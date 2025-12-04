@@ -573,8 +573,9 @@
 				}
 
 				// Check if this Win16 module is supported
-				var isModuleSupported = win16Modules.ContainsKey(dllName);
-				var supportedFunctions = isModuleSupported ? win16Modules[dllName] : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+				var isModuleSupported = win16Modules.TryGetValue(dllName, out var supportedFunctions);
+				if (!isModuleSupported)
+					supportedFunctions = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
 				var dependency = new DllDependency
 				{
@@ -593,7 +594,7 @@
 					};
 
 					// Check if function is supported
-					if (isModuleSupported && supportedFunctions.Contains(functionName))
+					if (isModuleSupported && supportedFunctions!.Contains(functionName))
 					{
 						status.Status = "implemented";
 						dependency.ImplementedCount++;
@@ -768,12 +769,12 @@
 							break;
 
 						// Read import entry (6 bytes):
-						// Byte 0: Flags
+						// Byte 0: Flags (unused)
 						// Bytes 1-2: Module index (1-based)
 						// Bytes 3-4: Import ordinal or name offset
 						// Byte 5: Reserved
 
-						var flags = fileBytes[currentOffset];
+						// var flags = fileBytes[currentOffset]; // Unused, removed
 						var moduleIndex = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 1);
 						var importOrdinal = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 3);
 
@@ -833,19 +834,16 @@
 			// If no imports found through Entry Table, fall back to just module names
 			if (importsByModule.Count == 0)
 			{
-				foreach (var moduleName in moduleNames)
+				foreach (var moduleName in moduleNames.Where(m => !string.IsNullOrWhiteSpace(m) && !m.StartsWith("UNKNOWN_MODULE_")))
 				{
-					if (!string.IsNullOrWhiteSpace(moduleName) && !moduleName.StartsWith("UNKNOWN_MODULE_"))
+					importsByModule[moduleName] = new List<NeImportedFunction>
 					{
-						importsByModule[moduleName] = new List<NeImportedFunction>
+						new NeImportedFunction
 						{
-							new NeImportedFunction
-							{
-								Name = "(Functions imported by this module)",
-								ImportedByOrdinal = false
-							}
-						};
-					}
+							Name = "(Functions imported by this module)",
+							ImportedByOrdinal = false
+						}
+					};
 				}
 			}
 		}

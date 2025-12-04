@@ -95,13 +95,9 @@ class Program
 		var modules = root.GetProperty("modules");
 		var moduleCount = modules.GetArrayLength();
 		
-		var totalFunctions = 0;
-		
-		foreach (var module in modules.EnumerateArray())
-		{
-			var functions = module.GetProperty("functions");
-			totalFunctions += functions.GetArrayLength();
-		}
+		var totalFunctions = modules.EnumerateArray()
+			.Select(module => module.GetProperty("functions").GetArrayLength())
+			.Sum();
 		
 		File.WriteAllText(outputPath, json);
 		

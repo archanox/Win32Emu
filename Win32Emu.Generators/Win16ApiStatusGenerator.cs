@@ -29,10 +29,9 @@ public sealed class Win16ApiStatusGenerator : IIncrementalGenerator
 			.Select(static (modules, _) => 
 			{
 				var result = ImmutableArray.CreateBuilder<Win16ModuleInfo>();
-				foreach (var module in modules)
+				foreach (var module in modules.Where(m => m != null))
 				{
-					if (module != null)
-						result.Add(module);
+					result.Add(module!);
 				}
 				return result.ToImmutable();
 			});
@@ -126,19 +125,15 @@ public sealed class Win16ApiStatusGenerator : IIncrementalGenerator
 		{
 			// Extract case labels from the switch statement
 			var caseSections = switchStatement.Sections;
-			foreach (var section in caseSections)
+			var functionNames = caseSections
+				.SelectMany(section => section.Labels.OfType<CaseSwitchLabelSyntax>())
+				.Select(label => label.Value as LiteralExpressionSyntax)
+				.Where(literal => literal != null && !string.IsNullOrEmpty(literal.Token.ValueText))
+				.Select(literal => literal!.Token.ValueText);
+
+			foreach (var functionName in functionNames)
 			{
-				foreach (var label in section.Labels.OfType<CaseSwitchLabelSyntax>())
-				{
-					if (label.Value is LiteralExpressionSyntax literal)
-					{
-						var functionName = literal.Token.ValueText;
-						if (!string.IsNullOrEmpty(functionName))
-						{
-							functions.Add(functionName);
-						}
-					}
-				}
+				functions.Add(functionName);
 			}
 		}
 
