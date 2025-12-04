@@ -57,13 +57,31 @@ To deploy updates:
 2. Click "Choose File" and select a Windows executable (.exe or .dll)
 3. The analysis runs entirely in your browser
 4. For PE32 files: Results show which Win32 APIs are implemented, stubbed, or missing
-5. For NE files: Format is detected and basic information is displayed (full API analysis pending Win16 API implementation)
+5. For NE files: Results show which Win16 APIs are implemented and missing, with per-function compatibility checking
 
 ## Supported Formats
 
-- **PE32 (Win32)**: Full compatibility analysis with API import checking
-- **NE (Win16)**: Format detection and basic analysis (Win16 API emulation in development)
+- **PE32 (Win32)**: Full compatibility analysis with API import checking against Win32 API implementations
+- **NE (Win16)**: Full compatibility analysis with API import checking against Win16 thunking layer implementations
 - **PE64**: Detection only - not supported by Win32Emu
+
+## Win16 (NE) Support
+
+The PE analyzer now fully supports Win16 NE executables:
+
+- **Entry Table Parsing**: Extracts individual imported functions (both by name and by ordinal)
+- **Module Support Detection**: Checks against 6 Win16 modules (KERNEL, USER, GDI, KEYBOARD, SYSTEM, SOUND)
+- **Function-Level Analysis**: Shows implementation status for each imported function
+- **Thunking Layer Compatibility**: Validates against ~400+ supported Win16 API functions that are thunked to Win32
+
+### Supported Win16 Modules
+
+1. **KERNEL.DLL** → KERNEL32.DLL (memory, file I/O, strings, modules)
+2. **USER.DLL** → USER32.DLL (windows, messages, dialogs, menus, input)
+3. **GDI.DLL** → GDI32.DLL (drawing, text, bitmaps, fonts, regions)
+4. **KEYBOARD.DLL** → USER32.DLL (keyboard input)
+5. **SYSTEM.DLL** → KERNEL32.DLL (timers, system time)
+6. **SOUND.DLL** → WINMM.DLL (multimedia)
 
 ## Limitations
 
@@ -71,7 +89,6 @@ To deploy updates:
 - **File size**: Limited to 100MB due to browser memory constraints
 - **Packed executables**: May not work with heavily packed or obfuscated executables
 - **Browser compatibility**: Requires modern browser with WebAssembly support
-- **NE API Analysis**: Win16 API compatibility checking pending Win16 API emulation implementation
 
 ## Security
 
