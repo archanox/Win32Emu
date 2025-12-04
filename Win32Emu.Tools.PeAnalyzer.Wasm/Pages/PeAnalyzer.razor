@@ -461,6 +461,175 @@
 		return $"{len:0.##} {sizes[order]}";
 	}
 
+	/// <summary>
+	/// Returns a dictionary of supported Win16 modules and their functions.
+	/// Based on Win16ThunkingLayer implementations in Win32Emu.
+	/// </summary>
+	private Dictionary<string, HashSet<string>> GetWin16SupportedModules()
+	{
+		var modules = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+
+		// KERNEL.DLL -> KERNEL32.DLL thunking
+		modules["KERNEL.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			// Memory management functions
+			"GLOBALALLOC", "GLOBALFREE", "GLOBALLOCK", "GLOBALUNLOCK", "GLOBALREALLOC", "GLOBALSIZE", "GLOBALHANDLE",
+			"LOCALALLOC", "LOCALFREE", "LOCALLOCK", "LOCALUNLOCK", "LOCALREALLOC", "LOCALSIZE", "LOCALHANDLE",
+			
+			// File I/O functions
+			"OPENFILE", "LCREAT", "LOPEN", "LCLOSE", "LREAD", "LWRITE", "LSEEK",
+			"_HREAD", "_HWRITE", "_LCREAT", "_LOPEN", "_LCLOSE", "_LREAD", "_LWRITE", "_LLSEEK",
+			
+			// String functions
+			"LSTRCPY", "LSTRCPYA", "LSTRCPYN", "LSTRCPYNA", "LSTRCAT", "LSTRCATA",
+			"LSTRCMP", "LSTRCMPA", "LSTRCMPI", "LSTRCMPIA", "LSTRLEN", "LSTRLENA",
+			
+			// Module/task functions
+			"GETMODULEHANDLE", "GETMODULEFILENAME", "GETMODULEFILENAME16", "GETPROCADDRESS",
+			"LOADLIBRARY", "FREELIBRARY", "GETCURRENTTASK", "GETCURRENTPDB",
+			
+			// Version functions
+			"GETVERSION", "GETVERSIONEX",
+			
+			// Miscellaneous functions
+			"GETWINFLAGS", "GETTICKCOUNT", "GETFREESPACE", "EXITWINDOWS", "EXITWINDOWSEXEC",
+			"OUTPUTDEBUGSTRING", "FATALAPPEXIT", "FATALEXIT"
+		};
+
+		// USER.DLL -> USER32.DLL thunking
+		modules["USER.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			// Window management functions
+			"CREATEWINDOW", "CREATEWINDOWA", "CREATEWINDOWEX", "CREATEWINDOWEXA",
+			"DESTROYWINDOW", "SHOWWINDOW", "UPDATEWINDOW", "SETWINDOWPOS", "MOVEWINDOW",
+			"GETWINDOWRECT", "GETCLIENTRECT", "ADJUSTWINDOWRECT", "ADJUSTWINDOWRECTEX",
+			"SETWINDOWTEXT", "SETWINDOWTEXTA", "GETWINDOWTEXT", "GETWINDOWTEXTA",
+			"GETWINDOWTEXTLENGTH", "GETWINDOWTEXTLENGTHA", "GETWINDOWLONG", "SETWINDOWLONG",
+			"GETCLASSNAME", "GETCLASSNAMEA", "GETCLASSINFO", "GETCLASSINFOA",
+			
+			// Message functions
+			"GETMESSAGE", "GETMESSAGEA", "PEEKMESSAGE", "PEEKMESSAGEA",
+			"TRANSLATEMESSAGE", "DISPATCHMESSAGE", "DISPATCHMESSAGEA",
+			"POSTMESSAGE", "POSTMESSAGEA", "SENDMESSAGE", "SENDMESSAGEA",
+			"POSTQUITMESSAGE", "WAITMESSAGE",
+			
+			// Dialog functions
+			"DIALOGBOX", "DIALOGBOXA", "DIALOGBOXPARAM", "DIALOGBOXPARAMA",
+			"DIALOGBOXINDIRECT", "DIALOGBOXINDIRECTA", "DIALOGBOXINDIRECTPARAM", "DIALOGBOXINDIRECTPARAMA",
+			"ENDDIALOG", "GETDLGITEM", "GETDLGITEMTEXT", "GETDLGITEMTEXTA",
+			"SETDLGITEMTEXT", "SETDLGITEMTEXTA", "GETDLGITEMINT", "SETDLGITEMINT",
+			"CHECKDLGBUTTON", "ISDLGBUTTONCHECKED",
+			
+			// Menu functions
+			"CREATEMENU", "CREATEPOPUPMENU", "DESTROYMENU",
+			"APPENDMENU", "APPENDMENUA", "INSERTMENU", "INSERTMENUA",
+			"DELETEMENU", "MODIFYMENU", "MODIFYMENUA",
+			"CHECKMENUITEM", "ENABLEMENUITEM", "SETMENU", "GETMENU", "DRAWMENUBAR",
+			
+			// GDI/DC functions (in USER for Win16)
+			"GETDC", "RELEASEDC", "GETWINDOWDC", "BEGINPAINT", "ENDPAINT",
+			"INVALIDATERECT", "VALIDATERECT", "INVALIDATERGN", "VALIDATERGN",
+			
+			// Resource functions
+			"LOADSTRING", "LOADSTRINGA", "LOADICON", "LOADICONA",
+			"LOADCURSOR", "LOADCURSORA", "LOADBITMAP", "LOADBITMAPA",
+			"LOADMENU", "LOADMENUA", "LOADDIALOG", "LOADACCELERATORS", "LOADACCELERATORSA",
+			
+			// Keyboard/mouse input functions
+			"GETASYNCKEYSTATE", "GETKEYSTATE", "GETKEYBOARDSTATE", "SETKEYBOARDSTATE",
+			"GETCURSORPOS", "SETCURSORPOS", "SHOWCURSOR", "SETCURSOR", "GETCURSOR",
+			"CLIPCURSOR", "GETCAPTURE", "SETCAPTURE", "RELEASECAPTURE",
+			
+			// Timer functions
+			"SETTIMER", "KILLTIMER",
+			
+			// Miscellaneous functions
+			"MESSAGEBOX", "MESSAGEBOXA", "MESSAGEBEEP",
+			"GETDESKTOPWINDOW", "GETACTIVEWINDOW", "SETACTIVEWINDOW",
+			"GETFOCUS", "SETFOCUS", "GETSYSTEMMETRICS",
+			"ISWINDOW", "ISWINDOWVISIBLE", "ISWINDOWENABLED", "ENABLEWINDOW",
+			"GETPARENT", "SETPARENT"
+		};
+
+		// GDI.DLL -> GDI32.DLL thunking
+		modules["GDI.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			// Device context functions
+			"CREATEDC", "CREATEDCA", "CREATECOMPATIBLEDC", "DELETEDC",
+			"SAVEDC", "RESTOREDC", "GETDEVICECAPS",
+			"SETMAPMODE", "GETMAPMODE", "SETVIEWPORTORG", "GETVIEWPORTORG",
+			"SETWINDOWORG", "GETWINDOWORG",
+			
+			// Drawing functions
+			"MOVETO", "LINETO", "RECTANGLE", "ELLIPSE", "POLYGON", "POLYLINE",
+			"ARC", "PIE", "CHORD", "ROUNDRECT", "SETPIXEL", "GETPIXEL",
+			"FLOODFILL", "EXTFLOODFILL",
+			
+			// Text output functions
+			"TEXTOUT", "TEXTOUTA", "EXTTEXTOUT", "EXTTEXTOUTA",
+			"DRAWTEXT", "DRAWTEXTA", "TABBEDTEXTOUT", "TABBEDTEXTOUTA",
+			"GETTEXTEXTENT", "GETTEXTEXTENTA", "GETTEXTMETRICS", "GETTEXTMETRICSA",
+			"SETTEXTCOLOR", "GETTEXTCOLOR", "SETBKCOLOR", "GETBKCOLOR",
+			"SETBKMODE", "GETBKMODE", "SETTEXTALIGN", "GETTEXTALIGN",
+			
+			// Pen and brush functions
+			"CREATEPEN", "CREATEPENINDIRECT", "CREATEBRUSHINDIRECT",
+			"CREATESOLIDBRUSH", "CREATEHATCHBRUSH", "CREATEPATTERNBRUSH",
+			"SELECTOBJECT", "DELETEOBJECT", "GETOBJECT", "GETSTOCKOBJECT",
+			
+			// Bitmap functions
+			"CREATEBITMAP", "CREATEBITMAPINDIRECT", "CREATECOMPATIBLEBITMAP", "CREATEDIBSECTION",
+			"BITBLT", "STRETCHBLT", "PATBLT", "SETDIBITS", "GETDIBITS",
+			"SETDIBITSTODEVICE", "STRETCHDIBITS",
+			
+			// Font functions
+			"CREATEFONT", "CREATEFONTA", "CREATEFONTINDIRECT", "CREATEFONTINDIRECTA",
+			"ENUMFONTS", "ENUMFONTSA", "ENUMFONTFAMILIES", "ENUMFONTFAMILIESA",
+			"GETTEXTFACE", "GETTEXTFACEA",
+			
+			// Region functions
+			"CREATERECTRGNINDIRECT", "CREATERECTRGNINDIRECTA", "CREATEELLIPTICRGN",
+			"CREATEELLIPTICRGNINDIRECT", "CREATEPOLYGONRGN", "CREATEROUNDRECTRGN",
+			"COMBINERGN", "EQUALRGN", "OFFSETRGN", "GETREGIONDATA",
+			"PTINREGION", "RECTINREGION", "FILLRGN", "FRAMERGN", "INVERTRGN", "PAINTRGN",
+			
+			// Palette functions
+			"CREATEPALETTE", "SELECTPALETTE", "REALIZEPALETTE",
+			"GETPALETTEENTRIES", "SETPALETTEENTRIES", "GETNEARESTCOLOR",
+			"GETNEARESTPALETTEINDEX", "ANIMATEPALETTE", "UPDATECOLORS",
+			
+			// Clipping functions
+			"SELECTCLIPRGN", "GETCLIPBOX", "EXCLUDECLIPRECT", "INTERSECTCLIPRECT", "OFFSETCLIPRGN",
+			
+			// Miscellaneous functions
+			"GETRVALUE", "GETGVALUE", "GETBVALUE", "RGB",
+			"GETROP2", "SETROP2", "SETSTRETCHBLTMODE", "GETSTRETCHBLTMODE", "UNREALIZEOBJECT"
+		};
+
+		// KEYBOARD.DLL -> USER32.DLL thunking
+		modules["KEYBOARD.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			"GETKEYSTATE", "GETASYNCKEYSTATE", "GETKEYBOARDSTATE", "SETKEYBOARDSTATE",
+			"GETKEYBOARDTYPE", "MAPVIRTUALKEY", "OEMKEYSCAN", "VKKEYSCAN", "ENABLEKEYBOARD"
+		};
+
+		// SYSTEM.DLL -> KERNEL32.DLL thunking
+		modules["SYSTEM.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			"GETTICKCOUNT", "GETFREESPACE", "GETSYSTEMTIME", "SETSYSTEMTIME",
+			"GETLOCALTIME", "SETLOCALTIME", "GETCURRENTTIME", "GETTIMERDESCRIPTION"
+		};
+
+		// SOUND.DLL -> WINMM.DLL thunking
+		modules["SOUND.DLL"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			"SNDPLAYSOUND", "SNDPLAYSONDA", "OPENDRIVER", "CLOSEDRIVER",
+			"SENDDRIVER", "GETDRIVERNAME", "GETDRIVERNAMEA", "GETDRIVERINFO", "GETDRIVERMODULEHANDLE"
+		};
+
+		return modules;
+	}
+
 	private string DetectExecutableFormat(byte[] bytes)
 	{
 		// Magic numbers for format detection
@@ -525,32 +694,60 @@
 				return;
 			}
 
-			// Process imported modules
-			foreach (var moduleName in neImports)
+			// Get Win16 module support information
+			var win16Modules = GetWin16SupportedModules();
+
+			// Process imported modules and their functions
+			foreach (var moduleImport in neImports)
 			{
+				var moduleName = moduleImport.Key;
+				var importedFunctions = moduleImport.Value;
+
 				var dllName = moduleName.ToUpperInvariant();
 				if (!dllName.EndsWith(".DLL") && !dllName.EndsWith(".EXE"))
 				{
 					dllName += ".DLL";
 				}
 
+				// Check if this Win16 module is supported
+				var isModuleSupported = win16Modules.ContainsKey(dllName);
+				var supportedFunctions = isModuleSupported ? win16Modules[dllName] : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
 				var dependency = new DllDependency
 				{
 					DllName = dllName,
-					IsSupported = false
+					IsSupported = isModuleSupported
 				};
 
-				// NE format imports by ordinal, so we can't know specific function names
-				// We add a placeholder to show the module is imported
-				var status = new FunctionStatus
+				// Check each imported function
+				foreach (var importedFunc in importedFunctions)
 				{
-					Name = "(Imported by ordinal - specific functions unknown)",
-					Status = "missing",
-					Ordinal = null
-				};
-				dependency.Functions.Add(status);
-				dependency.MissingCount = 1;
-				dependency.ImplementationPercentage = 0;
+					var functionName = importedFunc.Name;
+					var status = new FunctionStatus
+					{
+						Name = functionName,
+						Ordinal = importedFunc.Ordinal
+					};
+
+					// Check if function is supported
+					if (isModuleSupported && supportedFunctions.Contains(functionName))
+					{
+						status.Status = "implemented";
+						dependency.ImplementedCount++;
+					}
+					else
+					{
+						status.Status = "missing";
+						dependency.MissingCount++;
+					}
+
+					dependency.Functions.Add(status);
+				}
+
+				var totalFunctions = dependency.Functions.Count;
+				dependency.ImplementationPercentage = totalFunctions > 0
+					? (dependency.ImplementedCount * 100.0 / totalFunctions)
+					: 0;
 
 				analysisResult.Dependencies.Add(dependency);
 			}
@@ -558,13 +755,35 @@
 			// Calculate overall statistics
 			analysisResult.Status.TotalDlls = analysisResult.Dependencies.Count;
 			analysisResult.Status.TotalFunctions = analysisResult.Dependencies.Sum(d => d.Functions.Count);
-			analysisResult.Status.ImplementedFunctions = 0;
-			analysisResult.Status.StubFunctions = 0;
-			analysisResult.Status.MissingFunctions = analysisResult.Status.TotalFunctions;
-			analysisResult.Status.ImplementationPercentage = 0;
+			analysisResult.Status.ImplementedFunctions = analysisResult.Dependencies.Sum(d => d.ImplementedCount);
+			analysisResult.Status.StubFunctions = analysisResult.Dependencies.Sum(d => d.StubCount);
+			analysisResult.Status.MissingFunctions = analysisResult.Dependencies.Sum(d => d.MissingCount);
+			
+			if (analysisResult.Status.TotalFunctions > 0)
+			{
+				analysisResult.Status.ImplementationPercentage = 
+					(analysisResult.Status.ImplementedFunctions * 100.0 / analysisResult.Status.TotalFunctions);
+			}
 
-			// Set verdict for NE files
-			analysisResult.Status.Verdict = $"EXPERIMENTAL - Win16 NE format detected. Found {neImports.Count} module dependencies. Win16 API emulation is not yet implemented.";
+			// Determine verdict for Win16 files
+			var supportedModuleCount = analysisResult.Dependencies.Count(d => d.IsSupported);
+			
+			if (analysisResult.Status.MissingFunctions == 0)
+			{
+				analysisResult.Status.Verdict = "FULLY COMPATIBLE - All Win16 APIs are implemented through thunking layer";
+			}
+			else if (analysisResult.Status.ImplementationPercentage >= 80)
+			{
+				analysisResult.Status.Verdict = $"MOSTLY COMPATIBLE - Win16 NE format. {analysisResult.Status.ImplementedFunctions}/{analysisResult.Status.TotalFunctions} functions supported ({supportedModuleCount}/{analysisResult.Status.TotalDlls} modules)";
+			}
+			else if (analysisResult.Status.ImplementationPercentage >= 50)
+			{
+				analysisResult.Status.Verdict = $"PARTIALLY COMPATIBLE - Win16 NE format. {analysisResult.Status.ImplementedFunctions}/{analysisResult.Status.TotalFunctions} functions supported ({supportedModuleCount}/{analysisResult.Status.TotalDlls} modules)";
+			}
+			else
+			{
+				analysisResult.Status.Verdict = $"LIMITED COMPATIBILITY - Win16 NE format. {analysisResult.Status.ImplementedFunctions}/{analysisResult.Status.TotalFunctions} functions supported ({supportedModuleCount}/{analysisResult.Status.TotalDlls} modules)";
+			}
 		}
 		catch (Exception ex)
 		{
@@ -579,71 +798,203 @@
 	}
 
 	/// <summary>
-	/// Parses the NE (New Executable) format to extract imported module names.
+	/// Parses the NE (New Executable) format to extract imported functions with module and function details.
 	/// </summary>
 	/// <param name="fileBytes">The raw bytes of the NE executable</param>
-	/// <returns>List of imported module names</returns>
-	private List<string> ParseNeImports(byte[] fileBytes)
+	/// <returns>Dictionary mapping module names to lists of imported function names/ordinals</returns>
+	private Dictionary<string, List<NeImportedFunction>> ParseNeImports(byte[] fileBytes)
 	{
 		// NE format constants
-		const int MinimumNeHeaderSize = 64;    // Minimum size of NE header required for parsing
-		const int ModuleRefEntrySize = 2;      // Size of each entry in Module Reference Table (2 bytes)
+		const int MinimumNeHeaderSize = 64;
+		const int ModuleRefEntrySize = 2;
 
-		var imports = new List<string>();
+		var importsByModule = new Dictionary<string, List<NeImportedFunction>>(StringComparer.OrdinalIgnoreCase);
 
-		// Get offset to NE header from DOS header
-		// Need at least 0x3C + 4 bytes to read the NE header offset
-		if (fileBytes.Length < 0x40)
-			return imports;
-
-		var neHeaderOffset = BitConverter.ToUInt32(fileBytes, 0x3C);
-		if (neHeaderOffset + MinimumNeHeaderSize > fileBytes.Length)
-			return imports;
-
-		// Verify NE signature
-		if (fileBytes[neHeaderOffset] != 'N' || fileBytes[neHeaderOffset + 1] != 'E')
-			return imports;
-
-		// NE Header structure (key offsets from NE header start):
-		// Offset 0x1E (2 bytes): Number of entries in Module Reference Table
-		// Offset 0x28 (2 bytes): Offset to Module Reference Table (from start of NE header)
-		// Offset 0x2A (2 bytes): Offset to Imported Names Table (from start of NE header)
-
-		var moduleRefCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x1E);
-		var moduleRefTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x28);
-		var importedNamesTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x2A);
-
-		// Calculate absolute offsets
-		var absModuleRefTableOffset = neHeaderOffset + moduleRefTableOffset;
-		var absImportedNamesTableOffset = neHeaderOffset + importedNamesTableOffset;
-
-		// Validate offsets
-		if (absModuleRefTableOffset + (moduleRefCount * ModuleRefEntrySize) > fileBytes.Length)
-			return imports;
-
-		// Read Module Reference Table
-		// Each entry is a 2-byte offset into the Imported Names Table
-		for (int i = 0; i < moduleRefCount; i++)
+		try
 		{
-			var nameOffset = BitConverter.ToUInt16(fileBytes, (int)absModuleRefTableOffset + (i * ModuleRefEntrySize));
-			var absNameOffset = absImportedNamesTableOffset + nameOffset;
+			// Get offset to NE header from DOS header
+			if (fileBytes.Length < 0x40)
+				return importsByModule;
 
-			if (absNameOffset >= fileBytes.Length)
-				continue;
+			var neHeaderOffset = BitConverter.ToUInt32(fileBytes, 0x3C);
+			if (neHeaderOffset + MinimumNeHeaderSize > fileBytes.Length)
+				return importsByModule;
 
-			// Read Pascal-style string (length byte followed by characters)
-			var nameLength = fileBytes[absNameOffset];
-			if (nameLength == 0 || absNameOffset + 1 + nameLength > fileBytes.Length)
-				continue;
+			// Verify NE signature
+			if (fileBytes[neHeaderOffset] != 'N' || fileBytes[neHeaderOffset + 1] != 'E')
+				return importsByModule;
 
-			var moduleName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)absNameOffset + 1, nameLength);
-			if (!string.IsNullOrWhiteSpace(moduleName))
+			// NE Header structure (key offsets from NE header start):
+			// Offset 0x04 (2 bytes): Offset to Entry Table
+			// Offset 0x06 (2 bytes): Length of Entry Table in bytes
+			// Offset 0x1E (2 bytes): Number of entries in Module Reference Table
+			// Offset 0x28 (2 bytes): Offset to Module Reference Table
+			// Offset 0x2A (2 bytes): Offset to Imported Names Table
+
+			var entryTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x04);
+			var entryTableLength = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x06);
+			var moduleRefCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x1E);
+			var moduleRefTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x28);
+			var importedNamesTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x2A);
+
+			// Read module names first
+			var moduleNames = new List<string>();
+			var absModuleRefTableOffset = neHeaderOffset + moduleRefTableOffset;
+			var absImportedNamesTableOffset = neHeaderOffset + importedNamesTableOffset;
+
+			for (int i = 0; i < moduleRefCount; i++)
 			{
-				imports.Add(moduleName);
+				if (absModuleRefTableOffset + (i * ModuleRefEntrySize) + 2 > fileBytes.Length)
+					break;
+
+				var nameOffset = BitConverter.ToUInt16(fileBytes, (int)absModuleRefTableOffset + (i * ModuleRefEntrySize));
+				var absNameOffset = absImportedNamesTableOffset + nameOffset;
+
+				if (absNameOffset >= fileBytes.Length)
+				{
+					moduleNames.Add($"UNKNOWN_MODULE_{i + 1}");
+					continue;
+				}
+
+				var nameLength = fileBytes[absNameOffset];
+				if (nameLength == 0 || absNameOffset + 1 + nameLength > fileBytes.Length)
+				{
+					moduleNames.Add($"UNKNOWN_MODULE_{i + 1}");
+					continue;
+				}
+
+				var moduleName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)absNameOffset + 1, nameLength);
+				moduleNames.Add(string.IsNullOrWhiteSpace(moduleName) ? $"UNKNOWN_MODULE_{i + 1}" : moduleName);
+			}
+
+			// Parse Entry Table to find imported functions
+			var absEntryTableOffset = neHeaderOffset + entryTableOffset;
+			var entryTableEnd = absEntryTableOffset + entryTableLength;
+			var currentOffset = absEntryTableOffset;
+
+			while (currentOffset < entryTableEnd && currentOffset < fileBytes.Length)
+			{
+				// Each bundle starts with a count byte
+				var count = fileBytes[currentOffset];
+				if (count == 0)
+					break; // End of Entry Table
+
+				currentOffset++;
+
+				if (currentOffset >= fileBytes.Length)
+					break;
+
+				// Segment indicator byte
+				var segmentIndicator = fileBytes[currentOffset];
+				currentOffset++;
+
+				// segmentIndicator == 0xFF means imported entries
+				if (segmentIndicator == 0xFF)
+				{
+					// These are imported ordinals
+					for (int i = 0; i < count; i++)
+					{
+						if (currentOffset + 6 > fileBytes.Length)
+							break;
+
+						// Read import entry (6 bytes):
+						// Byte 0: Flags
+						// Bytes 1-2: Module index (1-based)
+						// Bytes 3-4: Import ordinal or name offset
+						// Byte 5: Reserved
+
+						var flags = fileBytes[currentOffset];
+						var moduleIndex = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 1);
+						var importOrdinal = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 3);
+
+						currentOffset += 6;
+
+						// Module index is 1-based
+						if (moduleIndex > 0 && moduleIndex <= moduleNames.Count)
+						{
+							var moduleName = moduleNames[moduleIndex - 1];
+
+							if (!importsByModule.ContainsKey(moduleName))
+								importsByModule[moduleName] = new List<NeImportedFunction>();
+
+							// Check if it's imported by name or ordinal
+							// If high bit of importOrdinal is NOT set, it's a name reference
+							if (importOrdinal < 0x8000)
+							{
+								// Import by name - importOrdinal is offset into Imported Names Table
+								var functionNameOffset = absImportedNamesTableOffset + importOrdinal;
+								if (functionNameOffset < fileBytes.Length)
+								{
+									var funcNameLength = fileBytes[functionNameOffset];
+									if (funcNameLength > 0 && functionNameOffset + 1 + funcNameLength <= fileBytes.Length)
+									{
+										var functionName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)functionNameOffset + 1, funcNameLength);
+										importsByModule[moduleName].Add(new NeImportedFunction
+										{
+											Name = functionName,
+											ImportedByOrdinal = false
+										});
+									}
+								}
+							}
+							else
+							{
+								// Import by ordinal
+								var ordinal = (ushort)(importOrdinal & 0x7FFF);
+								importsByModule[moduleName].Add(new NeImportedFunction
+								{
+									Name = $"Ordinal_{ordinal}",
+									Ordinal = ordinal,
+									ImportedByOrdinal = true
+								});
+							}
+						}
+					}
+				}
+				else
+				{
+					// Fixed or moveable segment entries - skip them
+					// Each entry is 3 bytes for moveable, 6 bytes for fixed
+					uint entrySize = (segmentIndicator == 0xFE) ? 6u : 3u;
+					currentOffset += count * entrySize;
+				}
+			}
+
+			// If no imports found through Entry Table, fall back to just module names
+			if (importsByModule.Count == 0)
+			{
+				foreach (var moduleName in moduleNames)
+				{
+					if (!string.IsNullOrWhiteSpace(moduleName) && !moduleName.StartsWith("UNKNOWN_MODULE_"))
+					{
+						importsByModule[moduleName] = new List<NeImportedFunction>
+						{
+							new NeImportedFunction
+							{
+								Name = "(Functions imported by this module)",
+								ImportedByOrdinal = false
+							}
+						};
+					}
+				}
 			}
 		}
+		catch (Exception)
+		{
+			// If parsing fails, return what we have so far
+		}
 
-		return imports;
+		return importsByModule;
+	}
+
+	/// <summary>
+	/// Represents an imported function in a NE (Win16) executable.
+	/// </summary>
+	private class NeImportedFunction
+	{
+		public string Name { get; set; } = "";
+		public ushort? Ordinal { get; set; }
+		public bool ImportedByOrdinal { get; set; }
 	}
 
 	// Data models
