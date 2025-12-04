@@ -2540,12 +2540,7 @@ public class IcedCpu : IAsyncCpu
 		// Get operand size to determine bit width and mask
 		var opSize = GetOpSizeBits(insn, 0);
 		var bitWidth = (uint)opSize; // 8, 16, or 32
-		var mask = opSize switch
-		{
-			8 => 0xFFu,
-			16 => 0xFFFFu,
-			_ => 0xFFFFFFFFu
-		};
+		var mask = GetOperandMask(opSize);
 		var msbMask = 1u << ((int)bitWidth - 1); // Bit 7 for 8-bit, bit 15 for 16-bit, bit 31 for 32-bit
 		var msb1Mask = 1u << ((int)bitWidth - 2); // Bit 6 for 8-bit, bit 14 for 16-bit, bit 30 for 32-bit
 
