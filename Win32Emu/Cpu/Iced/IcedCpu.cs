@@ -2415,6 +2415,16 @@ public class IcedCpu : IAsyncCpu
 		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
 		SetFlagVal(Af, true);
 
+		// Mask result to operand size before updating flags
+		// This is crucial for correct ZF calculation when high bits are set
+		var mask = opSize switch
+		{
+			8 => 0xFFu,
+			16 => 0xFFFFu,
+			_ => 0xFFFFFFFFu
+		};
+		r &= mask;
+
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
 	}
@@ -2515,6 +2525,17 @@ public class IcedCpu : IAsyncCpu
 		// AF is undefined for shift operations, but on real 80386 hardware it gets set
 		// Based on empirical evidence from SingleStepTests, AF is set when count > 0
 		SetFlagVal(Af, true);
+		
+		// Mask result to operand size before updating flags
+		// This is crucial for correct ZF calculation when high bits are set
+		var mask = opSize switch
+		{
+			8 => 0xFFu,
+			16 => 0xFFFFu,
+			_ => 0xFFFFFFFFu
+		};
+		r &= mask;
+		
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
 	}
