@@ -17,16 +17,21 @@ A Blazor WebAssembly application for analyzing Windows executable files (`.exe` 
 dotnet build
 ```
 
-## Regenerating Win16 API Status
+## Regenerating API Status
 
-The Win16 API compatibility data is auto-generated from the Win16 module source files. If you add or modify Win16 functions in the `Win32Emu/Win32/Win16/` directory, regenerate the JSON file:
+The Win16 API compatibility data is automatically generated at compile time by the `Win16ApiStatusGenerator` source generator. The generator parses Win16 module source files and extracts function names from switch statements.
+
+To regenerate both Win32 and Win16 API status JSON files:
 
 ```bash
 # From repository root
-python3 generate-win16-api-status.py
+dotnet build Win32Emu/Win32Emu.csproj --configuration Release
+dotnet run --project Win32Emu.Tools.ApiStatusGenerator --configuration Release -- Win32Emu.Tools.PeAnalyzer.Wasm/wwwroot
 ```
 
-This script parses the Win16 module C# files and extracts supported function names from the switch statements, generating `Win32Emu.Tools.PeAnalyzer.Wasm/wwwroot/win16-api-status.json`.
+This will generate:
+- `api-status.json` - Win32 API status (from `[DllModuleExport]` attributes)
+- `win16-api-status.json` - Win16 API status (from switch statements in Win16 modules)
 
 ## Publishing for GitHub Pages
 
