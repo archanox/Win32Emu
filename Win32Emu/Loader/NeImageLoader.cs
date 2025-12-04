@@ -282,7 +282,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			// NE: 2=Windows GUI compatible, 3=Uses PM (GUI) API
 			// PE: 2=WINDOWS_GUI, 3=WINDOWS_CUI (console)
 			(ushort)((neHeader.ApplicationType & 0x03) >= 2 ? PE_SUBSYSTEM_GUI : PE_SUBSYSTEM_CUI),
-			DEFAULT_HEADER_END_RVA,           // HeaderEndRva - use default
+			0,                                // HeaderEndRva - NE has no PE header, code can start at base address
 			DEFAULT_STACK_RESERVE,            // SizeOfStackReserve - 64KB default for 16-bit
 			DEFAULT_STACK_COMMIT,             // SizeOfStackCommit - 4KB default
 			DEFAULT_HEAP_RESERVE,             // SizeOfHeapReserve - 64KB default

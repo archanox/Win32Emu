@@ -271,6 +271,26 @@ public class NeImageLoaderTests
 		Assert.True(image.EntryPointAddress >= image.BaseAddress);
 	}
 
+	[Fact]
+	public void LoadFromBytes_WithMinimalNEFile_SetsHeaderEndRvaToZero()
+	{
+		// Arrange
+		var vm = new VirtualMemory(256 * 1024 * 1024, NullLogger.Instance); // 256MB
+		var loader = new NeImageLoader(vm, NullLogger.Instance);
+
+		// Create a minimal valid NE file structure
+		var neData = CreateMinimalNEFile();
+
+		// Act
+		var image = loader.LoadFromBytes(neData, "<test>");
+
+		// Assert
+		// NE executables have no PE header, so HeaderEndRva should be 0
+		// This allows code to execute from the base address without triggering
+		// "PE header region" detection in the emulator
+		Assert.Equal(0u, image.HeaderEndRva);
+	}
+
 	/// <summary>
 	/// Creates a minimal valid NE file structure for testing.
 	/// This is a simplified structure that passes basic validation.
