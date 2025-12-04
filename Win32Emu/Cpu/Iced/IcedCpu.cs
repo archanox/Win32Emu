@@ -2417,13 +2417,7 @@ public class IcedCpu : IAsyncCpu
 
 		// Mask result to operand size before updating flags
 		// This is crucial for correct ZF calculation when high bits are set
-		var mask = opSize switch
-		{
-			8 => 0xFFu,
-			16 => 0xFFFFu,
-			_ => 0xFFFFFFFFu
-		};
-		r &= mask;
+		r &= GetOperandMask(opSize);
 
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
@@ -2528,13 +2522,7 @@ public class IcedCpu : IAsyncCpu
 		
 		// Mask result to operand size before updating flags
 		// This is crucial for correct ZF calculation when high bits are set
-		var mask = opSize switch
-		{
-			8 => 0xFFu,
-			16 => 0xFFFFu,
-			_ => 0xFFFFFFFFu
-		};
-		r &= mask;
+		r &= GetOperandMask(opSize);
 		
 		WriteOp(insn, 0, r);
 		UpdateLogicResultFlags(r, signBit);
@@ -5780,6 +5768,17 @@ public class IcedCpu : IAsyncCpu
 
 		return 1;
 	}
+
+	/// <summary>
+	/// Gets the mask for a specific operand size (8, 16, or 32 bits).
+	/// Used to mask values to their actual size before flag calculations.
+	/// </summary>
+	private uint GetOperandMask(int opSize) => opSize switch
+	{
+		8 => 0xFFu,
+		16 => 0xFFFFu,
+		_ => 0xFFFFFFFFu
+	};
 
 	private int GetSourceSizeBits(Instruction insn)
 	{
