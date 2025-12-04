@@ -93,7 +93,7 @@ jobs:
         run: |
           dotnet run --project Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj \
             --configuration Release --no-build -- \
-            pages/api-status.json
+            pages
 
       - name: Generate Missing Functions Report
         run: |
