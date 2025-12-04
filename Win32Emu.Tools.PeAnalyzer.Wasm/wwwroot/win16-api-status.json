@@ -125,6 +125,14 @@
     {
       "name": "KERNEL.DLL",
       "functions": [
+        "_HREAD",
+        "_HWRITE",
+        "_LCLOSE",
+        "_LCREAT",
+        "_LLSEEK",
+        "_LOPEN",
+        "_LREAD",
+        "_LWRITE",
         "EXITWINDOWS",
         "EXITWINDOWSEXEC",
         "FATALAPPEXIT",
@@ -175,15 +183,7 @@
         "LSTRLENA",
         "LWRITE",
         "OPENFILE",
-        "OUTPUTDEBUGSTRING",
-        "_HREAD",
-        "_HWRITE",
-        "_LCLOSE",
-        "_LCREAT",
-        "_LLSEEK",
-        "_LOPEN",
-        "_LREAD",
-        "_LWRITE"
+        "OUTPUTDEBUGSTRING"
       ]
     },
     {
