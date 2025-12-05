@@ -690,7 +690,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			
 			modules.Add(moduleName);
-			logger?.LogDebug("[NE Loader] Parsed import module {Index}: {ModuleName}", i + 1, moduleName);
+			logger?.LogDebug("[NE Loader] Parsed import module {Index}: {ModuleName}", i, moduleName);
 		}
 		
 		return modules;
