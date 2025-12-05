@@ -675,7 +675,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			var actualOffset = importNamesOffset + nameOffset;
 			
 			// Validate offset is within bounds
-			if (actualOffset < 0 || actualOffset + 1 > bytes.Length)
+			if (actualOffset + 1 > bytes.Length)
 			{
 				logger?.LogWarning("[NE Loader] Module name offset {Offset} (entry {Index}) is out of bounds", actualOffset, i);
 				continue;
@@ -698,23 +698,26 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			
 			// Validate that the name contains printable ASCII characters (basic sanity check)
-			// Module names should be alphanumeric with possible underscores, hyphens, periods, or spaces
+			// Allow all printable ASCII characters (32-126) for maximum compatibility
 			var isValidName = true;
+			var invalidChars = new System.Text.StringBuilder();
 			for (var j = 1; j <= nameLength; j++)
 			{
 				var ch = (char)bytes[actualOffset + j];
-				// Allow alphanumeric characters, underscore, hyphen, period, and space
-				if (!char.IsLetterOrDigit(ch) && ch != '_' && ch != '-' && ch != '.' && ch != ' ')
+				// Allow printable ASCII characters (space through tilde: 32-126)
+				if (ch < 32 || ch > 126)
 				{
-					// Invalid character found - this is likely not a valid module name
+					// Invalid character found - likely corrupted data
 					isValidName = false;
-					break;
+					invalidChars.Append($"0x{(byte)ch:X2} ");
 				}
 			}
 			
 			if (!isValidName)
 			{
-				logger?.LogWarning("[NE Loader] Module name at offset {Offset} (entry {Index}) contains invalid characters", actualOffset, i);
+				var nameForLogging = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
+				logger?.LogWarning("[NE Loader] Module name at offset {Offset} (entry {Index}) contains non-printable characters (invalid bytes: {InvalidChars}): \"{ModuleName}\"", 
+					actualOffset, i, invalidChars.ToString().TrimEnd(), nameForLogging);
 				continue;
 			}
 			
