@@ -2,6 +2,7 @@
 @using PeNet
 @using System.Text.Json
 @using Microsoft.JSInterop
+@using Win32Emu.NeParser
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 
@@ -578,11 +579,14 @@
 
 	private string DetectExecutableFormat(byte[] bytes)
 	{
-		// Magic numbers for format detection
+		// Use NeParser to detect NE format
+		if (NeParser.IsNE(bytes))
+			return "NE (Win16)";
+		
+		// Check for PE format
 		const int MinimumDosHeaderSize = 0x40;
 		const int DosHeaderOffsetToNewHeader = 0x3C;
 		const ushort MzSignature = 0x5A4D; // "MZ" in little-endian
-		const ushort NeSignature = 0x454E; // "NE" in little-endian
 		const ushort PeSignature = 0x4550; // "PE" in little-endian
 		
 		try
@@ -595,16 +599,13 @@
 			if (mzSignature != MzSignature)
 				return "Unknown";
 
-			// Get offset to NE/PE header
+			// Get offset to PE header
 			var headerOffset = BitConverter.ToUInt32(bytes, DosHeaderOffsetToNewHeader);
 			if (headerOffset + 2 > bytes.Length)
 				return "Unknown";
 
 			// Check signature at header offset
 			var signature = BitConverter.ToUInt16(bytes, (int)headerOffset);
-			
-			if (signature == NeSignature)
-				return "NE (Win16)";
 			
 			if (signature == PeSignature)
 				return "PE32 (Win32)";
@@ -1172,4 +1173,32 @@
 			}
 		}
 	}
+}
+
+// Helper method to convert NeParser.NeHeader to NeHeaderInfo for UI display
+private NeHeaderInfo ConvertToNeHeaderInfo(Win32Emu.NeParser.NeHeader header)
+{
+return new NeHeaderInfo
+{
+LinkerMajorVersion = header.MajorLinkerVersion,
+LinkerMinorVersion = header.MinorLinkerVersion,
+TargetOperatingSystem = header.TargetOS,
+ExpectedWindowsVersion = header.ExpectedWindowsVersion,
+DGroupType = header.DGroupType,
+EntryPointFormatted = header.EntryPointFormatted,
+InitialStackFormatted = header.InitialStackFormatted,
+SegmentCount = header.SegmentCount,
+ModuleReferenceCount = header.ModuleReferenceCount,
+InitialHeapSize = header.InitHeapSize,
+InitialStackSize = header.InitStackSize,
+AutoDataSegmentIndex = header.AutoDataSegment,
+FileCrc = header.CrcChecksum,
+FileAlignmentShiftCount = header.SectorAlignmentShift,
+ResourceEntryCount = header.ResourceSegmentCount,
+MoveableEntryPointCount = header.MovableEntryCount,
+ProgramFlagsList = header.ProgramFlagsList,
+ApplicationFlagsList = header.ApplicationFlagsList,
+TargetOsName = header.TargetOsName,
+LinkerVersion = header.LinkerVersion
+};
 }
