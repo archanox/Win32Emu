@@ -113,7 +113,7 @@
 						</tr>
 						<tr>
 							<td><strong>File Alignment Shift:</strong></td>
-							<td>@analysisResult.NeHeader.FileAlignmentShiftCount (sector size: @(analysisResult.NeHeader.FileAlignmentShiftCount == 0 ? 512 : (1 << analysisResult.NeHeader.FileAlignmentShiftCount)) bytes)</td>
+							<td>@analysisResult.NeHeader.FileAlignmentShiftCount (sector size: @(analysisResult.NeHeader.FileAlignmentShiftCount == 0 ? 1 : (1 << analysisResult.NeHeader.FileAlignmentShiftCount)) bytes)</td>
 						</tr>
 						<tr>
 							<td><strong>Resource Entry Count:</strong></td>
