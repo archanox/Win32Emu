@@ -1,10 +1,10 @@
-namespace Win32Emu.NeParser;
-
-/// <summary>
-/// Represents a parsed NE (New Executable) file.
-/// </summary>
-public class NeExecutable
+namespace Win32Emu.NeParser
 {
+	/// <summary>
+	/// Represents a parsed NE (New Executable) file.
+	/// </summary>
+	public class NeExecutable
+	{
 	/// <summary>
 	/// The NE header information.
 	/// </summary>
@@ -297,8 +297,9 @@ public enum NeRelocationSourceType : byte
 public enum NeRelocationTargetType : byte
 {
 	InternalRef = 0,    // Internal reference (within this module)
-	ImportOrdinal = 1,  // Import by ordinal
+		ImportOrdinal = 1,  // Import by ordinal
 	ImportName = 2,     // Import by name
 	OsFixup = 3,        // Operating system fixup
 	Additive = 4,       // Additive fixup (add, don't replace)
+}
 }
