@@ -673,14 +673,14 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			// According to Microsoft documentation, these offsets are relative to the start of the imported names table.
 			// Try to read the module name using this standard interpretation.
 			var actualOffset = importNamesOffset + nameOffset;
-			var moduleName = TryReadModuleName(bytes, actualOffset, i);
+			var moduleName = TryReadModuleName(bytes, actualOffset);
 			
 			// If standard interpretation failed, try alternative: offset might be relative to NE header base
 			// This handles some non-standard or older NE files
 			if (moduleName == null)
 			{
 				actualOffset = header.BaseOffset + nameOffset;
-				moduleName = TryReadModuleName(bytes, actualOffset, i);
+				moduleName = TryReadModuleName(bytes, actualOffset);
 			}
 			
 			// If both interpretations failed, skip this entry
@@ -700,10 +700,10 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// Attempts to read a Pascal-style module name (length-prefixed string) from the specified offset.
 	/// Returns null if the offset is invalid, the name is empty, or the name extends beyond file bounds.
 	/// </summary>
-	private string? TryReadModuleName(byte[] bytes, int actualOffset, int entryIndex)
+	private string? TryReadModuleName(byte[] bytes, int actualOffset)
 	{
 		// Validate offset is within bounds
-		if (actualOffset < 0 || actualOffset >= bytes.Length || actualOffset + 1 > bytes.Length)
+		if (actualOffset < 0 || actualOffset + 1 > bytes.Length)
 		{
 			return null;
 		}
@@ -722,13 +722,12 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 		
 		// Validate that the name contains printable ASCII characters (basic sanity check)
-		// Module names should be alphanumeric with possible underscores, hyphens, or periods
+		// Module names should be alphanumeric with possible underscores, hyphens, periods, or spaces
 		for (var j = 1; j <= nameLength; j++)
 		{
-			var ch = bytes[actualOffset + j];
-			// Allow A-Z, a-z, 0-9, underscore, hyphen, period, and basic punctuation
-			if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || 
-			      (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.' || ch == ' '))
+			var ch = (char)bytes[actualOffset + j];
+			// Allow alphanumeric characters, underscore, hyphen, period, and space
+			if (!char.IsLetterOrDigit(ch) && ch != '_' && ch != '-' && ch != '.' && ch != ' ')
 			{
 				// Invalid character found - this is likely not a valid module name
 				return null;
