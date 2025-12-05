@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Win32Emu.Memory;
+using Win32Emu.NeParser;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +12,7 @@ namespace Win32Emu.Loader;
 /// <summary>
 /// NE (New Executable) loader for Win16 applications.
 /// Supports loading 16-bit Windows executables in the NE format.
+/// Uses Win32Emu.NeParser for parsing NE structures.
 /// </summary>
 public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 {
@@ -89,32 +91,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// <returns>True if the file is a valid NE executable, false otherwise</returns>
 	public static bool IsNE(string path)
 	{
-		try
-		{
-			using var stream = File.OpenRead(path);
-			using var reader = new BinaryReader(stream);
-			
-			// Check DOS MZ signature
-			var mzSignature = reader.ReadUInt16();
-			if (mzSignature != MZ_SIGNATURE)
-			{
-				return false;
-			}
-			
-			// Seek to offset which contains the offset to the NE/PE header
-			stream.Seek(DOS_HEADER_NE_PE_OFFSET, SeekOrigin.Begin);
-			var neOffset = reader.ReadUInt32();
-			
-			// Seek to NE header
-			stream.Seek(neOffset, SeekOrigin.Begin);
-			var neSignature = reader.ReadUInt16();
-			
-			return neSignature == NE_SIGNATURE;
-		}
-		catch
-		{
-			return false;
-		}
+		return NeParser.NeParser.IsNE(path);
 	}
 	
 	/// <summary>
@@ -124,36 +101,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// <returns>True if the byte array contains a valid NE executable, false otherwise</returns>
 	public static bool IsNE(byte[] bytes)
 	{
-		try
-		{
-			if (bytes.Length < DOS_HEADER_MIN_SIZE)
-			{
-				return false;
-			}
-			
-			// Check DOS MZ signature
-			var mzSignature = BitConverter.ToUInt16(bytes, 0);
-			if (mzSignature != MZ_SIGNATURE)
-			{
-				return false;
-			}
-			
-			// Get offset to NE header
-			var neOffset = BitConverter.ToUInt32(bytes, DOS_HEADER_NE_PE_OFFSET);
-			if (neOffset + 2 > bytes.Length)
-			{
-				return false;
-			}
-			
-			// Check NE signature
-			var neSignature = BitConverter.ToUInt16(bytes, (int)neOffset);
-			return neSignature == NE_SIGNATURE;
-		}
-		catch
-		{
-			// Return false on any parsing errors (out of bounds, etc.)
-			return false;
-		}
+		return NeParser.NeParser.IsNE(bytes);
 	}
 	
 	public LoadedImage Load(string path)
@@ -166,8 +114,9 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	{
 		logger?.LogInformation("[NE Loader] Loading NE executable from {Path}", sourcePath);
 		
-		// Parse NE header
-		var neHeader = ParseNeHeader(bytes);
+		// Parse NE executable using NeParser library
+		var neExe = NeParser.NeParser.Parse(bytes);
+		var neHeader = neExe.Header;
 		
 		logger?.LogInformation("[NE Loader] NE version: {Major}.{Minor}", neHeader.MajorLinkerVersion, neHeader.MinorLinkerVersion);
 		logger?.LogInformation("[NE Loader] Target OS: {TargetOS} (2=Windows)", neHeader.TargetOS);
@@ -177,24 +126,11 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			neHeader.AutoDataSegment, neHeader.InitHeapSize, neHeader.InitStackSize);
 		logger?.LogInformation("[NE Loader] Sector alignment shift: {Shift} (sector size: {Size})",
 			neHeader.SectorAlignmentShift, 1 << neHeader.SectorAlignmentShift);
-		
-		// Parse segment table
-		var segments = ParseSegmentTable(bytes, neHeader);
-		logger?.LogInformation("[NE Loader] Loaded {Count} segments", segments.Length);
-		
-		// Parse entry table
-		var entryPoints = ParseEntryTable(bytes, neHeader);
-		logger?.LogInformation("[NE Loader] Found {Count} entry points", entryPoints.Count);
-		
-		// Parse resident and non-resident name tables
-		var residentNames = ParseResidentNameTable(bytes, neHeader);
-		var nonResidentNames = ParseNonResidentNameTable(bytes, neHeader);
+		logger?.LogInformation("[NE Loader] Loaded {Count} segments", neExe.Segments.Length);
+		logger?.LogInformation("[NE Loader] Found {Count} entry points", neExe.EntryPoints.Count);
 		logger?.LogInformation("[NE Loader] Resident names: {Resident}, Non-resident names: {NonResident}", 
-			residentNames.Count, nonResidentNames.Count);
-		
-		// Parse import module name table
-		var importModules = ParseImportModuleTable(bytes, neHeader);
-		logger?.LogInformation("[NE Loader] Import modules: {Count}", importModules.Count);
+			neExe.ResidentNames.Count, neExe.NonResidentNames.Count);
+		logger?.LogInformation("[NE Loader] Import modules: {Count}", neExe.ImportModules.Count);
 		
 		// Calculate base address for 16-bit segments
 		// NE executables typically use a separate 16-bit address space
@@ -205,7 +141,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		uint currentAddress = baseAddress;
 		var segmentMap = new Dictionary<int, (uint address, uint size)>();
 		
-		foreach (var segment in segments)
+		foreach (var segment in neExe.Segments)
 		{
 			// Calculate memory allocation size
 			var memorySize = segment.MinAllocation > 0 ? Math.Max(segment.Length, segment.MinAllocation) : segment.Length;
@@ -242,12 +178,12 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 		
 		// Process segment relocations
-		ProcessRelocations(bytes, neHeader, segments, segmentMap, importModules);
+		ProcessRelocations(bytes, neHeader, neExe.Segments, segmentMap, neExe.ImportModules);
 		
 		// Calculate entry point address
 		// Entry point is specified as segment:offset in NE format
 		uint entryPointAddress = 0;
-		if (neHeader.EntryPointSegment > 0 && neHeader.EntryPointSegment <= segments.Length &&
+		if (neHeader.EntryPointSegment > 0 && neHeader.EntryPointSegment <= neExe.Segments.Length &&
 			segmentMap.TryGetValue(neHeader.EntryPointSegment, out var entrySegment))
 		{
 			entryPointAddress = entrySegment.address + neHeader.EntryPointOffset;
@@ -256,13 +192,13 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		}
 		
 		// Create import map for Win16 API calls
-		var importMap = BuildImportMap(importModules, residentNames, nonResidentNames, entryPoints);
+		var importMap = BuildImportMap(neExe.ImportModules, neExe.ResidentNames, neExe.NonResidentNames, neExe.EntryPoints);
 		
 		// Build export maps from resident and non-resident name tables
-		var (exportsByName, exportsByOrdinal) = BuildExportMaps(residentNames, nonResidentNames, segmentMap, entryPoints);
+		var (exportsByName, exportsByOrdinal) = BuildExportMaps(neExe.ResidentNames, neExe.NonResidentNames, segmentMap, neExe.EntryPoints);
 		
 		// Create PE sections from NE segments for compatibility
-		var sections = CreateSectionsFromSegments(segments, segmentMap, baseAddress);
+		var sections = CreateSectionsFromSegments(neExe.Segments, segmentMap, baseAddress);
 		
 		uint imageSize = currentAddress - baseAddress;
 		
@@ -732,7 +668,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// <summary>
 	/// Process segment relocations for all segments that have relocation data.
 	/// </summary>
-	private void ProcessRelocations(byte[] bytes, NeHeader header, NeSegment[] segments, 
+	private void ProcessRelocations(byte[] bytes, NeParser.NeHeader header, NeParser.NeSegment[] segments, 
 		Dictionary<int, (uint address, uint size)> segmentMap, List<string> importModules)
 	{
 		foreach (var segment in segments)
@@ -810,7 +746,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// </summary>
 	private void ApplyRelocation(NeRelocation reloc, uint segmentAddress, 
 		Dictionary<int, (uint address, uint size)> segmentMap, List<string> importModules,
-		byte[] bytes, NeHeader header)
+		byte[] bytes, NeParser.NeHeader header)
 	{
 		var targetType = (NeRelocationTargetType)(reloc.TargetFlags & 0x03);
 		var isAdditive = (reloc.TargetFlags & 0x04) != 0;
@@ -993,7 +929,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		List<string> importModules,
 		Dictionary<string, ushort> residentNames,
 		Dictionary<string, ushort> nonResidentNames,
-		Dictionary<ushort, NeEntryPoint> entryPoints)
+		Dictionary<ushort, NeParser.NeEntryPoint> entryPoints)
 	{
 		// For NE executables, imports are handled differently than PE
 		// We'll create synthetic addresses for imported functions similar to PE loader
@@ -1036,7 +972,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		Dictionary<string, ushort> residentNames,
 		Dictionary<string, ushort> nonResidentNames,
 		Dictionary<int, (uint address, uint size)> segmentMap,
-		Dictionary<ushort, NeEntryPoint> entryPoints)
+		Dictionary<ushort, NeParser.NeEntryPoint> entryPoints)
 	{
 		var byName = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
 		var byOrdinal = new Dictionary<uint, uint>();
@@ -1069,7 +1005,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	}
 	
 	private PeSection[] CreateSectionsFromSegments(
-		NeSegment[] segments,
+		NeParser.NeSegment[] segments,
 		Dictionary<int, (uint address, uint size)> segmentMap,
 		uint baseAddress)
 	{

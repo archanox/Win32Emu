@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Win32Emu.NeParser</RootNamespace>
+    <Description>Standalone New Executable (NE/Win16) format parser library</Description>
+  </PropertyGroup>
+
+</Project>

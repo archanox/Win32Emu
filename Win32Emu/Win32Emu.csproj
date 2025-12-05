@@ -56,6 +56,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Win32Emu.Generators\Win32Emu.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <ProjectReference Include="..\Win32Emu.Rtl\Win32Emu.Rtl.csproj" />
+    <ProjectReference Include="..\Win32Emu.NeParser\Win32Emu.NeParser.csproj" />
     <ProjectReference Include="..\CHDSharp\CHDSharpLib.csproj" />
   </ItemGroup>
 
