@@ -8,9 +8,9 @@
 <PageTitle>Win32Emu Executable Analyzer</PageTitle>
 
 <div class="container">
-	<h1>🔍 Win32Emu Compatibility Analyzer</h1>
+	<h1>🔍 Win32Emu Executable Analyzer</h1>
 	<p class="subtitle">Upload a Windows executable (.exe or .dll) to check compatibility with Win32Emu</p>
-	<p class="format-info">Supports both PE32 (Win32 32-bit) and NE (Win16) formats</p>
+	<p class="format-info">Supports PE32 (Win32 32-bit), PE32+ (Win64), and NE (Win16) formats</p>
 
 	<div class="upload-section">
 		<InputFile OnChange="HandleFileSelected" accept=".exe,.dll" class="file-input" />
@@ -57,6 +57,89 @@
 					</tr>
 				</table>
 			</div>
+
+			@if (analysisResult.NeHeader != null)
+			{
+				<div class="file-info">
+					<h3>📋 NE Header Details</h3>
+					<table>
+						<tr>
+							<td><strong>Linker Version:</strong></td>
+							<td>@analysisResult.NeHeader.LinkerVersion</td>
+						</tr>
+						<tr>
+							<td><strong>Target OS:</strong></td>
+							<td>@analysisResult.NeHeader.TargetOsName</td>
+						</tr>
+						<tr>
+							<td><strong>Expected Windows Version:</strong></td>
+							<td>@analysisResult.NeHeader.ExpectedWindowsVersion</td>
+						</tr>
+						<tr>
+							<td><strong>DGroup Type:</strong></td>
+							<td>@analysisResult.NeHeader.DGroupType</td>
+						</tr>
+						<tr>
+							<td><strong>Entry Point (CS:IP):</strong></td>
+							<td>@analysisResult.NeHeader.EntryPointFormatted</td>
+						</tr>
+						<tr>
+							<td><strong>Initial Stack (SS:SP):</strong></td>
+							<td>@analysisResult.NeHeader.InitialStackFormatted</td>
+						</tr>
+						<tr>
+							<td><strong>Segment Count:</strong></td>
+							<td>@analysisResult.NeHeader.SegmentCount</td>
+						</tr>
+						<tr>
+							<td><strong>Module Reference Count:</strong></td>
+							<td>@analysisResult.NeHeader.ModuleReferenceCount</td>
+						</tr>
+						<tr>
+							<td><strong>Initial Heap Size:</strong></td>
+							<td>@analysisResult.NeHeader.InitialHeapSize bytes</td>
+						</tr>
+						<tr>
+							<td><strong>Initial Stack Size:</strong></td>
+							<td>@analysisResult.NeHeader.InitialStackSize bytes</td>
+						</tr>
+						<tr>
+							<td><strong>Auto Data Segment:</strong></td>
+							<td>@analysisResult.NeHeader.AutoDataSegmentIndex</td>
+						</tr>
+						<tr>
+							<td><strong>File CRC:</strong></td>
+							<td>0x@analysisResult.NeHeader.FileCrc.ToString("X8")</td>
+						</tr>
+						<tr>
+							<td><strong>File Alignment Shift:</strong></td>
+							<td>@analysisResult.NeHeader.FileAlignmentShiftCount (sector size: @(analysisResult.NeHeader.FileAlignmentShiftCount == 0 ? 512 : (1 << analysisResult.NeHeader.FileAlignmentShiftCount)) bytes)</td>
+						</tr>
+						<tr>
+							<td><strong>Resource Entry Count:</strong></td>
+							<td>@analysisResult.NeHeader.ResourceEntryCount</td>
+						</tr>
+						<tr>
+							<td><strong>Moveable Entry Points:</strong></td>
+							<td>@analysisResult.NeHeader.MoveableEntryPointCount</td>
+						</tr>
+						@if (analysisResult.NeHeader.ProgramFlagsList.Any())
+						{
+							<tr>
+								<td><strong>Program Flags:</strong></td>
+								<td>@string.Join(", ", analysisResult.NeHeader.ProgramFlagsList)</td>
+							</tr>
+						}
+						@if (analysisResult.NeHeader.ApplicationFlagsList.Any())
+						{
+							<tr>
+								<td><strong>Application Flags:</strong></td>
+								<td>@string.Join(", ", analysisResult.NeHeader.ApplicationFlagsList)</td>
+							</tr>
+						}
+					</table>
+				</div>
+			}
 
 			<div class="compatibility-verdict @GetVerdictClass()">
 				<h3>🎯 Compatibility Verdict</h3>
@@ -542,6 +625,9 @@
 
 		try
 		{
+			// Parse NE header information
+			analysisResult.NeHeader = ParseNeHeader(fileBytes);
+			
 			// Parse NE header and imports
 			var neImports = ParseNeImports(fileBytes);
 			
@@ -658,6 +744,70 @@
 			analysisResult.Status.StubFunctions = 0;
 			analysisResult.Status.MissingFunctions = 0;
 			analysisResult.Status.ImplementationPercentage = 0;
+		}
+	}
+
+	/// <summary>
+	/// Parses the NE (New Executable) header to extract all header fields.
+	/// </summary>
+	/// <param name="fileBytes">The raw bytes of the NE executable</param>
+	/// <returns>NeHeaderInfo object with parsed header data, or null if parsing fails</returns>
+	private NeHeaderInfo? ParseNeHeader(byte[] fileBytes)
+	{
+		try
+		{
+			// Get offset to NE header from DOS header
+			if (fileBytes.Length < 0x40)
+				return null;
+
+			var neHeaderOffset = BitConverter.ToUInt32(fileBytes, 0x3C);
+			if (neHeaderOffset + 0x40 > fileBytes.Length) // Need at least 64 bytes for full NE header
+				return null;
+
+			// Verify NE signature
+			if (fileBytes[neHeaderOffset] != 'N' || fileBytes[neHeaderOffset + 1] != 'E')
+				return null;
+
+			var header = new NeHeaderInfo
+			{
+				LinkerMajorVersion = fileBytes[neHeaderOffset + 0x02],
+				LinkerMinorVersion = fileBytes[neHeaderOffset + 0x03],
+				EntryTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x04),
+				EntryTableLength = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x06),
+				FileCrc = BitConverter.ToUInt32(fileBytes, (int)neHeaderOffset + 0x08),
+				ProgramFlags = fileBytes[neHeaderOffset + 0x0C],
+				ApplicationFlags = fileBytes[neHeaderOffset + 0x0D],
+				AutoDataSegmentIndex = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x0E),
+				InitialHeapSize = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x10),
+				InitialStackSize = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x12),
+				EntryPoint = BitConverter.ToUInt32(fileBytes, (int)neHeaderOffset + 0x14),
+				InitialStack = BitConverter.ToUInt32(fileBytes, (int)neHeaderOffset + 0x18),
+				SegmentCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x1C),
+				ModuleReferenceCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x1E),
+				NonResidentNamesTableSize = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x20),
+				SegmentTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x22),
+				ResourceTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x24),
+				ResidentNamesTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x26),
+				ModuleReferenceTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x28),
+				ImportedNamesTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x2A),
+				NonResidentNamesTableOffset = BitConverter.ToUInt32(fileBytes, (int)neHeaderOffset + 0x2C),
+				MoveableEntryPointCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x30),
+				FileAlignmentShiftCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x32),
+				ResourceEntryCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x34),
+				TargetOperatingSystem = fileBytes[neHeaderOffset + 0x36],
+				Os2Flags = fileBytes[neHeaderOffset + 0x37],
+				ReturnThunksOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x38),
+				SegmentReferenceThunksOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x3A),
+				MinimumCodeSwapSize = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x3C),
+				ExpectedWindowsMinorVersion = fileBytes[neHeaderOffset + 0x3E],
+				ExpectedWindowsMajorVersion = fileBytes[neHeaderOffset + 0x3F]
+			};
+
+			return header;
+		}
+		catch
+		{
+			return null;
 		}
 	}
 
@@ -916,6 +1066,7 @@
 		public bool Is64Bit { get; set; }
 		public OverallStatus Status { get; set; } = new();
 		public List<DllDependency> Dependencies { get; set; } = new();
+		public NeHeaderInfo? NeHeader { get; set; }
 	}
 
 	public class OverallStatus
@@ -974,5 +1125,93 @@
 	{
 		public string Name { get; set; } = "";
 		public List<string> Functions { get; set; } = new();
+	}
+
+	public class NeHeaderInfo
+	{
+		public byte LinkerMajorVersion { get; set; }
+		public byte LinkerMinorVersion { get; set; }
+		public ushort EntryTableOffset { get; set; }
+		public ushort EntryTableLength { get; set; }
+		public uint FileCrc { get; set; }
+		public byte ProgramFlags { get; set; }
+		public byte ApplicationFlags { get; set; }
+		public ushort AutoDataSegmentIndex { get; set; }
+		public ushort InitialHeapSize { get; set; }
+		public ushort InitialStackSize { get; set; }
+		public uint EntryPoint { get; set; } // CS:IP
+		public uint InitialStack { get; set; } // SS:SP
+		public ushort SegmentCount { get; set; }
+		public ushort ModuleReferenceCount { get; set; }
+		public ushort NonResidentNamesTableSize { get; set; }
+		public ushort SegmentTableOffset { get; set; }
+		public ushort ResourceTableOffset { get; set; }
+		public ushort ResidentNamesTableOffset { get; set; }
+		public ushort ModuleReferenceTableOffset { get; set; }
+		public ushort ImportedNamesTableOffset { get; set; }
+		public uint NonResidentNamesTableOffset { get; set; }
+		public ushort MoveableEntryPointCount { get; set; }
+		public ushort FileAlignmentShiftCount { get; set; }
+		public ushort ResourceEntryCount { get; set; }
+		public byte TargetOperatingSystem { get; set; }
+		public byte Os2Flags { get; set; }
+		public ushort ReturnThunksOffset { get; set; }
+		public ushort SegmentReferenceThunksOffset { get; set; }
+		public ushort MinimumCodeSwapSize { get; set; }
+		public byte ExpectedWindowsMinorVersion { get; set; }
+		public byte ExpectedWindowsMajorVersion { get; set; }
+
+		public string LinkerVersion => $"{LinkerMajorVersion}.{LinkerMinorVersion}";
+		public string ExpectedWindowsVersion => $"{ExpectedWindowsMajorVersion}.{ExpectedWindowsMinorVersion}";
+		public string EntryPointFormatted => $"{(EntryPoint >> 16):X4}:{(EntryPoint & 0xFFFF):X4}";
+		public string InitialStackFormatted => $"{(InitialStack >> 16):X4}:{(InitialStack & 0xFFFF):X4}";
+		public string TargetOsName => TargetOperatingSystem switch
+		{
+			0x00 => "Unknown",
+			0x01 => "OS/2",
+			0x02 => "Windows",
+			0x03 => "European MS-DOS 4.x",
+			0x04 => "Windows/386",
+			0x05 => "BOSS (Borland Operating System Services)",
+			_ => $"Unknown (0x{TargetOperatingSystem:X2})"
+		};
+		public string DGroupType => (ProgramFlags & 0x03) switch
+		{
+			0 => "None",
+			1 => "Single Data",
+			2 => "Multiple Data",
+			3 => "Reserved",
+			_ => "Unknown"
+		};
+		public List<string> ProgramFlagsList
+		{
+			get
+			{
+				var flags = new List<string>();
+				if ((ProgramFlags & 0x04) != 0) flags.Add("Global initialization");
+				if ((ProgramFlags & 0x08) != 0) flags.Add("Protected mode only");
+				if ((ProgramFlags & 0x10) != 0) flags.Add("8086 instructions");
+				if ((ProgramFlags & 0x20) != 0) flags.Add("80286 instructions");
+				if ((ProgramFlags & 0x40) != 0) flags.Add("80386 instructions");
+				if ((ProgramFlags & 0x80) != 0) flags.Add("8087 instructions");
+				return flags;
+			}
+		}
+		public List<string> ApplicationFlagsList
+		{
+			get
+			{
+				var flags = new List<string>();
+				var appType = ApplicationFlags & 0x03;
+				if (appType == 0x01) flags.Add("Full screen (not aware of Windows/P.M. API)");
+				else if (appType == 0x02) flags.Add("Compatible with Windows/P.M. API");
+				else if (appType == 0x03) flags.Add("Uses Windows/P.M. API");
+				
+				if ((ApplicationFlags & 0x08) != 0) flags.Add("First segment has code that loads application");
+				if ((ApplicationFlags & 0x20) != 0) flags.Add("Errors in image/executable");
+				if ((ApplicationFlags & 0x80) != 0) flags.Add("Library module");
+				return flags;
+			}
+		}
 	}
 }
