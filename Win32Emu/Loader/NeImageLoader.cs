@@ -669,33 +669,74 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				continue; // Skip null entries but continue with remaining modules
 			}
 			
+			// NE format specification: Module reference table entries contain offsets into the imported names table.
+			// According to Microsoft documentation, these offsets are relative to the start of the imported names table.
+			// Try to read the module name using this standard interpretation.
 			var actualOffset = importNamesOffset + nameOffset;
-			if (actualOffset >= bytes.Length || actualOffset + 1 > bytes.Length)
+			var moduleName = TryReadModuleName(bytes, actualOffset, i);
+			
+			// If standard interpretation failed, try alternative: offset might be relative to NE header base
+			// This handles some non-standard or older NE files
+			if (moduleName == null)
 			{
-				logger?.LogWarning("[NE Loader] Module name offset {Offset} (entry {Index}) is out of bounds", actualOffset, i);
-				continue; // Skip invalid entries but continue with remaining modules
+				actualOffset = header.BaseOffset + nameOffset;
+				moduleName = TryReadModuleName(bytes, actualOffset, i);
 			}
 			
-			var nameLength = bytes[actualOffset];
-			if (nameLength == 0)
+			// If both interpretations failed, skip this entry
+			if (moduleName == null)
 			{
-				logger?.LogWarning("[NE Loader] Module name at offset {Offset} (entry {Index}) has zero length", actualOffset, i);
-				continue; // Skip empty names but continue with remaining modules
+				continue;
 			}
 			
-			if (actualOffset + nameLength + 1 > bytes.Length)
-			{
-				logger?.LogWarning("[NE Loader] Module name at offset {Offset} (entry {Index}) extends beyond file bounds (length {Length})", 
-					actualOffset, i, nameLength);
-				continue; // Skip truncated names but continue with remaining modules
-			}
-			
-			var moduleName = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
 			modules.Add(moduleName);
-			logger?.LogDebug("[NE Loader] Parsed import module {Index}: {ModuleName}", i, moduleName);
+			logger?.LogDebug("[NE Loader] Parsed import module {Index}: {ModuleName}", i + 1, moduleName);
 		}
 		
 		return modules;
+	}
+	
+	/// <summary>
+	/// Attempts to read a Pascal-style module name (length-prefixed string) from the specified offset.
+	/// Returns null if the offset is invalid, the name is empty, or the name extends beyond file bounds.
+	/// </summary>
+	private string? TryReadModuleName(byte[] bytes, int actualOffset, int entryIndex)
+	{
+		// Validate offset is within bounds
+		if (actualOffset < 0 || actualOffset >= bytes.Length || actualOffset + 1 > bytes.Length)
+		{
+			return null;
+		}
+		
+		// Read length byte
+		var nameLength = bytes[actualOffset];
+		if (nameLength == 0)
+		{
+			return null;
+		}
+		
+		// Validate name doesn't extend beyond file
+		if (actualOffset + nameLength + 1 > bytes.Length)
+		{
+			return null;
+		}
+		
+		// Validate that the name contains printable ASCII characters (basic sanity check)
+		// Module names should be alphanumeric with possible underscores, hyphens, or periods
+		for (var j = 1; j <= nameLength; j++)
+		{
+			var ch = bytes[actualOffset + j];
+			// Allow A-Z, a-z, 0-9, underscore, hyphen, period, and basic punctuation
+			if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || 
+			      (ch >= '0' && ch <= '9') || ch == '_' || ch == '-' || ch == '.' || ch == ' '))
+			{
+				// Invalid character found - this is likely not a valid module name
+				return null;
+			}
+		}
+		
+		// Read and return the module name
+		return Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
 	}
 	
 	/// <summary>
