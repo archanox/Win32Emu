@@ -33,6 +33,7 @@ namespace Win32Emu.NeParser
 	private const byte NE_ENTRY_MOVABLE = 0xFF;
 	private const int NE_ENTRY_MOVABLE_SIZE = 6;
 	private const int NE_ENTRY_FIXED_SIZE = 3;
+	private const int NE_IMPORTED_ENTRY_SIZE = 6;  // Size of an imported entry in the entry table
 	
 	// NE name table entry suffix size (name length byte + 2-byte ordinal)
 	private const int NE_NAME_ENTRY_SUFFIX_SIZE = 3;
@@ -614,14 +615,14 @@ namespace Win32Emu.NeParser
 					// These are imported ordinals
 					for (int i = 0; i < count; i++)
 					{
-						if (currentOffset + NE_ENTRY_MOVABLE_SIZE * 2 > fileBytes.Length)
+						if (currentOffset + NE_IMPORTED_ENTRY_SIZE > fileBytes.Length)
 							break;
 
 						// Read import entry (6 bytes)
 						var moduleIndex = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 1);
 						var importOrdinal = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 3);
 
-						currentOffset += NE_ENTRY_MOVABLE_SIZE * 2;
+						currentOffset += NE_IMPORTED_ENTRY_SIZE;
 
 						// Module index is 1-based
 						if (moduleIndex > 0 && moduleIndex <= importModules.Count)
