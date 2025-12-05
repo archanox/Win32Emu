@@ -4,14 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace Win32Emu.NeParser;
-
-/// <summary>
-/// Parser for NE (New Executable) format files used by Win16 applications.
-/// This is a standalone library with no dependencies on the emulator.
-/// </summary>
-public class NeParser
+namespace Win32Emu.NeParser
 {
+	/// <summary>
+	/// Parser for NE (New Executable) format files used by Win16 applications.
+	/// This is a standalone library with no dependencies on the emulator.
+	/// </summary>
+	public class NeParser
+	{
 	// NE header signature "NE" (0x454E)
 	private const ushort NE_SIGNATURE = 0x454E;
 	
@@ -39,6 +39,14 @@ public class NeParser
 	
 	// NE module reference entry size
 	private const int NE_MODULE_REF_ENTRY_SIZE = 2;
+	
+	// NE header field offsets
+	private const int NE_OFFSET_ENTRY_TABLE = 0x04;
+	private const int NE_OFFSET_ENTRY_TABLE_LENGTH = 0x06;
+	private const int NE_OFFSET_SEGMENT_COUNT = 0x1E;
+	private const int NE_OFFSET_MODULE_REF_COUNT = 0x20;
+	private const int NE_OFFSET_MODULE_REF_TABLE = 0x2A;
+	private const int NE_OFFSET_IMPORTED_NAMES_TABLE = 0x2C;
 	
 	/// <summary>
 	/// Validates if a file is a valid NE (Win16) executable by checking the NE signature.
@@ -557,79 +565,31 @@ public class NeParser
 	/// </summary>
 	private static Dictionary<string, List<NeImportedFunction>> ParseNeImports(byte[] fileBytes, NeHeader header, List<string> importModules)
 	{
-		// NE format constants
-		const int MinimumNeHeaderSize = 64;
-		const int ModuleRefEntrySize = 2;
-		const int ImportedEntrySize = 6;
+		// NE format constants for entry table parsing
 		const byte ImportedSegmentIndicator = 0xFF;
 		const byte FixedSegmentIndicator = 0xFE;
 		const ushort OrdinalHighBitMask = 0x8000;
 		const ushort OrdinalValueMask = 0x7FFF;
-		const uint FixedEntrySize = 6u;
-		const uint MoveableEntrySize = 3u;
 
 		var importsByModule = new Dictionary<string, List<NeImportedFunction>>(StringComparer.OrdinalIgnoreCase);
 
+		if (fileBytes == null || header == null || importModules == null || importModules.Count == 0)
+		{
+			return importsByModule;
+		}
+
 		try
 		{
-			// Get offset to NE header from DOS header
-			if (fileBytes.Length < 0x40)
-				return importsByModule;
-
-			var neHeaderOffset = BitConverter.ToUInt32(fileBytes, 0x3C);
-			if (neHeaderOffset + MinimumNeHeaderSize > fileBytes.Length)
-				return importsByModule;
-
-			// Verify NE signature
-			if (fileBytes[neHeaderOffset] != 'N' || fileBytes[neHeaderOffset + 1] != 'E')
-				return importsByModule;
-
-			var entryTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x04);
-			var entryTableLength = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x06);
-			var moduleRefCount = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x1E);
-			var moduleRefTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x28);
-			var importedNamesTableOffset = BitConverter.ToUInt16(fileBytes, (int)neHeaderOffset + 0x2A);
-
-			// Read module names first
-			var moduleNames = new List<string>();
-			var absModuleRefTableOffset = neHeaderOffset + moduleRefTableOffset;
-			var absImportedNamesTableOffset = neHeaderOffset + importedNamesTableOffset;
-
-			for (int i = 0; i < moduleRefCount; i++)
-			{
-				if (absModuleRefTableOffset + (i * ModuleRefEntrySize) + 2 > fileBytes.Length)
-					break;
-
-				var nameOffset = BitConverter.ToUInt16(fileBytes, (int)absModuleRefTableOffset + (i * ModuleRefEntrySize));
-				var absNameOffset = absImportedNamesTableOffset + nameOffset;
-
-				if (absNameOffset >= fileBytes.Length)
-				{
-					moduleNames.Add($"UNKNOWN_MODULE_{i + 1}");
-					continue;
-				}
-
-				var nameLength = fileBytes[absNameOffset];
-				if (nameLength == 0 || absNameOffset + 1 + nameLength > fileBytes.Length)
-				{
-					moduleNames.Add($"UNKNOWN_MODULE_{i + 1}");
-					continue;
-				}
-
-				var moduleName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)absNameOffset + 1, nameLength);
-				if (string.IsNullOrWhiteSpace(moduleName))
-				{
-					moduleNames.Add($"UNKNOWN_MODULE_{i + 1}");
-				}
-				else
-				{
-					moduleNames.Add(moduleName);
-				}
-			}
-
+			// Use values from the parsed header instead of re-parsing
+			var neHeaderOffset = (uint)header.BaseOffset;
+			var entryTableOffset = header.EntryTableOffset;
+			var entryTableLength = header.EntryTableLength;
+			var importedNamesTableOffset = header.ImportedNamesTableOffset;
+			
 			// Parse Entry Table to find imported functions
 			var absEntryTableOffset = neHeaderOffset + entryTableOffset;
 			var entryTableEnd = absEntryTableOffset + entryTableLength;
+			var absImportedNamesTableOffset = neHeaderOffset + importedNamesTableOffset;
 			var currentOffset = absEntryTableOffset;
 
 			while (currentOffset < entryTableEnd && currentOffset < fileBytes.Length)
@@ -654,19 +614,19 @@ public class NeParser
 					// These are imported ordinals
 					for (int i = 0; i < count; i++)
 					{
-						if (currentOffset + ImportedEntrySize > fileBytes.Length)
+						if (currentOffset + NE_ENTRY_MOVABLE_SIZE * 2 > fileBytes.Length)
 							break;
 
 						// Read import entry (6 bytes)
 						var moduleIndex = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 1);
 						var importOrdinal = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 3);
 
-						currentOffset += ImportedEntrySize;
+						currentOffset += NE_ENTRY_MOVABLE_SIZE * 2;
 
 						// Module index is 1-based
-						if (moduleIndex > 0 && moduleIndex <= moduleNames.Count)
+						if (moduleIndex > 0 && moduleIndex <= importModules.Count)
 						{
-							var moduleName = moduleNames[moduleIndex - 1];
+							var moduleName = importModules[moduleIndex - 1];
 
 							if (!importsByModule.ContainsKey(moduleName))
 								importsByModule[moduleName] = new List<NeImportedFunction>();
@@ -681,7 +641,7 @@ public class NeParser
 									var funcNameLength = fileBytes[functionNameOffset];
 									if (funcNameLength > 0 && functionNameOffset + 1 + funcNameLength <= fileBytes.Length)
 									{
-										var functionName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)functionNameOffset + 1, funcNameLength);
+										var functionName = Encoding.ASCII.GetString(fileBytes, (int)functionNameOffset + 1, funcNameLength);
 										if (!string.IsNullOrWhiteSpace(functionName))
 										{
 											importsByModule[moduleName].Add(new NeImportedFunction
@@ -710,14 +670,16 @@ public class NeParser
 				else
 				{
 					// Fixed or moveable segment entries - skip them
-					uint entrySize = (segmentIndicator == FixedSegmentIndicator) ? FixedEntrySize : MoveableEntrySize;
+					// Fixed segments use 3 bytes per entry, moveable use 6 bytes
+					uint entrySize = (segmentIndicator == FixedSegmentIndicator) ? (uint)NE_ENTRY_FIXED_SIZE : (uint)NE_ENTRY_MOVABLE_SIZE;
 					currentOffset += count * entrySize;
 				}
 			}
 		}
-		catch (Exception)
+		catch
 		{
-			// If parsing fails, return what we have so far
+			// Return partial results on error - library users can check if result is empty
+			return importsByModule;
 		}
 
 		return importsByModule;
@@ -737,8 +699,9 @@ public class NeParser
 		if (length == 0 || offset + 1 + length > bytes.Length)
 		{
 			return null;
-		}
+			}
 		
 		return Encoding.ASCII.GetString(bytes, offset + 1, length);
 	}
+}
 }

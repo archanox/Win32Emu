@@ -626,13 +626,13 @@
 
 		try
 		{
-			// Parse NE header information
-			analysisResult.NeHeader = ParseNeHeader(fileBytes);
+			// Parse NE executable using NeParser library
+			var neExe = Win32Emu.NeParser.NeParser.Parse(fileBytes);
 			
-			// Parse NE header and imports
-			var neImports = ParseNeImports(fileBytes);
+			// Convert NE header to NeHeaderInfo for UI display
+			analysisResult.NeHeader = ConvertToNeHeaderInfo(neExe.Header);
 			
-			if (neImports.Count == 0)
+			if (neExe.Imports.Count == 0)
 			{
 				analysisResult.Status.Verdict = "EXPERIMENTAL - Win16 NE format detected with no external module dependencies.";
 				analysisResult.Status.TotalDlls = 0;
@@ -648,7 +648,7 @@
 			var win16Modules = GetWin16SupportedModules();
 
 			// Process imported modules and their functions
-			foreach (var moduleImport in neImports)
+			foreach (var moduleImport in neExe.Imports)
 			{
 				var moduleName = moduleImport.Key;
 				var importedFunctions = moduleImport.Value;
@@ -1173,32 +1173,33 @@
 			}
 		}
 	}
+	
+	// Helper method to convert NeParser.NeHeader to NeHeaderInfo for UI display
+	private NeHeaderInfo ConvertToNeHeaderInfo(Win32Emu.NeParser.NeHeader header)
+	{
+		return new NeHeaderInfo
+		{
+			LinkerMajorVersion = header.MajorLinkerVersion,
+			LinkerMinorVersion = header.MinorLinkerVersion,
+			TargetOperatingSystem = header.TargetOS,
+			ExpectedWindowsVersion = header.ExpectedWindowsVersion,
+			DGroupType = header.DGroupType,
+			EntryPointFormatted = header.EntryPointFormatted,
+			InitialStackFormatted = header.InitialStackFormatted,
+			SegmentCount = header.SegmentCount,
+			ModuleReferenceCount = header.ModuleReferenceCount,
+			InitialHeapSize = header.InitHeapSize,
+			InitialStackSize = header.InitStackSize,
+			AutoDataSegmentIndex = header.AutoDataSegment,
+			FileCrc = header.CrcChecksum,
+			FileAlignmentShiftCount = header.SectorAlignmentShift,
+			ResourceEntryCount = header.ResourceSegmentCount,
+			MoveableEntryPointCount = header.MovableEntryCount,
+			ProgramFlagsList = header.ProgramFlagsList,
+			ApplicationFlagsList = header.ApplicationFlagsList,
+			TargetOsName = header.TargetOsName,
+			LinkerVersion = header.LinkerVersion
+		};
+	}
 }
 
-// Helper method to convert NeParser.NeHeader to NeHeaderInfo for UI display
-private NeHeaderInfo ConvertToNeHeaderInfo(Win32Emu.NeParser.NeHeader header)
-{
-return new NeHeaderInfo
-{
-LinkerMajorVersion = header.MajorLinkerVersion,
-LinkerMinorVersion = header.MinorLinkerVersion,
-TargetOperatingSystem = header.TargetOS,
-ExpectedWindowsVersion = header.ExpectedWindowsVersion,
-DGroupType = header.DGroupType,
-EntryPointFormatted = header.EntryPointFormatted,
-InitialStackFormatted = header.InitialStackFormatted,
-SegmentCount = header.SegmentCount,
-ModuleReferenceCount = header.ModuleReferenceCount,
-InitialHeapSize = header.InitHeapSize,
-InitialStackSize = header.InitStackSize,
-AutoDataSegmentIndex = header.AutoDataSegment,
-FileCrc = header.CrcChecksum,
-FileAlignmentShiftCount = header.SectorAlignmentShift,
-ResourceEntryCount = header.ResourceSegmentCount,
-MoveableEntryPointCount = header.MovableEntryCount,
-ProgramFlagsList = header.ProgramFlagsList,
-ApplicationFlagsList = header.ApplicationFlagsList,
-TargetOsName = header.TargetOsName,
-LinkerVersion = header.LinkerVersion
-};
-}
