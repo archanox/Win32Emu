@@ -734,6 +734,27 @@
 					continue;
 				}
 
+				// Validate that the name contains printable ASCII characters (basic sanity check)
+				// Module names should be alphanumeric with possible underscores, hyphens, periods, or spaces
+				var isValidName = true;
+				for (int j = 1; j <= nameLength; j++)
+				{
+					var ch = (char)fileBytes[(int)absNameOffset + j];
+					// Allow alphanumeric characters, underscore, hyphen, period, and space
+					if (!char.IsLetterOrDigit(ch) && ch != '_' && ch != '-' && ch != '.' && ch != ' ')
+					{
+						// Invalid character found - this is likely not a valid module name
+						isValidName = false;
+						break;
+					}
+				}
+
+				if (!isValidName)
+				{
+					moduleNames.Add($"UNKNOWN_MODULE_{i + 1}");
+					continue;
+				}
+
 				var moduleName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)absNameOffset + 1, nameLength);
 				moduleNames.Add(string.IsNullOrWhiteSpace(moduleName) ? $"UNKNOWN_MODULE_{i + 1}" : moduleName);
 			}
@@ -799,12 +820,31 @@
 									var funcNameLength = fileBytes[functionNameOffset];
 									if (funcNameLength > 0 && functionNameOffset + 1 + funcNameLength <= fileBytes.Length)
 									{
-										var functionName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)functionNameOffset + 1, funcNameLength);
-										importsByModule[moduleName].Add(new NeImportedFunction
+										// Validate function name characters
+										var isValidFunctionName = true;
+										for (int j = 1; j <= funcNameLength; j++)
 										{
-											Name = functionName,
-											ImportedByOrdinal = false
-										});
+											var ch = (char)fileBytes[(int)functionNameOffset + j];
+											// Allow alphanumeric characters, underscore, hyphen, period, space, and @
+											if (!char.IsLetterOrDigit(ch) && ch != '_' && ch != '-' && ch != '.' && ch != ' ' && ch != '@')
+											{
+												isValidFunctionName = false;
+												break;
+											}
+										}
+
+										if (isValidFunctionName)
+										{
+											var functionName = System.Text.Encoding.ASCII.GetString(fileBytes, (int)functionNameOffset + 1, funcNameLength);
+											if (!string.IsNullOrWhiteSpace(functionName))
+											{
+												importsByModule[moduleName].Add(new NeImportedFunction
+												{
+													Name = functionName,
+													ImportedByOrdinal = false
+												});
+											}
+										}
 									}
 								}
 							}
