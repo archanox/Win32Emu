@@ -16,19 +16,6 @@ namespace Win32Emu.Loader;
 /// </summary>
 public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 {
-	// NE header signature "NE" (0x454E)
-	private const ushort NE_SIGNATURE = 0x454E;
-	
-	// MZ DOS header signature "MZ" (0x5A4D in little-endian)
-	private const ushort MZ_SIGNATURE = 0x5A4D;
-	
-	// DOS header constants
-	private const int DOS_HEADER_MIN_SIZE = 0x40;
-	private const int DOS_HEADER_NE_PE_OFFSET = 0x3C;
-	
-	// NE header size (minimum required to read all header fields)
-	private const int NE_HEADER_MIN_SIZE = 64;
-	
 	// Base address for NE executables (64KB to avoid NULL pointer conflicts)
 	private const uint NE_BASE_ADDRESS = 0x00010000;
 	
@@ -39,18 +26,9 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	private const uint PARAGRAPH_MASK = 0xF;
 	private const uint PARAGRAPH_ALIGN = 0xFFFFFFF0;
 	
-	// NE segment flags
+	// NE segment flags (for CreateSectionsFromSegments)
 	private const ushort NE_SEGMENT_DATA = 0x0001;
 	private const ushort NE_SEGMENT_READONLY = 0x0008;
-	
-	// NE entry table constants
-	private const byte NE_ENTRY_UNUSED = 0x00;
-	private const byte NE_ENTRY_MOVABLE = 0xFF;
-	private const int NE_ENTRY_MOVABLE_SIZE = 6;
-	private const int NE_ENTRY_FIXED_SIZE = 3;
-	
-	// NE segment table entry size
-	private const int NE_SEGMENT_ENTRY_SIZE = 8;
 	
 	// NE relocation entry size
 	private const int NE_RELOCATION_ENTRY_SIZE = 8;
@@ -60,12 +38,6 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	
 	// Maximum reasonable relocations fallback (used when segment length is 0)
 	private const int MAX_REASONABLE_RELOCATIONS_FALLBACK = 1000;
-	
-	// NE name table entry suffix size (name length byte + 2-byte ordinal)
-	private const int NE_NAME_ENTRY_SUFFIX_SIZE = 3;
-	
-	// NE module reference entry size
-	private const int NE_MODULE_REF_ENTRY_SIZE = 2;
 	
 	// PE subsystem values
 	private const ushort PE_SUBSYSTEM_CUI = 2;
