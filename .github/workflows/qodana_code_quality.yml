@@ -28,7 +28,7 @@ jobs:
       - name: 'Pull Qodana Docker Image'
         run: docker pull jetbrains/qodana-cdnet:latest
       - name: 'Qodana Scan'
-        uses: JetBrains/qodana-action@v2025.2.2
+        uses: JetBrains/qodana-action@v2025.2.3
         with:
           pr-mode: true
           args: --solution,"Win32Emu.slnx"
