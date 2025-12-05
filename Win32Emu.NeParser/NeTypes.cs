@@ -265,3 +265,40 @@ public enum NeTargetOS : byte
 	/// <summary>Borland Operating System Services</summary>
 	BOSS = 5,
 }
+
+/// <summary>
+/// NE relocation record.
+/// </summary>
+public class NeRelocation
+{
+	public byte SourceType { get; init; }      // Source type (fixup type)
+	public byte TargetFlags { get; init; }     // Target flags and type
+	public ushort SourceOffset { get; init; }  // Offset within segment to fixup
+	public ushort TargetSegment { get; init; } // Target segment (or module index)
+	public ushort TargetOffset { get; init; }  // Target offset (or ordinal/name offset)
+}
+
+/// <summary>
+/// NE relocation source types.
+/// </summary>
+public enum NeRelocationSourceType : byte
+{
+	LoByte = 0,         // Low byte fixup
+	Selector = 2,       // 16-bit selector fixup
+	Pointer32 = 3,      // 32-bit far pointer fixup (seg:off)
+	Offset16 = 5,       // 16-bit offset fixup
+	Pointer48 = 11,     // 48-bit far pointer fixup (seg:off32)
+	Offset32 = 13,      // 32-bit offset fixup
+}
+
+/// <summary>
+/// NE relocation target types.
+/// </summary>
+public enum NeRelocationTargetType : byte
+{
+	InternalRef = 0,    // Internal reference (within this module)
+	ImportOrdinal = 1,  // Import by ordinal
+	ImportName = 2,     // Import by name
+	OsFixup = 3,        // Operating system fixup
+	Additive = 4,       // Additive fixup (add, don't replace)
+}
