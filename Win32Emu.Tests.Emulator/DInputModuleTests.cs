@@ -4,6 +4,7 @@ using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
 using Win32Emu.Gui.Backends;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -11,6 +12,52 @@ namespace Win32Emu.Tests.Emulator;
 
 public class DInputModuleTests
 {
+	/// <summary>
+	/// Mock backend factory for testing
+	/// </summary>
+	private class MockBackendFactory : IBackendFactory
+	{
+		public IRenderingBackend CreateRenderingBackend(ILogger logger) => throw new NotImplementedException();
+		public IRenderingBackend CreateRenderingBackendWithHost(ILogger logger, IEmulatorHost? host) => throw new NotImplementedException();
+		public IAudioBackend CreateAudioBackend(ILogger logger) => throw new NotImplementedException();
+		public IInputBackend CreateInputBackend(ILogger logger) => new MockInputBackend();
+	}
+
+	/// <summary>
+	/// Mock input backend for testing
+	/// </summary>
+	private class MockInputBackend : IInputBackend
+	{
+		public bool IsInitialized { get; private set; }
+		public int DeviceCount => 0;
+		public event EventHandler<UIEventArgs>? UIEvent;
+
+		public Task<bool> InitializeAsync()
+		{
+			IsInitialized = true;
+			return Task.FromResult(true);
+		}
+
+		public List<(uint DeviceId, string Name, IInputBackend.DeviceType Type)> GetDevices()
+		{
+			return new List<(uint, string, IInputBackend.DeviceType)>
+			{
+				(1, "Mock Keyboard", IInputBackend.DeviceType.Keyboard),
+				(2, "Mock Mouse", IInputBackend.DeviceType.Mouse)
+			};
+		}
+
+		public uint OpenDevice(uint deviceId, IInputBackend.DeviceType type) => deviceId;
+		public bool CloseDevice(uint deviceId) => true;
+		public bool PollDevice(uint deviceId, out IInputBackend.InputState? state)
+		{
+			state = new IInputBackend.InputState();
+			return true;
+		}
+		public void ProcessEvents() { }
+		public void Dispose() { }
+	}
+
     [Fact]
     public async Task DirectInputCreateA_ShouldReturnSuccess()
     {
@@ -50,7 +97,8 @@ public class DInputModuleTests
         // Arrange
         var vm = new VirtualMemory(0x10000000);
         var cpu = new IcedCpu(vm);
-        var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
+        var backendFactory = new MockBackendFactory();
+        var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
         var dinputModule = new DInputModule(env, 0x00400000);
 
         var outputPtr = 0x001FF000u;
@@ -106,7 +154,8 @@ public class DInputModuleTests
         // Arrange
         var vm = new VirtualMemory(0x10000000);
         var cpu = new IcedCpu(vm);
-        var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
+        var backendFactory = new MockBackendFactory();
+        var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
         var dinputModule = new DInputModule(env, 0x00400000);
 
         var outputPtr = 0x001FF000u;
