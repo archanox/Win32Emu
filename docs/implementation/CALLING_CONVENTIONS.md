@@ -165,25 +165,66 @@ When reading parameters from the stack:
 - **Stdcall/Cdecl/Fastcall/Thiscall:** Read parameters in declaration order (index 0, 1, 2...)
 - **Pascal:** Read parameters in REVERSE order due to left-to-right push
 
-Example in code:
-```csharp
-// Stdcall: params pushed right-to-left, read in declaration order
-var param1 = stackArgs.UInt32(0);  // First parameter
-var param2 = stackArgs.UInt32(1);  // Second parameter
+#### StackArgs (Stdcall/Cdecl)
 
-// Pascal: params pushed left-to-right, need to reverse stack offsets
-var param1 = stackArgs.UInt32(count - 1);  // First parameter (last on stack)
-var param2 = stackArgs.UInt32(count - 2);  // Second parameter
+For Win32 functions using stdcall or cdecl:
+
+```csharp
+var args = new StackArgs(cpu, memory);
+var param1 = args.UInt32(0);  // First parameter at ESP+4
+var param2 = args.UInt32(1);  // Second parameter at ESP+8
+```
+
+#### PascalStackArgs (Win16)
+
+For Win16 functions using Pascal calling convention:
+
+```csharp
+// Must provide parameter count for correct offset calculation
+var args = new PascalStackArgs(cpu, memory, paramCount: 3);
+var param1 = args.UInt32(0);  // First parameter at ESP+(3*4)=ESP+12
+var param2 = args.UInt32(1);  // Second parameter at ESP+(2*4)=ESP+8
+var param3 = args.UInt32(2);  // Third parameter at ESP+(1*4)=ESP+4
+```
+
+The `PascalStackArgs` wrapper automatically reverses the index mapping, so you can still use logical parameter indices (0, 1, 2...) and it will read from the correct stack offsets.
+
+**Win16 Thunking Example:**
+
+```csharp
+// In Win16 module forwarding to Win32 implementation
+public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+{
+    switch (export.ToUpperInvariant())
+    {
+        case "GLOBALALLOC":
+            // Win16 GlobalAlloc has 2 parameters
+            // Use PascalStackArgs to handle reversed parameter order
+            var args = new PascalStackArgs(cpu, memory, paramCount: 2);
+            
+            // Now can forward to Win32 which will read correct parameter order
+            return Win32Module.TryInvokeUnsafe(export, cpu, memory, out returnValue);
+    }
+}
 ```
 
 ## Testing
 
-Comprehensive tests are provided in `Win32Emu.Tests.User32/CallingConventionTests.cs`:
+Comprehensive tests validate calling convention implementations:
+
+### CallingConventionTests.cs
 
 - Enum value existence checks
 - Documentation validation
 - Export name decoration parsing
 - Convention difference verification
+
+### PascalStackArgsTests.cs
+
+- Parameter order reversal verification
+- Comparison with stdcall StackArgs behavior
+- Support for different parameter counts
+- All helper method functionality
 
 All tests pass and validate conformance to the x86 calling convention specification.
 
@@ -194,3 +235,5 @@ All tests pass and validate conformance to the x86 calling convention specificat
 - `Win32Emu/Loader/ExportMetadata.cs` - Convention enum and metadata
 - `Win32Emu.CallingConvention/Win32CallingConvention.cs` - Convention enum for code generation
 - `Win32Emu.CallingConvention/MarshallingCodeGenerator.cs` - Parameter marshalling logic
+- `Win32Emu/Win32/StackArgs.cs` - Stdcall parameter reading
+- `Win32Emu/Win32/PascalStackArgs.cs` - Pascal parameter reading (Win16)
