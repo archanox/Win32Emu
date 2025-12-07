@@ -30,7 +30,11 @@ public class DInputModuleTests
 	{
 		public bool IsInitialized { get; private set; }
 		public int DeviceCount => 0;
+		
+		// Event required by interface but not used in tests
+#pragma warning disable CS0067
 		public event EventHandler<UIEventArgs>? UIEvent;
+#pragma warning restore CS0067
 
 		public Task<bool> InitializeAsync()
 		{
