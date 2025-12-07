@@ -192,6 +192,21 @@ public class MarshallingCodeGenerator
                     }
                 }
                 break;
+                
+            case Win32CallingConvention.Pascal:
+                sb.AppendLine("        // Pascal: All parameters on stack, left-to-right push");
+                sb.AppendLine("        // Note: Arguments are pushed left-to-right, so stack order is reversed from stdcall");
+                // For Pascal, parameters are pushed left-to-right, so the first parameter is at the highest stack address
+                // This means we read them in reverse order compared to stdcall
+                for (int i = 0; i < signature.Parameters.Count; i++)
+                {
+                    var param = signature.Parameters[i];
+                    var accessor = GetStackAccessor(param);
+                    // Read in reverse order: last parameter is at lowest stack address
+                    var stackOffset = signature.Parameters.Count - 1 - i;
+                    sb.AppendLine($"        var {param.Name} = a.{accessor}({stackOffset}); // {param.Type} (param {i + 1}, stack offset {stackOffset})");
+                }
+                break;
         }
         
         return sb.ToString();

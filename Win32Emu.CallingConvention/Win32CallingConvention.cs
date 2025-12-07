@@ -28,5 +28,12 @@ public enum Win32CallingConvention
     /// This call convention - first argument (this pointer) in ECX, rest on stack
     /// Used by C++ member functions
     /// </summary>
-    Thiscall
+    Thiscall,
+    
+    /// <summary>
+    /// Pascal calling convention - callee cleans stack, arguments pushed left-to-right
+    /// Used by Win16 applications and Pascal compilers
+    /// Note: Argument order is REVERSED compared to stdcall (left-to-right vs right-to-left)
+    /// </summary>
+    Pascal
 }
