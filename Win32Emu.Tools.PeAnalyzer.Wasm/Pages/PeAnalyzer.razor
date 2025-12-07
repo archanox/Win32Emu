@@ -1182,10 +1182,12 @@
 			LinkerMajorVersion = header.MajorLinkerVersion,
 			LinkerMinorVersion = header.MinorLinkerVersion,
 			TargetOperatingSystem = header.TargetOS,
-			ExpectedWindowsVersion = header.ExpectedWindowsVersion,
-			DGroupType = header.DGroupType,
-			EntryPointFormatted = header.EntryPointFormatted,
-			InitialStackFormatted = header.InitialStackFormatted,
+			ExpectedWindowsMajorVersion = (byte)(header.ExpectedWindowsVersion & 0xFF),
+			ExpectedWindowsMinorVersion = (byte)(header.ExpectedWindowsVersion >> 8),
+			ProgramFlags = (byte)header.ProgramFlags,
+			ApplicationFlags = (byte)header.ApplicationType,
+			EntryPoint = ((uint)header.EntryPointSegment << 16) | header.EntryPointOffset,
+			InitialStack = ((uint)header.InitStackSegment << 16) | header.InitStackPointer,
 			SegmentCount = header.SegmentCount,
 			ModuleReferenceCount = header.ModuleReferenceCount,
 			InitialHeapSize = header.InitHeapSize,
@@ -1194,11 +1196,7 @@
 			FileCrc = header.CrcChecksum,
 			FileAlignmentShiftCount = header.SectorAlignmentShift,
 			ResourceEntryCount = header.ResourceSegmentCount,
-			MoveableEntryPointCount = header.MovableEntryCount,
-			ProgramFlagsList = header.ProgramFlagsList,
-			ApplicationFlagsList = header.ApplicationFlagsList,
-			TargetOsName = header.TargetOsName,
-			LinkerVersion = header.LinkerVersion
+			MoveableEntryPointCount = header.MovableEntryCount
 		};
 	}
 }
