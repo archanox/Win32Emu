@@ -38,7 +38,15 @@ public enum CallingConvention
 	/// Stack cleanup: RET N (where N = stack argument bytes only, excluding ECX)
 	/// Note: Register setup not yet implemented.
 	/// </summary>
-	Thiscall
+	Thiscall,
+
+	/// <summary>
+	/// Pascal calling convention - callee cleans stack, arguments pushed left-to-right, all on stack.
+	/// Used by Win16 applications and Pascal compilers. Return value in AL/AX/EAX.
+	/// Stack cleanup: RET N (where N = argument bytes)
+	/// Note: Argument order is REVERSED compared to stdcall (left-to-right vs right-to-left).
+	/// </summary>
+	Pascal
 }
 
 /// <summary>
