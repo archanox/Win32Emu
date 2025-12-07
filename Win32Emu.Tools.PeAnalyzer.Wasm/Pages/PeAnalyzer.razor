@@ -1093,8 +1093,8 @@
 		public ushort EntryTableOffset { get; set; }
 		public ushort EntryTableLength { get; set; }
 		public uint FileCrc { get; set; }
-		public byte ProgramFlags { get; set; }
-		public byte ApplicationFlags { get; set; }
+		public ushort ProgramFlags { get; set; }
+		public ushort ApplicationFlags { get; set; }
 		public ushort AutoDataSegmentIndex { get; set; }
 		public ushort InitialHeapSize { get; set; }
 		public ushort InitialStackSize { get; set; }
@@ -1182,10 +1182,10 @@
 			LinkerMajorVersion = header.MajorLinkerVersion,
 			LinkerMinorVersion = header.MinorLinkerVersion,
 			TargetOperatingSystem = header.TargetOS,
-			ExpectedWindowsMajorVersion = (byte)(header.ExpectedWindowsVersion & 0xFF),
-			ExpectedWindowsMinorVersion = (byte)(header.ExpectedWindowsVersion >> 8),
-			ProgramFlags = (byte)header.ProgramFlags,
-			ApplicationFlags = (byte)header.ApplicationType,
+			ExpectedWindowsMajorVersion = (byte)(header.ExpectedWindowsVersion >> 8),
+			ExpectedWindowsMinorVersion = (byte)(header.ExpectedWindowsVersion & 0xFF),
+			ProgramFlags = header.ProgramFlags,
+			ApplicationFlags = header.ApplicationType,
 			EntryPoint = ((uint)header.EntryPointSegment << 16) | header.EntryPointOffset,
 			InitialStack = ((uint)header.InitStackSegment << 16) | header.InitStackPointer,
 			SegmentCount = header.SegmentCount,
