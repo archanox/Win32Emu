@@ -49,7 +49,7 @@ public class Imm32Module : IWin32ModuleUnsafe
 	///   [in] HWND hWnd
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private uint ImmGetDefaultIMEWnd(uint hWnd)
 	{
 		_logger.LogInformation("[Imm32] ImmGetDefaultIMEWnd(hWnd=0x{HWnd:X8})", hWnd);

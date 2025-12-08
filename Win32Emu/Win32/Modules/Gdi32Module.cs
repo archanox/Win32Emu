@@ -2901,13 +2901,13 @@ namespace Win32Emu.Win32.Modules
 		///   [in] int  iMode
 		/// );
 		/// </summary>
-		[DllModuleExport(12)]
+		[DllModuleExport(12, IsStub = true)]
 		private int CombineRgn(uint hrgnDst, uint hrgnSrc1, uint hrgnSrc2, int iMode)
 		{
 			_logger.LogInformation("[Gdi32] CombineRgn(hrgnDst=0x{HrgnDst:X8}, hrgnSrc1=0x{HrgnSrc1:X8}, hrgnSrc2=0x{HrgnSrc2:X8}, iMode={IMode})",
 				hrgnDst, hrgnSrc1, hrgnSrc2, iMode);
-			// Return SIMPLEREGION (2) - stub assumes result is a simple region
-			return 2;
+			// Return SIMPLEREGION - stub assumes result is a simple region
+			return (int)NativeTypes.RegionComplexity.SIMPLEREGION;
 		}
 
 		/// <summary>
@@ -2918,7 +2918,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HBRUSH hbr
 		/// );
 		/// </summary>
-		[DllModuleExport(4)]
+		[DllModuleExport(4, IsStub = true)]
 		private uint FillRgn(uint hdc, uint hrgn, uint hbr)
 		{
 			_logger.LogInformation("[Gdi32] FillRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8}, hbr=0x{Hbr:X8})",

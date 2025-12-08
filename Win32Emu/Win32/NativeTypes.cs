@@ -171,6 +171,22 @@ public static class NativeTypes
 		ERROR_RESOURCE_TYPE_NOT_FOUND = 1813
 	}
 
+	// NTSTATUS codes
+	public enum NtStatus : uint
+	{
+		STATUS_SUCCESS = 0x00000000,
+		STATUS_NOT_IMPLEMENTED = 0xC0000002
+	}
+
+	// GDI region complexity types
+	public enum RegionComplexity
+	{
+		ERROR = 0,
+		NULLREGION = 1,
+		SIMPLEREGION = 2,
+		COMPLEXREGION = 3
+	}
+
 	// Windows BOOL values
 	public enum Win32Bool : uint
 	{
