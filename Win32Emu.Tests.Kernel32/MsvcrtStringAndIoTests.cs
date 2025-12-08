@@ -143,7 +143,7 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		var size = 1024u;
 
 		// Act - call setvbuf
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, streamPtr, bufferPtr, (uint)mode, size);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, streamPtr, bufferPtr, unchecked((uint)mode), size);
 		var success = _msvcrt.TryInvokeUnsafe("setvbuf", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
 
 		// Assert
@@ -161,7 +161,7 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		var size = 0u;
 
 		// Act - call setvbuf
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, streamPtr, bufferPtr, (uint)mode, size);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, streamPtr, bufferPtr, unchecked((uint)mode), size);
 		var success = _msvcrt.TryInvokeUnsafe("setvbuf", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
 
 		// Assert
