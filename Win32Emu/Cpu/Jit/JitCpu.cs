@@ -3172,6 +3172,16 @@ public class JitCpu : IAsyncCpu
 		return val;
 	}
 	
+	// Reset FPU to default state (FINIT instruction behavior)
+	public void FpuReset()
+	{
+		_fpuControlWord = 0x037F;
+		_fpuStatusWord = 0x0000;
+		_fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
+		_fpuTop = 0;
+		Array.Clear(_fpu, 0, _fpu.Length);
+	}
+	
 	// === FPU Instructions ===
 	
 	private void ExecFld(Instruction insn, VirtualMemory mem)

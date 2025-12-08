@@ -17,6 +17,33 @@ namespace Win32Emu.Win32.Modules
 		// CPU instance is set by TryInvokeUnsafe before calling exported methods
 		// Cannot be passed as parameter to [DllModuleExport] methods as it breaks source generation
 		private ICpu? _cpu;
+		
+		// Invalid parameter handler tracking
+		private uint _invalidParameterHandler = 0;
+		
+		// File handle tracking for fflush and setvbuf
+		private readonly Dictionary<uint, FileStreamInfo> _fileStreams = new();
+		
+		/// <summary>
+		/// Stream buffering mode
+		/// </summary>
+		private enum StreamBufferMode
+		{
+			IOFBF = 0,  // Full buffering
+			IOLBF = 1,  // Line buffering
+			IONBF = 2   // No buffering
+		}
+		
+		/// <summary>
+		/// Information about an open file stream
+		/// </summary>
+		private class FileStreamInfo
+		{
+			public uint BufferPtr { get; set; }
+			public StreamBufferMode Mode { get; set; }
+			public uint BufferSize { get; set; }
+			public bool NeedsFlush { get; set; }
+		}
 
 		public MsvcrtModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
 		{
@@ -711,6 +738,10 @@ namespace Win32Emu.Win32.Modules
 			return result;
 		}
 
+		/// <summary>
+		/// strcmp - Compare two strings
+		/// Performs lexicographic comparison of two null-terminated strings
+		/// </summary>
 		[DllModuleExport(8)]
 		private int strcmp(in LpcStr str1, in LpcStr str2)
 		{
@@ -989,10 +1020,31 @@ namespace Win32Emu.Win32.Modules
 	private void _fpreset()
 	{
 		_logger.LogInformation("[msvcrt] _fpreset()");
+		
 		// Reset FPU to default state
-		// In a real implementation, this would initialize the x87 FPU control word
-		// to its default value (0x027F) and clear the status word
-		// For our emulation, we'll just log it as the FPU state is managed by the CPU emulator
+		// Default x87 FPU control word is 0x037F
+		if (_cpu == null)
+		{
+			_logger.LogWarning("[msvcrt] _fpreset: CPU instance not available");
+			return;
+		}
+		
+		// Access FPU state through concrete CPU implementations
+		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
+		{
+			// Reset FPU by calling the FINIT instruction behavior
+			// This sets control word to 0x037F, clears status word, and sets tag word to 0xFFFF
+			icedCpu.FpuReset();
+		}
+		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
+		{
+			// Reset FPU by calling the FINIT instruction behavior
+			jitCpu.FpuReset();
+		}
+		else
+		{
+			_logger.LogWarning("[msvcrt] _fpreset: Unsupported CPU type {CpuType}", _cpu.GetType().Name);
+		}
 	}
 
 	/// <summary>
@@ -1003,8 +1055,10 @@ namespace Win32Emu.Win32.Modules
 	private uint _set_invalid_parameter_handler(uint handler)
 	{
 		_logger.LogInformation("[msvcrt] _set_invalid_parameter_handler(handler=0x{Handler:X8})", handler);
-		// Return the old handler (we'll return NULL since we don't actually track this)
-		return 0;
+		// Return the old handler and store the new one
+		var oldHandler = _invalidParameterHandler;
+		_invalidParameterHandler = handler;
+		return oldHandler;
 	}
 
 	/// <summary>
@@ -1015,8 +1069,36 @@ namespace Win32Emu.Win32.Modules
 	private int fflush(uint stream)
 	{
 		_logger.LogInformation("[msvcrt] fflush(stream=0x{Stream:X8})", stream);
-		// Flush stream buffer (stub - return 0 for success)
-		return 0;
+		
+		// NULL stream means flush all open streams
+		if (stream == 0)
+		{
+			// Flush all tracked streams
+			foreach (var kvp in _fileStreams)
+			{
+				if (kvp.Value.NeedsFlush)
+				{
+					_logger.LogDebug("[msvcrt] fflush: Flushing stream 0x{Stream:X8}", kvp.Key);
+					kvp.Value.NeedsFlush = false;
+				}
+			}
+			return 0; // Success
+		}
+		
+		// Flush specific stream
+		if (_fileStreams.TryGetValue(stream, out var fileInfo))
+		{
+			if (fileInfo.NeedsFlush)
+			{
+				_logger.LogDebug("[msvcrt] fflush: Flushing stream 0x{Stream:X8}", stream);
+				fileInfo.NeedsFlush = false;
+			}
+			return 0; // Success
+		}
+		
+		// Stream not tracked, assume success (might be stdin/stdout/stderr)
+		_logger.LogDebug("[msvcrt] fflush: Stream 0x{Stream:X8} not tracked, assuming success", stream);
+		return 0; // Success
 	}
 
 	/// <summary>
@@ -1028,9 +1110,32 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogInformation("[msvcrt] setvbuf(stream=0x{Stream:X8}, buffer=0x{Buffer:X8}, mode={Mode}, size={Size})", 
 			stream, buffer, mode, size);
-		// Set buffer for stream (stub - return 0 for success)
-		// Mode values: _IOFBF (0) = full buffering, _IOLBF (1) = line buffering, _IONBF (2) = no buffering
-		return 0;
+		
+		// Validate mode
+		if (!Enum.IsDefined(typeof(StreamBufferMode), mode))
+		{
+			_logger.LogWarning("[msvcrt] setvbuf: Invalid mode {Mode}", mode);
+			return -1; // Error
+		}
+		
+		var bufferMode = (StreamBufferMode)mode;
+		
+		// Create or update stream info
+		if (!_fileStreams.ContainsKey(stream))
+		{
+			_fileStreams[stream] = new FileStreamInfo();
+		}
+		
+		var fileInfo = _fileStreams[stream];
+		fileInfo.BufferPtr = buffer;
+		fileInfo.Mode = bufferMode;
+		fileInfo.BufferSize = size;
+		fileInfo.NeedsFlush = false;
+		
+		_logger.LogDebug("[msvcrt] setvbuf: Set stream 0x{Stream:X8} to mode {Mode} with buffer 0x{Buffer:X8} size {Size}", 
+			stream, bufferMode, buffer, size);
+		
+		return 0; // Success
 	}
 }
 }

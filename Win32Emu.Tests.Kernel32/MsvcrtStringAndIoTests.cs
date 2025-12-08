@@ -137,9 +137,10 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 	public void Setvbuf_WithFullBuffering_ShouldSucceed()
 	{
 		// Arrange - setvbuf(stream, buffer, _IOFBF, size)
+		const int IOFBF = 0; // Full buffering
 		var streamPtr = 0x10000000u;
 		var bufferPtr = 0x20000000u;
-		var mode = 0; // _IOFBF = full buffering
+		var mode = IOFBF;
 		var size = 1024u;
 
 		// Act - call setvbuf
@@ -155,9 +156,10 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 	public void Setvbuf_WithNoBuffering_ShouldSucceed()
 	{
 		// Arrange - setvbuf(stream, NULL, _IONBF, 0)
+		const int IONBF = 2; // No buffering
 		var streamPtr = 0x10000000u;
 		var bufferPtr = 0u; // NULL
-		var mode = 2; // _IONBF = no buffering
+		var mode = IONBF;
 		var size = 0u;
 
 		// Act - call setvbuf
