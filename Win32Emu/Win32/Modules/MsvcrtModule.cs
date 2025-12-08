@@ -179,6 +179,9 @@ namespace Win32Emu.Win32.Modules
 				case "STRNCMP":
 					returnValue = (uint)strncmp(a.LpcStr(0), a.LpcStr(1), a.UInt32(2));
 					return true;
+				case "STRCMP":
+					returnValue = (uint)strcmp(a.LpcStr(0), a.LpcStr(1));
+					return true;
 				case "VFPRINTF":
 					returnValue = (uint)vfprintf(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
 					return true;
@@ -214,6 +217,19 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "TOUPPER":
 					returnValue = (uint)toupper(a.Int32(0));
+					return true;
+				case "_FPRESET":
+					_fpreset();
+					returnValue = 0;
+					return true;
+				case "_SET_INVALID_PARAMETER_HANDLER":
+					returnValue = _set_invalid_parameter_handler(a.UInt32(0));
+					return true;
+				case "FFLUSH":
+					returnValue = (uint)fflush(a.UInt32(0));
+					return true;
+				case "SETVBUF":
+					returnValue = (uint)setvbuf(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
 					return true;
 				case "??1TYPE_INFO@@UAE@XZ":
 					// type_info destructor (C++ mangled name)
@@ -695,6 +711,16 @@ namespace Win32Emu.Win32.Modules
 			return result;
 		}
 
+		[DllModuleExport(8)]
+		private int strcmp(in LpcStr str1, in LpcStr str2)
+		{
+			var s1 = str1.ToString() ?? string.Empty;
+			var s2 = str2.ToString() ?? string.Empty;
+			_logger.LogInformation("[msvcrt] strcmp(str1=\"{S1}\", str2=\"{S2}\")", s1, s2);
+			// Compare strings
+			return string.Compare(s1, s2, StringComparison.Ordinal);
+		}
+
 		[DllModuleExport(12)]
 		private int vfprintf(uint stream, in LpcStr format, uint args)
 		{
@@ -953,6 +979,58 @@ namespace Win32Emu.Win32.Modules
 		{
 			_env.HeapFree(0, ptr);
 		}
+	}
+
+	/// <summary>
+	/// _fpreset - Reset floating-point unit to default state
+	/// Resets the FPU control word and status word
+	/// </summary>
+	[DllModuleExport(0)]
+	private void _fpreset()
+	{
+		_logger.LogInformation("[msvcrt] _fpreset()");
+		// Reset FPU to default state
+		// In a real implementation, this would initialize the x87 FPU control word
+		// to its default value (0x027F) and clear the status word
+		// For our emulation, we'll just log it as the FPU state is managed by the CPU emulator
+	}
+
+	/// <summary>
+	/// _set_invalid_parameter_handler - Set handler for invalid parameter errors
+	/// Allows applications to handle invalid parameter errors in CRT functions
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _set_invalid_parameter_handler(uint handler)
+	{
+		_logger.LogInformation("[msvcrt] _set_invalid_parameter_handler(handler=0x{Handler:X8})", handler);
+		// Return the old handler (we'll return NULL since we don't actually track this)
+		return 0;
+	}
+
+	/// <summary>
+	/// fflush - Flush a file stream
+	/// Forces any buffered data to be written to the file
+	/// </summary>
+	[DllModuleExport(4)]
+	private int fflush(uint stream)
+	{
+		_logger.LogInformation("[msvcrt] fflush(stream=0x{Stream:X8})", stream);
+		// Flush stream buffer (stub - return 0 for success)
+		return 0;
+	}
+
+	/// <summary>
+	/// setvbuf - Set buffer for file stream
+	/// Controls buffering mode and buffer size for a stream
+	/// </summary>
+	[DllModuleExport(16)]
+	private int setvbuf(uint stream, uint buffer, int mode, uint size)
+	{
+		_logger.LogInformation("[msvcrt] setvbuf(stream=0x{Stream:X8}, buffer=0x{Buffer:X8}, mode={Mode}, size={Size})", 
+			stream, buffer, mode, size);
+		// Set buffer for stream (stub - return 0 for success)
+		// Mode values: _IOFBF (0) = full buffering, _IOLBF (1) = line buffering, _IONBF (2) = no buffering
+		return 0;
 	}
 }
 }
