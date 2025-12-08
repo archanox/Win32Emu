@@ -173,6 +173,9 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			case "OPENTHREADTOKEN":
 				returnValue = OpenThreadToken(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
+			case "GETTOKENINFORMATION":
+				returnValue = GetTokenInformation(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
 			case "REVERTTOSELF":
 				returnValue = RevertToSelf();
 				return true;
@@ -816,6 +819,32 @@ public class Advapi32Module : IWin32ModuleUnsafe
 			_env.MemWrite32(TokenHandle, 0xC0000001); // Pseudo-handle for token
 		}
 		return 1; // TRUE
+	}
+
+	/// <summary>
+	/// Retrieves a specified type of information about an access token.
+	/// BOOL GetTokenInformation(
+	///   [in]            HANDLE                  TokenHandle,
+	///   [in]            TOKEN_INFORMATION_CLASS TokenInformationClass,
+	///   [out, optional] LPVOID                  TokenInformation,
+	///   [in]            DWORD                   TokenInformationLength,
+	///   [out]           PDWORD                  ReturnLength
+	/// );
+	/// </summary>
+	[DllModuleExport(114, Version = "4.90.0.3000", IsStub = true)]
+	private uint GetTokenInformation(uint TokenHandle, uint TokenInformationClass, uint TokenInformation, uint TokenInformationLength, uint ReturnLength)
+	{
+		_logger.LogInformation("[Advapi32] GetTokenInformation(TokenHandle=0x{TokenHandle:X8}, TokenInformationClass={TokenInformationClass}, TokenInformation=0x{TokenInformation:X8}, TokenInformationLength={TokenInformationLength}, ReturnLength=0x{ReturnLength:X8})",
+			TokenHandle, TokenInformationClass, TokenInformation, TokenInformationLength, ReturnLength);
+		
+		// Return length required (stub - return 0 for now)
+		if (ReturnLength != 0)
+		{
+			_env.MemWrite32(ReturnLength, 0);
+		}
+		
+		// Return FALSE - stub implementation, function not supported
+		return 0;
 	}
 
 	[DllModuleExport(271, Version = "4.90.0.3000")]

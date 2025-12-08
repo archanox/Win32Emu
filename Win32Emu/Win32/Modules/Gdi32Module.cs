@@ -476,6 +476,32 @@ namespace Win32Emu.Win32.Modules
 					returnValue = SetSystemPaletteUse(a.UInt32(0), a.UInt32(1));
 					return true;
 
+				// Region functions
+				case "COMBINERGN":
+					returnValue = (uint)CombineRgn(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3));
+					return true;
+				case "FILLRGN":
+					returnValue = FillRgn(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				// Information context (IC) functions
+				case "CREATEICA":
+					returnValue = CreateICA(a.LpcStr(0), a.LpcStr(1), a.LpcStr(2), a.UInt32(3));
+					return true;
+				case "CREATEICW":
+					returnValue = CreateICW(a.LpcWStr(0), a.LpcWStr(1), a.LpcWStr(2), a.UInt32(3));
+					return true;
+
+				// Device context (DC) creation - Unicode
+				case "CREATEDCW":
+					returnValue = CreateDCW(a.LpcWStr(0), a.LpcWStr(1), a.LpcWStr(2), a.UInt32(3));
+					return true;
+
+				// Font creation - Unicode
+				case "CREATEFONTINDIRECTW":
+					returnValue = CreateFontIndirectW(a.UInt32(0));
+					return true;
+
 				default:
 					_logger.LogInformation("[Gdi32] Unimplemented export: {Export}", export);
 					return false;
@@ -2465,6 +2491,7 @@ namespace Win32Emu.Win32.Modules
 			public uint SelectedBrush { get; set; } = 0; // Currently selected brush
 			public uint SelectedPen { get; set; } = 0; // Currently selected pen
 			public bool OwnsSelectedBitmap { get; set; } = false; // True if bitmap was created by BeginPaint
+			public bool IsInfoContext { get; set; } = false; // True if this is an information context (IC) rather than a device context (DC)
 		}
 
 		/// <summary>
@@ -2863,6 +2890,146 @@ namespace Win32Emu.Win32.Modules
 				hdc, lpLogfont, lpProc, lParam, dwFlags);
 			// Stub implementation: return 1 (no fonts enumerated)
 			return 1;
+		}
+
+		/// <summary>
+		/// Combines two regions and stores the result in a destination region.
+		/// int CombineRgn(
+		///   [in] HRGN hrgnDst,
+		///   [in] HRGN hrgnSrc1,
+		///   [in] HRGN hrgnSrc2,
+		///   [in] int  iMode
+		/// );
+		/// </summary>
+		[DllModuleExport(12)]
+		private int CombineRgn(uint hrgnDst, uint hrgnSrc1, uint hrgnSrc2, int iMode)
+		{
+			_logger.LogInformation("[Gdi32] CombineRgn(hrgnDst=0x{HrgnDst:X8}, hrgnSrc1=0x{HrgnSrc1:X8}, hrgnSrc2=0x{HrgnSrc2:X8}, iMode={IMode})",
+				hrgnDst, hrgnSrc1, hrgnSrc2, iMode);
+			// Return SIMPLEREGION (2) - stub assumes result is a simple region
+			return 2;
+		}
+
+		/// <summary>
+		/// Fills a region by using the specified brush.
+		/// BOOL FillRgn(
+		///   [in] HDC   hdc,
+		///   [in] HRGN  hrgn,
+		///   [in] HBRUSH hbr
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint FillRgn(uint hdc, uint hrgn, uint hbr)
+		{
+			_logger.LogInformation("[Gdi32] FillRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8}, hbr=0x{Hbr:X8})",
+				hdc, hrgn, hbr);
+			// Return success (1) - stub implementation
+			return 1;
+		}
+
+		/// <summary>
+		/// Creates an information context for the specified device (ANSI version).
+		/// HDC CreateICA(
+		///   [in] LPCSTR lpszDriver,
+		///   [in] LPCSTR lpszDevice,
+		///   [in] LPCSTR lpszOutput,
+		///   [in] const DEVMODEA *lpdvmInit
+		/// );
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint CreateICA(in LpcStr lpszDriver, in LpcStr lpszDevice, in LpcStr lpszOutput, uint lpdvmInit)
+		{
+			var driver = lpszDriver.ToString() ?? string.Empty;
+			var device = lpszDevice.ToString() ?? string.Empty;
+			var output = lpszOutput.ToString() ?? string.Empty;
+			
+			_logger.LogInformation("[Gdi32] CreateICA(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\", lpdvmInit=0x{LpdvmInit:X8})",
+				driver, device, output, lpdvmInit);
+
+			// Create a new information context handle
+			var handle = _nextDcHandle++;
+			_deviceContexts[handle] = new DeviceContext
+			{
+				IsInfoContext = true
+			};
+
+			return handle;
+		}
+
+		/// <summary>
+		/// Creates an information context for the specified device (Unicode version).
+		/// HDC CreateICW(
+		///   [in] LPCWSTR lpszDriver,
+		///   [in] LPCWSTR lpszDevice,
+		///   [in] LPCWSTR lpszOutput,
+		///   [in] const DEVMODEW *lpdvmInit
+		/// );
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint CreateICW(in LpcWStr lpszDriver, in LpcWStr lpszDevice, in LpcWStr lpszOutput, uint lpdvmInit)
+		{
+			var driver = lpszDriver.ToString() ?? string.Empty;
+			var device = lpszDevice.ToString() ?? string.Empty;
+			var output = lpszOutput.ToString() ?? string.Empty;
+			
+			_logger.LogInformation("[Gdi32] CreateICW(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\", lpdvmInit=0x{LpdvmInit:X8})",
+				driver, device, output, lpdvmInit);
+
+			// Create a new information context handle
+			var handle = _nextDcHandle++;
+			_deviceContexts[handle] = new DeviceContext
+			{
+				IsInfoContext = true
+			};
+
+			return handle;
+		}
+
+		/// <summary>
+		/// Creates a device context for a device (Unicode version).
+		/// HDC CreateDCW(
+		///   [in] LPCWSTR lpszDriver,
+		///   [in] LPCWSTR lpszDevice,
+		///   [in] LPCWSTR lpszOutput,
+		///   [in] const DEVMODEW *lpdvmInit
+		/// );
+		/// </summary>
+		[DllModuleExport(20)]
+		private uint CreateDCW(in LpcWStr lpszDriver, in LpcWStr lpszDevice, in LpcWStr lpszOutput, uint lpdvmInit)
+		{
+			var driver = lpszDriver.ToString() ?? string.Empty;
+			var device = lpszDevice.ToString() ?? string.Empty;
+			var output = lpszOutput.ToString() ?? string.Empty;
+			
+			_logger.LogInformation("[Gdi32] CreateDCW(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\", lpdvmInit=0x{LpdvmInit:X8})",
+				driver, device, output, lpdvmInit);
+
+			// Create a new device context handle
+			var handle = _nextDcHandle++;
+			_deviceContexts[handle] = new DeviceContext();
+
+			return handle;
+		}
+
+		/// <summary>
+		/// Creates a logical font from a LOGFONTW structure (Unicode version).
+		/// HFONT CreateFontIndirectW(
+		///   [in] const LOGFONTW *lplf
+		/// );
+		/// </summary>
+		[DllModuleExport(4)]
+		private uint CreateFontIndirectW(uint lplf)
+		{
+			_logger.LogInformation("[Gdi32] CreateFontIndirectW(lplf=0x{Lplf:X8})", lplf);
+
+			// Create a new font handle
+			var fontHandle = _nextGdiObjectHandle++;
+			_gdiObjects[fontHandle] = new GdiObject
+			{
+				Type = GdiObjectType.Font
+			};
+
+			return fontHandle;
 		}
 	}
 }
