@@ -38,6 +38,18 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 				returnValue = NtCurrentTeb();
 				return true;
 
+			case "NTALLOCATEVIRTUALMEMORY":
+				returnValue = NtAllocateVirtualMemory(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+				return true;
+
+			case "NTFREEVIRTUALMEMORY":
+				returnValue = NtFreeVirtualMemory(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
+
+			case "NTQUERYOBJECT":
+				returnValue = NtQueryObject(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+				return true;
+
 			case "RTLEXITUSERPROCESS":
 				RtlExitUserProcess(a.UInt32(0));
 				return true;
@@ -63,6 +75,67 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 		var tebAddress = _env.TebAddress;
 		LogNtCurrentTeb(tebAddress);
 		return tebAddress;
+	}
+
+	/// <summary>
+	/// Allocates a region of memory within the virtual address space of a process.
+	/// NTSTATUS NtAllocateVirtualMemory(
+	///   HANDLE ProcessHandle,
+	///   PVOID *BaseAddress,
+	///   ULONG_PTR ZeroBits,
+	///   PSIZE_T RegionSize,
+	///   ULONG AllocationType,
+	///   ULONG Protect
+	/// );
+	/// </summary>
+	[DllModuleExport(24, IsStub = true)]
+	private uint NtAllocateVirtualMemory(uint ProcessHandle, uint BaseAddress, uint ZeroBits, uint RegionSize, uint AllocationType, uint Protect)
+	{
+		LogNtAllocateVirtualMemory(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
+		// Return STATUS_NOT_IMPLEMENTED (0xC0000002)
+		return 0xC0000002;
+	}
+
+	/// <summary>
+	/// Frees a region of memory within the virtual address space of a process.
+	/// NTSTATUS NtFreeVirtualMemory(
+	///   HANDLE ProcessHandle,
+	///   PVOID *BaseAddress,
+	///   PSIZE_T RegionSize,
+	///   ULONG FreeType
+	/// );
+	/// </summary>
+	[DllModuleExport(16, IsStub = true)]
+	private uint NtFreeVirtualMemory(uint ProcessHandle, uint BaseAddress, uint RegionSize, uint FreeType)
+	{
+		LogNtFreeVirtualMemory(ProcessHandle, BaseAddress, RegionSize, FreeType);
+		// Return STATUS_NOT_IMPLEMENTED (0xC0000002)
+		return 0xC0000002;
+	}
+
+	/// <summary>
+	/// Retrieves information about an object.
+	/// NTSTATUS NtQueryObject(
+	///   HANDLE Handle,
+	///   OBJECT_INFORMATION_CLASS ObjectInformationClass,
+	///   PVOID ObjectInformation,
+	///   ULONG ObjectInformationLength,
+	///   PULONG ReturnLength
+	/// );
+	/// </summary>
+	[DllModuleExport(20, IsStub = true)]
+	private uint NtQueryObject(uint Handle, uint ObjectInformationClass, uint ObjectInformation, uint ObjectInformationLength, uint ReturnLength)
+	{
+		LogNtQueryObject(Handle, ObjectInformationClass, ObjectInformation, ObjectInformationLength, ReturnLength);
+		
+		// Write zero to ReturnLength if provided
+		if (ReturnLength != 0)
+		{
+			_env.MemWrite32(ReturnLength, 0);
+		}
+		
+		// Return STATUS_NOT_IMPLEMENTED (0xC0000002)
+		return 0xC0000002;
 	}
 
 	/// <summary>
@@ -97,6 +170,15 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 
 	[LoggerMessage(Level = LogLevel.Debug, Message = "[Ntdll] NtCurrentTeb() -> 0x{TebAddress:X8}")]
 	partial void LogNtCurrentTeb(uint tebAddress);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Ntdll] NtAllocateVirtualMemory(ProcessHandle=0x{ProcessHandle:X8}, BaseAddress=0x{BaseAddress:X8}, ZeroBits={ZeroBits}, RegionSize=0x{RegionSize:X8}, AllocationType=0x{AllocationType:X8}, Protect=0x{Protect:X8})")]
+	partial void LogNtAllocateVirtualMemory(uint ProcessHandle, uint BaseAddress, uint ZeroBits, uint RegionSize, uint AllocationType, uint Protect);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Ntdll] NtFreeVirtualMemory(ProcessHandle=0x{ProcessHandle:X8}, BaseAddress=0x{BaseAddress:X8}, RegionSize=0x{RegionSize:X8}, FreeType=0x{FreeType:X8})")]
+	partial void LogNtFreeVirtualMemory(uint ProcessHandle, uint BaseAddress, uint RegionSize, uint FreeType);
+
+	[LoggerMessage(Level = LogLevel.Information, Message = "[Ntdll] NtQueryObject(Handle=0x{Handle:X8}, ObjectInformationClass={ObjectInformationClass}, ObjectInformation=0x{ObjectInformation:X8}, ObjectInformationLength={ObjectInformationLength}, ReturnLength=0x{ReturnLength:X8})")]
+	partial void LogNtQueryObject(uint Handle, uint ObjectInformationClass, uint ObjectInformation, uint ObjectInformationLength, uint ReturnLength);
 
 	[LoggerMessage(Level = LogLevel.Information, Message = "[Ntdll] RtlExitUserProcess(exitCode={ExitCode})")]
 	partial void LogRtlExitUserProcess(uint exitCode);
