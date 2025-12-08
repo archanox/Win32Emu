@@ -92,8 +92,8 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 	private uint NtAllocateVirtualMemory(uint ProcessHandle, uint BaseAddress, uint ZeroBits, uint RegionSize, uint AllocationType, uint Protect)
 	{
 		LogNtAllocateVirtualMemory(ProcessHandle, BaseAddress, ZeroBits, RegionSize, AllocationType, Protect);
-		// Return STATUS_NOT_IMPLEMENTED (0xC0000002)
-		return 0xC0000002;
+		// Return STATUS_NOT_IMPLEMENTED
+		return (uint)NativeTypes.NtStatus.STATUS_NOT_IMPLEMENTED;
 	}
 
 	/// <summary>
@@ -109,8 +109,8 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 	private uint NtFreeVirtualMemory(uint ProcessHandle, uint BaseAddress, uint RegionSize, uint FreeType)
 	{
 		LogNtFreeVirtualMemory(ProcessHandle, BaseAddress, RegionSize, FreeType);
-		// Return STATUS_NOT_IMPLEMENTED (0xC0000002)
-		return 0xC0000002;
+		// Return STATUS_NOT_IMPLEMENTED
+		return (uint)NativeTypes.NtStatus.STATUS_NOT_IMPLEMENTED;
 	}
 
 	/// <summary>
@@ -134,8 +134,8 @@ public partial class NtdllModule : IWin32ModuleUnsafe
 			_env.MemWrite32(ReturnLength, 0);
 		}
 		
-		// Return STATUS_NOT_IMPLEMENTED (0xC0000002)
-		return 0xC0000002;
+		// Return STATUS_NOT_IMPLEMENTED
+		return (uint)NativeTypes.NtStatus.STATUS_NOT_IMPLEMENTED;
 	}
 
 	/// <summary>
