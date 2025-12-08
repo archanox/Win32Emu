@@ -51,6 +51,22 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 - Performance benchmarking
 - Compatibility testing with different executable types
 
+### 5. Win32Emu.Tests.ReactOS 📋 PLANNED
+**Purpose**: Leverage ReactOS test suite for Win32 API validation  
+**Status**: Design complete, ready for implementation  
+**Future Coverage**:
+- Kernel32.dll API tests (~60 test executables)
+- User32.dll API tests (~80 test executables)
+- GDI32.dll API tests
+- Additional Win32 module tests from ReactOS
+- See: https://github.com/reactos/reactos/tree/master/modules/rostests/apitests
+
+**Approach**: Run ReactOS test executables (compiled to PE format) directly in Win32Emu, parse Wine test framework output, and report results via xUnit.
+
+**Documentation**:
+- [ReactOS Test Integration Research](docs/research/REACTOS_TEST_INTEGRATION.md) - Comprehensive analysis and strategy
+- [Implementation Plan](docs/implementation/REACTOS_TEST_INTEGRATION_PLAN.md) - Developer guide for using ReactOS tests
+
 ## Test Infrastructure Components
 
 ### Core Testing Classes
@@ -159,6 +175,12 @@ Tests are categorized using xUnit traits to control CI behavior:
   - 941 hardware-generated CPU instruction tests from SingleStepTests/80386 suite
   - Validates CPU implementation against real 386 hardware behavior
   - Run locally with: `dotnet test --filter "Category=ConformanceTests"`
+
+- **ReactOS Tests** (`[Trait("Category", "ReactOSTests")]`): Optional - when implemented
+  - Comprehensive Win32 API validation using ReactOS test suite
+  - Tests compiled from ReactOS source run as PE executables in Win32Emu
+  - Validates API implementations match Windows behavior
+  - Run locally with: `dotnet test --filter "Category=ReactOSTests"`
 
 ### Purpose
 This policy allows developers to:
