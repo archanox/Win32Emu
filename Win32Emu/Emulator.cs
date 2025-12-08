@@ -586,6 +586,7 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new WinspoolModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new OledlgModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Olepro32Module(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new Imm32Module(_env, _image.BaseAddress, peLoader, _logger));
         
         // Additional system DLLs
         _dispatcher.RegisterModule(new NtdllModule(_env, _image.BaseAddress, peLoader, _logger));
