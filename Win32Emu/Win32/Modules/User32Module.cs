@@ -1589,9 +1589,8 @@ namespace Win32Emu.Win32.Modules
 				case "WAITFORINPUTIDLE":
 					returnValue = WaitForInputIdle(a.UInt32(0), a.UInt32(1));
 					return true;
-				
-				
-								default:
+
+				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
 			}
