@@ -97,6 +97,30 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETVERSIONEXW":
 				returnValue = GetVersionExW(a.UInt32(0));
 				return true;
+			case "VERSETCONDITIONMASK":
+				{
+					// VerSetConditionMask takes a ULONGLONG (64-bit) as first parameter
+					// We need to read it as two 32-bit values from the stack
+					var conditionMaskLow = a.UInt32(0);
+					var conditionMaskHigh = a.UInt32(1);
+					var conditionMask = ((ulong)conditionMaskHigh << 32) | conditionMaskLow;
+					var result = VerSetConditionMask(conditionMask, a.UInt32(2), a.UInt32(3));
+					returnValue = (uint)result;
+					_cpu!.SetRegister("EDX", (uint)(result >> 32));
+					return true;
+				}
+			case "VERIFYVERSIONINFOW":
+				{
+					// VerifyVersionInfoW also takes a DWORDLONG (64-bit) parameter
+					var conditionMaskLow = a.UInt32(2);
+					var conditionMaskHigh = a.UInt32(3);
+					var conditionMask = ((ulong)conditionMaskHigh << 32) | conditionMaskLow;
+					returnValue = VerifyVersionInfoW(a.UInt32(0), a.UInt32(1), conditionMask);
+					return true;
+				}
+			case "ISDEBUGGERPRESENT":
+				returnValue = IsDebuggerPresent();
+				return true;
 			case "GETLASTERROR":
 				returnValue = GetLastError();
 				return true;
@@ -120,6 +144,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "OPENPROCESS":
 				returnValue = OpenProcess(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
+			case "CREATEACTCTXW":
+				returnValue = CreateActCtxW(a.UInt32(0));
+				return true;
+			case "ACTIVATEACTCTX":
+				returnValue = ActivateActCtx(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "DEACTIVATEACTCTX":
+				returnValue = DeactivateActCtx(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "GETCURRENTPROCESS":
 				returnValue = GetCurrentProcess();
@@ -181,6 +214,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "LOADLIBRARYW":
 				returnValue = LoadLibraryW(a.UInt32(0));
 				return true;
+			case "LOADLIBRARYEXW":
+				returnValue = LoadLibraryExW(a.LpcWStr(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "GETPROCADDRESS":
 				returnValue = GetProcAddress(a.UInt32(0), a.LpcStr(1));
 				return true;
@@ -210,6 +246,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "EXPANDENVIRONMENTSTRINGSA":
 				returnValue = ExpandEnvironmentStringsA(a.LpcStr(0), a.LpStr(1), a.UInt32(2));
+				return true;
+			case "EXPANDENVIRONMENTSTRINGSW":
+				returnValue = ExpandEnvironmentStringsW(a.LpcWStr(0), a.LpWStr(1), a.UInt32(2));
 				return true;
 			case "FREEENVIRONMENTSTRINGSW":
 				returnValue = FreeEnvironmentStringsW(a.UInt32(0));
@@ -396,6 +435,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "DELETEFILEA":
 				returnValue = DeleteFileA(a.UInt32(0));
 				return true;
+			case "DELETEFILEW":
+				returnValue = DeleteFileW(a.LpcWStr(0));
+				return true;
 			case "MOVEFILEA":
 				returnValue = MoveFileA(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -410,6 +452,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "GETFILEATTRIBUTESA":
 				returnValue = GetFileAttributesA(a.LpcStr(0));
+				return true;
+			case "GETFILEATTRIBUTESW":
+				returnValue = GetFileAttributesW(a.LpcWStr(0));
 				return true;
 			case "OPENFILE":
 				returnValue = OpenFile(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
@@ -432,8 +477,14 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "FINDFIRSTFILEA":
 				returnValue = FindFirstFileA(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "FINDFIRSTFILEW":
+				returnValue = FindFirstFileW(a.LpcWStr(0), a.UInt32(1));
+				return true;
 			case "FINDNEXTFILEA":
 				returnValue = FindNextFileA(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "FINDNEXTFILEW":
+				returnValue = FindNextFileW(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "FINDCLOSE":
 				returnValue = FindClose(a.UInt32(0));
@@ -676,6 +727,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "FINDRESOURCEA":
 				returnValue = FindResourceA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
+			case "FINDRESOURCEW":
+				returnValue = FindResourceW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "LOADRESOURCE":
 				returnValue = LoadResource(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -720,6 +774,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETSYSTEMDIRECTORYA":
 				returnValue = GetSystemDirectoryA(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "GETSYSTEMDIRECTORYW":
+				returnValue = GetSystemDirectoryW(a.LpWStr(0), a.UInt32(1));
+				return true;
 			case "GETTEMPPATHA":
 				returnValue = GetTempPathA(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -750,6 +807,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GLOBALSIZE":
 				returnValue = GlobalSize(a.UInt32(0));
 				return true;
+			case "GLOBALADDATOMW":
+				returnValue = GlobalAddAtomW(a.LpcWStr(0));
+				return true;
+			case "GLOBALFINDATOMW":
+				returnValue = GlobalFindAtomW(a.LpcWStr(0));
+				return true;
 			case "INTERLOCKEDDECREMENT":
 				returnValue = (uint)InterlockedDecrement(a.UInt32(0));
 				return true;
@@ -776,6 +839,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "LSTRCMPIA":
 				returnValue = (uint)lstrcmpiA(a.LpcStr(0), a.LpcStr(1));
+				return true;
+			case "LSTRCMPIW":
+				returnValue = (uint)lstrcmpiW(a.LpcWStr(0), a.LpcWStr(1));
 				return true;
 			case "LSTRCPYNA":
 				returnValue = lstrcpynA(a.UInt32(0), a.LpcStr(1), a.Int32(2));
@@ -11318,6 +11384,528 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			_env.MemWrite32(lpNumberOfBytesWritten, 0);
 		}
 		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Adds a Unicode character string to the global atom table and returns a unique value (an atom) identifying the string.
+	/// ATOM GlobalAddAtomW(
+	///   [in] LPCWSTR lpString
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint GlobalAddAtomW(in LpcWStr lpString)
+	{
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GlobalAddAtomW(lpString=\"{Str}\")", str);
+		return 0xC000; // Return a valid atom value (stub implementation)
+	}
+
+	/// <summary>
+	/// Searches the global atom table for a Unicode string and returns the atom associated with that string.
+	/// ATOM GlobalFindAtomW(
+	///   [in] LPCWSTR lpString
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint GlobalFindAtomW(in LpcWStr lpString)
+	{
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GlobalFindAtomW(lpString=\"{Str}\")", str);
+		return 0; // Not found (stub implementation)
+	}
+
+	/// <summary>
+	/// Performs a case-insensitive comparison of two Unicode character strings.
+	/// int lstrcmpiW(
+	///   [in] LPCWSTR lpString1,
+	///   [in] LPCWSTR lpString2
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private int lstrcmpiW(in LpcWStr lpString1, in LpcWStr lpString2)
+	{
+		var str1 = lpString1.Read(_env.Memory) ?? string.Empty;
+		var str2 = lpString2.Read(_env.Memory) ?? string.Empty;
+		_logger.LogDebug("[Kernel32] lstrcmpiW(lpString1={LpString1}, lpString2={LpString2})", str1, str2);
+		return string.Compare(str1, str2, StringComparison.OrdinalIgnoreCase);
+	}
+
+	/// <summary>
+	/// Loads a Unicode DLL module with additional options.
+	/// HMODULE LoadLibraryExW(
+	///   [in] LPCWSTR lpLibFileName,
+	///   [in] HANDLE  hFile,
+	///   [in] DWORD   dwFlags
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint LoadLibraryExW(in LpcWStr lpLibFileName, uint hFile, uint dwFlags)
+	{
+		var fileName = lpLibFileName.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] LoadLibraryExW(lpLibFileName={LpLibFileName}, hFile=0x{HFile:X8}, dwFlags=0x{DwFlags:X8})",
+			fileName, hFile, dwFlags);
+		
+		// Call existing LoadLibraryW implementation (ignoring flags for now)
+		return LoadLibraryW(lpLibFileName.Address);
+	}
+
+	/// <summary>
+	/// Deletes an existing Unicode file.
+	/// BOOL DeleteFileW(
+	///   [in] LPCWSTR lpFileName
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint DeleteFileW(in LpcWStr lpFileName)
+	{
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] DeleteFileW(lpFileName={LpFileName})", fileName);
+		
+		var vfs = _env.VirtualFileSystem;
+		if (vfs == null)
+		{
+			_logger.LogWarning("[Kernel32] DeleteFileW: VFS not available");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+
+		try
+		{
+			vfs.DeleteFile(fileName);
+			return (uint)NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] DeleteFileW failed");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	/// <summary>
+	/// Expands Unicode environment variable strings and replaces them with their defined values.
+	/// DWORD ExpandEnvironmentStringsW(
+	///   [in]  LPCWSTR lpSrc,
+	///   [out] LPWSTR  lpDst,
+	///   [in]  DWORD   nSize
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint ExpandEnvironmentStringsW(in LpcWStr lpSrc, in LpWStr lpDst, uint nSize)
+	{
+		var src = lpSrc.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] ExpandEnvironmentStringsW(lpSrc={LpSrc}, nSize={NSize})", src, nSize);
+		
+		// Simple expansion - just replace %VAR% patterns
+		var expanded = src;
+		var startIndex = 0;
+		while (startIndex < expanded.Length)
+		{
+			var start = expanded.IndexOf('%', startIndex);
+			if (start == -1) break;
+			
+			var end = expanded.IndexOf('%', start + 1);
+			if (end == -1) break;
+			
+			var varName = expanded.Substring(start + 1, end - start - 1);
+			var value = _env.GetEnvironmentVariable(varName) ?? "";
+			expanded = expanded.Substring(0, start) + value + expanded.Substring(end + 1);
+			startIndex = start + value.Length;
+		}
+		
+		var requiredSize = (uint)(expanded.Length + 1); // +1 for null terminator
+		
+		if (nSize == 0 || lpDst.Address == 0)
+		{
+			// Return required size
+			return requiredSize;
+		}
+		
+		if (nSize < requiredSize)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return requiredSize;
+		}
+		
+		lpDst.Write(_env.Memory, expanded);
+		return requiredSize;
+	}
+
+	/// <summary>
+	/// Searches a Unicode directory for a file or subdirectory with a name that matches a specific name.
+	/// HANDLE FindFirstFileW(
+	///   [in]  LPCWSTR            lpFileName,
+	///   [out] LPWIN32_FIND_DATAW lpFindFileData
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint FindFirstFileW(in LpcWStr lpFileName, uint lpFindFileData)
+	{
+		try
+		{
+			var searchPattern = lpFileName.Read(_env.Memory) ?? string.Empty;
+			if (string.IsNullOrEmpty(searchPattern))
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			// Get directory and pattern
+			var dir = Path.GetDirectoryName(searchPattern) ?? ".";
+			var pattern = Path.GetFileName(searchPattern);
+
+			if (string.IsNullOrEmpty(pattern))
+			{
+				pattern = "*";
+			}
+
+			// VFS is required for file operations
+			if (_env.VirtualFileSystem == null)
+			{
+				_logger.LogError("[Kernel32] FindFirstFileW: VFS not initialized");
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			string[] files = _env.VirtualFileSystem.GetFiles(dir, pattern);
+
+			if (files.Length == 0)
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+			}
+
+			// Create handle for this search (reuse existing _findFileHandles)
+			var handle = _nextFindFileHandle++;
+			_findFileHandles[handle] = new FindFileHandle
+			{
+				SearchPattern = searchPattern,
+				Files = files,
+				CurrentIndex = 0
+			};
+
+			// Write first file data (WIN32_FIND_DATAW structure - 592 bytes)
+			var fileName = Path.GetFileName(files[0]);
+			WriteFindDataW(lpFindFileData, fileName);
+
+			_logger.LogInformation("[Kernel32] FindFirstFileW: Found '{FileName}' for pattern '{SearchPattern}'", fileName, searchPattern);
+			_findFileHandles[handle].CurrentIndex = 1;
+
+			return handle;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation("[Kernel32] FindFirstFileW failed: {ExMessage}", ex.Message);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
+		}
+	}
+
+	/// <summary>
+	/// Continues a file search from a previous call to FindFirstFileW.
+	/// BOOL FindNextFileW(
+	///   [in]  HANDLE             hFindFile,
+	///   [out] LPWIN32_FIND_DATAW lpFindFileData
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint FindNextFileW(uint hFindFile, uint lpFindFileData)
+	{
+		try
+		{
+			if (!_findFileHandles.TryGetValue(hFindFile, out var handle))
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			if (handle.CurrentIndex >= handle.Files.Length)
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_NO_MORE_FILES;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
+
+			// Write next file data
+			var fileName = Path.GetFileName(handle.Files[handle.CurrentIndex]);
+			WriteFindDataW(lpFindFileData, fileName);
+
+			_logger.LogDebug("[Kernel32] FindNextFileW: Found '{FileName}'", fileName);
+			handle.CurrentIndex++;
+
+			return (uint)NativeTypes.Win32Bool.TRUE;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogInformation("[Kernel32] FindNextFileW failed: {ExMessage}", ex.Message);
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_NO_MORE_FILES;
+			return (uint)NativeTypes.Win32Bool.FALSE;
+		}
+	}
+
+	// Helper method to write WIN32_FIND_DATAW structure
+	private void WriteFindDataW(uint lpFindFileData, string fileName)
+	{
+		// WIN32_FIND_DATAW structure layout (592 bytes total)
+		// Same as ANSI version but cFileName is WCHAR[260] (520 bytes) instead of CHAR[260]
+		
+		// Clear the structure
+		var zeroBuffer = new byte[592];
+		_env.MemWriteBytes(lpFindFileData, zeroBuffer);
+
+		// Write filename at offset 44 (cFileName field), ensure null-terminated and max 260 WCHARs
+		// Truncate fileName if it's too long
+		var truncated = fileName.Length > 259 ? fileName.Substring(0, 259) : fileName;
+		new LpWStr(lpFindFileData + 44).Write(_env.Memory, truncated);
+	}
+
+	/// <summary>
+	/// Determines the location of a resource with the specified type and name in the specified module (Unicode).
+	/// HRSRC FindResourceW(
+	///   [in, optional] HMODULE hModule,
+	///   [in]           LPCWSTR lpName,
+	///   [in]           LPCWSTR lpType
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint FindResourceW(uint hModule, uint lpName, uint lpType)
+	{
+		_logger.LogInformation("[Kernel32] FindResourceW(hModule=0x{HModule:X8}, lpName=0x{LpName:X8}, lpType=0x{LpType:X8})",
+			hModule, lpName, lpType);
+		
+		if (_resourceReader == null)
+		{
+			_logger.LogWarning("[Kernel32] FindResourceW: Resource reader not available");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_RESOURCE_TYPE_NOT_FOUND;
+			return 0;
+		}
+
+		// In Win32, resource IDs < 0x10000 are integers, >= 0x10000 are string pointers
+		// We can just pass them through to the resource reader which handles both cases
+		
+		try
+		{
+			var result = _resourceReader.FindResource(lpType, lpName, 0);
+			if (result == 0)
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_PROC_NOT_FOUND;
+			}
+			return result;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] FindResourceW failed");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_RESOURCE_TYPE_NOT_FOUND;
+			return 0;
+		}
+	}
+
+	/// <summary>
+	/// Retrieves file system attributes for a Unicode file or directory.
+	/// DWORD GetFileAttributesW(
+	///   [in] LPCWSTR lpFileName
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint GetFileAttributesW(in LpcWStr lpFileName)
+	{
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
+		_logger.LogInformation("[Kernel32] GetFileAttributesW(lpFileName={LpFileName})", fileName);
+		
+		var vfs = _env.VirtualFileSystem;
+		if (vfs == null)
+		{
+			_logger.LogWarning("[Kernel32] GetFileAttributesW: VFS not available");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
+		}
+
+		try
+		{
+			// Try to use VFS to check if file exists
+			if (vfs.FileExists(fileName))
+			{
+				return 0x80; // FILE_ATTRIBUTE_NORMAL
+			}
+			else if (vfs.DirectoryExists(fileName))
+			{
+				return 0x10; // FILE_ATTRIBUTE_DIRECTORY
+			}
+			else
+			{
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return 0xFFFFFFFF;
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[Kernel32] GetFileAttributesW failed");
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+			return 0xFFFFFFFF;
+		}
+	}
+
+	/// <summary>
+	/// Retrieves the path of the system directory (Unicode).
+	/// UINT GetSystemDirectoryW(
+	///   [out] LPWSTR lpBuffer,
+	///   [in]  UINT   uSize
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint GetSystemDirectoryW(in LpWStr lpBuffer, uint uSize)
+	{
+		_logger.LogInformation("[Kernel32] GetSystemDirectoryW(uSize={USize})", uSize);
+		
+		// Return C:\Windows\System32
+		var systemDir = @"C:\Windows\System32";
+		var requiredSize = (uint)(systemDir.Length + 1);
+		
+		if (uSize == 0 || lpBuffer.Address == 0)
+		{
+			return requiredSize - 1; // Return length without null terminator
+		}
+		
+		if (uSize < requiredSize)
+		{
+			_lastError = (uint)NativeTypes.Win32Error.ERROR_INSUFFICIENT_BUFFER;
+			return requiredSize - 1;
+		}
+		
+		lpBuffer.Write(_env.Memory, systemDir);
+		return (uint)systemDir.Length;
+	}
+
+	/// <summary>
+	/// Determines whether the calling process is being debugged by a user-mode debugger.
+	/// BOOL IsDebuggerPresent();
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint IsDebuggerPresent()
+	{
+		_logger.LogDebug("[Kernel32] IsDebuggerPresent()");
+		// Return FALSE - no debugger present in emulated environment
+		return (uint)NativeTypes.Win32Bool.FALSE;
+	}
+
+	/// <summary>
+	/// Sets the bits of a 64-bit value to indicate the comparison operator to use for a specified operating system version attribute.
+	/// ULONGLONG VerSetConditionMask(
+	///   [in] ULONGLONG ConditionMask,
+	///   [in] DWORD     TypeMask,
+	///   [in] BYTE      Condition
+	/// );
+	/// </summary>
+	[DllModuleExport(12)]
+	private ulong VerSetConditionMask(ulong conditionMask, uint typeMask, uint condition)
+	{
+		_logger.LogDebug("[Kernel32] VerSetConditionMask(conditionMask=0x{ConditionMask:X16}, typeMask=0x{TypeMask:X8}, condition={Condition})",
+			conditionMask, typeMask, condition);
+		
+		// Implementation based on Windows VerSetConditionMask
+		// Each type bit uses 3 bits in the condition mask
+		if (typeMask == 0)
+			return conditionMask;
+		
+		condition &= 0x07; // Only lower 3 bits are used
+		
+		// Find the bit position in typeMask
+		uint bitIndex = 0;
+		uint mask = typeMask;
+		while ((mask & 1) == 0 && bitIndex < 32)
+		{
+			mask >>= 1;
+			bitIndex++;
+		}
+		
+		if (bitIndex >= 32)
+			return conditionMask;
+		
+		// Set the 3-bit condition at the appropriate position
+		ulong shift = bitIndex * 3;
+		ulong clearMask = ~(0x07UL << (int)shift);
+		ulong setMask = ((ulong)condition) << (int)shift;
+		
+		return (conditionMask & clearMask) | setMask;
+	}
+
+	/// <summary>
+	/// Compares a set of operating system version requirements to the corresponding values for the currently running version of the system (Unicode).
+	/// BOOL VerifyVersionInfoW(
+	///   [in] LPOSVERSIONINFOEXW lpVersionInformation,
+	///   [in] DWORD              dwTypeMask,
+	///   [in] DWORDLONG          dwlConditionMask
+	/// );
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint VerifyVersionInfoW(uint lpVersionInformation, uint dwTypeMask, ulong dwlConditionMask)
+	{
+		_logger.LogInformation("[Kernel32] VerifyVersionInfoW(lpVersionInformation=0x{LpVersionInformation:X8}, dwTypeMask=0x{DwTypeMask:X8}, dwlConditionMask=0x{DwlConditionMask:X16})",
+			lpVersionInformation, dwTypeMask, dwlConditionMask);
+		
+		// Read OSVERSIONINFOEXW structure (size: 156 bytes for W version)
+		// For simplicity, we'll emulate Windows 95 (version 4.0.950)
+		// and always return TRUE for now
+		
+		// In a real implementation, we would:
+		// 1. Read the lpVersionInformation structure
+		// 2. Compare each field specified in dwTypeMask using the condition in dwlConditionMask
+		// 3. Return TRUE if all comparisons match, FALSE otherwise
+		
+		return (uint)NativeTypes.Win32Bool.TRUE;
+	}
+
+	/// <summary>
+	/// Creates an activation context (Unicode).
+	/// HANDLE CreateActCtxW(
+	///   [in] PCACTCTXW pActCtx
+	/// );
+	/// </summary>
+	[DllModuleExport(4, IsStub = true)]
+	private uint CreateActCtxW(uint pActCtx)
+	{
+		_logger.LogInformation("[Kernel32] CreateActCtxW(pActCtx=0x{PActCtx:X8})", pActCtx);
+		// Stub: Return an invalid handle - activation contexts not fully supported
+		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+		return 0xFFFFFFFF; // INVALID_HANDLE_VALUE
+	}
+
+	/// <summary>
+	/// Activates the specified activation context.
+	/// BOOL ActivateActCtx(
+	///   [in]  HANDLE    hActCtx,
+	///   [out] ULONG_PTR *lpCookie
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint ActivateActCtx(uint hActCtx, uint lpCookie)
+	{
+		_logger.LogInformation("[Kernel32] ActivateActCtx(hActCtx=0x{HActCtx:X8}, lpCookie=0x{LpCookie:X8})",
+			hActCtx, lpCookie);
+		
+		// Stub: Write a dummy cookie and return success
+		if (lpCookie != 0)
+		{
+			_env.MemWrite32(lpCookie, 0x12345678);
+		}
+		
+		return (uint)NativeTypes.Win32Bool.TRUE;
+	}
+
+	/// <summary>
+	/// Deactivates the activation context corresponding to the specified cookie.
+	/// BOOL DeactivateActCtx(
+	///   [in] DWORD     dwFlags,
+	///   [in] ULONG_PTR ulCookie
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint DeactivateActCtx(uint dwFlags, uint ulCookie)
+	{
+		_logger.LogInformation("[Kernel32] DeactivateActCtx(dwFlags=0x{DwFlags:X8}, ulCookie=0x{UlCookie:X8})",
+			dwFlags, ulCookie);
+		
+		// Stub: Just return success
+		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
 }
