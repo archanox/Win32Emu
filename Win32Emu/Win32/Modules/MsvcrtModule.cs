@@ -24,6 +24,12 @@ namespace Win32Emu.Win32.Modules
 		// File handle tracking for fflush and setvbuf
 		private readonly Dictionary<uint, FileStreamInfo> _fileStreams = new();
 		
+		// atexit/onexit function tracking
+		private readonly List<uint> _exitFunctions = new();
+		
+		// Thread lock tracking (stub for now)
+		private readonly Dictionary<int, object> _locks = new();
+		
 		/// <summary>
 		/// Stream buffering mode
 		/// </summary>
@@ -257,6 +263,44 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "SETVBUF":
 					returnValue = (uint)setvbuf(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "__DLLONEXIT":
+					returnValue = __dllonexit(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "__INITENV":
+					returnValue = __initenv();
+					return true;
+				case "__LCONV_INIT":
+					returnValue = __lconv_init();
+					return true;
+				case "_IOB":
+					returnValue = _iob();
+					return true;
+				case "_LOCK":
+					_lock(a.Int32(0));
+					returnValue = 0;
+					return true;
+				case "_ONEXIT":
+					returnValue = _onexit(a.UInt32(0));
+					return true;
+				case "_STRDUP":
+					returnValue = _strdup(a.LpcStr(0));
+					return true;
+				case "_UNLOCK":
+					_unlock(a.Int32(0));
+					returnValue = 0;
+					return true;
+				case "_VSNPRINTF":
+					returnValue = (uint)_vsnprintf(a.UInt32(0), a.UInt32(1), a.LpcStr(2), a.UInt32(3));
+					return true;
+				case "ATOI":
+					returnValue = (uint)atoi(a.LpcStr(0));
+					return true;
+				case "FWRITE":
+					returnValue = fwrite(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "STRCPY":
+					returnValue = strcpy(a.UInt32(0), a.LpcStr(1));
 					return true;
 				case "??1TYPE_INFO@@UAE@XZ":
 					// type_info destructor (C++ mangled name)
@@ -1136,6 +1180,225 @@ namespace Win32Emu.Win32.Modules
 			stream, bufferMode, buffer, size);
 		
 		return 0; // Success
+	}
+
+	/// <summary>
+	/// __dllonexit - Register function to be called at DLL unload
+	/// Takes function pointer, start and end of onexit table
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint __dllonexit(uint func, uint pbegin, uint pend)
+	{
+		_logger.LogInformation("[msvcrt] __dllonexit(func=0x{Func:X8}, pbegin=0x{Pbegin:X8}, pend=0x{Pend:X8})", 
+			func, pbegin, pend);
+		
+		// Add to exit functions list
+		if (func != 0)
+		{
+			_exitFunctions.Add(func);
+		}
+		
+		// In real implementation, this would update the onexit table
+		// For our purposes, just tracking in _exitFunctions is sufficient
+		return func; // Return function pointer on success
+	}
+
+	/// <summary>
+	/// __initenv - Get pointer to environment variables
+	/// Returns pointer to array of environment strings
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint __initenv()
+	{
+		_logger.LogInformation("[msvcrt] __initenv()");
+		// Return pointer to environment variables (same as __p___initenv)
+		return _env.GetEnvironmentStringsA();
+	}
+
+	/// <summary>
+	/// __lconv_init - Initialize locale conversion structure
+	/// Initializes the locale-specific formatting information
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint __lconv_init()
+	{
+		_logger.LogInformation("[msvcrt] __lconv_init()");
+		// Return 0 for success - this is a stub as we don't implement full locale support
+		return 0;
+	}
+
+	/// <summary>
+	/// _iob - Get pointer to I/O buffer array
+	/// Returns pointer to stdin, stdout, stderr buffers
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint _iob()
+	{
+		_logger.LogInformation("[msvcrt] _iob()");
+		// Return pointer to IO buffer array (same as __p__iob)
+		return __p__iob();
+	}
+
+	/// <summary>
+	/// _lock - Acquire a lock for thread synchronization
+	/// Used to protect CRT data structures in multi-threaded programs
+	/// </summary>
+	[DllModuleExport(4)]
+	private void _lock(int locknum)
+	{
+		_logger.LogInformation("[msvcrt] _lock(locknum={Locknum})", locknum);
+		// In a full implementation, this would acquire a lock
+		// For now, just track that we "have" the lock
+		if (!_locks.ContainsKey(locknum))
+		{
+			_locks[locknum] = new object();
+		}
+	}
+
+	/// <summary>
+	/// _onexit - Register function to be called at exit
+	/// Similar to atexit but returns the function pointer
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _onexit(uint func)
+	{
+		_logger.LogInformation("[msvcrt] _onexit(func=0x{Func:X8})", func);
+		
+		// Add to exit functions list
+		if (func != 0)
+		{
+			_exitFunctions.Add(func);
+			return func; // Return function pointer on success
+		}
+		
+		return 0; // NULL on error
+	}
+
+	/// <summary>
+	/// _strdup - Duplicate a string
+	/// Allocates memory and copies the string
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _strdup(in LpcStr str)
+	{
+		var s = str.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] _strdup(str=\"{S}\")", s);
+		
+		// Allocate memory for string + null terminator
+		var length = (uint)s.Length + 1;
+		var ptr = _env.HeapAlloc(0, length);
+		
+		if (ptr == 0)
+		{
+			return 0; // NULL on allocation failure
+		}
+		
+		// Copy string to allocated memory
+		_env.WriteAnsiStringAt(ptr, s);
+		
+		return ptr;
+	}
+
+	/// <summary>
+	/// _unlock - Release a lock for thread synchronization
+	/// Used to release locks acquired with _lock
+	/// </summary>
+	[DllModuleExport(4)]
+	private void _unlock(int locknum)
+	{
+		_logger.LogInformation("[msvcrt] _unlock(locknum={Locknum})", locknum);
+		// In a full implementation, this would release a lock
+		// For now, just remove from tracking if present
+		_locks.Remove(locknum);
+	}
+
+	/// <summary>
+	/// _vsnprintf - Format string with variable arguments and size limit
+	/// Similar to sprintf but with a maximum size and va_list
+	/// </summary>
+	[DllModuleExport(16)]
+	private int _vsnprintf(uint buffer, uint count, in LpcStr format, uint args)
+	{
+		var fmt = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] _vsnprintf(buffer=0x{Buffer:X8}, count={Count}, format=\"{Fmt}\", args=0x{Args:X8})", 
+			buffer, count, fmt, args);
+		
+		// Simplified implementation - just copy format string to buffer with size limit
+		if (buffer != 0 && count > 0)
+		{
+			var outputLength = (uint)Math.Min(fmt.Length, (int)(count - 1));
+			if (outputLength > 0)
+			{
+				var bytes = System.Text.Encoding.ASCII.GetBytes(fmt.Substring(0, (int)outputLength));
+				_env.MemWriteBytes(buffer, bytes);
+			}
+			// Always null terminate
+			_env.MemWrite8(buffer + outputLength, 0);
+			return (int)outputLength;
+		}
+		
+		return -1; // Error
+	}
+
+	/// <summary>
+	/// atoi - Convert string to integer
+	/// Parses string and returns integer value
+	/// </summary>
+	[DllModuleExport(4)]
+	private int atoi(in LpcStr str)
+	{
+		var s = str.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] atoi(str=\"{S}\")", s);
+		
+		// Parse string to integer, return 0 if parsing fails
+		if (int.TryParse(s.Trim(), out var result))
+		{
+			return result;
+		}
+		
+		return 0;
+	}
+
+	/// <summary>
+	/// fwrite - Write data to stream
+	/// Writes count items of size bytes each to stream
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint fwrite(uint ptr, uint size, uint count, uint stream)
+	{
+		_logger.LogInformation("[msvcrt] fwrite(ptr=0x{Ptr:X8}, size={Size}, count={Count}, stream=0x{Stream:X8})", 
+			ptr, size, count, stream);
+		
+		// In a real implementation, this would write to a file
+		// For now, just return the count to indicate success
+		// Mark stream as needing flush if tracked
+		if (_fileStreams.TryGetValue(stream, out var fileInfo))
+		{
+			fileInfo.NeedsFlush = true;
+		}
+		
+		return count; // Return number of items written
+	}
+
+	/// <summary>
+	/// strcpy - Copy string
+	/// Copies source string to destination
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint strcpy(uint dest, in LpcStr src)
+	{
+		var s = src.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] strcpy(dest=0x{Dest:X8}, src=\"{S}\")", dest, s);
+		
+		if (dest == 0)
+		{
+			return 0; // NULL destination
+		}
+		
+		// Copy string to destination
+		_env.WriteAnsiStringAt(dest, s);
+		
+		return dest; // Return destination pointer
 	}
 }
 }
