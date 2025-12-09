@@ -3167,7 +3167,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lprc + 8, 0); // right
 				_env.MemWrite32(lprc + 12, 0); // bottom
 			}
-			return 1; // NULLREGION
+			return (int)NativeTypes.RegionComplexity.NULLREGION;
 		}
 
 		[DllModuleExport(20, IsStub = true)]
@@ -3186,7 +3186,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] GetROP2(hdc=0x{Hdc:X8})", hdc);
 			
 			// Stub: return R2_COPYPEN (13) - default ROP2 mode
-			return 13;
+			return (int)NativeTypes.ROP2Mode.R2_COPYPEN;
 		}
 
 		[DllModuleExport(8, IsStub = true)]
@@ -3195,7 +3195,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] SetROP2(hdc=0x{Hdc:X8}, fnDrawMode={FnDrawMode})", hdc, fnDrawMode);
 			
 			// Stub: return previous mode (R2_COPYPEN)
-			return 13;
+			return (int)NativeTypes.ROP2Mode.R2_COPYPEN;
 		}
 
 		[DllModuleExport(16, IsStub = true)]
@@ -3219,10 +3219,11 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(16, IsStub = true)]
-		private uint EnumFontFamiliesA(uint hdc, uint lpszFamily, uint lpEnumFontFamProc, uint lParam)
+		private uint EnumFontFamiliesA(uint hdc, in LpcStr lpszFamily, uint lpEnumFontFamProc, uint lParam)
 		{
-			_logger.LogInformation("[Gdi32] EnumFontFamiliesA(hdc=0x{Hdc:X8}, lpszFamily=0x{LpszFamily:X8}, lpEnumFontFamProc=0x{LpEnumFontFamProc:X8}, lParam=0x{LParam:X8})",
-				hdc, lpszFamily, lpEnumFontFamProc, lParam);
+			var family = lpszFamily.ToString() ?? string.Empty;
+			_logger.LogInformation("[Gdi32] EnumFontFamiliesA(hdc=0x{Hdc:X8}, lpszFamily=\"{Family}\", lpEnumFontFamProc=0x{LpEnumFontFamProc:X8}, lParam=0x{LParam:X8})",
+				hdc, family, lpEnumFontFamProc, lParam);
 			
 			// Stub: return 1 (success, but no fonts enumerated)
 			return 1;
@@ -3276,17 +3277,30 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] GetTextMetricsW(hdc=0x{Hdc:X8}, lptm=0x{Lptm:X8})", hdc, lptm);
 			
-			// Stub: fill in default metrics
+			// Stub: fill in default metrics using the C# struct helper
 			if (lptm != 0)
 			{
-				// TEXTMETRICW structure (56 bytes)
-				_env.MemWrite32(lptm, (uint)DefaultFontHeight);     // tmHeight
-				_env.MemWrite32(lptm + 4, 0);                       // tmAscent
-				_env.MemWrite32(lptm + 8, 0);                       // tmDescent
-				_env.MemWrite32(lptm + 12, 0);                      // tmInternalLeading
-				_env.MemWrite32(lptm + 16, 0);                      // tmExternalLeading
-				_env.MemWrite32(lptm + 20, (uint)DefaultCharWidth); // tmAveCharWidth
-				_env.MemWrite32(lptm + 24, (uint)DefaultCharWidth); // tmMaxCharWidth
+				var textMetric = new TEXTMETRICWRef(_env.Memory, lptm);
+				textMetric.tmHeight = DefaultFontHeight;
+				textMetric.tmAscent = 0;
+				textMetric.tmDescent = 0;
+				textMetric.tmInternalLeading = 0;
+				textMetric.tmExternalLeading = 0;
+				textMetric.tmAveCharWidth = DefaultCharWidth;
+				textMetric.tmMaxCharWidth = DefaultCharWidth;
+				textMetric.tmWeight = 0;
+				textMetric.tmOverhang = 0;
+				textMetric.tmDigitizedAspectX = 0;
+				textMetric.tmDigitizedAspectY = 0;
+				textMetric.tmFirstChar = 0;
+				textMetric.tmLastChar = 0;
+				textMetric.tmDefaultChar = 0;
+				textMetric.tmBreakChar = 0;
+				textMetric.tmItalic = 0;
+				textMetric.tmUnderlined = 0;
+				textMetric.tmStruckOut = 0;
+				textMetric.tmPitchAndFamily = 0;
+				textMetric.tmCharSet = 0;
 			}
 			return 1; // TRUE
 		}

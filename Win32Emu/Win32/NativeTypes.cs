@@ -187,6 +187,27 @@ public static class NativeTypes
 		COMPLEXREGION = 3
 	}
 
+	// GDI ROP2 drawing modes
+	public enum ROP2Mode
+	{
+		R2_BLACK = 1,        // 0
+		R2_NOTMERGEPEN = 2,  // DPon
+		R2_MASKNOTPEN = 3,   // DPna
+		R2_NOTCOPYPEN = 4,   // PN
+		R2_MASKPENNOT = 5,   // PDna
+		R2_NOT = 6,          // Dn
+		R2_XORPEN = 7,       // DPx
+		R2_NOTMASKPEN = 8,   // DPan
+		R2_MASKPEN = 9,      // DPa
+		R2_NOTXORPEN = 10,   // DPxn
+		R2_NOP = 11,         // D
+		R2_MERGENOTPEN = 12, // DPno
+		R2_COPYPEN = 13,     // P (default)
+		R2_MERGEPENNOT = 14, // PDno
+		R2_MERGEPEN = 15,    // DPo
+		R2_WHITE = 16        // 1
+	}
+
 	// Windows BOOL values
 	public enum Win32Bool : uint
 	{
@@ -462,6 +483,55 @@ public static class NativeTypes
 		public uint fIncUpdate;     // Offset 28
 		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
 		public byte[] rgbReserved; // Offset 32 - Reserved
+	}
+
+	// TEXTMETRICW structure (60 bytes)
+	// Used with GetTextMetricsW in GDI32
+	[StructLayout(LayoutKind.Explicit, Size = 60)]
+	[GenerateMemoryRef]
+	public struct TEXTMETRICW
+	{
+		[FieldOffset(0)]
+		public int tmHeight;           // Offset 0
+		[FieldOffset(4)]
+		public int tmAscent;           // Offset 4
+		[FieldOffset(8)]
+		public int tmDescent;          // Offset 8
+		[FieldOffset(12)]
+		public int tmInternalLeading;  // Offset 12
+		[FieldOffset(16)]
+		public int tmExternalLeading;  // Offset 16
+		[FieldOffset(20)]
+		public int tmAveCharWidth;     // Offset 20
+		[FieldOffset(24)]
+		public int tmMaxCharWidth;     // Offset 24
+		[FieldOffset(28)]
+		public int tmWeight;           // Offset 28
+		[FieldOffset(32)]
+		public int tmOverhang;         // Offset 32
+		[FieldOffset(36)]
+		public int tmDigitizedAspectX; // Offset 36
+		[FieldOffset(40)]
+		public int tmDigitizedAspectY; // Offset 40
+		[FieldOffset(44)]
+		public ushort tmFirstChar;     // Offset 44
+		[FieldOffset(46)]
+		public ushort tmLastChar;      // Offset 46
+		[FieldOffset(48)]
+		public ushort tmDefaultChar;   // Offset 48
+		[FieldOffset(50)]
+		public ushort tmBreakChar;     // Offset 50
+		[FieldOffset(52)]
+		public byte tmItalic;          // Offset 52
+		[FieldOffset(53)]
+		public byte tmUnderlined;      // Offset 53
+		[FieldOffset(54)]
+		public byte tmStruckOut;       // Offset 54
+		[FieldOffset(55)]
+		public byte tmPitchAndFamily;  // Offset 55
+		[FieldOffset(56)]
+		public byte tmCharSet;         // Offset 56
+		// Padding bytes 57-59 for alignment to 60 bytes
 	}
 
 	// DOCINFO structure (20 bytes)
