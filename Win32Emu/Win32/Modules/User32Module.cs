@@ -1589,6 +1589,102 @@ namespace Win32Emu.Win32.Modules
 				case "WAITFORINPUTIDLE":
 					returnValue = WaitForInputIdle(a.UInt32(0), a.UInt32(1));
 					return true;
+				case "APPENDMENUW":
+					returnValue = AppendMenuW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "CHANGEDISPLAYSETTINGSEXW":
+					returnValue = (uint)ChangeDisplaySettingsExW(a.LpcWStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "CHARNEXTEXA":
+					returnValue = CharNextExA(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
+					return true;
+				case "CHARNEXTW":
+					returnValue = CharNextW(a.LpcWStr(0));
+					return true;
+				case "CHARPREVEXA":
+					returnValue = CharPrevExA(a.UInt32(0), a.LpcStr(1), a.LpcStr(2));
+					return true;
+				case "CHARPREVW":
+					returnValue = CharPrevW(a.LpcWStr(0), a.LpcWStr(1));
+					return true;
+				case "CLOSEWINDOW":
+					returnValue = CloseWindow(a.UInt32(0));
+					return true;
+				case "CREATECURSOR":
+					returnValue = CreateCursor(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+				case "CREATEDESKTOPW":
+					returnValue = CreateDesktopW(a.LpcWStr(0), a.LpcWStr(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "CREATEDIALOGPARAMW":
+					returnValue = CreateDialogParamW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "CREATEICONFROMRESOURCEEX":
+					returnValue = CreateIconFromResourceEx(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.Int32(4), a.Int32(5), a.UInt32(6));
+					return true;
+				case "CREATEWINDOWSTATIONW":
+					returnValue = CreateWindowStationW(a.LpcWStr(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "ENUMDISPLAYSETTINGSW":
+					returnValue = EnumDisplaySettingsW(a.LpcWStr(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "ENUMPROPSEXW":
+					returnValue = EnumPropsExW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "ENUMPROPSW":
+					returnValue = EnumPropsW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "FINDWINDOWW":
+					returnValue = FindWindowW(a.LpcWStr(0), a.LpcWStr(1));
+					return true;
+				case "GETGUITHREADINFO":
+					returnValue = GetGUIThreadInfo(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETPROPW":
+					returnValue = GetPropW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETTITLEBARINFO":
+					returnValue = GetTitleBarInfo(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "INITIALIZELPKHOOKS":
+					returnValue = InitializeLpkHooks(a.UInt32(0));
+					return true;
+				case "ISGUITHREAD":
+					returnValue = IsGUIThread(a.Int32(0));
+					return true;
+				case "LOADIMAGEW":
+					returnValue = LoadImageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.UInt32(5));
+					return true;
+				case "LOOKUPICONIDFROMDIRECTORYEX":
+					returnValue = LookupIconIdFromDirectoryEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
+					return true;
+				case "OPENDESKTOPW":
+					returnValue = OpenDesktopW(a.LpcWStr(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "OPENWINDOWSTATIONW":
+					returnValue = OpenWindowStationW(a.LpcWStr(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "PRIVATEEXTRACTICONSW":
+					returnValue = PrivateExtractIconsW(a.LpcWStr(0), a.Int32(1), a.Int32(2), a.Int32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+					return true;
+				case "REALGETWINDOWCLASSA":
+					returnValue = (uint)RealGetWindowClassA(a.UInt32(0), a.LpStr(1), a.UInt32(2));
+					return true;
+				case "REGISTERWINDOWMESSAGEW":
+					returnValue = RegisterWindowMessageW(a.LpcWStr(0));
+					return true;
+				case "SENDMESSAGETIMEOUTW":
+					returnValue = SendMessageTimeoutW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+				case "SETPROPW":
+					returnValue = SetPropW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "SWITCHTOTHISWINDOW":
+					returnValue = SwitchToThisWindow(a.UInt32(0), a.Int32(1));
+					return true;
+				case "TRACKMOUSEEVENT":
+					returnValue = TrackMouseEvent(a.UInt32(0));
+					return true;
 
 				default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
@@ -9544,6 +9640,367 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[User32] WaitForInputIdle(hProcess={Hprocess}, dwMilliseconds={Dwmilliseconds})", hProcess, dwMilliseconds);
 			return 0; // Stub implementation
 		}
+
+
+/// <summary>
+/// AppendMenuW - Appends a new item to the end of the specified menu bar, drop-down menu, submenu, or shortcut menu (Unicode version).
+/// </summary>
+[DllModuleExport(16, IsStub = true)]
+private uint AppendMenuW(uint hMenu, uint uFlags, uint uIDNewItem, uint lpNewItem)
+{
+_logger.LogInformation("[User32] AppendMenuW(hMenu=0x{HMenu:X8}, uFlags=0x{UFlags:X8}, uIDNewItem=0x{UIDNewItem:X8}, lpNewItem=0x{LpNewItem:X8})", 
+hMenu, uFlags, uIDNewItem, lpNewItem);
+return 1; // TRUE - Stub implementation
+}
+
+/// <summary>
+/// ChangeDisplaySettingsExW - Changes the settings of the specified display device to the specified graphics mode (Unicode version).
+/// </summary>
+[DllModuleExport(20, IsStub = true)]
+private int ChangeDisplaySettingsExW(in LpcWStr lpszDeviceName, uint lpDevMode, uint hwnd, uint dwflags, uint lParam)
+{
+var deviceName = lpszDeviceName.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] ChangeDisplaySettingsExW(lpszDeviceName=\"{DeviceName}\", lpDevMode=0x{LpDevMode:X8}, hwnd=0x{Hwnd:X8}, dwflags=0x{Dwflags:X8}, lParam=0x{LParam:X8})",
+deviceName, lpDevMode, hwnd, dwflags, lParam);
+return 0; // DISP_CHANGE_SUCCESSFUL - Stub implementation
+}
+
+/// <summary>
+/// CharNextExA - Retrieves the pointer to the next character in a string (ANSI extended version).
+/// </summary>
+[DllModuleExport(12, IsStub = true)]
+private uint CharNextExA(uint CodePage, in LpcStr lpCurrentChar, uint dwFlags)
+{
+_logger.LogInformation("[User32] CharNextExA(CodePage={CodePage}, lpCurrentChar=0x{LpCurrentChar:X8}, dwFlags={DwFlags})",
+CodePage, lpCurrentChar.Address, dwFlags);
+// Return pointer to next character (stub: advance by 1 byte for ANSI)
+return lpCurrentChar.Address + 1;
+}
+
+/// <summary>
+/// CharNextW - Retrieves the pointer to the next character in a string (Unicode version).
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint CharNextW(in LpcWStr lpsz)
+{
+_logger.LogInformation("[User32] CharNextW(lpsz=0x{Lpsz:X8})", lpsz.Address);
+// Return pointer to next character (advance by 2 bytes for Unicode)
+return lpsz.Address + 2;
+}
+
+/// <summary>
+/// CharPrevExA - Retrieves the pointer to the preceding character in a string (ANSI extended version).
+/// </summary>
+[DllModuleExport(12, IsStub = true)]
+private uint CharPrevExA(uint CodePage, in LpcStr lpStart, in LpcStr lpCurrentChar)
+{
+_logger.LogInformation("[User32] CharPrevExA(CodePage={CodePage}, lpStart=0x{LpStart:X8}, lpCurrentChar=0x{LpCurrentChar:X8})",
+CodePage, lpStart.Address, lpCurrentChar.Address);
+// Return pointer to previous character (stub: go back 1 byte for ANSI)
+if (lpCurrentChar.Address > lpStart.Address)
+return lpCurrentChar.Address - 1;
+return lpStart.Address;
+}
+
+/// <summary>
+/// CharPrevW - Retrieves the pointer to the preceding character in a string (Unicode version).
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint CharPrevW(in LpcWStr lpszStart, in LpcWStr lpszCurrent)
+{
+_logger.LogInformation("[User32] CharPrevW(lpszStart=0x{LpszStart:X8}, lpszCurrent=0x{LpszCurrent:X8})",
+lpszStart.Address, lpszCurrent.Address);
+// Return pointer to previous character (go back 2 bytes for Unicode)
+if (lpszCurrent.Address > lpszStart.Address + 1)
+return lpszCurrent.Address - 2;
+return lpszStart.Address;
+}
+
+/// <summary>
+/// CloseWindow - Minimizes (but does not destroy) the specified window.
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint CloseWindow(uint hWnd)
+{
+_logger.LogInformation("[User32] CloseWindow(hWnd=0x{HWnd:X8})", hWnd);
+return 1; // TRUE - Stub implementation
+}
+
+/// <summary>
+/// CreateCursor - Creates a cursor having the specified size, bit patterns, and hot spot.
+/// </summary>
+[DllModuleExport(28, IsStub = true)]
+private uint CreateCursor(uint hInst, int xHotSpot, int yHotSpot, int nWidth, int nHeight, uint pvANDPlane, uint pvXORPlane)
+{
+_logger.LogInformation("[User32] CreateCursor(hInst=0x{HInst:X8}, xHotSpot={XHotSpot}, yHotSpot={YHotSpot}, nWidth={NWidth}, nHeight={NHeight}, pvANDPlane=0x{PvANDPlane:X8}, pvXORPlane=0x{PvXORPlane:X8})",
+hInst, xHotSpot, yHotSpot, nWidth, nHeight, pvANDPlane, pvXORPlane);
+return 0x00050001; // Fake cursor handle - Stub implementation
+}
+
+/// <summary>
+/// CreateDesktopW - Creates a new desktop, associates it with the current window station of the calling process (Unicode version).
+/// </summary>
+[DllModuleExport(24, IsStub = true)]
+private uint CreateDesktopW(in LpcWStr lpszDesktop, in LpcWStr lpszDevice, uint pDevmode, uint dwFlags, uint dwDesiredAccess, uint lpsa)
+{
+var desktop = lpszDesktop.ToString() ?? string.Empty;
+var device = lpszDevice.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] CreateDesktopW(lpszDesktop=\"{Desktop}\", lpszDevice=\"{Device}\", pDevmode=0x{PDevmode:X8}, dwFlags=0x{DwFlags:X8}, dwDesiredAccess=0x{DwDesiredAccess:X8}, lpsa=0x{Lpsa:X8})",
+desktop, device, pDevmode, dwFlags, dwDesiredAccess, lpsa);
+return 0x00020001; // Fake desktop handle - Stub implementation
+}
+
+/// <summary>
+/// CreateDialogParamW - Creates a modeless dialog box from a dialog box template (Unicode version).
+/// </summary>
+[DllModuleExport(20, IsStub = true)]
+private uint CreateDialogParamW(uint hInstance, uint lpTemplateName, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
+{
+_logger.LogInformation("[User32] CreateDialogParamW(hInstance=0x{HInstance:X8}, lpTemplateName=0x{LpTemplateName:X8}, hWndParent=0x{HWndParent:X8}, lpDialogFunc=0x{LpDialogFunc:X8}, dwInitParam=0x{DwInitParam:X8})",
+hInstance, lpTemplateName, hWndParent, lpDialogFunc, dwInitParam);
+return 0; // NULL - Stub implementation (dialog not created)
+}
+
+/// <summary>
+/// CreateIconFromResourceEx - Creates an icon or cursor from resource bits describing the icon.
+/// </summary>
+[DllModuleExport(28, IsStub = true)]
+private uint CreateIconFromResourceEx(uint presbits, uint dwResSize, int fIcon, uint dwVer, int cxDesired, int cyDesired, uint Flags)
+{
+_logger.LogInformation("[User32] CreateIconFromResourceEx(presbits=0x{Presbits:X8}, dwResSize={DwResSize}, fIcon={FIcon}, dwVer=0x{DwVer:X8}, cxDesired={CxDesired}, cyDesired={CyDesired}, Flags=0x{Flags:X8})",
+presbits, dwResSize, fIcon, dwVer, cxDesired, cyDesired, Flags);
+return 0x00040001; // Fake icon/cursor handle - Stub implementation
+}
+
+/// <summary>
+/// CreateWindowStationW - Creates a window station object (Unicode version).
+/// </summary>
+[DllModuleExport(16, IsStub = true)]
+private uint CreateWindowStationW(in LpcWStr lpwinsta, uint dwFlags, uint dwDesiredAccess, uint lpsa)
+{
+var winsta = lpwinsta.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] CreateWindowStationW(lpwinsta=\"{Winsta}\", dwFlags=0x{DwFlags:X8}, dwDesiredAccess=0x{DwDesiredAccess:X8}, lpsa=0x{Lpsa:X8})",
+winsta, dwFlags, dwDesiredAccess, lpsa);
+return 0x00030001; // Fake window station handle - Stub implementation
+}
+
+/// <summary>
+/// EnumDisplaySettingsW - Retrieves information about one of the graphics modes for a display device (Unicode version).
+/// </summary>
+[DllModuleExport(12, IsStub = true)]
+private uint EnumDisplaySettingsW(in LpcWStr lpszDeviceName, uint iModeNum, uint lpDevMode)
+{
+var deviceName = lpszDeviceName.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] EnumDisplaySettingsW(lpszDeviceName=\"{DeviceName}\", iModeNum={IModeNum}, lpDevMode=0x{LpDevMode:X8})",
+deviceName, iModeNum, lpDevMode);
+return 0; // FALSE - Stub implementation (no modes available)
+}
+
+/// <summary>
+/// EnumPropsExW - Enumerates all entries in the property list of a window (Unicode extended version).
+/// </summary>
+[DllModuleExport(12, IsStub = true)]
+private uint EnumPropsExW(uint hWnd, uint lpEnumFunc, uint lParam)
+{
+_logger.LogInformation("[User32] EnumPropsExW(hWnd=0x{HWnd:X8}, lpEnumFunc=0x{LpEnumFunc:X8}, lParam=0x{LParam:X8})",
+hWnd, lpEnumFunc, lParam);
+return 0xFFFFFFFF; // -1 indicates no properties enumerated - Stub implementation
+}
+
+/// <summary>
+/// EnumPropsW - Enumerates all entries in the property list of a window (Unicode version).
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint EnumPropsW(uint hWnd, uint lpEnumFunc)
+{
+_logger.LogInformation("[User32] EnumPropsW(hWnd=0x{HWnd:X8}, lpEnumFunc=0x{LpEnumFunc:X8})", hWnd, lpEnumFunc);
+return 0xFFFFFFFF; // -1 indicates no properties enumerated - Stub implementation
+}
+
+/// <summary>
+/// FindWindowW - Retrieves a handle to the top-level window whose class name and window name match the specified strings (Unicode version).
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint FindWindowW(in LpcWStr lpClassName, in LpcWStr lpWindowName)
+{
+var className = lpClassName.ToString() ?? string.Empty;
+var windowName = lpWindowName.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] FindWindowW(lpClassName=\"{ClassName}\", lpWindowName=\"{WindowName}\")",
+className, windowName);
+return 0; // NULL - Stub implementation (window not found)
+}
+
+/// <summary>
+/// GetGUIThreadInfo - Retrieves information about the active window or a specified GUI thread.
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint GetGUIThreadInfo(uint idThread, uint pgui)
+{
+_logger.LogInformation("[User32] GetGUIThreadInfo(idThread={IdThread}, pgui=0x{Pgui:X8})", idThread, pgui);
+return 0; // FALSE - Stub implementation
+}
+
+/// <summary>
+/// GetPropW - Retrieves a data handle from the property list of the specified window (Unicode version).
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint GetPropW(uint hWnd, uint lpString)
+{
+_logger.LogInformation("[User32] GetPropW(hWnd=0x{HWnd:X8}, lpString=0x{LpString:X8})", hWnd, lpString);
+return 0; // NULL - Stub implementation (property not found)
+}
+
+/// <summary>
+/// GetTitleBarInfo - Retrieves information about the specified title bar.
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint GetTitleBarInfo(uint hwnd, uint pti)
+{
+_logger.LogInformation("[User32] GetTitleBarInfo(hwnd=0x{Hwnd:X8}, pti=0x{Pti:X8})", hwnd, pti);
+return 0; // FALSE - Stub implementation
+}
+
+/// <summary>
+/// InitializeLpkHooks - Initializes Language Pack hooks (internal function).
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint InitializeLpkHooks(uint lpLpkHooks)
+{
+_logger.LogInformation("[User32] InitializeLpkHooks(lpLpkHooks=0x{LpLpkHooks:X8})", lpLpkHooks);
+return 1; // TRUE - Stub implementation
+}
+
+/// <summary>
+/// IsGUIThread - Converts a thread to a GUI thread.
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint IsGUIThread(int bConvert)
+{
+_logger.LogInformation("[User32] IsGUIThread(bConvert={BConvert})", bConvert);
+return 1; // TRUE - Stub implementation (assume thread is GUI thread)
+}
+
+/// <summary>
+/// LoadImageW - Loads an icon, cursor, animated cursor, or bitmap (Unicode version).
+/// </summary>
+[DllModuleExport(24, IsStub = true)]
+private uint LoadImageW(uint hInst, uint name, uint type, int cx, int cy, uint fuLoad)
+{
+_logger.LogInformation("[User32] LoadImageW(hInst=0x{HInst:X8}, name=0x{Name:X8}, type={Type}, cx={Cx}, cy={Cy}, fuLoad=0x{FuLoad:X8})",
+hInst, name, type, cx, cy, fuLoad);
+return 0; // NULL - Stub implementation (image not loaded)
+}
+
+/// <summary>
+/// LookupIconIdFromDirectoryEx - Searches through icon or cursor data for the icon or cursor that best fits the current display device.
+/// </summary>
+[DllModuleExport(20, IsStub = true)]
+private uint LookupIconIdFromDirectoryEx(uint presbits, int fIcon, int cxDesired, int cyDesired, uint Flags)
+{
+_logger.LogInformation("[User32] LookupIconIdFromDirectoryEx(presbits=0x{Presbits:X8}, fIcon={FIcon}, cxDesired={CxDesired}, cyDesired={CyDesired}, Flags=0x{Flags:X8})",
+presbits, fIcon, cxDesired, cyDesired, Flags);
+return 0; // 0 indicates no suitable icon found - Stub implementation
+}
+
+/// <summary>
+/// OpenDesktopW - Opens the specified desktop object (Unicode version).
+/// </summary>
+[DllModuleExport(16, IsStub = true)]
+private uint OpenDesktopW(in LpcWStr lpszDesktop, uint dwFlags, int fInherit, uint dwDesiredAccess)
+{
+var desktop = lpszDesktop.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] OpenDesktopW(lpszDesktop=\"{Desktop}\", dwFlags=0x{DwFlags:X8}, fInherit={FInherit}, dwDesiredAccess=0x{DwDesiredAccess:X8})",
+desktop, dwFlags, fInherit, dwDesiredAccess);
+return 0; // NULL - Stub implementation (desktop not opened)
+}
+
+/// <summary>
+/// OpenWindowStationW - Opens the specified window station (Unicode version).
+/// </summary>
+[DllModuleExport(12, IsStub = true)]
+private uint OpenWindowStationW(in LpcWStr lpwinsta, int fInherit, uint dwDesiredAccess)
+{
+var winsta = lpwinsta.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] OpenWindowStationW(lpwinsta=\"{Winsta}\", fInherit={FInherit}, dwDesiredAccess=0x{DwDesiredAccess:X8})",
+winsta, fInherit, dwDesiredAccess);
+return 0; // NULL - Stub implementation (window station not opened)
+}
+
+/// <summary>
+/// PrivateExtractIconsW - Creates an array of handles to icons extracted from a file (Unicode version).
+/// </summary>
+[DllModuleExport(32, IsStub = true)]
+private uint PrivateExtractIconsW(in LpcWStr szFileName, int nIconIndex, int cxIcon, int cyIcon, uint phicon, uint piconid, uint nIcons, uint flags)
+{
+var fileName = szFileName.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] PrivateExtractIconsW(szFileName=\"{FileName}\", nIconIndex={NIconIndex}, cxIcon={CxIcon}, cyIcon={CyIcon}, phicon=0x{Phicon:X8}, piconid=0x{Piconid:X8}, nIcons={NIcons}, flags=0x{Flags:X8})",
+fileName, nIconIndex, cxIcon, cyIcon, phicon, piconid, nIcons, flags);
+return 0; // 0 indicates no icons extracted - Stub implementation
+}
+
+/// <summary>
+/// RealGetWindowClassA - Retrieves a string that specifies the window type (ANSI version).
+/// </summary>
+[DllModuleExport(12, IsStub = true)]
+private int RealGetWindowClassA(uint hwnd, in LpStr pszType, uint cchType)
+{
+_logger.LogInformation("[User32] RealGetWindowClassA(hwnd=0x{Hwnd:X8}, pszType=0x{PszType:X8}, cchType={CchType})",
+hwnd, pszType.Address, cchType);
+return 0; // 0 indicates error - Stub implementation
+}
+
+/// <summary>
+/// RegisterWindowMessageW - Defines a new window message that is guaranteed to be unique throughout the system (Unicode version).
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint RegisterWindowMessageW(in LpcWStr lpString)
+{
+var message = lpString.ToString() ?? string.Empty;
+_logger.LogInformation("[User32] RegisterWindowMessageW(lpString=\"{Message}\")", message);
+return 0xC000; // Return a valid registered message ID - Stub implementation
+}
+
+/// <summary>
+/// SendMessageTimeoutW - Sends the specified message to one or more windows (Unicode version with timeout).
+/// </summary>
+[DllModuleExport(28, IsStub = true)]
+private uint SendMessageTimeoutW(uint hWnd, uint Msg, uint wParam, uint lParam, uint fuFlags, uint uTimeout, uint lpdwResult)
+{
+_logger.LogInformation("[User32] SendMessageTimeoutW(hWnd=0x{HWnd:X8}, Msg=0x{Msg:X8}, wParam=0x{WParam:X8}, lParam=0x{LParam:X8}, fuFlags=0x{FuFlags:X8}, uTimeout={UTimeout}, lpdwResult=0x{LpdwResult:X8})",
+hWnd, Msg, wParam, lParam, fuFlags, uTimeout, lpdwResult);
+return 0; // 0 indicates timeout or failure - Stub implementation
+}
+
+/// <summary>
+/// SetPropW - Adds a new entry or changes an existing entry in the property list of the specified window (Unicode version).
+/// </summary>
+[DllModuleExport(12, IsStub = true)]
+private uint SetPropW(uint hWnd, uint lpString, uint hData)
+{
+_logger.LogInformation("[User32] SetPropW(hWnd=0x{HWnd:X8}, lpString=0x{LpString:X8}, hData=0x{HData:X8})",
+hWnd, lpString, hData);
+return 1; // TRUE - Stub implementation
+}
+
+/// <summary>
+/// SwitchToThisWindow - Switches focus to the specified window and brings it to the foreground.
+/// </summary>
+[DllModuleExport(8, IsStub = true)]
+private uint SwitchToThisWindow(uint hwnd, int fUnknown)
+{
+_logger.LogInformation("[User32] SwitchToThisWindow(hwnd=0x{Hwnd:X8}, fUnknown={FUnknown})", hwnd, fUnknown);
+return 0; // Void function, return value doesn't matter - Stub implementation
+}
+
+/// <summary>
+/// TrackMouseEvent - Posts messages when the mouse pointer leaves a window or hovers over a window for a specified amount of time.
+/// </summary>
+[DllModuleExport(4, IsStub = true)]
+private uint TrackMouseEvent(uint lpEventTrack)
+{
+_logger.LogInformation("[User32] TrackMouseEvent(lpEventTrack=0x{LpEventTrack:X8})", lpEventTrack);
+return 1; // TRUE - Stub implementation
+}
 
 		#endregion
 	}
