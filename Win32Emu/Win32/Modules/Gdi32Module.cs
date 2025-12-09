@@ -529,7 +529,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = GetCharABCWidthsW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 				case "GETTEXTCHARSETINFO":
-					returnValue = GdiGetCodePage(a.UInt32(0)); // Simplified: reuse GdiGetCodePage
+					returnValue = GetTextCharsetInfo(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 				case "GETTEXTMETRICSW":
 					returnValue = GetTextMetricsW(a.UInt32(0), a.UInt32(1));
@@ -3250,6 +3250,25 @@ namespace Win32Emu.Win32.Modules
 			
 			// Stub: return CP_ACP (0) - ANSI code page
 			return 0;
+		}
+
+		/// <summary>
+		/// Retrieves information about the character set of the font that is currently selected into a specified device context.
+		/// UINT GetTextCharsetInfo(
+		///   [in]  HDC             hdc,
+		///   [out] LPFONTSIGNATURE lpSig,
+		///   [in]  DWORD           dwFlags
+		/// );
+		/// </summary>
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetTextCharsetInfo(uint hdc, uint lpSig, uint dwFlags)
+		{
+			_logger.LogInformation("[Gdi32] GetTextCharsetInfo(hdc=0x{Hdc:X8}, lpSig=0x{LpSig:X8}, dwFlags=0x{DwFlags:X8})",
+				hdc, lpSig, dwFlags);
+			
+			// Stub: Return ANSI_CHARSET (0) which is the most common Windows charset
+			// If lpSig is provided, we would fill in the FONTSIGNATURE structure, but this is a stub
+			return 0; // ANSI_CHARSET
 		}
 
 		[DllModuleExport(16, IsStub = true)]
