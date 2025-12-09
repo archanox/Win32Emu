@@ -305,6 +305,25 @@ namespace Win32Emu.Win32.Modules
 				case "STRCPY":
 					returnValue = strcpy(a.UInt32(0), a.LpcStr(1));
 					return true;
+				case "_ASSERT":
+					_assert(a.LpcStr(0), a.LpcStr(1), a.UInt32(2));
+					returnValue = 0;
+					return true;
+				case "PUTCHAR":
+					returnValue = (uint)putchar(a.Int32(0));
+					return true;
+				case "PUTS":
+					returnValue = (uint)puts(a.LpcStr(0));
+					return true;
+				case "SSCANF":
+					returnValue = (uint)sscanf(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
+					return true;
+				case "STRCAT":
+					returnValue = strcat(a.UInt32(0), a.LpcStr(1));
+					return true;
+				case "STRSTR":
+					returnValue = strstr(a.LpcStr(0), a.LpcStr(1));
+					return true;
 				case "??1TYPE_INFO@@UAE@XZ":
 					// type_info destructor (C++ mangled name)
 					// This is typically a no-op for type_info objects in our emulation
@@ -1423,6 +1442,126 @@ namespace Win32Emu.Win32.Modules
 		_env.WriteAnsiStringAt(dest, s);
 		
 		return dest; // Return destination pointer
+	}
+
+	/// <summary>
+	/// _assert - Handle assertion failures
+	/// Reports an assertion failure and terminates the program
+	/// </summary>
+	[DllModuleExport(4)]
+	private void _assert(in LpcStr expr, in LpcStr file, uint line)
+	{
+		var expression = expr.ToString() ?? string.Empty;
+		var filename = file.ToString() ?? string.Empty;
+		_logger.LogError("[msvcrt] Assertion failed: {Expression}, file {File}, line {Line}", 
+			expression, filename, line);
+		
+		// In real MSVCRT, this would show a dialog and abort the program
+		// For now, just log the assertion and continue
+		// Note: In a real implementation, this might call abort()
+	}
+
+	/// <summary>
+	/// putchar - Write character to stdout
+	/// Writes a character to standard output
+	/// </summary>
+	[DllModuleExport(4)]
+	private int putchar(int c)
+	{
+		_logger.LogInformation("[msvcrt] putchar(c={C})", (char)c);
+		
+		// In a real implementation, this would write to console
+		// For emulation, just log it
+		Console.Write((char)c);
+		
+		return c; // Return the character written
+	}
+
+	/// <summary>
+	/// puts - Write string to stdout with newline
+	/// Writes a string to standard output followed by a newline
+	/// </summary>
+	[DllModuleExport(4)]
+	private int puts(in LpcStr str)
+	{
+		var s = str.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] puts(str=\"{S}\")", s);
+		
+		// In a real implementation, this would write to console
+		Console.WriteLine(s);
+		
+		return s.Length + 1; // Return non-negative value on success (number of chars including newline)
+	}
+
+	/// <summary>
+	/// sscanf - Read formatted data from string
+	/// Reads data from string according to format specification
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private int sscanf(uint buffer, in LpcStr format, uint varargs)
+	{
+		var fmt = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] sscanf(buffer=0x{Buffer:X8}, format=\"{Fmt}\", varargs=0x{Varargs:X8})", 
+			buffer, fmt, varargs);
+		
+		// This is a complex function that would require parsing format strings
+		// For now, return 0 to indicate no items were read
+		// A real implementation would parse the format string and write to varargs
+		_logger.LogWarning("[msvcrt] sscanf is a stub implementation");
+		
+		return 0; // Return number of items successfully read (0 for stub)
+	}
+
+	/// <summary>
+	/// strcat - Concatenate strings
+	/// Appends source string to destination string
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint strcat(uint dest, in LpcStr src)
+	{
+		var s = src.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] strcat(dest=0x{Dest:X8}, src=\"{S}\")", dest, s);
+		
+		if (dest == 0)
+		{
+			return 0; // NULL destination
+		}
+		
+		// Read existing string at destination
+		var existing = _env.ReadAnsiString(dest);
+		
+		// Concatenate strings
+		var result = existing + s;
+		
+		// Write back to destination
+		_env.WriteAnsiStringAt(dest, result);
+		
+		return dest; // Return destination pointer
+	}
+
+	/// <summary>
+	/// strstr - Find substring
+	/// Searches for first occurrence of substring in string
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint strstr(in LpcStr str, in LpcStr substr)
+	{
+		var s = str.ToString() ?? string.Empty;
+		var sub = substr.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] strstr(str=\"{S}\", substr=\"{Sub}\")", s, sub);
+		
+		// Find index of substring
+		var index = s.IndexOf(sub, StringComparison.Ordinal);
+		
+		if (index < 0)
+		{
+			return 0; // Not found, return NULL
+		}
+		
+		// Calculate pointer to substring in original string
+		// We need to return a pointer offset by the index
+		var strPtr = str.Address;
+		return strPtr + (uint)index;
 	}
 }
 }
