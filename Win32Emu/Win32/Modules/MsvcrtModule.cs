@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using System.Collections.Concurrent;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -27,8 +28,8 @@ namespace Win32Emu.Win32.Modules
 		// atexit/onexit function tracking
 		private readonly List<uint> _exitFunctions = new();
 		
-		// Thread lock tracking (stub for now)
-		private readonly Dictionary<int, object> _locks = new();
+		// Thread lock tracking (using ConcurrentDictionary for thread safety)
+		private readonly ConcurrentDictionary<int, object> _locks = new();
 		
 		/// <summary>
 		/// Stream buffering mode
@@ -1248,11 +1249,8 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogInformation("[msvcrt] _lock(locknum={Locknum})", locknum);
 		// In a full implementation, this would acquire a lock
-		// For now, just track that we "have" the lock
-		if (!_locks.ContainsKey(locknum))
-		{
-			_locks[locknum] = new object();
-		}
+		// For now, just track that we "have" the lock (thread-safe with ConcurrentDictionary)
+		_locks.TryAdd(locknum, new object());
 	}
 
 	/// <summary>
@@ -1308,13 +1306,16 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogInformation("[msvcrt] _unlock(locknum={Locknum})", locknum);
 		// In a full implementation, this would release a lock
-		// For now, just remove from tracking if present
-		_locks.Remove(locknum);
+		// Thread-safe removal with ConcurrentDictionary
+		_locks.TryRemove(locknum, out _);
 	}
 
 	/// <summary>
 	/// _vsnprintf - Format string with variable arguments and size limit
 	/// Similar to sprintf but with a maximum size and va_list
+	/// NOTE: This is a simplified stub that does not handle printf-style format string substitution.
+	/// It only copies the format string itself to the buffer with size limiting.
+	/// Full implementation would require parsing format specifiers and reading varargs.
 	/// </summary>
 	[DllModuleExport(16)]
 	private int _vsnprintf(uint buffer, uint count, in LpcStr format, uint args)
@@ -1326,15 +1327,17 @@ namespace Win32Emu.Win32.Modules
 		// Simplified implementation - just copy format string to buffer with size limit
 		if (buffer != 0 && count > 0)
 		{
-			var outputLength = (uint)Math.Min(fmt.Length, (int)(count - 1));
+			// Safely convert count to int, handling large values
+			var maxLength = (int)Math.Min(count - 1, (uint)int.MaxValue);
+			var outputLength = Math.Min(fmt.Length, maxLength);
 			if (outputLength > 0)
 			{
-				var bytes = System.Text.Encoding.ASCII.GetBytes(fmt.Substring(0, (int)outputLength));
+				var bytes = System.Text.Encoding.ASCII.GetBytes(fmt.Substring(0, outputLength));
 				_env.MemWriteBytes(buffer, bytes);
 			}
 			// Always null terminate
-			_env.MemWrite8(buffer + outputLength, 0);
-			return (int)outputLength;
+			_env.MemWrite8(buffer + (uint)outputLength, 0);
+			return outputLength;
 		}
 		
 		return -1; // Error
