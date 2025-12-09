@@ -26,7 +26,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly Dictionary<uint, FileStreamInfo> _fileStreams = new();
 		
 		// atexit/onexit function tracking (using ConcurrentBag for thread safety)
-		private readonly System.Collections.Concurrent.ConcurrentBag<uint> _exitFunctions = new();
+		private readonly ConcurrentBag<uint> _exitFunctions = new();
 		
 		// Thread lock tracking (using ConcurrentDictionary for thread safety)
 		// Uses a shared object since we're just tracking lock acquisition, not implementing real locks
@@ -1222,7 +1222,7 @@ namespace Win32Emu.Win32.Modules
 	/// __lconv_init - Initialize locale conversion structure
 	/// Initializes the locale-specific formatting information
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, IsStub = true)]
 	private uint __lconv_init()
 	{
 		_logger.LogInformation("[msvcrt] __lconv_init()");
@@ -1248,7 +1248,7 @@ namespace Win32Emu.Win32.Modules
 	/// NOTE: This is a stub implementation that only tracks lock acquisition.
 	/// Real implementation would block until lock is available.
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private void _lock(int locknum)
 	{
 		_logger.LogInformation("[msvcrt] _lock(locknum={Locknum})", locknum);
@@ -1313,7 +1313,7 @@ namespace Win32Emu.Win32.Modules
 	/// _unlock - Release a lock for thread synchronization
 	/// Used to release locks acquired with _lock
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private void _unlock(int locknum)
 	{
 		_logger.LogInformation("[msvcrt] _unlock(locknum={Locknum})", locknum);
@@ -1329,7 +1329,7 @@ namespace Win32Emu.Win32.Modules
 	/// It only copies the format string itself to the buffer with size limiting.
 	/// Full implementation would require parsing format specifiers and reading varargs.
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, IsStub = true)]
 	private int _vsnprintf(uint buffer, uint count, in LpcStr format, uint args)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -1379,7 +1379,7 @@ namespace Win32Emu.Win32.Modules
 	/// fwrite - Write data to stream
 	/// Writes count items of size bytes each to stream
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, IsStub = true)]
 	private uint fwrite(uint ptr, uint size, uint count, uint stream)
 	{
 		_logger.LogInformation("[msvcrt] fwrite(ptr=0x{Ptr:X8}, size={Size}, count={Count}, stream=0x{Stream:X8})", 
