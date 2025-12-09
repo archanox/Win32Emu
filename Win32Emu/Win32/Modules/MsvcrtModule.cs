@@ -1470,9 +1470,8 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogInformation("[msvcrt] putchar(c={C})", (char)c);
 		
-		// In a real implementation, this would write to console
-		// For emulation, just log it
-		Console.Write((char)c);
+		// Write to proper stdout using the environment's WriteToStdOutput
+		_env.WriteToStdOutput(((char)c).ToString());
 		
 		return c; // Return the character written
 	}
@@ -1487,8 +1486,8 @@ namespace Win32Emu.Win32.Modules
 		var s = str.ToString() ?? string.Empty;
 		_logger.LogInformation("[msvcrt] puts(str=\"{S}\")", s);
 		
-		// In a real implementation, this would write to console
-		Console.WriteLine(s);
+		// Write to proper stdout using the environment's WriteToStdOutput
+		_env.WriteToStdOutput(s + "\n");
 		
 		return s.Length + 1; // Return non-negative value on success (number of chars including newline)
 	}

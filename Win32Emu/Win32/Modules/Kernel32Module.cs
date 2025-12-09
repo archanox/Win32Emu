@@ -3603,7 +3603,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <param name="hObject">A handle to an object</param>
 	/// <param name="lpdwFlags">A pointer to a variable that receives a set of bit flags that specify properties of the object handle</param>
 	/// <returns>If the function succeeds, the return value is nonzero. If the function fails, the return value is zero.</returns>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, IsStub = true)]
 	private uint GetHandleInformation(uint hObject, uint lpdwFlags)
 	{
 		_logger.LogInformation("[Kernel32] GetHandleInformation(hObject=0x{HObject:X8}, lpdwFlags=0x{LpdwFlags:X8})",
@@ -7297,7 +7297,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <param name="lpString">The character string to search for</param>
 	/// <returns>If the function succeeds, the return value is the atom associated with the given string.
 	/// If the function fails, the return value is zero.</returns>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private uint FindAtomA(in LpcStr lpString)
 	{
 		var str = lpString.ToString() ?? string.Empty;
@@ -7312,7 +7312,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <param name="lpString">The Unicode string to search for</param>
 	/// <returns>If the function succeeds, the return value is the atom associated with the given string.
 	/// If the function fails, the return value is zero.</returns>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private uint FindAtomW(in LpcWStr lpString)
 	{
 		var str = lpString.ToString() ?? string.Empty;
@@ -7329,7 +7329,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// <param name="nSize">The size, in characters, of the buffer</param>
 	/// <returns>If the function succeeds, the return value is the length of the string copied to the buffer, in characters, not including the terminating null character.
 	/// If the function fails, the return value is zero.</returns>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, IsStub = true)]
 	private uint GetAtomNameA(uint nAtom, uint lpBuffer, int nSize)
 	{
 		_logger.LogInformation("[Kernel32] GetAtomNameA(nAtom=0x{NAtom:X}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
@@ -12114,7 +12114,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	/// Decrements the reference count of the specified activation context, and removes it from the list of activation contexts when the reference count reaches zero.
 	/// </summary>
 	/// <param name="hActCtx">Handle to an activation context</param>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private void ReleaseActCtx(uint hActCtx)
 	{
 		_logger.LogInformation("[Kernel32] ReleaseActCtx(hActCtx=0x{HActCtx:X8})", hActCtx);

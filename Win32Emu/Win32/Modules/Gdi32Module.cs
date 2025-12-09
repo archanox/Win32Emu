@@ -3124,7 +3124,7 @@ namespace Win32Emu.Win32.Modules
 			return regionHandle;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint EqualRgn(uint hSrcRgn1, uint hSrcRgn2)
 		{
 			_logger.LogInformation("[Gdi32] EqualRgn(hSrcRgn1=0x{HSrcRgn1:X8}, hSrcRgn2=0x{HSrcRgn2:X8})",
@@ -3134,7 +3134,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, IsStub = true)]
 		private int GetClipRgn(uint hdc, uint hrgn)
 		{
 			_logger.LogInformation("[Gdi32] GetClipRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8})", hdc, hrgn);
@@ -3143,7 +3143,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, IsStub = true)]
 		private int GetRandomRgn(uint hdc, uint hrgn, int iNum)
 		{
 			_logger.LogInformation("[Gdi32] GetRandomRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8}, iNum={INum})",
@@ -3153,7 +3153,7 @@ namespace Win32Emu.Win32.Modules
 			return -1;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, IsStub = true)]
 		private int GetRgnBox(uint hrgn, uint lprc)
 		{
 			_logger.LogInformation("[Gdi32] GetRgnBox(hrgn=0x{Hrgn:X8}, lprc=0x{Lprc:X8})", hrgn, lprc);
@@ -3170,7 +3170,7 @@ namespace Win32Emu.Win32.Modules
 			return 1; // NULLREGION
 		}
 
-		[DllModuleExport(20)]
+		[DllModuleExport(20, IsStub = true)]
 		private uint SetRectRgn(uint hrgn, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect)
 		{
 			_logger.LogInformation("[Gdi32] SetRectRgn(hrgn=0x{Hrgn:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
@@ -3180,7 +3180,7 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, IsStub = true)]
 		private int GetROP2(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] GetROP2(hdc=0x{Hdc:X8})", hdc);
@@ -3189,7 +3189,7 @@ namespace Win32Emu.Win32.Modules
 			return 13;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, IsStub = true)]
 		private int SetROP2(uint hdc, int fnDrawMode)
 		{
 			_logger.LogInformation("[Gdi32] SetROP2(hdc=0x{Hdc:X8}, fnDrawMode={FnDrawMode})", hdc, fnDrawMode);
@@ -3198,7 +3198,7 @@ namespace Win32Emu.Win32.Modules
 			return 13;
 		}
 
-		[DllModuleExport(16)]
+		[DllModuleExport(16, IsStub = true)]
 		private uint SetPixelV(uint hdc, int x, int y, uint crColor)
 		{
 			_logger.LogInformation("[Gdi32] SetPixelV(hdc=0x{Hdc:X8}, x={X}, y={Y}, crColor=0x{CrColor:X8})",
@@ -3208,7 +3208,7 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, IsStub = true)]
 		private int GetObjectW(uint hgdiobj, int cbBuffer, uint lpvObject)
 		{
 			_logger.LogInformation("[Gdi32] GetObjectW(hgdiobj=0x{Hgdiobj:X8}, cbBuffer={CbBuffer}, lpvObject=0x{LpvObject:X8})",
@@ -3228,7 +3228,7 @@ namespace Win32Emu.Win32.Modules
 			return 1;
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, IsStub = true)]
 		private int GdiGetCharDimensions(uint hdc, uint lptm, uint lpAvgCharWidth)
 		{
 			_logger.LogInformation("[Gdi32] GdiGetCharDimensions(hdc=0x{Hdc:X8}, lptm=0x{Lptm:X8}, lpAvgCharWidth=0x{LpAvgCharWidth:X8})",
@@ -3242,7 +3242,7 @@ namespace Win32Emu.Win32.Modules
 			return DefaultFontHeight;
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, IsStub = true)]
 		private uint GdiGetCodePage(uint hdc)
 		{
 			_logger.LogInformation("[Gdi32] GdiGetCodePage(hdc=0x{Hdc:X8})", hdc);
@@ -3251,7 +3251,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(16)]
+		[DllModuleExport(16, IsStub = true)]
 		private uint GetCharABCWidthsA(uint hdc, uint uFirstChar, uint uLastChar, uint lpabc)
 		{
 			_logger.LogInformation("[Gdi32] GetCharABCWidthsA(hdc=0x{Hdc:X8}, uFirstChar={UFirstChar}, uLastChar={ULastChar}, lpabc=0x{Lpabc:X8})",
@@ -3261,7 +3261,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(16)]
+		[DllModuleExport(16, IsStub = true)]
 		private uint GetCharABCWidthsW(uint hdc, uint uFirstChar, uint uLastChar, uint lpabc)
 		{
 			_logger.LogInformation("[Gdi32] GetCharABCWidthsW(hdc=0x{Hdc:X8}, uFirstChar={UFirstChar}, uLastChar={ULastChar}, lpabc=0x{Lpabc:X8})",
@@ -3271,7 +3271,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, IsStub = true)]
 		private uint GetTextMetricsW(uint hdc, uint lptm)
 		{
 			_logger.LogInformation("[Gdi32] GetTextMetricsW(hdc=0x{Hdc:X8}, lptm=0x{Lptm:X8})", hdc, lptm);
