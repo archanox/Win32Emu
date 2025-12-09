@@ -25,11 +25,13 @@ namespace Win32Emu.Win32.Modules
 		// File handle tracking for fflush and setvbuf
 		private readonly Dictionary<uint, FileStreamInfo> _fileStreams = new();
 		
-		// atexit/onexit function tracking
-		private readonly List<uint> _exitFunctions = new();
+		// atexit/onexit function tracking (using ConcurrentBag for thread safety)
+		private readonly System.Collections.Concurrent.ConcurrentBag<uint> _exitFunctions = new();
 		
 		// Thread lock tracking (using ConcurrentDictionary for thread safety)
+		// Uses a shared object since we're just tracking lock acquisition, not implementing real locks
 		private readonly ConcurrentDictionary<int, object> _locks = new();
+		private static readonly object _sharedLockObject = new();
 		
 		/// <summary>
 		/// Stream buffering mode
@@ -1243,6 +1245,8 @@ namespace Win32Emu.Win32.Modules
 	/// <summary>
 	/// _lock - Acquire a lock for thread synchronization
 	/// Used to protect CRT data structures in multi-threaded programs
+	/// NOTE: This is a stub implementation that only tracks lock acquisition.
+	/// Real implementation would block until lock is available.
 	/// </summary>
 	[DllModuleExport(4)]
 	private void _lock(int locknum)
@@ -1250,7 +1254,8 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[msvcrt] _lock(locknum={Locknum})", locknum);
 		// In a full implementation, this would acquire a lock
 		// For now, just track that we "have" the lock (thread-safe with ConcurrentDictionary)
-		_locks.TryAdd(locknum, new object());
+		// Using a shared object to avoid allocating a new object for each lock
+		_locks.TryAdd(locknum, _sharedLockObject);
 	}
 
 	/// <summary>
@@ -1327,8 +1332,9 @@ namespace Win32Emu.Win32.Modules
 		// Simplified implementation - just copy format string to buffer with size limit
 		if (buffer != 0 && count > 0)
 		{
-			// Safely convert count to int, handling large values
-			var maxLength = (int)Math.Min(count - 1, (uint)int.MaxValue);
+			// Safely handle count underflow and conversion
+			// If count is 1, we can only write the null terminator
+			var maxLength = count > 1 ? (int)Math.Min(count - 1, (uint)int.MaxValue) : 0;
 			var outputLength = Math.Min(fmt.Length, maxLength);
 			if (outputLength > 0)
 			{
