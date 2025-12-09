@@ -49,6 +49,27 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	// File copy buffer size
 	private const int FILE_COPY_BUFFER_SIZE = 8192;
 
+	// File attribute constants
+	private const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+	private const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
+	private const uint INVALID_FILE_ATTRIBUTES = 0xFFFFFFFF;
+
+	// WIN32_FIND_DATAW structure constants
+	private const int WIN32_FIND_DATAW_SIZE = 592;
+	private const int WIN32_FIND_DATAW_CFILENAME_OFFSET = 44;
+	private const int MAX_PATH = 260;
+	private const int MAX_PATH_MINUS_NULL = 259;
+
+	// Atom table constants
+	private const uint ATOM_STUB_VALUE = 0xC000;
+
+	// Activation context constants
+	private const uint ACTCTX_COOKIE_STUB = 0x12345678;
+
+	// VerSetConditionMask constants
+	private const uint VER_CONDITION_MASK = 0x07;
+	private const uint MAX_TYPEMASK_INDEX = 32;
+
 	// IsBadStringPtr constants
 	private const uint BAD_POINTER_TRUE = 1;  // Return value indicating bad pointer
 	private const uint BAD_POINTER_FALSE = 0; // Return value indicating good pointer
@@ -98,26 +119,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetVersionExW(a.UInt32(0));
 				return true;
 			case "VERSETCONDITIONMASK":
-				{
-					// VerSetConditionMask takes a ULONGLONG (64-bit) as first parameter
-					// We need to read it as two 32-bit values from the stack
-					var conditionMaskLow = a.UInt32(0);
-					var conditionMaskHigh = a.UInt32(1);
-					var conditionMask = ((ulong)conditionMaskHigh << 32) | conditionMaskLow;
-					var result = VerSetConditionMask(conditionMask, a.UInt32(2), a.UInt32(3));
-					returnValue = (uint)result;
-					_cpu!.SetRegister("EDX", (uint)(result >> 32));
-					return true;
-				}
+				returnValue = VerSetConditionMask_Wrapper(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 			case "VERIFYVERSIONINFOW":
-				{
-					// VerifyVersionInfoW also takes a DWORDLONG (64-bit) parameter
-					var conditionMaskLow = a.UInt32(2);
-					var conditionMaskHigh = a.UInt32(3);
-					var conditionMask = ((ulong)conditionMaskHigh << 32) | conditionMaskLow;
-					returnValue = VerifyVersionInfoW(a.UInt32(0), a.UInt32(1), conditionMask);
-					return true;
-				}
+				returnValue = VerifyVersionInfoW_Wrapper(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+				return true;
 			case "ISDEBUGGERPRESENT":
 				returnValue = IsDebuggerPresent();
 				return true;
@@ -11392,12 +11398,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] LPCWSTR lpString
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private uint GlobalAddAtomW(in LpcWStr lpString)
 	{
 		var str = lpString.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GlobalAddAtomW(lpString=\"{Str}\")", str);
-		return 0xC000; // Return a valid atom value (stub implementation)
+		return ATOM_STUB_VALUE; // Return a valid atom value (stub implementation)
 	}
 
 	/// <summary>
@@ -11406,7 +11412,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] LPCWSTR lpString
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, IsStub = true)]
 	private uint GlobalFindAtomW(in LpcWStr lpString)
 	{
 		var str = lpString.Read(_env.Memory) ?? string.Empty;
@@ -11471,8 +11477,17 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		try
 		{
-			vfs.DeleteFile(fileName);
-			return (uint)NativeTypes.Win32Bool.TRUE;
+			var deleted = vfs.DeleteFile(fileName);
+			if (deleted)
+			{
+				return (uint)NativeTypes.Win32Bool.TRUE;
+			}
+			else
+			{
+				_logger.LogWarning("[Kernel32] DeleteFileW: Failed to delete file {FileName}", fileName);
+				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+				return (uint)NativeTypes.Win32Bool.FALSE;
+			}
 		}
 		catch (Exception ex)
 		{
@@ -11496,22 +11511,33 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var src = lpSrc.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] ExpandEnvironmentStringsW(lpSrc={LpSrc}, nSize={NSize})", src, nSize);
 		
-		// Simple expansion - just replace %VAR% patterns
-		var expanded = src;
-		var startIndex = 0;
-		while (startIndex < expanded.Length)
+		// Simple expansion - just replace %VAR% patterns using StringBuilder
+		var sb = new StringBuilder();
+		var i = 0;
+		while (i < src.Length)
 		{
-			var start = expanded.IndexOf('%', startIndex);
-			if (start == -1) break;
-			
-			var end = expanded.IndexOf('%', start + 1);
-			if (end == -1) break;
-			
-			var varName = expanded.Substring(start + 1, end - start - 1);
+			var start = src.IndexOf('%', i);
+			if (start == -1)
+			{
+				// No more %, append the rest
+				sb.Append(src, i, src.Length - i);
+				break;
+			}
+			var end = src.IndexOf('%', start + 1);
+			if (end == -1)
+			{
+				// Unmatched %, append the rest
+				sb.Append(src, i, src.Length - i);
+				break;
+			}
+			// Append text before %
+			sb.Append(src, i, start - i);
+			var varName = src.Substring(start + 1, end - start - 1);
 			var value = _env.GetEnvironmentVariable(varName) ?? "";
-			expanded = expanded.Substring(0, start) + value + expanded.Substring(end + 1);
-			startIndex = start + value.Length;
+			sb.Append(value);
+			i = end + 1;
 		}
+		var expanded = sb.ToString();
 		
 		var requiredSize = (uint)(expanded.Length + 1); // +1 for null terminator
 		
@@ -11649,13 +11675,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Same as ANSI version but cFileName is WCHAR[260] (520 bytes) instead of CHAR[260]
 		
 		// Clear the structure
-		var zeroBuffer = new byte[592];
+		var zeroBuffer = new byte[WIN32_FIND_DATAW_SIZE];
 		_env.MemWriteBytes(lpFindFileData, zeroBuffer);
 
 		// Write filename at offset 44 (cFileName field), ensure null-terminated and max 260 WCHARs
 		// Truncate fileName if it's too long
-		var truncated = fileName.Length > 259 ? fileName.Substring(0, 259) : fileName;
-		new LpWStr(lpFindFileData + 44).Write(_env.Memory, truncated);
+		var truncated = fileName.Length > MAX_PATH_MINUS_NULL ? fileName.Substring(0, MAX_PATH_MINUS_NULL) : fileName;
+		new LpWStr(lpFindFileData + WIN32_FIND_DATAW_CFILENAME_OFFSET).Write(_env.Memory, truncated);
 	}
 
 	/// <summary>
@@ -11716,7 +11742,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			_logger.LogWarning("[Kernel32] GetFileAttributesW: VFS not available");
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return 0xFFFFFFFF; // INVALID_FILE_ATTRIBUTES
+			return INVALID_FILE_ATTRIBUTES;
 		}
 
 		try
@@ -11724,23 +11750,23 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Try to use VFS to check if file exists
 			if (vfs.FileExists(fileName))
 			{
-				return 0x80; // FILE_ATTRIBUTE_NORMAL
+				return FILE_ATTRIBUTE_NORMAL;
 			}
 			else if (vfs.DirectoryExists(fileName))
 			{
-				return 0x10; // FILE_ATTRIBUTE_DIRECTORY
+				return FILE_ATTRIBUTE_DIRECTORY;
 			}
 			else
 			{
 				_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-				return 0xFFFFFFFF;
+				return INVALID_FILE_ATTRIBUTES;
 			}
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[Kernel32] GetFileAttributesW failed");
 			_lastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
-			return 0xFFFFFFFF;
+			return INVALID_FILE_ATTRIBUTES;
 		}
 	}
 
@@ -11806,23 +11832,23 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (typeMask == 0)
 			return conditionMask;
 		
-		condition &= 0x07; // Only lower 3 bits are used
+		condition &= VER_CONDITION_MASK; // Only lower 3 bits are used
 		
 		// Find the bit position in typeMask
 		uint bitIndex = 0;
 		uint mask = typeMask;
-		while ((mask & 1) == 0 && bitIndex < 32)
+		while ((mask & 1) == 0 && bitIndex < MAX_TYPEMASK_INDEX)
 		{
 			mask >>= 1;
 			bitIndex++;
 		}
 		
-		if (bitIndex >= 32)
+		if (bitIndex >= MAX_TYPEMASK_INDEX)
 			return conditionMask;
 		
 		// Set the 3-bit condition at the appropriate position
 		ulong shift = bitIndex * 3;
-		ulong clearMask = ~(0x07UL << (int)shift);
+		ulong clearMask = ~(VER_CONDITION_MASK << (int)shift);
 		ulong setMask = ((ulong)condition) << (int)shift;
 		
 		return (conditionMask & clearMask) | setMask;
@@ -11836,7 +11862,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] DWORDLONG          dwlConditionMask
 	/// );
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, IsStub = true)]
 	private uint VerifyVersionInfoW(uint lpVersionInformation, uint dwTypeMask, ulong dwlConditionMask)
 	{
 		_logger.LogInformation("[Kernel32] VerifyVersionInfoW(lpVersionInformation=0x{LpVersionInformation:X8}, dwTypeMask=0x{DwTypeMask:X8}, dwlConditionMask=0x{DwlConditionMask:X16})",
@@ -11866,7 +11892,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] CreateActCtxW(pActCtx=0x{PActCtx:X8})", pActCtx);
 		// Stub: Return an invalid handle - activation contexts not fully supported
 		_lastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
-		return 0xFFFFFFFF; // INVALID_HANDLE_VALUE
+		return (uint)NativeTypes.Win32Handle.INVALID_HANDLE_VALUE;
 	}
 
 	/// <summary>
@@ -11885,7 +11911,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Stub: Write a dummy cookie and return success
 		if (lpCookie != 0)
 		{
-			_env.MemWrite32(lpCookie, 0x12345678);
+			_env.MemWrite32(lpCookie, ACTCTX_COOKIE_STUB);
 		}
 		
 		return (uint)NativeTypes.Win32Bool.TRUE;
@@ -11906,6 +11932,34 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		
 		// Stub: Just return success
 		return (uint)NativeTypes.Win32Bool.TRUE;
+	}
+
+	/// <summary>
+	/// Wrapper for VerSetConditionMask that handles 64-bit parameter from stack.
+	/// This function reads the 64-bit conditionMask as two 32-bit values from the stack.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint VerSetConditionMask_Wrapper(uint conditionMaskLow, uint conditionMaskHigh, uint typeMask, uint condition)
+	{
+		// Reconstruct the 64-bit condition mask from two 32-bit stack values
+		var conditionMask = ((ulong)conditionMaskHigh << 32) | conditionMaskLow;
+		var result = VerSetConditionMask(conditionMask, typeMask, condition);
+		
+		// Return the 64-bit result by setting EDX:EAX (high:low)
+		_cpu!.SetRegister("EDX", (uint)(result >> 32));
+		return (uint)result;
+	}
+
+	/// <summary>
+	/// Wrapper for VerifyVersionInfoW that handles 64-bit parameter from stack.
+	/// This function reads the 64-bit dwlConditionMask as two 32-bit values from the stack.
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint VerifyVersionInfoW_Wrapper(uint lpVersionInformation, uint dwTypeMask, uint conditionMaskLow, uint conditionMaskHigh)
+	{
+		// Reconstruct the 64-bit condition mask from two 32-bit stack values
+		var conditionMask = ((ulong)conditionMaskHigh << 32) | conditionMaskLow;
+		return VerifyVersionInfoW(lpVersionInformation, dwTypeMask, conditionMask);
 	}
 
 }
