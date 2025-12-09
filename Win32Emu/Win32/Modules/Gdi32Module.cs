@@ -480,8 +480,74 @@ namespace Win32Emu.Win32.Modules
 				case "COMBINERGN":
 					returnValue = (uint)CombineRgn(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3));
 					return true;
+				case "CREATERECTRGNINDIRECT":
+					returnValue = CreateRectRgnIndirect(a.UInt32(0));
+					return true;
+				case "EQUALRGN":
+					returnValue = EqualRgn(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETCLIPRGN":
+					returnValue = (uint)GetClipRgn(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETRANDOMRGN":
+					returnValue = (uint)GetRandomRgn(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "GETRGNBOX":
+					returnValue = (uint)GetRgnBox(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "SETRECTRGN":
+					returnValue = SetRectRgn(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.Int32(4));
+					return true;
 				case "FILLRGN":
 					returnValue = FillRgn(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETROP2":
+					returnValue = (uint)GetROP2(a.UInt32(0));
+					return true;
+				case "SETROP2":
+					returnValue = (uint)SetROP2(a.UInt32(0), a.Int32(1));
+					return true;
+				case "SETPIXELV":
+					returnValue = SetPixelV(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "GETOBJECTW":
+					returnValue = (uint)GetObjectW(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "ENUMFONTFAMILIESA":
+					returnValue = EnumFontFamiliesA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "GDIGETCHARDIMENSIONS":
+					returnValue = (uint)GdiGetCharDimensions(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GDIGETCODEPAGE":
+					returnValue = GdiGetCodePage(a.UInt32(0));
+					return true;
+				case "GETCHARABCWIDTHSA":
+					returnValue = GetCharABCWidthsA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "GETCHARABCWIDTHSW":
+					returnValue = GetCharABCWidthsW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "GETTEXTCHARSETINFO":
+					returnValue = GdiGetCodePage(a.UInt32(0)); // Simplified: reuse GdiGetCodePage
+					return true;
+				case "GETTEXTMETRICSW":
+					returnValue = GetTextMetricsW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "CREATEMETAFILEA":
+					returnValue = CreateMetaFileA(a.LpcStr(0));
+					return true;
+				case "CLOSEMETAFILE":
+					returnValue = CloseMetaFile(a.UInt32(0));
+					return true;
+				case "CREATEENHMETAFILEA":
+					returnValue = CreateEnhMetaFileA(a.UInt32(0), a.LpcStr(1), a.UInt32(2), a.LpcStr(3));
+					return true;
+				case "CLOSEENHMETAFILE":
+					returnValue = CloseEnhMetaFile(a.UInt32(0));
+					return true;
+				case "GETENHMETAFILEBITS":
+					returnValue = GetEnhMetaFileBits(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
 				// Information context (IC) functions
@@ -3030,6 +3096,253 @@ namespace Win32Emu.Win32.Modules
 			};
 
 			return fontHandle;
+		}
+
+		// Region functions
+		[DllModuleExport(4)]
+		private uint CreateRectRgnIndirect(uint lprc)
+		{
+			_logger.LogInformation("[Gdi32] CreateRectRgnIndirect(lprc=0x{Lprc:X8})", lprc);
+			
+			if (lprc == 0)
+			{
+				return 0; // NULL pointer
+			}
+			
+			// Read RECT structure (left, top, right, bottom - each 4 bytes)
+			var left = (int)_env.MemRead32(lprc);
+			var top = (int)_env.MemRead32(lprc + 4);
+			var right = (int)_env.MemRead32(lprc + 8);
+			var bottom = (int)_env.MemRead32(lprc + 12);
+			
+			// Create a region handle
+			var regionHandle = _nextGdiObjectHandle++;
+			_gdiObjects[regionHandle] = new GdiObject { Type = GdiObjectType.Region };
+			
+			_logger.LogInformation("[Gdi32] CreateRectRgnIndirect -> 0x{Handle:X8} ({Left},{Top})-({Right},{Bottom})",
+				regionHandle, left, top, right, bottom);
+			return regionHandle;
+		}
+
+		[DllModuleExport(8)]
+		private uint EqualRgn(uint hSrcRgn1, uint hSrcRgn2)
+		{
+			_logger.LogInformation("[Gdi32] EqualRgn(hSrcRgn1=0x{HSrcRgn1:X8}, hSrcRgn2=0x{HSrcRgn2:X8})",
+				hSrcRgn1, hSrcRgn2);
+			
+			// Stub: return FALSE (regions are not equal)
+			return 0;
+		}
+
+		[DllModuleExport(8)]
+		private int GetClipRgn(uint hdc, uint hrgn)
+		{
+			_logger.LogInformation("[Gdi32] GetClipRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8})", hdc, hrgn);
+			
+			// Stub: return 0 (no clipping region)
+			return 0;
+		}
+
+		[DllModuleExport(12)]
+		private int GetRandomRgn(uint hdc, uint hrgn, int iNum)
+		{
+			_logger.LogInformation("[Gdi32] GetRandomRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8}, iNum={INum})",
+				hdc, hrgn, iNum);
+			
+			// Stub: return -1 (error)
+			return -1;
+		}
+
+		[DllModuleExport(8)]
+		private int GetRgnBox(uint hrgn, uint lprc)
+		{
+			_logger.LogInformation("[Gdi32] GetRgnBox(hrgn=0x{Hrgn:X8}, lprc=0x{Lprc:X8})", hrgn, lprc);
+			
+			// Stub: return NULLREGION (1)
+			if (lprc != 0)
+			{
+				// Write empty rectangle (all zeros)
+				_env.MemWrite32(lprc, 0);     // left
+				_env.MemWrite32(lprc + 4, 0); // top
+				_env.MemWrite32(lprc + 8, 0); // right
+				_env.MemWrite32(lprc + 12, 0); // bottom
+			}
+			return 1; // NULLREGION
+		}
+
+		[DllModuleExport(20)]
+		private uint SetRectRgn(uint hrgn, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect)
+		{
+			_logger.LogInformation("[Gdi32] SetRectRgn(hrgn=0x{Hrgn:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
+				hrgn, nLeftRect, nTopRect, nRightRect, nBottomRect);
+			
+			// Stub: return TRUE
+			return 1;
+		}
+
+		[DllModuleExport(4)]
+		private int GetROP2(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] GetROP2(hdc=0x{Hdc:X8})", hdc);
+			
+			// Stub: return R2_COPYPEN (13) - default ROP2 mode
+			return 13;
+		}
+
+		[DllModuleExport(8)]
+		private int SetROP2(uint hdc, int fnDrawMode)
+		{
+			_logger.LogInformation("[Gdi32] SetROP2(hdc=0x{Hdc:X8}, fnDrawMode={FnDrawMode})", hdc, fnDrawMode);
+			
+			// Stub: return previous mode (R2_COPYPEN)
+			return 13;
+		}
+
+		[DllModuleExport(16)]
+		private uint SetPixelV(uint hdc, int x, int y, uint crColor)
+		{
+			_logger.LogInformation("[Gdi32] SetPixelV(hdc=0x{Hdc:X8}, x={X}, y={Y}, crColor=0x{CrColor:X8})",
+				hdc, x, y, crColor);
+			
+			// Stub: return TRUE
+			return 1;
+		}
+
+		[DllModuleExport(12)]
+		private int GetObjectW(uint hgdiobj, int cbBuffer, uint lpvObject)
+		{
+			_logger.LogInformation("[Gdi32] GetObjectW(hgdiobj=0x{Hgdiobj:X8}, cbBuffer={CbBuffer}, lpvObject=0x{LpvObject:X8})",
+				hgdiobj, cbBuffer, lpvObject);
+			
+			// Stub: return 0 (failure)
+			return 0;
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint EnumFontFamiliesA(uint hdc, uint lpszFamily, uint lpEnumFontFamProc, uint lParam)
+		{
+			_logger.LogInformation("[Gdi32] EnumFontFamiliesA(hdc=0x{Hdc:X8}, lpszFamily=0x{LpszFamily:X8}, lpEnumFontFamProc=0x{LpEnumFontFamProc:X8}, lParam=0x{LParam:X8})",
+				hdc, lpszFamily, lpEnumFontFamProc, lParam);
+			
+			// Stub: return 1 (success, but no fonts enumerated)
+			return 1;
+		}
+
+		[DllModuleExport(12)]
+		private int GdiGetCharDimensions(uint hdc, uint lptm, uint lpAvgCharWidth)
+		{
+			_logger.LogInformation("[Gdi32] GdiGetCharDimensions(hdc=0x{Hdc:X8}, lptm=0x{Lptm:X8}, lpAvgCharWidth=0x{LpAvgCharWidth:X8})",
+				hdc, lptm, lpAvgCharWidth);
+			
+			// Stub: return default font height
+			if (lpAvgCharWidth != 0)
+			{
+				_env.MemWrite32(lpAvgCharWidth, (uint)DefaultCharWidth);
+			}
+			return DefaultFontHeight;
+		}
+
+		[DllModuleExport(4)]
+		private uint GdiGetCodePage(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] GdiGetCodePage(hdc=0x{Hdc:X8})", hdc);
+			
+			// Stub: return CP_ACP (0) - ANSI code page
+			return 0;
+		}
+
+		[DllModuleExport(16)]
+		private uint GetCharABCWidthsA(uint hdc, uint uFirstChar, uint uLastChar, uint lpabc)
+		{
+			_logger.LogInformation("[Gdi32] GetCharABCWidthsA(hdc=0x{Hdc:X8}, uFirstChar={UFirstChar}, uLastChar={ULastChar}, lpabc=0x{Lpabc:X8})",
+				hdc, uFirstChar, uLastChar, lpabc);
+			
+			// Stub: return FALSE
+			return 0;
+		}
+
+		[DllModuleExport(16)]
+		private uint GetCharABCWidthsW(uint hdc, uint uFirstChar, uint uLastChar, uint lpabc)
+		{
+			_logger.LogInformation("[Gdi32] GetCharABCWidthsW(hdc=0x{Hdc:X8}, uFirstChar={UFirstChar}, uLastChar={ULastChar}, lpabc=0x{Lpabc:X8})",
+				hdc, uFirstChar, uLastChar, lpabc);
+			
+			// Stub: return FALSE
+			return 0;
+		}
+
+		[DllModuleExport(8)]
+		private uint GetTextMetricsW(uint hdc, uint lptm)
+		{
+			_logger.LogInformation("[Gdi32] GetTextMetricsW(hdc=0x{Hdc:X8}, lptm=0x{Lptm:X8})", hdc, lptm);
+			
+			// Stub: fill in default metrics
+			if (lptm != 0)
+			{
+				// TEXTMETRICW structure (56 bytes)
+				_env.MemWrite32(lptm, (uint)DefaultFontHeight);     // tmHeight
+				_env.MemWrite32(lptm + 4, 0);                       // tmAscent
+				_env.MemWrite32(lptm + 8, 0);                       // tmDescent
+				_env.MemWrite32(lptm + 12, 0);                      // tmInternalLeading
+				_env.MemWrite32(lptm + 16, 0);                      // tmExternalLeading
+				_env.MemWrite32(lptm + 20, (uint)DefaultCharWidth); // tmAveCharWidth
+				_env.MemWrite32(lptm + 24, (uint)DefaultCharWidth); // tmMaxCharWidth
+			}
+			return 1; // TRUE
+		}
+
+		// Metafile functions
+		[DllModuleExport(4, IsStub = true)]
+		private uint CreateMetaFileA(in LpcStr lpszFile)
+		{
+			var file = lpszFile.ToString() ?? string.Empty;
+			_logger.LogInformation("[Gdi32] CreateMetaFileA(lpszFile=\"{File}\")", file);
+			
+			// Stub: return a dummy metafile handle
+			var metaHandle = _nextGdiObjectHandle++;
+			return metaHandle;
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint CloseMetaFile(uint hmf)
+		{
+			_logger.LogInformation("[Gdi32] CloseMetaFile(hmf=0x{Hmf:X8})", hmf);
+			
+			// Stub: return the metafile handle
+			return hmf;
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint CreateEnhMetaFileA(uint hdcRef, in LpcStr lpFilename, uint lpRect, in LpcStr lpDescription)
+		{
+			var filename = lpFilename.ToString() ?? string.Empty;
+			var description = lpDescription.ToString() ?? string.Empty;
+			_logger.LogInformation("[Gdi32] CreateEnhMetaFileA(hdcRef=0x{HdcRef:X8}, lpFilename=\"{Filename}\", lpRect=0x{LpRect:X8}, lpDescription=\"{Description}\")",
+				hdcRef, filename, lpRect, description);
+			
+			// Stub: return a dummy enhanced metafile handle
+			var emfHandle = _nextGdiObjectHandle++;
+			return emfHandle;
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint CloseEnhMetaFile(uint hdc)
+		{
+			_logger.LogInformation("[Gdi32] CloseEnhMetaFile(hdc=0x{Hdc:X8})", hdc);
+			
+			// Stub: return a dummy enhanced metafile handle
+			var emfHandle = _nextGdiObjectHandle++;
+			return emfHandle;
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetEnhMetaFileBits(uint hemf, uint cbBuffer, uint lpbBuffer)
+		{
+			_logger.LogInformation("[Gdi32] GetEnhMetaFileBits(hemf=0x{Hemf:X8}, cbBuffer={CbBuffer}, lpbBuffer=0x{LpbBuffer:X8})",
+				hemf, cbBuffer, lpbBuffer);
+			
+			// Stub: return 0 (no bits copied)
+			return 0;
 		}
 	}
 }
