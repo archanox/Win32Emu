@@ -1097,498 +1097,498 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)GetKeyNameTextW(a.Int32(0), a.UInt32(1), a.Int32(2));
 					return true;
 
-								case "ACTIVATEKEYBOARDLAYOUT":
-									returnValue = ActivateKeyboardLayout(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "ADJUSTWINDOWRECT":
-									returnValue = AdjustWindowRect(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "ATTACHTHREADINPUT":
-									returnValue = AttachThreadInput(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "BROADCASTSYSTEMMESSAGEA":
-									returnValue = BroadcastSystemMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "BROADCASTSYSTEMMESSAGEEXA":
-									returnValue = BroadcastSystemMessageExA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
-									return true;
-								case "BROADCASTSYSTEMMESSAGEEXW":
-									returnValue = BroadcastSystemMessageExW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
-									return true;
-								case "BROADCASTSYSTEMMESSAGEW":
-									returnValue = BroadcastSystemMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "CALLWINDOWPROCW":
-									returnValue = CallWindowProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "CHANGECLIPBOARDCHAIN":
-									returnValue = ChangeClipboardChain(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "CHANGEDISPLAYSETTINGSW":
-									returnValue = ChangeDisplaySettingsW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "CHARTOOEMBUFFA":
-									returnValue = CharToOemBuffA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "CHARTOOEMBUFFW":
-									returnValue = CharToOemBuffW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "CHARTOOEMW":
-									returnValue = CharToOemW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "CLOSEDESKTOP":
-									returnValue = CloseDesktop(a.UInt32(0));
-									return true;
-								case "CLOSEWINDOWSTATION":
-									returnValue = CloseWindowStation(a.UInt32(0));
-									return true;
-								case "COPYICON":
-									returnValue = CopyIcon(a.UInt32(0));
-									return true;
-								case "COPYIMAGE":
-									returnValue = CopyImage(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
-									return true;
-								case "COUNTCLIPBOARDFORMATS":
-									returnValue = CountClipboardFormats();
-									return true;
-								case "CREATEDESKTOPA":
-									returnValue = CreateDesktopA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
-									return true;
-								case "CREATEDIALOGINDIRECTPARAMW":
-									returnValue = CreateDialogIndirectParamW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "CREATEICON":
-									returnValue = CreateIcon(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
-									return true;
-								case "CREATEICONFROMRESOURCE":
-									returnValue = CreateIconFromResource(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
-									return true;
-								case "CREATEICONINDIRECT":
-									returnValue = CreateIconIndirect(a.UInt32(0));
-									return true;
-								case "CREATEMDIWINDOWA":
-									returnValue = CreateMDIWindowA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
-									return true;
-								case "CREATEMDIWINDOWW":
-									returnValue = CreateMDIWindowW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
-									return true;
-								case "CREATEMENU":
-									returnValue = CreateMenu();
-									return true;
-								case "CREATEWINDOWEXW":
-									returnValue = CreateWindowExW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11));
-									return true;
-								case "CREATEWINDOWSTATIONA":
-									returnValue = CreateWindowStationA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "DDEACCESSDATA":
-									returnValue = DdeAccessData(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "DDECREATEDATAHANDLE":
-									returnValue = DdeCreateDataHandle(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
-									return true;
-								case "DDECREATESTRINGHANDLEW":
-									returnValue = DdeCreateStringHandleW(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "DDEFREEDATAHANDLE":
-									returnValue = DdeFreeDataHandle(a.UInt32(0));
-									return true;
-								case "DDEGETLASTERROR":
-									returnValue = DdeGetLastError(a.UInt32(0));
-									return true;
-								case "DDEINITIALIZEW":
-									returnValue = DdeInitializeW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "DDENAMESERVICE":
-									returnValue = DdeNameService(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "DDEQUERYCONVINFO":
-									returnValue = DdeQueryConvInfo(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "DDEQUERYSTRINGA":
-									returnValue = DdeQueryStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4));
-									return true;
-								case "DDEQUERYSTRINGW":
-									returnValue = DdeQueryStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4));
-									return true;
-								case "DDEUNACCESSDATA":
-									returnValue = DdeUnaccessData(a.UInt32(0));
-									return true;
-								case "DDEUNINITIALIZE":
-									returnValue = DdeUninitialize(a.UInt32(0));
-									return true;
-								case "DEFDLGPROCW":
-									returnValue = DefDlgProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "DEFFRAMEPROCA":
-									returnValue = DefFrameProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "DEFMDICHILDPROCA":
-									returnValue = DefMDIChildProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "DEFWINDOWPROCW":
-									returnValue = DefWindowProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "DESTROYCURSOR":
-									returnValue = DestroyCursor(a.UInt32(0));
-									return true;
-								case "DIALOGBOXPARAMW":
-									returnValue = DialogBoxParamW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "DISPATCHMESSAGEW":
-									returnValue = DispatchMessageW(a.UInt32(0));
-									return true;
-								case "DLGDIRLISTA":
-									returnValue = DlgDirListA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
-									return true;
-								case "DLGDIRSELECTEXA":
-									returnValue = DlgDirSelectExA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3));
-									return true;
-								case "DRAWICONEX":
-									returnValue = DrawIconEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4), a.Int32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
-									return true;
-								case "DRAWSTATEA":
-									returnValue = DrawStateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.Int32(8), a.UInt32(9));
-									return true;
-								case "DRAWTEXTEXA":
-									returnValue = DrawTextExA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
-									return true;
-								case "DRAWTEXTEXW":
-									returnValue = DrawTextExW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
-									return true;
-								case "DRAWTEXTW":
-									returnValue = DrawTextW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "ENABLESCROLLBAR":
-									returnValue = EnableScrollBar(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "ENDMENU":
-									returnValue = EndMenu();
-									return true;
-								case "ENUMCHILDWINDOWS":
-									returnValue = EnumChildWindows(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "ENUMCLIPBOARDFORMATS":
-									returnValue = EnumClipboardFormats(a.UInt32(0));
-									return true;
-								case "ENUMDESKTOPSA":
-									returnValue = EnumDesktopsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "ENUMTHREADWINDOWS":
-									returnValue = EnumThreadWindows(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "ENUMWINDOWSTATIONSA":
-									returnValue = EnumWindowStationsA(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "FINDWINDOWEXA":
-									returnValue = FindWindowExA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "FREEDDELPARAM":
-									returnValue = FreeDDElParam(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "GETANCESTOR":
-									returnValue = GetAncestor(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "GETCARETPOS":
-									returnValue = GetCaretPos(a.UInt32(0));
-									return true;
-								case "GETCLASSINFOEXA":
-									returnValue = GetClassInfoExA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "GETCLASSINFOEXW":
-									returnValue = GetClassInfoExW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "GETCLASSINFOW":
-									returnValue = GetClassInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "GETCLASSLONGW":
-									returnValue = GetClassLongW(a.UInt32(0), a.Int32(1));
-									return true;
-								case "GETCLASSNAMEW":
-									returnValue = GetClassNameW(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "GETCLIPCURSOR":
-									returnValue = GetClipCursor(a.UInt32(0));
-									return true;
-								case "GETCLIPBOARDFORMATNAMEA":
-									returnValue = GetClipboardFormatNameA(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "GETCLIPBOARDFORMATNAMEW":
-									returnValue = GetClipboardFormatNameW(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "GETCLIPBOARDOWNER":
-									returnValue = GetClipboardOwner();
-									return true;
-								case "GETCLIPBOARDSEQUENCENUMBER":
-									returnValue = GetClipboardSequenceNumber();
-									return true;
-								case "GETCLIPBOARDVIEWER":
-									returnValue = GetClipboardViewer();
-									return true;
-								case "GETCOMBOBOXINFO":
-									returnValue = GetComboBoxInfo(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "GETCURSOR":
-									returnValue = GetCursor();
-									return true;
-								case "GETDIALOGBASEUNITS":
-									returnValue = GetDialogBaseUnits();
-									return true;
-								case "GETICONINFO":
-									returnValue = GetIconInfo(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "GETKEYBOARDLAYOUTLIST":
-									returnValue = GetKeyboardLayoutList(a.Int32(0), a.UInt32(1));
-									return true;
-								case "GETKEYBOARDLAYOUTNAMEA":
-									returnValue = GetKeyboardLayoutNameA(a.UInt32(0));
-									return true;
-								case "GETKEYBOARDLAYOUTNAMEW":
-									returnValue = GetKeyboardLayoutNameW(a.UInt32(0));
-									return true;
-								case "GETMENUBARINFO":
-									returnValue = GetMenuBarInfo(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
-									return true;
-								case "GETMENUINFO":
-									returnValue = GetMenuInfo(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "GETMENUITEMINFOW":
-									returnValue = GetMenuItemInfoW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
-									return true;
-								case "GETMENUITEMRECT":
-									returnValue = GetMenuItemRect(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "GETMENUSTRINGA":
-									returnValue = GetMenuStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
-									return true;
-								case "GETMENUSTRINGW":
-									returnValue = GetMenuStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
-									return true;
-								case "GETMESSAGEW":
-									returnValue = GetMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "GETMONITORINFOW":
-									returnValue = GetMonitorInfoW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "GETOPENCLIPBOARDWINDOW":
-									returnValue = GetOpenClipboardWindow();
-									return true;
-								case "GETPROCESSWINDOWSTATION":
-									returnValue = GetProcessWindowStation();
-									return true;
-								case "GETQUEUESTATUS":
-									returnValue = GetQueueStatus(a.UInt32(0));
-									return true;
-								case "GETRAWINPUTDATA":
-									returnValue = GetRawInputData(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "GETSHELLWINDOW":
-									returnValue = GetShellWindow();
-									return true;
-								case "GETSYSTEMMENU":
-									returnValue = GetSystemMenu(a.UInt32(0), a.Int32(1));
-									return true;
-								case "GETTABBEDTEXTEXTENTA":
-									returnValue = GetTabbedTextExtentA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
-									return true;
-								case "GETTHREADDESKTOP":
-									returnValue = GetThreadDesktop(a.UInt32(0));
-									return true;
-								case "GETUSEROBJECTINFORMATIONA":
-									returnValue = GetUserObjectInformationA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "GETUSEROBJECTINFORMATIONW":
-									returnValue = GetUserObjectInformationW(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "GETWINDOWLONGW":
-									returnValue = GetWindowLongW(a.UInt32(0), a.Int32(1));
-									return true;
-								case "GETWINDOWTEXTW":
-									returnValue = GetWindowTextW(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "HILITEMENUITEM":
-									returnValue = HiliteMenuItem(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "INSENDMESSAGE":
-									returnValue = InSendMessage();
-									return true;
-								case "INSENDMESSAGEEX":
-									returnValue = InSendMessageEx(a.UInt32(0));
-									return true;
-								case "INSERTMENUITEMW":
-									returnValue = InsertMenuItemW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
-									return true;
-								case "ISMENU":
-									returnValue = IsMenu(a.UInt32(0));
-									return true;
-								case "LOADCURSORW":
-									returnValue = LoadCursorW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "LOADICONW":
-									returnValue = LoadIconW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "LOADKEYBOARDLAYOUTA":
-									returnValue = LoadKeyboardLayoutA(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "LOADMENUINDIRECTA":
-									returnValue = LoadMenuIndirectA(a.UInt32(0));
-									return true;
-								case "LOADSTRINGW":
-									returnValue = LoadStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3));
-									return true;
-								case "MAPVIRTUALKEYW":
-									returnValue = MapVirtualKeyW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "MODIFYMENUW":
-									returnValue = ModifyMenuW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "MONITORFROMRECT":
-									returnValue = MonitorFromRect(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "MONITORFROMWINDOW":
-									returnValue = MonitorFromWindow(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "MSGWAITFORMULTIPLEOBJECTSEX":
-									returnValue = MsgWaitForMultipleObjectsEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "OEMKEYSCAN":
-									returnValue = OemKeyScan(a.UInt32(0));
-									return true;
-								case "OEMTOCHARBUFFW":
-									returnValue = OemToCharBuffW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "OEMTOCHARW":
-									returnValue = OemToCharW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "OPENDESKTOPA":
-									returnValue = OpenDesktopA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
-									return true;
-								case "OPENINPUTDESKTOP":
-									returnValue = OpenInputDesktop(a.UInt32(0), a.Int32(1), a.UInt32(2));
-									return true;
-								case "OPENWINDOWSTATIONA":
-									returnValue = OpenWindowStationA(a.UInt32(0), a.Int32(1), a.UInt32(2));
-									return true;
-								case "PACKDDELPARAM":
-									returnValue = PackDDElParam(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "PEEKMESSAGEW":
-									returnValue = PeekMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "POSTMESSAGEW":
-									returnValue = PostMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "POSTTHREADMESSAGEW":
-									returnValue = PostThreadMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "PRIVATEEXTRACTICONSA":
-									returnValue = PrivateExtractIconsA(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
-									return true;
-								case "REALCHILDWINDOWFROMPOINT":
-									returnValue = RealChildWindowFromPoint(a.UInt32(0), a.Int32(1), a.Int32(2));
-									return true;
-								case "REGISTERCLASSEXW":
-									returnValue = RegisterClassExW(a.UInt32(0));
-									return true;
-								case "REGISTERCLASSW":
-									returnValue = RegisterClassW(a.UInt32(0));
-									return true;
-								case "REGISTERRAWINPUTDEVICES":
-									returnValue = RegisterRawInputDevices(a.UInt32(0), a.UInt32(1), a.UInt32(2));
-									return true;
-								case "REPLYMESSAGE":
-									returnValue = ReplyMessage(a.UInt32(0));
-									return true;
-								case "SCROLLDC":
-									returnValue = ScrollDC(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
-									return true;
-								case "SENDDLGITEMMESSAGEW":
-									returnValue = SendDlgItemMessageW(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
-									return true;
-								case "SENDINPUT":
-									returnValue = SendInput(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "SENDMESSAGECALLBACKA":
-									returnValue = SendMessageCallbackA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
-									return true;
-								case "SENDMESSAGECALLBACKW":
-									returnValue = SendMessageCallbackW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
-									return true;
-								case "SENDMESSAGETIMEOUTA":
-									returnValue = SendMessageTimeoutA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
-									return true;
-								case "SENDMESSAGEW":
-									returnValue = SendMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "SENDNOTIFYMESSAGEW":
-									returnValue = SendNotifyMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "SETCLASSLONGW":
-									returnValue = SetClassLongW(a.UInt32(0), a.Int32(1), a.Int32(2));
-									return true;
-								case "SETCLIPBOARDVIEWER":
-									returnValue = SetClipboardViewer(a.UInt32(0));
-									return true;
-								case "SETDOUBLECLICKTIME":
-									returnValue = SetDoubleClickTime(a.UInt32(0));
-									return true;
-								case "SETKEYBOARDSTATE":
-									returnValue = SetKeyboardState(a.UInt32(0));
-									return true;
-								case "SETLAYEREDWINDOWATTRIBUTES":
-									returnValue = SetLayeredWindowAttributes(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "SETMENUINFO":
-									returnValue = SetMenuInfo(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "SETMENUITEMINFOW":
-									returnValue = SetMenuItemInfoW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
-									return true;
-								case "SETPROCESSWINDOWSTATION":
-									returnValue = SetProcessWindowStation(a.UInt32(0));
-									return true;
-								case "SETTHREADDESKTOP":
-									returnValue = SetThreadDesktop(a.UInt32(0));
-									return true;
-								case "SETWINDOWLONGW":
-									returnValue = SetWindowLongW(a.UInt32(0), a.Int32(1), a.Int32(2));
-									return true;
-								case "SETWINDOWRGN":
-									returnValue = SetWindowRgn(a.UInt32(0), a.UInt32(1), a.Int32(2));
-									return true;
-								case "SETWINDOWTEXTW":
-									returnValue = SetWindowTextW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "SETWINDOWSHOOKEXW":
-									returnValue = SetWindowsHookExW(a.Int32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "SWAPMOUSEBUTTON":
-									returnValue = SwapMouseButton(a.Int32(0));
-									return true;
-								case "SWITCHDESKTOP":
-									returnValue = SwitchDesktop(a.UInt32(0));
-									return true;
-								case "SYSTEMPARAMETERSINFOW":
-									returnValue = SystemParametersInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
-									return true;
-								case "TOUNICODEEX":
-									returnValue = ToUnicodeEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4), a.UInt32(5), a.UInt32(6));
-									return true;
-								case "UNLOADKEYBOARDLAYOUT":
-									returnValue = UnloadKeyboardLayout(a.UInt32(0));
-									return true;
-								case "UNREGISTERCLASSW":
-									returnValue = UnregisterClassW(a.UInt32(0), a.UInt32(1));
-									return true;
-								case "UNREGISTERHOTKEY":
-									returnValue = UnregisterHotKey(a.UInt32(0), a.Int32(1));
-									return true;
-								case "VKKEYSCANW":
-									returnValue = VkKeyScanW(a.UInt32(0));
-									return true;
-								case "WAITFORINPUTIDLE":
-									returnValue = WaitForInputIdle(a.UInt32(0), a.UInt32(1));
-									return true;
+				case "ACTIVATEKEYBOARDLAYOUT":
+					returnValue = ActivateKeyboardLayout(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "ADJUSTWINDOWRECT":
+					returnValue = AdjustWindowRect(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "ATTACHTHREADINPUT":
+					returnValue = AttachThreadInput(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "BROADCASTSYSTEMMESSAGEA":
+					returnValue = BroadcastSystemMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "BROADCASTSYSTEMMESSAGEEXA":
+					returnValue = BroadcastSystemMessageExA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "BROADCASTSYSTEMMESSAGEEXW":
+					returnValue = BroadcastSystemMessageExW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "BROADCASTSYSTEMMESSAGEW":
+					returnValue = BroadcastSystemMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "CALLWINDOWPROCW":
+					returnValue = CallWindowProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "CHANGECLIPBOARDCHAIN":
+					returnValue = ChangeClipboardChain(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "CHANGEDISPLAYSETTINGSW":
+					returnValue = ChangeDisplaySettingsW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "CHARTOOEMBUFFA":
+					returnValue = CharToOemBuffA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "CHARTOOEMBUFFW":
+					returnValue = CharToOemBuffW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "CHARTOOEMW":
+					returnValue = CharToOemW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "CLOSEDESKTOP":
+					returnValue = CloseDesktop(a.UInt32(0));
+					return true;
+				case "CLOSEWINDOWSTATION":
+					returnValue = CloseWindowStation(a.UInt32(0));
+					return true;
+				case "COPYICON":
+					returnValue = CopyIcon(a.UInt32(0));
+					return true;
+				case "COPYIMAGE":
+					returnValue = CopyImage(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
+					return true;
+				case "COUNTCLIPBOARDFORMATS":
+					returnValue = CountClipboardFormats();
+					return true;
+				case "CREATEDESKTOPA":
+					returnValue = CreateDesktopA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "CREATEDIALOGINDIRECTPARAMW":
+					returnValue = CreateDialogIndirectParamW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "CREATEICON":
+					returnValue = CreateIcon(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+				case "CREATEICONFROMRESOURCE":
+					returnValue = CreateIconFromResource(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "CREATEICONINDIRECT":
+					returnValue = CreateIconIndirect(a.UInt32(0));
+					return true;
+				case "CREATEMDIWINDOWA":
+					returnValue = CreateMDIWindowA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
+					return true;
+				case "CREATEMDIWINDOWW":
+					returnValue = CreateMDIWindowW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
+					return true;
+				case "CREATEMENU":
+					returnValue = CreateMenu();
+					return true;
+				case "CREATEWINDOWEXW":
+					returnValue = CreateWindowExW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11));
+					return true;
+				case "CREATEWINDOWSTATIONA":
+					returnValue = CreateWindowStationA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DDEACCESSDATA":
+					returnValue = DdeAccessData(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "DDECREATEDATAHANDLE":
+					returnValue = DdeCreateDataHandle(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+				case "DDECREATESTRINGHANDLEW":
+					returnValue = DdeCreateStringHandleW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "DDEFREEDATAHANDLE":
+					returnValue = DdeFreeDataHandle(a.UInt32(0));
+					return true;
+				case "DDEGETLASTERROR":
+					returnValue = DdeGetLastError(a.UInt32(0));
+					return true;
+				case "DDEINITIALIZEW":
+					returnValue = DdeInitializeW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DDENAMESERVICE":
+					returnValue = DdeNameService(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DDEQUERYCONVINFO":
+					returnValue = DdeQueryConvInfo(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "DDEQUERYSTRINGA":
+					returnValue = DdeQueryStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4));
+					return true;
+				case "DDEQUERYSTRINGW":
+					returnValue = DdeQueryStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4));
+					return true;
+				case "DDEUNACCESSDATA":
+					returnValue = DdeUnaccessData(a.UInt32(0));
+					return true;
+				case "DDEUNINITIALIZE":
+					returnValue = DdeUninitialize(a.UInt32(0));
+					return true;
+				case "DEFDLGPROCW":
+					returnValue = DefDlgProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DEFFRAMEPROCA":
+					returnValue = DefFrameProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "DEFMDICHILDPROCA":
+					returnValue = DefMDIChildProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DEFWINDOWPROCW":
+					returnValue = DefWindowProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "DESTROYCURSOR":
+					returnValue = DestroyCursor(a.UInt32(0));
+					return true;
+				case "DIALOGBOXPARAMW":
+					returnValue = DialogBoxParamW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "DISPATCHMESSAGEW":
+					returnValue = DispatchMessageW(a.UInt32(0));
+					return true;
+				case "DLGDIRLISTA":
+					returnValue = DlgDirListA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
+					return true;
+				case "DLGDIRSELECTEXA":
+					returnValue = DlgDirSelectExA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3));
+					return true;
+				case "DRAWICONEX":
+					returnValue = DrawIconEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4), a.Int32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
+					return true;
+				case "DRAWSTATEA":
+					returnValue = DrawStateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.Int32(8), a.UInt32(9));
+					return true;
+				case "DRAWTEXTEXA":
+					returnValue = DrawTextExA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "DRAWTEXTEXW":
+					returnValue = DrawTextExW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "DRAWTEXTW":
+					returnValue = DrawTextW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "ENABLESCROLLBAR":
+					returnValue = EnableScrollBar(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "ENDMENU":
+					returnValue = EndMenu();
+					return true;
+				case "ENUMCHILDWINDOWS":
+					returnValue = EnumChildWindows(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "ENUMCLIPBOARDFORMATS":
+					returnValue = EnumClipboardFormats(a.UInt32(0));
+					return true;
+				case "ENUMDESKTOPSA":
+					returnValue = EnumDesktopsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "ENUMTHREADWINDOWS":
+					returnValue = EnumThreadWindows(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "ENUMWINDOWSTATIONSA":
+					returnValue = EnumWindowStationsA(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "FINDWINDOWEXA":
+					returnValue = FindWindowExA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "FREEDDELPARAM":
+					returnValue = FreeDDElParam(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETANCESTOR":
+					returnValue = GetAncestor(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETCARETPOS":
+					returnValue = GetCaretPos(a.UInt32(0));
+					return true;
+				case "GETCLASSINFOEXA":
+					returnValue = GetClassInfoExA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETCLASSINFOEXW":
+					returnValue = GetClassInfoExW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETCLASSINFOW":
+					returnValue = GetClassInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "GETCLASSLONGW":
+					returnValue = GetClassLongW(a.UInt32(0), a.Int32(1));
+					return true;
+				case "GETCLASSNAMEW":
+					returnValue = GetClassNameW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "GETCLIPCURSOR":
+					returnValue = GetClipCursor(a.UInt32(0));
+					return true;
+				case "GETCLIPBOARDFORMATNAMEA":
+					returnValue = GetClipboardFormatNameA(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "GETCLIPBOARDFORMATNAMEW":
+					returnValue = GetClipboardFormatNameW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "GETCLIPBOARDOWNER":
+					returnValue = GetClipboardOwner();
+					return true;
+				case "GETCLIPBOARDSEQUENCENUMBER":
+					returnValue = GetClipboardSequenceNumber();
+					return true;
+				case "GETCLIPBOARDVIEWER":
+					returnValue = GetClipboardViewer();
+					return true;
+				case "GETCOMBOBOXINFO":
+					returnValue = GetComboBoxInfo(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETCURSOR":
+					returnValue = GetCursor();
+					return true;
+				case "GETDIALOGBASEUNITS":
+					returnValue = GetDialogBaseUnits();
+					return true;
+				case "GETICONINFO":
+					returnValue = GetIconInfo(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETKEYBOARDLAYOUTLIST":
+					returnValue = GetKeyboardLayoutList(a.Int32(0), a.UInt32(1));
+					return true;
+				case "GETKEYBOARDLAYOUTNAMEA":
+					returnValue = GetKeyboardLayoutNameA(a.UInt32(0));
+					return true;
+				case "GETKEYBOARDLAYOUTNAMEW":
+					returnValue = GetKeyboardLayoutNameW(a.UInt32(0));
+					return true;
+				case "GETMENUBARINFO":
+					returnValue = GetMenuBarInfo(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "GETMENUINFO":
+					returnValue = GetMenuInfo(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETMENUITEMINFOW":
+					returnValue = GetMenuItemInfoW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "GETMENUITEMRECT":
+					returnValue = GetMenuItemRect(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "GETMENUSTRINGA":
+					returnValue = GetMenuStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+					return true;
+				case "GETMENUSTRINGW":
+					returnValue = GetMenuStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+					return true;
+				case "GETMESSAGEW":
+					returnValue = GetMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "GETMONITORINFOW":
+					returnValue = GetMonitorInfoW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "GETOPENCLIPBOARDWINDOW":
+					returnValue = GetOpenClipboardWindow();
+					return true;
+				case "GETPROCESSWINDOWSTATION":
+					returnValue = GetProcessWindowStation();
+					return true;
+				case "GETQUEUESTATUS":
+					returnValue = GetQueueStatus(a.UInt32(0));
+					return true;
+				case "GETRAWINPUTDATA":
+					returnValue = GetRawInputData(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "GETSHELLWINDOW":
+					returnValue = GetShellWindow();
+					return true;
+				case "GETSYSTEMMENU":
+					returnValue = GetSystemMenu(a.UInt32(0), a.Int32(1));
+					return true;
+				case "GETTABBEDTEXTEXTENTA":
+					returnValue = GetTabbedTextExtentA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
+					return true;
+				case "GETTHREADDESKTOP":
+					returnValue = GetThreadDesktop(a.UInt32(0));
+					return true;
+				case "GETUSEROBJECTINFORMATIONA":
+					returnValue = GetUserObjectInformationA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "GETUSEROBJECTINFORMATIONW":
+					returnValue = GetUserObjectInformationW(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "GETWINDOWLONGW":
+					returnValue = GetWindowLongW(a.UInt32(0), a.Int32(1));
+					return true;
+				case "GETWINDOWTEXTW":
+					returnValue = GetWindowTextW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "HILITEMENUITEM":
+					returnValue = HiliteMenuItem(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "INSENDMESSAGE":
+					returnValue = InSendMessage();
+					return true;
+				case "INSENDMESSAGEEX":
+					returnValue = InSendMessageEx(a.UInt32(0));
+					return true;
+				case "INSERTMENUITEMW":
+					returnValue = InsertMenuItemW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "ISMENU":
+					returnValue = IsMenu(a.UInt32(0));
+					return true;
+				case "LOADCURSORW":
+					returnValue = LoadCursorW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "LOADICONW":
+					returnValue = LoadIconW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "LOADKEYBOARDLAYOUTA":
+					returnValue = LoadKeyboardLayoutA(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "LOADMENUINDIRECTA":
+					returnValue = LoadMenuIndirectA(a.UInt32(0));
+					return true;
+				case "LOADSTRINGW":
+					returnValue = LoadStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3));
+					return true;
+				case "MAPVIRTUALKEYW":
+					returnValue = MapVirtualKeyW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "MODIFYMENUW":
+					returnValue = ModifyMenuW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "MONITORFROMRECT":
+					returnValue = MonitorFromRect(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "MONITORFROMWINDOW":
+					returnValue = MonitorFromWindow(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "MSGWAITFORMULTIPLEOBJECTSEX":
+					returnValue = MsgWaitForMultipleObjectsEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "OEMKEYSCAN":
+					returnValue = OemKeyScan(a.UInt32(0));
+					return true;
+				case "OEMTOCHARBUFFW":
+					returnValue = OemToCharBuffW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "OEMTOCHARW":
+					returnValue = OemToCharW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "OPENDESKTOPA":
+					returnValue = OpenDesktopA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "OPENINPUTDESKTOP":
+					returnValue = OpenInputDesktop(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "OPENWINDOWSTATIONA":
+					returnValue = OpenWindowStationA(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "PACKDDELPARAM":
+					returnValue = PackDDElParam(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "PEEKMESSAGEW":
+					returnValue = PeekMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "POSTMESSAGEW":
+					returnValue = PostMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "POSTTHREADMESSAGEW":
+					returnValue = PostThreadMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "PRIVATEEXTRACTICONSA":
+					returnValue = PrivateExtractIconsA(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+					return true;
+				case "REALCHILDWINDOWFROMPOINT":
+					returnValue = RealChildWindowFromPoint(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+				case "REGISTERCLASSEXW":
+					returnValue = RegisterClassExW(a.UInt32(0));
+					return true;
+				case "REGISTERCLASSW":
+					returnValue = RegisterClassW(a.UInt32(0));
+					return true;
+				case "REGISTERRAWINPUTDEVICES":
+					returnValue = RegisterRawInputDevices(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+				case "REPLYMESSAGE":
+					returnValue = ReplyMessage(a.UInt32(0));
+					return true;
+				case "SCROLLDC":
+					returnValue = ScrollDC(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+				case "SENDDLGITEMMESSAGEW":
+					returnValue = SendDlgItemMessageW(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "SENDINPUT":
+					returnValue = SendInput(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "SENDMESSAGECALLBACKA":
+					returnValue = SendMessageCallbackA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "SENDMESSAGECALLBACKW":
+					returnValue = SendMessageCallbackW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "SENDMESSAGETIMEOUTA":
+					returnValue = SendMessageTimeoutA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+				case "SENDMESSAGEW":
+					returnValue = SendMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "SENDNOTIFYMESSAGEW":
+					returnValue = SendNotifyMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "SETCLASSLONGW":
+					returnValue = SetClassLongW(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+				case "SETCLIPBOARDVIEWER":
+					returnValue = SetClipboardViewer(a.UInt32(0));
+					return true;
+				case "SETDOUBLECLICKTIME":
+					returnValue = SetDoubleClickTime(a.UInt32(0));
+					return true;
+				case "SETKEYBOARDSTATE":
+					returnValue = SetKeyboardState(a.UInt32(0));
+					return true;
+				case "SETLAYEREDWINDOWATTRIBUTES":
+					returnValue = SetLayeredWindowAttributes(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "SETMENUINFO":
+					returnValue = SetMenuInfo(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "SETMENUITEMINFOW":
+					returnValue = SetMenuItemInfoW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+					return true;
+				case "SETPROCESSWINDOWSTATION":
+					returnValue = SetProcessWindowStation(a.UInt32(0));
+					return true;
+				case "SETTHREADDESKTOP":
+					returnValue = SetThreadDesktop(a.UInt32(0));
+					return true;
+				case "SETWINDOWLONGW":
+					returnValue = SetWindowLongW(a.UInt32(0), a.Int32(1), a.Int32(2));
+					return true;
+				case "SETWINDOWRGN":
+					returnValue = SetWindowRgn(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "SETWINDOWTEXTW":
+					returnValue = SetWindowTextW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "SETWINDOWSHOOKEXW":
+					returnValue = SetWindowsHookExW(a.Int32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "SWAPMOUSEBUTTON":
+					returnValue = SwapMouseButton(a.Int32(0));
+					return true;
+				case "SWITCHDESKTOP":
+					returnValue = SwitchDesktop(a.UInt32(0));
+					return true;
+				case "SYSTEMPARAMETERSINFOW":
+					returnValue = SystemParametersInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+				case "TOUNICODEEX":
+					returnValue = ToUnicodeEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4), a.UInt32(5), a.UInt32(6));
+					return true;
+				case "UNLOADKEYBOARDLAYOUT":
+					returnValue = UnloadKeyboardLayout(a.UInt32(0));
+					return true;
+				case "UNREGISTERCLASSW":
+					returnValue = UnregisterClassW(a.UInt32(0), a.UInt32(1));
+					return true;
+				case "UNREGISTERHOTKEY":
+					returnValue = UnregisterHotKey(a.UInt32(0), a.Int32(1));
+					return true;
+				case "VKKEYSCANW":
+					returnValue = VkKeyScanW(a.UInt32(0));
+					return true;
+				case "WAITFORINPUTIDLE":
+					returnValue = WaitForInputIdle(a.UInt32(0), a.UInt32(1));
+					return true;
 				
 				
 								default:
