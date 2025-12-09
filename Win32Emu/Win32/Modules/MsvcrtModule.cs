@@ -1446,9 +1446,9 @@ namespace Win32Emu.Win32.Modules
 
 	/// <summary>
 	/// _assert - Handle assertion failures
-	/// Reports an assertion failure and terminates the program
+	/// Reports an assertion failure. Note: Unlike real MSVCRT, this implementation logs the failure but does not terminate the program.
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(12)]
 	private void _assert(in LpcStr expr, in LpcStr file, uint line)
 	{
 		var expression = expr.ToString() ?? string.Empty;
