@@ -9434,9 +9434,9 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(16, IsStub = true)]
-		private uint SetMenuItemInfoW(uint hmenu, uint item, int fByPositon, uint lpmii)
+		private uint SetMenuItemInfoW(uint hmenu, uint item, int fByPosition, uint lpmii)
 		{
-			_logger.LogInformation("[User32] SetMenuItemInfoW(hmenu={Hmenu}, item={Item}, fByPositon={Fbypositon}, lpmii={Lpmii})", hmenu, item, fByPositon, lpmii);
+			_logger.LogInformation("[User32] SetMenuItemInfoW(hmenu={Hmenu}, item={Item}, fByPosition={Fbyposition}, lpmii={Lpmii})", hmenu, item, fByPosition, lpmii);
 			return 0; // Stub implementation
 		}
 
