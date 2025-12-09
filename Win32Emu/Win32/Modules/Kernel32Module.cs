@@ -160,6 +160,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "DEACTIVATEACTCTX":
 				returnValue = DeactivateActCtx(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "RELEASEACTCTX":
+				ReleaseActCtx(a.UInt32(0));
+				returnValue = 0;
+				return true;
 			case "GETCURRENTPROCESS":
 				returnValue = GetCurrentProcess();
 				return true;
@@ -380,6 +384,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "LOCALALLOC":
 				returnValue = LocalAlloc(a.UInt32(0), a.UInt32(1));
 				return true;
+			case "LOCALLOCK":
+				returnValue = LocalLock(a.UInt32(0));
+				return true;
+			case "LOCALUNLOCK":
+				returnValue = LocalUnlock(a.UInt32(0));
+				return true;
 			case "VIRTUALALLOC":
 				returnValue = VirtualAlloc(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 				return true;
@@ -422,6 +432,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "CLOSEHANDLE":
 				returnValue = CloseHandle(a.UInt32(0));
+				return true;
+			case "GETHANDLEINFORMATION":
+				returnValue = GetHandleInformation(a.UInt32(0), a.UInt32(1));
 				return true;
 			case "CONVERTTOGLOBALHANDLE":
 				returnValue = ConvertToGlobalHandle(a.UInt32(0));
@@ -574,6 +587,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "SLEEPEX":
 				returnValue = SleepEx(a.UInt32(0), a.UInt32(1));
+				return true;
+			case "QUEUEUSERAPC":
+				returnValue = QueueUserAPC(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
 			// Thread management and TLS functions
@@ -798,6 +814,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GLOBALFINDATOMA":
 				returnValue = GlobalFindAtomA(a.LpcStr(0));
 				return true;
+			case "FINDATOMA":
+				returnValue = FindAtomA(a.LpcStr(0));
+				return true;
+			case "FINDATOMW":
+				returnValue = FindAtomW(a.LpcWStr(0));
+				return true;
+			case "GETATOMNAMEA":
+				returnValue = GetAtomNameA(a.UInt32(0), a.UInt32(1), a.Int32(2));
+				return true;
 			case "GLOBALFLAGS":
 				returnValue = GlobalFlags(a.UInt32(0));
 				return true;
@@ -851,6 +876,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				return true;
 			case "LSTRCPYNA":
 				returnValue = lstrcpynA(a.UInt32(0), a.LpcStr(1), a.Int32(2));
+				return true;
+			case "LSTRCPYNW":
+				returnValue = lstrcpynW(a.UInt32(0), a.LpcWStr(1), a.Int32(2));
 				return true;
 			case "MULDIV":
 				returnValue = (uint)MulDiv(a.Int32(0), a.Int32(1), a.Int32(2));
@@ -2998,6 +3026,36 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	/// <summary>
+	/// Locks a local memory object and returns a pointer to the first byte of the object's memory block.
+	/// </summary>
+	/// <param name="hMem">A handle to the local memory object</param>
+	/// <returns>If the function succeeds, the return value is a pointer to the first byte of the memory block.
+	/// If the function fails, the return value is NULL.</returns>
+	[DllModuleExport(4)]
+	private uint LocalLock(uint hMem)
+	{
+		_logger.LogInformation("[Kernel32] LocalLock(hMem=0x{HMem:X8})", hMem);
+		// In our simplified implementation, local memory handles are just pointers
+		// So we can return the handle itself
+		return hMem;
+	}
+
+	/// <summary>
+	/// Decrements the lock count associated with a memory object that was allocated with LMEM_MOVEABLE.
+	/// </summary>
+	/// <param name="hMem">A handle to the local memory object</param>
+	/// <returns>If the function succeeds and the memory object is still locked after decrementing the lock count, 
+	/// the return value is a nonzero value. If the function fails, the return value is zero.</returns>
+	[DllModuleExport(4)]
+	private uint LocalUnlock(uint hMem)
+	{
+		_logger.LogInformation("[Kernel32] LocalUnlock(hMem=0x{HMem:X8})", hMem);
+		// In our simplified implementation, we don't track lock counts
+		// Just return success (nonzero)
+		return 1;
+	}
+
+	/// <summary>
 	/// Reserves, commits, or changes the state of a region of pages in the virtual address space of the calling process.
 	/// Memory allocated by this function is automatically initialized to zero.
 	/// </summary>
@@ -3537,6 +3595,26 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		return _env.CloseHandle(hObject) ? 1u : 0u;
+	}
+
+	/// <summary>
+	/// Retrieves certain properties of an object handle.
+	/// </summary>
+	/// <param name="hObject">A handle to an object</param>
+	/// <param name="lpdwFlags">A pointer to a variable that receives a set of bit flags that specify properties of the object handle</param>
+	/// <returns>If the function succeeds, the return value is nonzero. If the function fails, the return value is zero.</returns>
+	[DllModuleExport(8)]
+	private uint GetHandleInformation(uint hObject, uint lpdwFlags)
+	{
+		_logger.LogInformation("[Kernel32] GetHandleInformation(hObject=0x{HObject:X8}, lpdwFlags=0x{LpdwFlags:X8})",
+			hObject, lpdwFlags);
+		
+		// Stub implementation - return success with no flags set
+		if (lpdwFlags != 0)
+		{
+			_env.MemWrite32(lpdwFlags, 0); // HANDLE_FLAG_INHERIT = 0, HANDLE_FLAG_PROTECT_FROM_CLOSE = 0
+		}
+		return 1; // Success
 	}
 
 	[DllModuleExport(13)]
@@ -5138,6 +5216,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		// Return WAIT_IO_COMPLETION (0) indicating it completed without being interrupted by an APC
 		return WAIT_IO_COMPLETION;
+	}
+
+	/// <summary>
+	/// Adds a user-mode asynchronous procedure call (APC) object to the APC queue of the specified thread.
+	/// </summary>
+	/// <param name="pfnAPC">A pointer to the application-supplied APC function to be called when the specified thread performs an alertable wait operation</param>
+	/// <param name="hThread">A handle to the thread. The handle must have the THREAD_SET_CONTEXT access right</param>
+	/// <param name="dwData">A single value that is passed to the APC function pointed to by the pfnAPC parameter</param>
+	/// <returns>If the function succeeds, the return value is nonzero. If the function fails, the return value is zero.</returns>
+	[DllModuleExport(12, IsStub = true)]
+	private uint QueueUserAPC(uint pfnAPC, uint hThread, uint dwData)
+	{
+		_logger.LogInformation("[Kernel32] QueueUserAPC(pfnAPC=0x{PfnAPC:X8}, hThread=0x{HThread:X8}, dwData=0x{DwData:X8})",
+			pfnAPC, hThread, dwData);
+		
+		// Stub implementation - APCs are not currently supported
+		// Return success to avoid breaking applications that use this function
+		_logger.LogWarning("[Kernel32] QueueUserAPC is a stub - APC not actually queued");
+		return 1; // Success
 	}
 
 	[DllModuleExport(1)]
@@ -7194,6 +7291,57 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return 0; // Not found
 	}
 
+	/// <summary>
+	/// Searches the local atom table for the specified string and retrieves the atom associated with that string.
+	/// </summary>
+	/// <param name="lpString">The character string to search for</param>
+	/// <returns>If the function succeeds, the return value is the atom associated with the given string.
+	/// If the function fails, the return value is zero.</returns>
+	[DllModuleExport(4)]
+	private uint FindAtomA(in LpcStr lpString)
+	{
+		var str = lpString.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] FindAtomA(lpString=\"{Str}\")", str);
+		// Stub implementation - return 0 (not found)
+		return 0;
+	}
+
+	/// <summary>
+	/// Searches the local atom table for the specified Unicode string and retrieves the atom associated with that string.
+	/// </summary>
+	/// <param name="lpString">The Unicode string to search for</param>
+	/// <returns>If the function succeeds, the return value is the atom associated with the given string.
+	/// If the function fails, the return value is zero.</returns>
+	[DllModuleExport(4)]
+	private uint FindAtomW(in LpcWStr lpString)
+	{
+		var str = lpString.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] FindAtomW(lpString=\"{Str}\")", str);
+		// Stub implementation - return 0 (not found)
+		return 0;
+	}
+
+	/// <summary>
+	/// Retrieves a copy of the character string associated with the specified local atom.
+	/// </summary>
+	/// <param name="nAtom">The atom that specifies the character string to be retrieved</param>
+	/// <param name="lpBuffer">The buffer that receives the character string</param>
+	/// <param name="nSize">The size, in characters, of the buffer</param>
+	/// <returns>If the function succeeds, the return value is the length of the string copied to the buffer, in characters, not including the terminating null character.
+	/// If the function fails, the return value is zero.</returns>
+	[DllModuleExport(12)]
+	private uint GetAtomNameA(uint nAtom, uint lpBuffer, int nSize)
+	{
+		_logger.LogInformation("[Kernel32] GetAtomNameA(nAtom=0x{NAtom:X}, lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
+			nAtom, lpBuffer, nSize);
+		// Stub implementation - return empty string
+		if (lpBuffer != 0 && nSize > 0)
+		{
+			_env.MemWrite8(lpBuffer, 0); // Write null terminator
+		}
+		return 0;
+	}
+
 	[DllModuleExport(4)]
 	private uint GlobalFlags(uint hMem)
 	{
@@ -7380,6 +7528,34 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		{
 			var toCopy = str2.Length < iMaxLength - 1 ? str2 : str2.Substring(0, iMaxLength - 1);
 			_env.WriteAnsiStringAt(lpString1, toCopy);
+		}
+		return lpString1;
+	}
+
+	/// <summary>
+	/// Copies a specified number of characters from one Unicode string to another.
+	/// </summary>
+	/// <param name="lpString1">Pointer to a buffer to receive the string</param>
+	/// <param name="lpString2">Pointer to the Unicode string to copy</param>
+	/// <param name="iMaxLength">The number of characters to be copied, including the terminating null character</param>
+	/// <returns>If the function succeeds, the return value is a pointer to the buffer.</returns>
+	[DllModuleExport(12)]
+	private uint lstrcpynW(uint lpString1, in LpcWStr lpString2, int iMaxLength)
+	{
+		var str2 = lpString2.ToString() ?? string.Empty;
+		_logger.LogInformation("[Kernel32] lstrcpynW(lpString1=0x{LpString1:X8}, lpString2=\"{Str2}\", iMaxLength={IMaxLength})",
+			lpString1, str2, iMaxLength);
+		if (lpString1 != 0 && iMaxLength > 0)
+		{
+			// Copy up to iMaxLength-1 characters plus null terminator
+			var toCopy = str2.Length < iMaxLength - 1 ? str2 : str2.Substring(0, iMaxLength - 1);
+			// Write Unicode string (2 bytes per character)
+			for (int i = 0; i < toCopy.Length; i++)
+			{
+				_env.MemWrite16(lpString1 + (uint)(i * 2), (ushort)toCopy[i]);
+			}
+			// Null terminate
+			_env.MemWrite16(lpString1 + (uint)(toCopy.Length * 2), 0);
 		}
 		return lpString1;
 	}
@@ -11932,6 +12108,18 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		
 		// Stub: Just return success
 		return (uint)NativeTypes.Win32Bool.TRUE;
+	}
+
+	/// <summary>
+	/// Decrements the reference count of the specified activation context, and removes it from the list of activation contexts when the reference count reaches zero.
+	/// </summary>
+	/// <param name="hActCtx">Handle to an activation context</param>
+	[DllModuleExport(4)]
+	private void ReleaseActCtx(uint hActCtx)
+	{
+		_logger.LogInformation("[Kernel32] ReleaseActCtx(hActCtx=0x{HActCtx:X8})", hActCtx);
+		
+		// Stub: Just log and return - we don't track activation context references
 	}
 
 	/// <summary>
