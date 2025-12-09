@@ -1097,7 +1097,501 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)GetKeyNameTextW(a.Int32(0), a.UInt32(1), a.Int32(2));
 					return true;
 
-				default:
+								case "ACTIVATEKEYBOARDLAYOUT":
+									returnValue = ActivateKeyboardLayout(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "ADJUSTWINDOWRECT":
+									returnValue = AdjustWindowRect(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "ATTACHTHREADINPUT":
+									returnValue = AttachThreadInput(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "BROADCASTSYSTEMMESSAGEA":
+									returnValue = BroadcastSystemMessageA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "BROADCASTSYSTEMMESSAGEEXA":
+									returnValue = BroadcastSystemMessageExA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+									return true;
+								case "BROADCASTSYSTEMMESSAGEEXW":
+									returnValue = BroadcastSystemMessageExW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+									return true;
+								case "BROADCASTSYSTEMMESSAGEW":
+									returnValue = BroadcastSystemMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "CALLWINDOWPROCW":
+									returnValue = CallWindowProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "CHANGECLIPBOARDCHAIN":
+									returnValue = ChangeClipboardChain(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "CHANGEDISPLAYSETTINGSW":
+									returnValue = ChangeDisplaySettingsW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "CHARTOOEMBUFFA":
+									returnValue = CharToOemBuffA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "CHARTOOEMBUFFW":
+									returnValue = CharToOemBuffW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "CHARTOOEMW":
+									returnValue = CharToOemW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "CLOSEDESKTOP":
+									returnValue = CloseDesktop(a.UInt32(0));
+									return true;
+								case "CLOSEWINDOWSTATION":
+									returnValue = CloseWindowStation(a.UInt32(0));
+									return true;
+								case "COPYICON":
+									returnValue = CopyIcon(a.UInt32(0));
+									return true;
+								case "COPYIMAGE":
+									returnValue = CopyImage(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
+									return true;
+								case "COUNTCLIPBOARDFORMATS":
+									returnValue = CountClipboardFormats();
+									return true;
+								case "CREATEDESKTOPA":
+									returnValue = CreateDesktopA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+									return true;
+								case "CREATEDIALOGINDIRECTPARAMW":
+									returnValue = CreateDialogIndirectParamW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "CREATEICON":
+									returnValue = CreateIcon(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+									return true;
+								case "CREATEICONFROMRESOURCE":
+									returnValue = CreateIconFromResource(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+									return true;
+								case "CREATEICONINDIRECT":
+									returnValue = CreateIconIndirect(a.UInt32(0));
+									return true;
+								case "CREATEMDIWINDOWA":
+									returnValue = CreateMDIWindowA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
+									return true;
+								case "CREATEMDIWINDOWW":
+									returnValue = CreateMDIWindowW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9));
+									return true;
+								case "CREATEMENU":
+									returnValue = CreateMenu();
+									return true;
+								case "CREATEWINDOWEXW":
+									returnValue = CreateWindowExW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11));
+									return true;
+								case "CREATEWINDOWSTATIONA":
+									returnValue = CreateWindowStationA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "DDEACCESSDATA":
+									returnValue = DdeAccessData(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "DDECREATEDATAHANDLE":
+									returnValue = DdeCreateDataHandle(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+									return true;
+								case "DDECREATESTRINGHANDLEW":
+									returnValue = DdeCreateStringHandleW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "DDEFREEDATAHANDLE":
+									returnValue = DdeFreeDataHandle(a.UInt32(0));
+									return true;
+								case "DDEGETLASTERROR":
+									returnValue = DdeGetLastError(a.UInt32(0));
+									return true;
+								case "DDEINITIALIZEW":
+									returnValue = DdeInitializeW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "DDENAMESERVICE":
+									returnValue = DdeNameService(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "DDEQUERYCONVINFO":
+									returnValue = DdeQueryConvInfo(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "DDEQUERYSTRINGA":
+									returnValue = DdeQueryStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4));
+									return true;
+								case "DDEQUERYSTRINGW":
+									returnValue = DdeQueryStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4));
+									return true;
+								case "DDEUNACCESSDATA":
+									returnValue = DdeUnaccessData(a.UInt32(0));
+									return true;
+								case "DDEUNINITIALIZE":
+									returnValue = DdeUninitialize(a.UInt32(0));
+									return true;
+								case "DEFDLGPROCW":
+									returnValue = DefDlgProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "DEFFRAMEPROCA":
+									returnValue = DefFrameProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "DEFMDICHILDPROCA":
+									returnValue = DefMDIChildProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "DEFWINDOWPROCW":
+									returnValue = DefWindowProcW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "DESTROYCURSOR":
+									returnValue = DestroyCursor(a.UInt32(0));
+									return true;
+								case "DIALOGBOXPARAMW":
+									returnValue = DialogBoxParamW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "DISPATCHMESSAGEW":
+									returnValue = DispatchMessageW(a.UInt32(0));
+									return true;
+								case "DLGDIRLISTA":
+									returnValue = DlgDirListA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
+									return true;
+								case "DLGDIRSELECTEXA":
+									returnValue = DlgDirSelectExA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3));
+									return true;
+								case "DRAWICONEX":
+									returnValue = DrawIconEx(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.Int32(4), a.Int32(5), a.UInt32(6), a.UInt32(7), a.UInt32(8));
+									return true;
+								case "DRAWSTATEA":
+									returnValue = DrawStateA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.Int32(8), a.UInt32(9));
+									return true;
+								case "DRAWTEXTEXA":
+									returnValue = DrawTextExA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+									return true;
+								case "DRAWTEXTEXW":
+									returnValue = DrawTextExW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+									return true;
+								case "DRAWTEXTW":
+									returnValue = DrawTextW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "ENABLESCROLLBAR":
+									returnValue = EnableScrollBar(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "ENDMENU":
+									returnValue = EndMenu();
+									return true;
+								case "ENUMCHILDWINDOWS":
+									returnValue = EnumChildWindows(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "ENUMCLIPBOARDFORMATS":
+									returnValue = EnumClipboardFormats(a.UInt32(0));
+									return true;
+								case "ENUMDESKTOPSA":
+									returnValue = EnumDesktopsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "ENUMTHREADWINDOWS":
+									returnValue = EnumThreadWindows(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "ENUMWINDOWSTATIONSA":
+									returnValue = EnumWindowStationsA(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "FINDWINDOWEXA":
+									returnValue = FindWindowExA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "FREEDDELPARAM":
+									returnValue = FreeDDElParam(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "GETANCESTOR":
+									returnValue = GetAncestor(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "GETCARETPOS":
+									returnValue = GetCaretPos(a.UInt32(0));
+									return true;
+								case "GETCLASSINFOEXA":
+									returnValue = GetClassInfoExA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "GETCLASSINFOEXW":
+									returnValue = GetClassInfoExW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "GETCLASSINFOW":
+									returnValue = GetClassInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "GETCLASSLONGW":
+									returnValue = GetClassLongW(a.UInt32(0), a.Int32(1));
+									return true;
+								case "GETCLASSNAMEW":
+									returnValue = GetClassNameW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "GETCLIPCURSOR":
+									returnValue = GetClipCursor(a.UInt32(0));
+									return true;
+								case "GETCLIPBOARDFORMATNAMEA":
+									returnValue = GetClipboardFormatNameA(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "GETCLIPBOARDFORMATNAMEW":
+									returnValue = GetClipboardFormatNameW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "GETCLIPBOARDOWNER":
+									returnValue = GetClipboardOwner();
+									return true;
+								case "GETCLIPBOARDSEQUENCENUMBER":
+									returnValue = GetClipboardSequenceNumber();
+									return true;
+								case "GETCLIPBOARDVIEWER":
+									returnValue = GetClipboardViewer();
+									return true;
+								case "GETCOMBOBOXINFO":
+									returnValue = GetComboBoxInfo(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "GETCURSOR":
+									returnValue = GetCursor();
+									return true;
+								case "GETDIALOGBASEUNITS":
+									returnValue = GetDialogBaseUnits();
+									return true;
+								case "GETICONINFO":
+									returnValue = GetIconInfo(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "GETKEYBOARDLAYOUTLIST":
+									returnValue = GetKeyboardLayoutList(a.Int32(0), a.UInt32(1));
+									return true;
+								case "GETKEYBOARDLAYOUTNAMEA":
+									returnValue = GetKeyboardLayoutNameA(a.UInt32(0));
+									return true;
+								case "GETKEYBOARDLAYOUTNAMEW":
+									returnValue = GetKeyboardLayoutNameW(a.UInt32(0));
+									return true;
+								case "GETMENUBARINFO":
+									returnValue = GetMenuBarInfo(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3));
+									return true;
+								case "GETMENUINFO":
+									returnValue = GetMenuInfo(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "GETMENUITEMINFOW":
+									returnValue = GetMenuItemInfoW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+									return true;
+								case "GETMENUITEMRECT":
+									returnValue = GetMenuItemRect(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "GETMENUSTRINGA":
+									returnValue = GetMenuStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+									return true;
+								case "GETMENUSTRINGW":
+									returnValue = GetMenuStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+									return true;
+								case "GETMESSAGEW":
+									returnValue = GetMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "GETMONITORINFOW":
+									returnValue = GetMonitorInfoW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "GETOPENCLIPBOARDWINDOW":
+									returnValue = GetOpenClipboardWindow();
+									return true;
+								case "GETPROCESSWINDOWSTATION":
+									returnValue = GetProcessWindowStation();
+									return true;
+								case "GETQUEUESTATUS":
+									returnValue = GetQueueStatus(a.UInt32(0));
+									return true;
+								case "GETRAWINPUTDATA":
+									returnValue = GetRawInputData(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "GETSHELLWINDOW":
+									returnValue = GetShellWindow();
+									return true;
+								case "GETSYSTEMMENU":
+									returnValue = GetSystemMenu(a.UInt32(0), a.Int32(1));
+									return true;
+								case "GETTABBEDTEXTEXTENTA":
+									returnValue = GetTabbedTextExtentA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.Int32(3), a.UInt32(4));
+									return true;
+								case "GETTHREADDESKTOP":
+									returnValue = GetThreadDesktop(a.UInt32(0));
+									return true;
+								case "GETUSEROBJECTINFORMATIONA":
+									returnValue = GetUserObjectInformationA(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "GETUSEROBJECTINFORMATIONW":
+									returnValue = GetUserObjectInformationW(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "GETWINDOWLONGW":
+									returnValue = GetWindowLongW(a.UInt32(0), a.Int32(1));
+									return true;
+								case "GETWINDOWTEXTW":
+									returnValue = GetWindowTextW(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "HILITEMENUITEM":
+									returnValue = HiliteMenuItem(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "INSENDMESSAGE":
+									returnValue = InSendMessage();
+									return true;
+								case "INSENDMESSAGEEX":
+									returnValue = InSendMessageEx(a.UInt32(0));
+									return true;
+								case "INSERTMENUITEMW":
+									returnValue = InsertMenuItemW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+									return true;
+								case "ISMENU":
+									returnValue = IsMenu(a.UInt32(0));
+									return true;
+								case "LOADCURSORW":
+									returnValue = LoadCursorW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "LOADICONW":
+									returnValue = LoadIconW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "LOADKEYBOARDLAYOUTA":
+									returnValue = LoadKeyboardLayoutA(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "LOADMENUINDIRECTA":
+									returnValue = LoadMenuIndirectA(a.UInt32(0));
+									return true;
+								case "LOADSTRINGW":
+									returnValue = LoadStringW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3));
+									return true;
+								case "MAPVIRTUALKEYW":
+									returnValue = MapVirtualKeyW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "MODIFYMENUW":
+									returnValue = ModifyMenuW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "MONITORFROMRECT":
+									returnValue = MonitorFromRect(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "MONITORFROMWINDOW":
+									returnValue = MonitorFromWindow(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "MSGWAITFORMULTIPLEOBJECTSEX":
+									returnValue = MsgWaitForMultipleObjectsEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "OEMKEYSCAN":
+									returnValue = OemKeyScan(a.UInt32(0));
+									return true;
+								case "OEMTOCHARBUFFW":
+									returnValue = OemToCharBuffW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "OEMTOCHARW":
+									returnValue = OemToCharW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "OPENDESKTOPA":
+									returnValue = OpenDesktopA(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+									return true;
+								case "OPENINPUTDESKTOP":
+									returnValue = OpenInputDesktop(a.UInt32(0), a.Int32(1), a.UInt32(2));
+									return true;
+								case "OPENWINDOWSTATIONA":
+									returnValue = OpenWindowStationA(a.UInt32(0), a.Int32(1), a.UInt32(2));
+									return true;
+								case "PACKDDELPARAM":
+									returnValue = PackDDElParam(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "PEEKMESSAGEW":
+									returnValue = PeekMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "POSTMESSAGEW":
+									returnValue = PostMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "POSTTHREADMESSAGEW":
+									returnValue = PostThreadMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "PRIVATEEXTRACTICONSA":
+									returnValue = PrivateExtractIconsA(a.UInt32(0), a.Int32(1), a.Int32(2), a.Int32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6), a.UInt32(7));
+									return true;
+								case "REALCHILDWINDOWFROMPOINT":
+									returnValue = RealChildWindowFromPoint(a.UInt32(0), a.Int32(1), a.Int32(2));
+									return true;
+								case "REGISTERCLASSEXW":
+									returnValue = RegisterClassExW(a.UInt32(0));
+									return true;
+								case "REGISTERCLASSW":
+									returnValue = RegisterClassW(a.UInt32(0));
+									return true;
+								case "REGISTERRAWINPUTDEVICES":
+									returnValue = RegisterRawInputDevices(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+									return true;
+								case "REPLYMESSAGE":
+									returnValue = ReplyMessage(a.UInt32(0));
+									return true;
+								case "SCROLLDC":
+									returnValue = ScrollDC(a.UInt32(0), a.Int32(1), a.Int32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+									return true;
+								case "SENDDLGITEMMESSAGEW":
+									returnValue = SendDlgItemMessageW(a.UInt32(0), a.Int32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+									return true;
+								case "SENDINPUT":
+									returnValue = SendInput(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "SENDMESSAGECALLBACKA":
+									returnValue = SendMessageCallbackA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+									return true;
+								case "SENDMESSAGECALLBACKW":
+									returnValue = SendMessageCallbackW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+									return true;
+								case "SENDMESSAGETIMEOUTA":
+									returnValue = SendMessageTimeoutA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5), a.UInt32(6));
+									return true;
+								case "SENDMESSAGEW":
+									returnValue = SendMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "SENDNOTIFYMESSAGEW":
+									returnValue = SendNotifyMessageW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "SETCLASSLONGW":
+									returnValue = SetClassLongW(a.UInt32(0), a.Int32(1), a.Int32(2));
+									return true;
+								case "SETCLIPBOARDVIEWER":
+									returnValue = SetClipboardViewer(a.UInt32(0));
+									return true;
+								case "SETDOUBLECLICKTIME":
+									returnValue = SetDoubleClickTime(a.UInt32(0));
+									return true;
+								case "SETKEYBOARDSTATE":
+									returnValue = SetKeyboardState(a.UInt32(0));
+									return true;
+								case "SETLAYEREDWINDOWATTRIBUTES":
+									returnValue = SetLayeredWindowAttributes(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "SETMENUINFO":
+									returnValue = SetMenuInfo(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "SETMENUITEMINFOW":
+									returnValue = SetMenuItemInfoW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
+									return true;
+								case "SETPROCESSWINDOWSTATION":
+									returnValue = SetProcessWindowStation(a.UInt32(0));
+									return true;
+								case "SETTHREADDESKTOP":
+									returnValue = SetThreadDesktop(a.UInt32(0));
+									return true;
+								case "SETWINDOWLONGW":
+									returnValue = SetWindowLongW(a.UInt32(0), a.Int32(1), a.Int32(2));
+									return true;
+								case "SETWINDOWRGN":
+									returnValue = SetWindowRgn(a.UInt32(0), a.UInt32(1), a.Int32(2));
+									return true;
+								case "SETWINDOWTEXTW":
+									returnValue = SetWindowTextW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "SETWINDOWSHOOKEXW":
+									returnValue = SetWindowsHookExW(a.Int32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "SWAPMOUSEBUTTON":
+									returnValue = SwapMouseButton(a.Int32(0));
+									return true;
+								case "SWITCHDESKTOP":
+									returnValue = SwitchDesktop(a.UInt32(0));
+									return true;
+								case "SYSTEMPARAMETERSINFOW":
+									returnValue = SystemParametersInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+									return true;
+								case "TOUNICODEEX":
+									returnValue = ToUnicodeEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.Int32(4), a.UInt32(5), a.UInt32(6));
+									return true;
+								case "UNLOADKEYBOARDLAYOUT":
+									returnValue = UnloadKeyboardLayout(a.UInt32(0));
+									return true;
+								case "UNREGISTERCLASSW":
+									returnValue = UnregisterClassW(a.UInt32(0), a.UInt32(1));
+									return true;
+								case "UNREGISTERHOTKEY":
+									returnValue = UnregisterHotKey(a.UInt32(0), a.Int32(1));
+									return true;
+								case "VKKEYSCANW":
+									returnValue = VkKeyScanW(a.UInt32(0));
+									return true;
+								case "WAITFORINPUTIDLE":
+									returnValue = WaitForInputIdle(a.UInt32(0), a.UInt32(1));
+									return true;
+				
+				
+								default:
 					_logger.LogInformation("[User32] Unimplemented export: {Export}", export);
 					return false;
 			}
@@ -7901,6 +8395,1155 @@ namespace Win32Emu.Win32.Modules
 			var wstr = new LpWStr(lpString);
 			wstr.Write(_env.Memory, keyName);
 			return keyName.Length;
+		}
+
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint ActivateKeyboardLayout(uint hkl, uint flags)
+		{
+			_logger.LogInformation("[User32] ActivateKeyboardLayout(hkl={Hkl}, flags={Flags})", hkl, flags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint AdjustWindowRect(uint lpRect, uint dwStyle, int bMenu)
+		{
+			_logger.LogInformation("[User32] AdjustWindowRect(lpRect={Lprect}, dwStyle={Dwstyle}, bMenu={Bmenu})", lpRect, dwStyle, bMenu);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint AttachThreadInput(uint idAttach, uint idAttachTo, int fAttach)
+		{
+			_logger.LogInformation("[User32] AttachThreadInput(idAttach={Idattach}, idAttachTo={Idattachto}, fAttach={Fattach})", idAttach, idAttachTo, fAttach);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint BroadcastSystemMessageA(uint flags, uint lpInfo, uint msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] BroadcastSystemMessageA(flags={Flags}, lpInfo={Lpinfo}, msg={Msg}, wParam={Wparam}, lParam={Lparam})", flags, lpInfo, msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint BroadcastSystemMessageExA(uint flags, uint lpInfo, uint msg, uint wParam, uint lParam, uint pbsmInfo)
+		{
+			_logger.LogInformation("[User32] BroadcastSystemMessageExA(flags={Flags}, lpInfo={Lpinfo}, msg={Msg}, wParam={Wparam}, lParam={Lparam}, pbsmInfo={Pbsminfo})", flags, lpInfo, msg, wParam, lParam, pbsmInfo);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint BroadcastSystemMessageExW(uint flags, uint lpInfo, uint msg, uint wParam, uint lParam, uint pbsmInfo)
+		{
+			_logger.LogInformation("[User32] BroadcastSystemMessageExW(flags={Flags}, lpInfo={Lpinfo}, msg={Msg}, wParam={Wparam}, lParam={Lparam}, pbsmInfo={Pbsminfo})", flags, lpInfo, msg, wParam, lParam, pbsmInfo);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint BroadcastSystemMessageW(uint flags, uint lpInfo, uint msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] BroadcastSystemMessageW(flags={Flags}, lpInfo={Lpinfo}, msg={Msg}, wParam={Wparam}, lParam={Lparam})", flags, lpInfo, msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint CallWindowProcW(uint lpPrevWndFunc, uint hWnd, uint msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] CallWindowProcW(lpPrevWndFunc={Lpprevwndfunc}, hWnd={Hwnd}, msg={Msg}, wParam={Wparam}, lParam={Lparam})", lpPrevWndFunc, hWnd, msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint ChangeClipboardChain(uint hWndRemove, uint hWndNewNext)
+		{
+			_logger.LogInformation("[User32] ChangeClipboardChain(hWndRemove={Hwndremove}, hWndNewNext={Hwndnewnext})", hWndRemove, hWndNewNext);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint ChangeDisplaySettingsW(uint lpDevMode, uint dwFlags)
+		{
+			_logger.LogInformation("[User32] ChangeDisplaySettingsW(lpDevMode={Lpdevmode}, dwFlags={Dwflags})", lpDevMode, dwFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint CharToOemBuffA(uint lpszSrc, uint lpszDst, uint cchDstLength)
+		{
+			_logger.LogInformation("[User32] CharToOemBuffA(lpszSrc={Lpszsrc}, lpszDst={Lpszdst}, cchDstLength={Cchdstlength})", lpszSrc, lpszDst, cchDstLength);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint CharToOemBuffW(uint lpszSrc, uint lpszDst, uint cchDstLength)
+		{
+			_logger.LogInformation("[User32] CharToOemBuffW(lpszSrc={Lpszsrc}, lpszDst={Lpszdst}, cchDstLength={Cchdstlength})", lpszSrc, lpszDst, cchDstLength);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint CharToOemW(uint pSrc, uint pDst)
+		{
+			_logger.LogInformation("[User32] CharToOemW(pSrc={Psrc}, pDst={Pdst})", pSrc, pDst);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint CloseDesktop(uint hDesktop)
+		{
+			_logger.LogInformation("[User32] CloseDesktop(hDesktop={Hdesktop})", hDesktop);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint CloseWindowStation(uint hWinSta)
+		{
+			_logger.LogInformation("[User32] CloseWindowStation(hWinSta={Hwinsta})", hWinSta);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint CopyIcon(uint hIcon)
+		{
+			_logger.LogInformation("[User32] CopyIcon(hIcon={Hicon})", hIcon);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint CopyImage(uint h, uint type, int cx, int cy, uint flags)
+		{
+			_logger.LogInformation("[User32] CopyImage(h={H}, type={Type}, cx={Cx}, cy={Cy}, flags={Flags})", h, type, cx, cy, flags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint CountClipboardFormats()
+		{
+			_logger.LogInformation("[User32] CountClipboardFormats()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint CreateDesktopA(uint lpszDesktop, uint lpszDevice, uint pDevmode, uint dwFlags, uint dwDesiredAccess, uint lpsa)
+		{
+			_logger.LogInformation("[User32] CreateDesktopA(lpszDesktop={Lpszdesktop}, lpszDevice={Lpszdevice}, pDevmode={Pdevmode}, dwFlags={Dwflags}, dwDesiredAccess={Dwdesiredaccess}, lpsa={Lpsa})", lpszDesktop, lpszDevice, pDevmode, dwFlags, dwDesiredAccess, lpsa);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint CreateDialogIndirectParamW(uint hInstance, uint lpTemplate, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
+		{
+			_logger.LogInformation("[User32] CreateDialogIndirectParamW(hInstance={Hinstance}, lpTemplate={Lptemplate}, hWndParent={Hwndparent}, lpDialogFunc={Lpdialogfunc}, dwInitParam={Dwinitparam})", hInstance, lpTemplate, hWndParent, lpDialogFunc, dwInitParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(28, IsStub = true)]
+		private uint CreateIcon(uint hInstance, int nWidth, int nHeight, uint cPlanes, uint cBitsPixel, uint lpbANDbits, uint lpbXORbits)
+		{
+			_logger.LogInformation("[User32] CreateIcon(hInstance={Hinstance}, nWidth={Nwidth}, nHeight={Nheight}, cPlanes={Cplanes}, cBitsPixel={Cbitspixel}, lpbANDbits={Lpbandbits}, lpbXORbits={Lpbxorbits})", hInstance, nWidth, nHeight, cPlanes, cBitsPixel, lpbANDbits, lpbXORbits);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint CreateIconFromResource(uint presbits, uint dwResSize, int fIcon, uint dwVer)
+		{
+			_logger.LogInformation("[User32] CreateIconFromResource(presbits={Presbits}, dwResSize={Dwressize}, fIcon={Ficon}, dwVer={Dwver})", presbits, dwResSize, fIcon, dwVer);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint CreateIconIndirect(uint piconinfo)
+		{
+			_logger.LogInformation("[User32] CreateIconIndirect(piconinfo={Piconinfo})", piconinfo);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(40, IsStub = true)]
+		private uint CreateMDIWindowA(uint lpClassName, uint lpWindowName, uint dwStyle, int X, int Y, int nWidth, int nHeight, uint hWndParent, uint hInstance, uint lParam)
+		{
+			_logger.LogInformation("[User32] CreateMDIWindowA(lpClassName={Lpclassname}, lpWindowName={Lpwindowname}, dwStyle={Dwstyle}, X={X}, Y={Y}, nWidth={Nwidth}, nHeight={Nheight}, hWndParent={Hwndparent}, hInstance={Hinstance}, lParam={Lparam})", lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hInstance, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(40, IsStub = true)]
+		private uint CreateMDIWindowW(uint lpClassName, uint lpWindowName, uint dwStyle, int X, int Y, int nWidth, int nHeight, uint hWndParent, uint hInstance, uint lParam)
+		{
+			_logger.LogInformation("[User32] CreateMDIWindowW(lpClassName={Lpclassname}, lpWindowName={Lpwindowname}, dwStyle={Dwstyle}, X={X}, Y={Y}, nWidth={Nwidth}, nHeight={Nheight}, hWndParent={Hwndparent}, hInstance={Hinstance}, lParam={Lparam})", lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hInstance, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint CreateMenu()
+		{
+			_logger.LogInformation("[User32] CreateMenu()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(48, IsStub = true)]
+		private uint CreateWindowExW(uint dwExStyle, uint lpClassName, uint lpWindowName, uint dwStyle, int X, int Y, int nWidth, int nHeight, uint hWndParent, uint hMenu, uint hInstance, uint lpParam)
+		{
+			_logger.LogInformation("[User32] CreateWindowExW(dwExStyle={Dwexstyle}, lpClassName={Lpclassname}, lpWindowName={Lpwindowname}, dwStyle={Dwstyle}, X={X}, Y={Y}, nWidth={Nwidth}, nHeight={Nheight}, hWndParent={Hwndparent}, hMenu={Hmenu}, hInstance={Hinstance}, lpParam={Lpparam})", dwExStyle, lpClassName, lpWindowName, dwStyle, X, Y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint CreateWindowStationA(uint lpwinsta, uint dwFlags, uint dwDesiredAccess, uint lpsa)
+		{
+			_logger.LogInformation("[User32] CreateWindowStationA(lpwinsta={Lpwinsta}, dwFlags={Dwflags}, dwDesiredAccess={Dwdesiredaccess}, lpsa={Lpsa})", lpwinsta, dwFlags, dwDesiredAccess, lpsa);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint DdeAccessData(uint hData, uint pcbDataSize)
+		{
+			_logger.LogInformation("[User32] DdeAccessData(hData={Hdata}, pcbDataSize={Pcbdatasize})", hData, pcbDataSize);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(32, IsStub = true)]
+		private uint DdeCreateDataHandle(uint idInst, uint pSrc, uint cb, uint cbOff, uint hszItem, uint wFmt, uint afCmd)
+		{
+			_logger.LogInformation("[User32] DdeCreateDataHandle(idInst={Idinst}, pSrc={Psrc}, cb={Cb}, cbOff={Cboff}, hszItem={Hszitem}, wFmt={Wfmt}, afCmd={Afcmd})", idInst, pSrc, cb, cbOff, hszItem, wFmt, afCmd);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint DdeCreateStringHandleW(uint idInst, uint psz, int iCodePage)
+		{
+			_logger.LogInformation("[User32] DdeCreateStringHandleW(idInst={Idinst}, psz={Psz}, iCodePage={Icodepage})", idInst, psz, iCodePage);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint DdeFreeDataHandle(uint hData)
+		{
+			_logger.LogInformation("[User32] DdeFreeDataHandle(hData={Hdata})", hData);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint DdeGetLastError(uint idInst)
+		{
+			_logger.LogInformation("[User32] DdeGetLastError(idInst={Idinst})", idInst);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint DdeInitializeW(uint pidInst, uint pfnCallback, uint afCmd, uint ulRes)
+		{
+			_logger.LogInformation("[User32] DdeInitializeW(pidInst={Pidinst}, pfnCallback={Pfncallback}, afCmd={Afcmd}, ulRes={Ulres})", pidInst, pfnCallback, afCmd, ulRes);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint DdeNameService(uint idInst, uint hsz1, uint hsz2, uint afCmd)
+		{
+			_logger.LogInformation("[User32] DdeNameService(idInst={Idinst}, hsz1={Hsz1}, hsz2={Hsz2}, afCmd={Afcmd})", idInst, hsz1, hsz2, afCmd);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint DdeQueryConvInfo(uint hConv, uint idTransaction, uint pConvInfo)
+		{
+			_logger.LogInformation("[User32] DdeQueryConvInfo(hConv={Hconv}, idTransaction={Idtransaction}, pConvInfo={Pconvinfo})", hConv, idTransaction, pConvInfo);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint DdeQueryStringA(uint idInst, uint hsz, uint psz, uint cchMax, int iCodePage)
+		{
+			_logger.LogInformation("[User32] DdeQueryStringA(idInst={Idinst}, hsz={Hsz}, psz={Psz}, cchMax={Cchmax}, iCodePage={Icodepage})", idInst, hsz, psz, cchMax, iCodePage);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint DdeQueryStringW(uint idInst, uint hsz, uint psz, uint cchMax, int iCodePage)
+		{
+			_logger.LogInformation("[User32] DdeQueryStringW(idInst={Idinst}, hsz={Hsz}, psz={Psz}, cchMax={Cchmax}, iCodePage={Icodepage})", idInst, hsz, psz, cchMax, iCodePage);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint DdeUnaccessData(uint hData)
+		{
+			_logger.LogInformation("[User32] DdeUnaccessData(hData={Hdata})", hData);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint DdeUninitialize(uint idInst)
+		{
+			_logger.LogInformation("[User32] DdeUninitialize(idInst={Idinst})", idInst);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint DefDlgProcW(uint hDlg, uint msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] DefDlgProcW(hDlg={Hdlg}, msg={Msg}, wParam={Wparam}, lParam={Lparam})", hDlg, msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint DefFrameProcA(uint hWnd, uint hWndMDIClient, uint msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] DefFrameProcA(hWnd={Hwnd}, hWndMDIClient={Hwndmdiclient}, msg={Msg}, wParam={Wparam}, lParam={Lparam})", hWnd, hWndMDIClient, msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint DefMDIChildProcA(uint hWnd, uint msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] DefMDIChildProcA(hWnd={Hwnd}, msg={Msg}, wParam={Wparam}, lParam={Lparam})", hWnd, msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint DefWindowProcW(uint hWnd, uint msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] DefWindowProcW(hWnd={Hwnd}, msg={Msg}, wParam={Wparam}, lParam={Lparam})", hWnd, msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint DestroyCursor(uint hCursor)
+		{
+			_logger.LogInformation("[User32] DestroyCursor(hCursor={Hcursor})", hCursor);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint DialogBoxParamW(uint hInstance, uint lpTemplateName, uint hWndParent, uint lpDialogFunc, uint dwInitParam)
+		{
+			_logger.LogInformation("[User32] DialogBoxParamW(hInstance={Hinstance}, lpTemplateName={Lptemplatename}, hWndParent={Hwndparent}, lpDialogFunc={Lpdialogfunc}, dwInitParam={Dwinitparam})", hInstance, lpTemplateName, hWndParent, lpDialogFunc, dwInitParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint DispatchMessageW(uint lpMsg)
+		{
+			_logger.LogInformation("[User32] DispatchMessageW(lpMsg={Lpmsg})", lpMsg);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint DlgDirListA(uint hDlg, uint lpPathSpec, int nIDListBox, int nIDStaticPath, uint uFileType)
+		{
+			_logger.LogInformation("[User32] DlgDirListA(hDlg={Hdlg}, lpPathSpec={Lppathspec}, nIDListBox={Nidlistbox}, nIDStaticPath={Nidstaticpath}, uFileType={Ufiletype})", hDlg, lpPathSpec, nIDListBox, nIDStaticPath, uFileType);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint DlgDirSelectExA(uint hwndDlg, uint lpString, int chCount, int idListBox)
+		{
+			_logger.LogInformation("[User32] DlgDirSelectExA(hwndDlg={Hwnddlg}, lpString={Lpstring}, chCount={Chcount}, idListBox={Idlistbox})", hwndDlg, lpString, chCount, idListBox);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(36, IsStub = true)]
+		private uint DrawIconEx(uint hdc, int xLeft, int yTop, uint hIcon, int cxWidth, int cyWidth, uint istepIfAniCur, uint hbrFlickerFreeDraw, uint diFlags)
+		{
+			_logger.LogInformation("[User32] DrawIconEx(hdc={Hdc}, xLeft={Xleft}, yTop={Ytop}, hIcon={Hicon}, cxWidth={Cxwidth}, cyWidth={Cywidth}, istepIfAniCur={Istepifanicur}, hbrFlickerFreeDraw={Hbrflickerfreedraw}, diFlags={Diflags})", hdc, xLeft, yTop, hIcon, cxWidth, cyWidth, istepIfAniCur, hbrFlickerFreeDraw, diFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(40, IsStub = true)]
+		private uint DrawStateA(uint hdc, uint hbrFore, uint qfnCallBack, uint lData, uint wData, int x, int y, int cx, int cy, uint uFlags)
+		{
+			_logger.LogInformation("[User32] DrawStateA(hdc={Hdc}, hbrFore={Hbrfore}, qfnCallBack={Qfncallback}, lData={Ldata}, wData={Wdata}, x={X}, y={Y}, cx={Cx}, cy={Cy}, uFlags={Uflags})", hdc, hbrFore, qfnCallBack, lData, wData, x, y, cx, cy, uFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint DrawTextExA(uint hdc, uint lpchText, int cchText, uint lprc, uint format, uint lpdtp)
+		{
+			_logger.LogInformation("[User32] DrawTextExA(hdc={Hdc}, lpchText={Lpchtext}, cchText={Cchtext}, lprc={Lprc}, format={Format}, lpdtp={Lpdtp})", hdc, lpchText, cchText, lprc, format, lpdtp);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint DrawTextExW(uint hdc, uint lpchText, int cchText, uint lprc, uint format, uint lpdtp)
+		{
+			_logger.LogInformation("[User32] DrawTextExW(hdc={Hdc}, lpchText={Lpchtext}, cchText={Cchtext}, lprc={Lprc}, format={Format}, lpdtp={Lpdtp})", hdc, lpchText, cchText, lprc, format, lpdtp);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint DrawTextW(uint hDC, uint lpchText, int cchText, uint lprc, uint format)
+		{
+			_logger.LogInformation("[User32] DrawTextW(hDC={Hdc}, lpchText={Lpchtext}, cchText={Cchtext}, lprc={Lprc}, format={Format})", hDC, lpchText, cchText, lprc, format);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint EnableScrollBar(uint hWnd, uint wSBflags, uint wArrows)
+		{
+			_logger.LogInformation("[User32] EnableScrollBar(hWnd={Hwnd}, wSBflags={Wsbflags}, wArrows={Warrows})", hWnd, wSBflags, wArrows);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint EndMenu()
+		{
+			_logger.LogInformation("[User32] EndMenu()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint EnumChildWindows(uint hWndParent, uint lpEnumFunc, uint lParam)
+		{
+			_logger.LogInformation("[User32] EnumChildWindows(hWndParent={Hwndparent}, lpEnumFunc={Lpenumfunc}, lParam={Lparam})", hWndParent, lpEnumFunc, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint EnumClipboardFormats(uint format)
+		{
+			_logger.LogInformation("[User32] EnumClipboardFormats(format={Format})", format);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint EnumDesktopsA(uint hwinsta, uint lpEnumFunc, uint lParam)
+		{
+			_logger.LogInformation("[User32] EnumDesktopsA(hwinsta={Hwinsta}, lpEnumFunc={Lpenumfunc}, lParam={Lparam})", hwinsta, lpEnumFunc, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint EnumThreadWindows(uint dwThreadId, uint lpfn, uint lParam)
+		{
+			_logger.LogInformation("[User32] EnumThreadWindows(dwThreadId={Dwthreadid}, lpfn={Lpfn}, lParam={Lparam})", dwThreadId, lpfn, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint EnumWindowStationsA(uint lpEnumFunc, uint lParam)
+		{
+			_logger.LogInformation("[User32] EnumWindowStationsA(lpEnumFunc={Lpenumfunc}, lParam={Lparam})", lpEnumFunc, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint FindWindowExA(uint hWndParent, uint hWndChildAfter, uint lpszClass, uint lpszWindow)
+		{
+			_logger.LogInformation("[User32] FindWindowExA(hWndParent={Hwndparent}, hWndChildAfter={Hwndchildafter}, lpszClass={Lpszclass}, lpszWindow={Lpszwindow})", hWndParent, hWndChildAfter, lpszClass, lpszWindow);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint FreeDDElParam(uint msg, uint lParam)
+		{
+			_logger.LogInformation("[User32] FreeDDElParam(msg={Msg}, lParam={Lparam})", msg, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetAncestor(uint hwnd, uint gaFlags)
+		{
+			_logger.LogInformation("[User32] GetAncestor(hwnd={Hwnd}, gaFlags={Gaflags})", hwnd, gaFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetCaretPos(uint lpPoint)
+		{
+			_logger.LogInformation("[User32] GetCaretPos(lpPoint={Lppoint})", lpPoint);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetClassInfoExA(uint hInstance, uint lpszClass, uint lpwcx)
+		{
+			_logger.LogInformation("[User32] GetClassInfoExA(hInstance={Hinstance}, lpszClass={Lpszclass}, lpwcx={Lpwcx})", hInstance, lpszClass, lpwcx);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetClassInfoExW(uint hInstance, uint lpszClass, uint lpwcx)
+		{
+			_logger.LogInformation("[User32] GetClassInfoExW(hInstance={Hinstance}, lpszClass={Lpszclass}, lpwcx={Lpwcx})", hInstance, lpszClass, lpwcx);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetClassInfoW(uint hInstance, uint lpszClass, uint lpWndClass)
+		{
+			_logger.LogInformation("[User32] GetClassInfoW(hInstance={Hinstance}, lpszClass={Lpszclass}, lpWndClass={Lpwndclass})", hInstance, lpszClass, lpWndClass);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetClassLongW(uint hWnd, int nIndex)
+		{
+			_logger.LogInformation("[User32] GetClassLongW(hWnd={Hwnd}, nIndex={Nindex})", hWnd, nIndex);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetClassNameW(uint hWnd, uint lpClassName, int nMaxCount)
+		{
+			_logger.LogInformation("[User32] GetClassNameW(hWnd={Hwnd}, lpClassName={Lpclassname}, nMaxCount={Nmaxcount})", hWnd, lpClassName, nMaxCount);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetClipCursor(uint lpRect)
+		{
+			_logger.LogInformation("[User32] GetClipCursor(lpRect={Lprect})", lpRect);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetClipboardFormatNameA(uint format, uint lpszFormatName, int cchMaxCount)
+		{
+			_logger.LogInformation("[User32] GetClipboardFormatNameA(format={Format}, lpszFormatName={Lpszformatname}, cchMaxCount={Cchmaxcount})", format, lpszFormatName, cchMaxCount);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetClipboardFormatNameW(uint format, uint lpszFormatName, int cchMaxCount)
+		{
+			_logger.LogInformation("[User32] GetClipboardFormatNameW(format={Format}, lpszFormatName={Lpszformatname}, cchMaxCount={Cchmaxcount})", format, lpszFormatName, cchMaxCount);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetClipboardOwner()
+		{
+			_logger.LogInformation("[User32] GetClipboardOwner()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetClipboardSequenceNumber()
+		{
+			_logger.LogInformation("[User32] GetClipboardSequenceNumber()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetClipboardViewer()
+		{
+			_logger.LogInformation("[User32] GetClipboardViewer()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetComboBoxInfo(uint hwndCombo, uint pcbi)
+		{
+			_logger.LogInformation("[User32] GetComboBoxInfo(hwndCombo={Hwndcombo}, pcbi={Pcbi})", hwndCombo, pcbi);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetCursor()
+		{
+			_logger.LogInformation("[User32] GetCursor()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetDialogBaseUnits()
+		{
+			_logger.LogInformation("[User32] GetDialogBaseUnits()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetIconInfo(uint hIcon, uint piconinfo)
+		{
+			_logger.LogInformation("[User32] GetIconInfo(hIcon={Hicon}, piconinfo={Piconinfo})", hIcon, piconinfo);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetKeyboardLayoutList(int nBuff, uint lpList)
+		{
+			_logger.LogInformation("[User32] GetKeyboardLayoutList(nBuff={Nbuff}, lpList={Lplist})", nBuff, lpList);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetKeyboardLayoutNameA(uint pwszKLID)
+		{
+			_logger.LogInformation("[User32] GetKeyboardLayoutNameA(pwszKLID={Pwszklid})", pwszKLID);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetKeyboardLayoutNameW(uint pwszKLID)
+		{
+			_logger.LogInformation("[User32] GetKeyboardLayoutNameW(pwszKLID={Pwszklid})", pwszKLID);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint GetMenuBarInfo(uint hwnd, int idObject, int idItem, uint pmbi)
+		{
+			_logger.LogInformation("[User32] GetMenuBarInfo(hwnd={Hwnd}, idObject={Idobject}, idItem={Iditem}, pmbi={Pmbi})", hwnd, idObject, idItem, pmbi);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetMenuInfo(uint hmenu, uint lpcmi)
+		{
+			_logger.LogInformation("[User32] GetMenuInfo(hmenu={Hmenu}, lpcmi={Lpcmi})", hmenu, lpcmi);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint GetMenuItemInfoW(uint hmenu, uint item, int fByPosition, uint lpmii)
+		{
+			_logger.LogInformation("[User32] GetMenuItemInfoW(hmenu={Hmenu}, item={Item}, fByPosition={Fbyposition}, lpmii={Lpmii})", hmenu, item, fByPosition, lpmii);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint GetMenuItemRect(uint hWnd, uint hMenu, uint uItem, uint lprcItem)
+		{
+			_logger.LogInformation("[User32] GetMenuItemRect(hWnd={Hwnd}, hMenu={Hmenu}, uItem={Uitem}, lprcItem={Lprcitem})", hWnd, hMenu, uItem, lprcItem);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint GetMenuStringA(uint hMenu, uint uIDItem, uint lpString, int cchMax, uint flags)
+		{
+			_logger.LogInformation("[User32] GetMenuStringA(hMenu={Hmenu}, uIDItem={Uiditem}, lpString={Lpstring}, cchMax={Cchmax}, flags={Flags})", hMenu, uIDItem, lpString, cchMax, flags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint GetMenuStringW(uint hMenu, uint uIDItem, uint lpString, int cchMax, uint flags)
+		{
+			_logger.LogInformation("[User32] GetMenuStringW(hMenu={Hmenu}, uIDItem={Uiditem}, lpString={Lpstring}, cchMax={Cchmax}, flags={Flags})", hMenu, uIDItem, lpString, cchMax, flags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint GetMessageW(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax)
+		{
+			_logger.LogInformation("[User32] GetMessageW(lpMsg={Lpmsg}, hWnd={Hwnd}, wMsgFilterMin={Wmsgfiltermin}, wMsgFilterMax={Wmsgfiltermax})", lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetMonitorInfoW(uint hMonitor, uint lpmi)
+		{
+			_logger.LogInformation("[User32] GetMonitorInfoW(hMonitor={Hmonitor}, lpmi={Lpmi})", hMonitor, lpmi);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetOpenClipboardWindow()
+		{
+			_logger.LogInformation("[User32] GetOpenClipboardWindow()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetProcessWindowStation()
+		{
+			_logger.LogInformation("[User32] GetProcessWindowStation()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetQueueStatus(uint flags)
+		{
+			_logger.LogInformation("[User32] GetQueueStatus(flags={Flags})", flags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint GetRawInputData(uint hRawInput, uint uiCommand, uint pData, uint pcbSize, uint cbSizeHeader)
+		{
+			_logger.LogInformation("[User32] GetRawInputData(hRawInput={Hrawinput}, uiCommand={Uicommand}, pData={Pdata}, pcbSize={Pcbsize}, cbSizeHeader={Cbsizeheader})", hRawInput, uiCommand, pData, pcbSize, cbSizeHeader);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint GetShellWindow()
+		{
+			_logger.LogInformation("[User32] GetShellWindow()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetSystemMenu(uint hWnd, int bRevert)
+		{
+			_logger.LogInformation("[User32] GetSystemMenu(hWnd={Hwnd}, bRevert={Brevert})", hWnd, bRevert);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint GetTabbedTextExtentA(uint hdc, uint lpString, int chCount, int nTabPositions, uint lpnTabStopPositions)
+		{
+			_logger.LogInformation("[User32] GetTabbedTextExtentA(hdc={Hdc}, lpString={Lpstring}, chCount={Chcount}, nTabPositions={Ntabpositions}, lpnTabStopPositions={Lpntabstoppositions})", hdc, lpString, chCount, nTabPositions, lpnTabStopPositions);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint GetThreadDesktop(uint dwThreadId)
+		{
+			_logger.LogInformation("[User32] GetThreadDesktop(dwThreadId={Dwthreadid})", dwThreadId);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint GetUserObjectInformationA(uint hObj, int nIndex, uint pvInfo, uint nLength, uint lpnLengthNeeded)
+		{
+			_logger.LogInformation("[User32] GetUserObjectInformationA(hObj={Hobj}, nIndex={Nindex}, pvInfo={Pvinfo}, nLength={Nlength}, lpnLengthNeeded={Lpnlengthneeded})", hObj, nIndex, pvInfo, nLength, lpnLengthNeeded);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint GetUserObjectInformationW(uint hObj, int nIndex, uint pvInfo, uint nLength, uint lpnLengthNeeded)
+		{
+			_logger.LogInformation("[User32] GetUserObjectInformationW(hObj={Hobj}, nIndex={Nindex}, pvInfo={Pvinfo}, nLength={Nlength}, lpnLengthNeeded={Lpnlengthneeded})", hObj, nIndex, pvInfo, nLength, lpnLengthNeeded);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint GetWindowLongW(uint hWnd, int nIndex)
+		{
+			_logger.LogInformation("[User32] GetWindowLongW(hWnd={Hwnd}, nIndex={Nindex})", hWnd, nIndex);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint GetWindowTextW(uint hWnd, uint lpString, int nMaxCount)
+		{
+			_logger.LogInformation("[User32] GetWindowTextW(hWnd={Hwnd}, lpString={Lpstring}, nMaxCount={Nmaxcount})", hWnd, lpString, nMaxCount);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint HiliteMenuItem(uint hWnd, uint hMenu, uint uIDHiliteItem, uint uHilite)
+		{
+			_logger.LogInformation("[User32] HiliteMenuItem(hWnd={Hwnd}, hMenu={Hmenu}, uIDHiliteItem={Uidhiliteitem}, uHilite={Uhilite})", hWnd, hMenu, uIDHiliteItem, uHilite);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(0, IsStub = true)]
+		private uint InSendMessage()
+		{
+			_logger.LogInformation("[User32] InSendMessage()");
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint InSendMessageEx(uint lpReserved)
+		{
+			_logger.LogInformation("[User32] InSendMessageEx(lpReserved={Lpreserved})", lpReserved);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint InsertMenuItemW(uint hmenu, uint item, int fByPosition, uint lpmi)
+		{
+			_logger.LogInformation("[User32] InsertMenuItemW(hmenu={Hmenu}, item={Item}, fByPosition={Fbyposition}, lpmi={Lpmi})", hmenu, item, fByPosition, lpmi);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint IsMenu(uint hMenu)
+		{
+			_logger.LogInformation("[User32] IsMenu(hMenu={Hmenu})", hMenu);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint LoadCursorW(uint hInstance, uint lpCursorName)
+		{
+			_logger.LogInformation("[User32] LoadCursorW(hInstance={Hinstance}, lpCursorName={Lpcursorname})", hInstance, lpCursorName);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint LoadIconW(uint hInstance, uint lpIconName)
+		{
+			_logger.LogInformation("[User32] LoadIconW(hInstance={Hinstance}, lpIconName={Lpiconname})", hInstance, lpIconName);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint LoadKeyboardLayoutA(uint pwszKLID, uint Flags)
+		{
+			_logger.LogInformation("[User32] LoadKeyboardLayoutA(pwszKLID={Pwszklid}, Flags={Flags})", pwszKLID, Flags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint LoadMenuIndirectA(uint lpMenuTemplate)
+		{
+			_logger.LogInformation("[User32] LoadMenuIndirectA(lpMenuTemplate={Lpmenutemplate})", lpMenuTemplate);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint LoadStringW(uint hInstance, uint uID, uint lpBuffer, int cchBufferMax)
+		{
+			_logger.LogInformation("[User32] LoadStringW(hInstance={Hinstance}, uID={Uid}, lpBuffer={Lpbuffer}, cchBufferMax={Cchbuffermax})", hInstance, uID, lpBuffer, cchBufferMax);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint MapVirtualKeyW(uint uCode, uint uMapType)
+		{
+			_logger.LogInformation("[User32] MapVirtualKeyW(uCode={Ucode}, uMapType={Umaptype})", uCode, uMapType);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint ModifyMenuW(uint hMnu, uint uPosition, uint uFlags, uint uIDNewItem, uint lpNewItem)
+		{
+			_logger.LogInformation("[User32] ModifyMenuW(hMnu={Hmnu}, uPosition={Uposition}, uFlags={Uflags}, uIDNewItem={Uidnewitem}, lpNewItem={Lpnewitem})", hMnu, uPosition, uFlags, uIDNewItem, lpNewItem);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint MonitorFromRect(uint lprc, uint dwFlags)
+		{
+			_logger.LogInformation("[User32] MonitorFromRect(lprc={Lprc}, dwFlags={Dwflags})", lprc, dwFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint MonitorFromWindow(uint hwnd, uint dwFlags)
+		{
+			_logger.LogInformation("[User32] MonitorFromWindow(hwnd={Hwnd}, dwFlags={Dwflags})", hwnd, dwFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint MsgWaitForMultipleObjectsEx(uint nCount, uint pHandles, uint dwMilliseconds, uint dwWakeMask, uint dwFlags)
+		{
+			_logger.LogInformation("[User32] MsgWaitForMultipleObjectsEx(nCount={Ncount}, pHandles={Phandles}, dwMilliseconds={Dwmilliseconds}, dwWakeMask={Dwwakemask}, dwFlags={Dwflags})", nCount, pHandles, dwMilliseconds, dwWakeMask, dwFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint OemKeyScan(uint wOemChar)
+		{
+			_logger.LogInformation("[User32] OemKeyScan(wOemChar={Woemchar})", wOemChar);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint OemToCharBuffW(uint lpszSrc, uint lpszDst, uint cchDstLength)
+		{
+			_logger.LogInformation("[User32] OemToCharBuffW(lpszSrc={Lpszsrc}, lpszDst={Lpszdst}, cchDstLength={Cchdstlength})", lpszSrc, lpszDst, cchDstLength);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint OemToCharW(uint pSrc, uint pDst)
+		{
+			_logger.LogInformation("[User32] OemToCharW(pSrc={Psrc}, pDst={Pdst})", pSrc, pDst);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint OpenDesktopA(uint lpszDesktop, uint dwFlags, int fInherit, uint dwDesiredAccess)
+		{
+			_logger.LogInformation("[User32] OpenDesktopA(lpszDesktop={Lpszdesktop}, dwFlags={Dwflags}, fInherit={Finherit}, dwDesiredAccess={Dwdesiredaccess})", lpszDesktop, dwFlags, fInherit, dwDesiredAccess);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint OpenInputDesktop(uint dwFlags, int fInherit, uint dwDesiredAccess)
+		{
+			_logger.LogInformation("[User32] OpenInputDesktop(dwFlags={Dwflags}, fInherit={Finherit}, dwDesiredAccess={Dwdesiredaccess})", dwFlags, fInherit, dwDesiredAccess);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint OpenWindowStationA(uint lpszWinSta, int fInherit, uint dwDesiredAccess)
+		{
+			_logger.LogInformation("[User32] OpenWindowStationA(lpszWinSta={Lpszwinsta}, fInherit={Finherit}, dwDesiredAccess={Dwdesiredaccess})", lpszWinSta, fInherit, dwDesiredAccess);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint PackDDElParam(uint msg, uint uiLo, uint uiHi)
+		{
+			_logger.LogInformation("[User32] PackDDElParam(msg={Msg}, uiLo={Uilo}, uiHi={Uihi})", msg, uiLo, uiHi);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint PeekMessageW(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
+		{
+			_logger.LogInformation("[User32] PeekMessageW(lpMsg={Lpmsg}, hWnd={Hwnd}, wMsgFilterMin={Wmsgfiltermin}, wMsgFilterMax={Wmsgfiltermax}, wRemoveMsg={Wremovemsg})", lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint PostMessageW(uint hWnd, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] PostMessageW(hWnd={Hwnd}, Msg={Msg}, wParam={Wparam}, lParam={Lparam})", hWnd, Msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint PostThreadMessageW(uint idThread, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] PostThreadMessageW(idThread={Idthread}, Msg={Msg}, wParam={Wparam}, lParam={Lparam})", idThread, Msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(32, IsStub = true)]
+		private uint PrivateExtractIconsA(uint szFileName, int nIconIndex, int cxIcon, int cyIcon, uint phicon, uint piconid, uint nIcons, uint flags)
+		{
+			_logger.LogInformation("[User32] PrivateExtractIconsA(szFileName={Szfilename}, nIconIndex={Niconindex}, cxIcon={Cxicon}, cyIcon={Cyicon}, phicon={Phicon}, piconid={Piconid}, nIcons={Nicons}, flags={Flags})", szFileName, nIconIndex, cxIcon, cyIcon, phicon, piconid, nIcons, flags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint RealChildWindowFromPoint(uint hwndParent, int xPoint, int yPoint)
+		{
+			_logger.LogInformation("[User32] RealChildWindowFromPoint(hwndParent={Hwndparent}, xPoint={Xpoint}, yPoint={Ypoint})", hwndParent, xPoint, yPoint);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint RegisterClassExW(uint lpWndClass)
+		{
+			_logger.LogInformation("[User32] RegisterClassExW(lpWndClass={Lpwndclass})", lpWndClass);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint RegisterClassW(uint lpWndClass)
+		{
+			_logger.LogInformation("[User32] RegisterClassW(lpWndClass={Lpwndclass})", lpWndClass);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint RegisterRawInputDevices(uint pRawInputDevices, uint uiNumDevices, uint cbSize)
+		{
+			_logger.LogInformation("[User32] RegisterRawInputDevices(pRawInputDevices={Prawinputdevices}, uiNumDevices={Uinumdevices}, cbSize={Cbsize})", pRawInputDevices, uiNumDevices, cbSize);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint ReplyMessage(uint lResult)
+		{
+			_logger.LogInformation("[User32] ReplyMessage(lResult={Lresult})", lResult);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(28, IsStub = true)]
+		private uint ScrollDC(uint hDC, int dx, int dy, uint lprcScroll, uint lprcClip, uint hrgnUpdate, uint lprcUpdate)
+		{
+			_logger.LogInformation("[User32] ScrollDC(hDC={Hdc}, dx={Dx}, dy={Dy}, lprcScroll={Lprcscroll}, lprcClip={Lprcclip}, hrgnUpdate={Hrgnupdate}, lprcUpdate={Lprcupdate})", hDC, dx, dy, lprcScroll, lprcClip, hrgnUpdate, lprcUpdate);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint SendDlgItemMessageW(uint hDlg, int nIDDlgItem, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] SendDlgItemMessageW(hDlg={Hdlg}, nIDDlgItem={Niddlgitem}, Msg={Msg}, wParam={Wparam}, lParam={Lparam})", hDlg, nIDDlgItem, Msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint SendInput(uint cInputs, uint pInputs, int cbSize)
+		{
+			_logger.LogInformation("[User32] SendInput(cInputs={Cinputs}, pInputs={Pinputs}, cbSize={Cbsize})", cInputs, pInputs, cbSize);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint SendMessageCallbackA(uint hWnd, uint Msg, uint wParam, uint lParam, uint lpResultCallBack, uint dwData)
+		{
+			_logger.LogInformation("[User32] SendMessageCallbackA(hWnd={Hwnd}, Msg={Msg}, wParam={Wparam}, lParam={Lparam}, lpResultCallBack={Lpresultcallback}, dwData={Dwdata})", hWnd, Msg, wParam, lParam, lpResultCallBack, dwData);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint SendMessageCallbackW(uint hWnd, uint Msg, uint wParam, uint lParam, uint lpResultCallBack, uint dwData)
+		{
+			_logger.LogInformation("[User32] SendMessageCallbackW(hWnd={Hwnd}, Msg={Msg}, wParam={Wparam}, lParam={Lparam}, lpResultCallBack={Lpresultcallback}, dwData={Dwdata})", hWnd, Msg, wParam, lParam, lpResultCallBack, dwData);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(28, IsStub = true)]
+		private uint SendMessageTimeoutA(uint hWnd, uint Msg, uint wParam, uint lParam, uint fuFlags, uint uTimeout, uint lpdwResult)
+		{
+			_logger.LogInformation("[User32] SendMessageTimeoutA(hWnd={Hwnd}, Msg={Msg}, wParam={Wparam}, lParam={Lparam}, fuFlags={Fuflags}, uTimeout={Utimeout}, lpdwResult={Lpdwresult})", hWnd, Msg, wParam, lParam, fuFlags, uTimeout, lpdwResult);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint SendMessageW(uint hWnd, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] SendMessageW(hWnd={Hwnd}, Msg={Msg}, wParam={Wparam}, lParam={Lparam})", hWnd, Msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint SendNotifyMessageW(uint hWnd, uint Msg, uint wParam, uint lParam)
+		{
+			_logger.LogInformation("[User32] SendNotifyMessageW(hWnd={Hwnd}, Msg={Msg}, wParam={Wparam}, lParam={Lparam})", hWnd, Msg, wParam, lParam);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint SetClassLongW(uint hWnd, int nIndex, int dwNewLong)
+		{
+			_logger.LogInformation("[User32] SetClassLongW(hWnd={Hwnd}, nIndex={Nindex}, dwNewLong={Dwnewlong})", hWnd, nIndex, dwNewLong);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint SetClipboardViewer(uint hWndNewViewer)
+		{
+			_logger.LogInformation("[User32] SetClipboardViewer(hWndNewViewer={Hwndnewviewer})", hWndNewViewer);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint SetDoubleClickTime(uint uInterval)
+		{
+			_logger.LogInformation("[User32] SetDoubleClickTime(uInterval={Uinterval})", uInterval);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint SetKeyboardState(uint lpKeyState)
+		{
+			_logger.LogInformation("[User32] SetKeyboardState(lpKeyState={Lpkeystate})", lpKeyState);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint SetLayeredWindowAttributes(uint hwnd, uint crKey, uint bAlpha, uint dwFlags)
+		{
+			_logger.LogInformation("[User32] SetLayeredWindowAttributes(hwnd={Hwnd}, crKey={Crkey}, bAlpha={Balpha}, dwFlags={Dwflags})", hwnd, crKey, bAlpha, dwFlags);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint SetMenuInfo(uint hmenu, uint lpcmi)
+		{
+			_logger.LogInformation("[User32] SetMenuInfo(hmenu={Hmenu}, lpcmi={Lpcmi})", hmenu, lpcmi);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint SetMenuItemInfoW(uint hmenu, uint item, int fByPositon, uint lpmii)
+		{
+			_logger.LogInformation("[User32] SetMenuItemInfoW(hmenu={Hmenu}, item={Item}, fByPositon={Fbypositon}, lpmii={Lpmii})", hmenu, item, fByPositon, lpmii);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint SetProcessWindowStation(uint hWinSta)
+		{
+			_logger.LogInformation("[User32] SetProcessWindowStation(hWinSta={Hwinsta})", hWinSta);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint SetThreadDesktop(uint hDesktop)
+		{
+			_logger.LogInformation("[User32] SetThreadDesktop(hDesktop={Hdesktop})", hDesktop);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint SetWindowLongW(uint hWnd, int nIndex, int dwNewLong)
+		{
+			_logger.LogInformation("[User32] SetWindowLongW(hWnd={Hwnd}, nIndex={Nindex}, dwNewLong={Dwnewlong})", hWnd, nIndex, dwNewLong);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(12, IsStub = true)]
+		private uint SetWindowRgn(uint hWnd, uint hRgn, int bRedraw)
+		{
+			_logger.LogInformation("[User32] SetWindowRgn(hWnd={Hwnd}, hRgn={Hrgn}, bRedraw={Bredraw})", hWnd, hRgn, bRedraw);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint SetWindowTextW(uint hWnd, uint lpString)
+		{
+			_logger.LogInformation("[User32] SetWindowTextW(hWnd={Hwnd}, lpString={Lpstring})", hWnd, lpString);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint SetWindowsHookExW(int idHook, uint lpfn, uint hmod, uint dwThreadId)
+		{
+			_logger.LogInformation("[User32] SetWindowsHookExW(idHook={Idhook}, lpfn={Lpfn}, hmod={Hmod}, dwThreadId={Dwthreadid})", idHook, lpfn, hmod, dwThreadId);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint SwapMouseButton(int fSwap)
+		{
+			_logger.LogInformation("[User32] SwapMouseButton(fSwap={Fswap})", fSwap);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint SwitchDesktop(uint hDesktop)
+		{
+			_logger.LogInformation("[User32] SwitchDesktop(hDesktop={Hdesktop})", hDesktop);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(16, IsStub = true)]
+		private uint SystemParametersInfoW(uint uiAction, uint uiParam, uint pvParam, uint fWinIni)
+		{
+			_logger.LogInformation("[User32] SystemParametersInfoW(uiAction={Uiaction}, uiParam={Uiparam}, pvParam={Pvparam}, fWinIni={Fwinini})", uiAction, uiParam, pvParam, fWinIni);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(24, IsStub = true)]
+		private uint ToUnicodeEx(uint wVirtKey, uint wScanCode, uint lpKeyState, uint pwszBuff, int cchBuff, uint wFlags, uint dwhkl)
+		{
+			_logger.LogInformation("[User32] ToUnicodeEx(wVirtKey={Wvirtkey}, wScanCode={Wscancode}, lpKeyState={Lpkeystate}, pwszBuff={Pwszbuff}, cchBuff={Cchbuff}, wFlags={Wflags}, dwhkl={Dwhkl})", wVirtKey, wScanCode, lpKeyState, pwszBuff, cchBuff, wFlags, dwhkl);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint UnloadKeyboardLayout(uint hkl)
+		{
+			_logger.LogInformation("[User32] UnloadKeyboardLayout(hkl={Hkl})", hkl);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint UnregisterClassW(uint lpClassName, uint hInstance)
+		{
+			_logger.LogInformation("[User32] UnregisterClassW(lpClassName={Lpclassname}, hInstance={Hinstance})", lpClassName, hInstance);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint UnregisterHotKey(uint hWnd, int id)
+		{
+			_logger.LogInformation("[User32] UnregisterHotKey(hWnd={Hwnd}, id={Id})", hWnd, id);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(4, IsStub = true)]
+		private uint VkKeyScanW(uint ch)
+		{
+			_logger.LogInformation("[User32] VkKeyScanW(ch={Ch})", ch);
+			return 0; // Stub implementation
+		}
+
+		[DllModuleExport(8, IsStub = true)]
+		private uint WaitForInputIdle(uint hProcess, uint dwMilliseconds)
+		{
+			_logger.LogInformation("[User32] WaitForInputIdle(hProcess={Hprocess}, dwMilliseconds={Dwmilliseconds})", hProcess, dwMilliseconds);
+			return 0; // Stub implementation
 		}
 
 		#endregion
