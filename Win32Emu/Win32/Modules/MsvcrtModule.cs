@@ -1288,6 +1288,13 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[msvcrt] _strdup(str=\"{S}\")", s);
 		
 		// Allocate memory for string + null terminator
+		// Check for potential overflow (though extremely unlikely in practice)
+		if (s.Length >= int.MaxValue)
+		{
+			_logger.LogWarning("[msvcrt] _strdup: String too long, returning NULL");
+			return 0; // NULL on error
+		}
+		
 		var length = (uint)s.Length + 1;
 		var ptr = _env.HeapAlloc(0, length);
 		
@@ -1334,7 +1341,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			// Safely handle count underflow and conversion
 			// If count is 1, we can only write the null terminator
-			var maxLength = count > 1 ? (int)Math.Min(count - 1, (uint)int.MaxValue) : 0;
+			var maxLength = count > 1 ? (int)Math.Min(count - 1, int.MaxValue) : 0;
 			var outputLength = Math.Min(fmt.Length, maxLength);
 			if (outputLength > 0)
 			{
@@ -1377,6 +1384,14 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogInformation("[msvcrt] fwrite(ptr=0x{Ptr:X8}, size={Size}, count={Count}, stream=0x{Stream:X8})", 
 			ptr, size, count, stream);
+		
+		// Check for potential overflow in size * count
+		// This is a simplified implementation; real fwrite would write bytes to a file
+		if (size > 0 && count > uint.MaxValue / size)
+		{
+			_logger.LogWarning("[msvcrt] fwrite: size * count would overflow, returning 0");
+			return 0; // Error - overflow would occur
+		}
 		
 		// In a real implementation, this would write to a file
 		// For now, just return the count to indicate success
