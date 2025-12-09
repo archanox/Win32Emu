@@ -4,6 +4,8 @@ using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using System.Collections.Concurrent;
+using System.Text;
+using System.Linq;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -334,6 +336,30 @@ namespace Win32Emu.Win32.Modules
 					// operator delete (C++ mangled name)
 					operator_delete(a.UInt32(0));
 					returnValue = 0;
+					return true;
+				case "_BEGINTHREADEX":
+					returnValue = _beginthreadex(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4), a.UInt32(5));
+					return true;
+				case "_VSNWPRINTF":
+					returnValue = (uint)_vsnwprintf(a.UInt32(0), a.UInt32(1), a.LpcWStr(2), a.UInt32(3));
+					return true;
+				case "_WFOPEN":
+					returnValue = _wfopen(a.LpcWStr(0), a.LpcWStr(1));
+					return true;
+				case "SWPRINTF":
+					returnValue = (uint)swprintf(a.UInt32(0), a.LpcWStr(1), a.UInt32(2));
+					return true;
+				case "WCSCMP":
+					returnValue = (uint)wcscmp(a.LpcWStr(0), a.LpcWStr(1));
+					return true;
+				case "WCSCPY":
+					returnValue = wcscpy(a.UInt32(0), a.LpcWStr(1));
+					return true;
+				case "WCSLEN":
+					returnValue = (uint)wcslen(a.LpcWStr(0));
+					return true;
+				case "WCSRCHR":
+					returnValue = wcsrchr(a.LpcWStr(0), a.Int32(1));
 					return true;
 
 				default:
@@ -1561,6 +1587,191 @@ namespace Win32Emu.Win32.Modules
 		// We need to return a pointer offset by the index
 		var strPtr = str.Address;
 		return strPtr + (uint)index;
+	}
+
+	/// <summary>
+	/// _beginthreadex - Create a new thread with security attributes
+	/// uintptr_t _beginthreadex(
+	///   void *security,
+	///   unsigned stack_size,
+	///   unsigned ( __stdcall *start_address )( void * ),
+	///   void *arglist,
+	///   unsigned initflag,
+	///   unsigned *thrdaddr
+	/// );
+	/// </summary>
+	[DllModuleExport(18, IsStub = true)]
+	private uint _beginthreadex(uint security, uint stackSize, uint startAddress, uint arglist, uint initflag, uint thrdaddr)
+	{
+		_logger.LogInformation("[msvcrt] _beginthreadex(security=0x{Security:X8}, stackSize={StackSize}, startAddress=0x{StartAddress:X8}, arglist=0x{Arglist:X8}, initflag={Initflag}, thrdaddr=0x{Thrdaddr:X8})",
+			security, stackSize, startAddress, arglist, initflag, thrdaddr);
+		
+		// Stub implementation - return a fake thread handle
+		// In a real implementation, this would create a new thread
+		uint fakeThreadHandle = 0x12340000 | (uint)(_env.GetCurrentThreadId() + 1);
+		
+		// Write thread ID if pointer is provided
+		if (thrdaddr != 0)
+		{
+			_env.MemWrite32(thrdaddr, fakeThreadHandle);
+		}
+		
+		return fakeThreadHandle;
+	}
+
+	/// <summary>
+	/// _vsnwprintf - Format a wide string with variable arguments
+	/// int _vsnwprintf(
+	///   wchar_t *buffer,
+	///   size_t count,
+	///   const wchar_t *format,
+	///   va_list argptr
+	/// );
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private int _vsnwprintf(uint buffer, uint count, in LpcWStr format, uint args)
+	{
+		var fmt = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] _vsnwprintf(buffer=0x{Buffer:X8}, count={Count}, format=\"{Fmt}\", args=0x{Args:X8})", buffer, count, fmt, args);
+		
+		// Stub implementation - just write the format string
+		if (buffer != 0 && count > 0)
+		{
+			var bytes = Encoding.Unicode.GetBytes(fmt + "\0");
+			var maxBytes = Math.Min((uint)bytes.Length, count * 2); // count is in characters, not bytes
+			_env.Memory.WriteBytes(buffer, bytes.Take((int)maxBytes).ToArray());
+		}
+		
+		return fmt.Length;
+	}
+
+	/// <summary>
+	/// _wfopen - Open a file using wide character filename
+	/// FILE *_wfopen(
+	///   const wchar_t *filename,
+	///   const wchar_t *mode
+	/// );
+	/// </summary>
+	[DllModuleExport(8, IsStub = true)]
+	private uint _wfopen(in LpcWStr filename, in LpcWStr mode)
+	{
+		var fname = filename.ToString() ?? string.Empty;
+		var m = mode.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] _wfopen(filename=\"{Fname}\", mode=\"{M}\")", fname, m);
+		
+		// Stub implementation - return a fake FILE pointer
+		// In a real implementation, this would open the file
+		return _env.HeapAlloc(0, 32); // Allocate fake FILE structure
+	}
+
+	/// <summary>
+	/// swprintf - Format a wide string
+	/// int swprintf(
+	///   wchar_t *buffer,
+	///   const wchar_t *format,
+	///   ...
+	/// );
+	/// </summary>
+	[DllModuleExport(12, IsStub = true)]
+	private int swprintf(uint buffer, in LpcWStr format, uint args)
+	{
+		var fmt = format.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] swprintf(buffer=0x{Buffer:X8}, format=\"{Fmt}\", args=0x{Args:X8})", buffer, fmt, args);
+		
+		// Stub implementation - just write the format string
+		if (buffer != 0)
+		{
+			var bytes = Encoding.Unicode.GetBytes(fmt + "\0");
+			_env.Memory.WriteBytes(buffer, bytes);
+		}
+		
+		return fmt.Length;
+	}
+
+	/// <summary>
+	/// wcscmp - Compare two wide strings
+	/// int wcscmp(
+	///   const wchar_t *string1,
+	///   const wchar_t *string2
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private int wcscmp(in LpcWStr str1, in LpcWStr str2)
+	{
+		var s1 = str1.ToString() ?? string.Empty;
+		var s2 = str2.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] wcscmp(str1=\"{S1}\", str2=\"{S2}\")", s1, s2);
+		
+		// Compare wide strings
+		return string.Compare(s1, s2, StringComparison.Ordinal);
+	}
+
+	/// <summary>
+	/// wcscpy - Copy a wide string
+	/// wchar_t *wcscpy(
+	///   wchar_t *strDestination,
+	///   const wchar_t *strSource
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint wcscpy(uint dest, in LpcWStr src)
+	{
+		var s = src.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] wcscpy(dest=0x{Dest:X8}, src=\"{S}\")", dest, s);
+		
+		if (dest == 0)
+		{
+			return 0; // NULL destination
+		}
+		
+		// Copy wide string to destination
+		var bytes = Encoding.Unicode.GetBytes(s + "\0");
+		_env.Memory.WriteBytes(dest, bytes);
+		
+		return dest; // Return destination pointer
+	}
+
+	/// <summary>
+	/// wcslen - Get length of a wide string
+	/// size_t wcslen(
+	///   const wchar_t *str
+	/// );
+	/// </summary>
+	[DllModuleExport(4)]
+	private int wcslen(in LpcWStr str)
+	{
+		var s = str.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] wcslen(str=\"{S}\")", s);
+		
+		return s.Length;
+	}
+
+	/// <summary>
+	/// wcsrchr - Find last occurrence of a character in a wide string
+	/// wchar_t *wcsrchr(
+	///   const wchar_t *str,
+	///   wchar_t c
+	/// );
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint wcsrchr(in LpcWStr str, int c)
+	{
+		var s = str.ToString() ?? string.Empty;
+		var ch = (char)c;
+		_logger.LogInformation("[msvcrt] wcsrchr(str=\"{S}\", c='{Ch}')", s, ch);
+		
+		// Find last occurrence of character
+		var index = s.LastIndexOf(ch);
+		
+		if (index < 0)
+		{
+			return 0; // Not found, return NULL
+		}
+		
+		// Calculate pointer to character in original string
+		// Wide chars are 2 bytes each, so multiply index by 2
+		var strPtr = str.Address;
+		return strPtr + (uint)(index * 2);
 	}
 }
 }
