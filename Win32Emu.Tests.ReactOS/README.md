@@ -30,13 +30,13 @@ Investigation revealed that the emulator's CPU was incorrectly handling RET inst
 
 **This was a bug in the emulator's RET instruction handling, not in the test executables.**
 
-The fix ensures that when the CPU is initialized with bitness=32 (Win32 protected mode), ALL RET instructions use 32-bit operand size regardless of any prefix bytes. Win32 PE executables run in 32-bit protected mode and must always use 32-bit return addresses.
+The fix ensures that when the CPU is initialized with bitness=32 (Win32 protected mode) and force32BitStackOps=true (default), ALL RET instructions use 32-bit operand size regardless of any prefix bytes. Win32 PE executables run in 32-bit protected mode and must always use 32-bit return addresses.
 
 ### Fix Applied (December 2024)
 
 The emulator was modified to correctly handle RET instructions in 32-bit mode:
 
-1. **Root Cause Fixed**: RET instructions are now forced to use 32-bit operand size when CPU is in 32-bit mode, regardless of instruction encoding or prefix bytes
+1. **Root Cause Fixed**: RET instructions are now forced to use 32-bit operand size when CPU is in 32-bit mode and force32BitStackOps=true (default). When force32BitStackOps=false, RET operand size follows the instruction encoding and prefixes., regardless of instruction encoding or prefix bytes
 2. **Before Fix**: Tests would execute some APIs successfully, then crash when a 16-bit RET truncated a return address
 3. **After Fix**: Tests should execute without memory corruption from truncated return addresses
 

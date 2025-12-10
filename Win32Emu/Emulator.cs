@@ -226,9 +226,9 @@ public sealed class Emulator : IDisposable
     /// <param name="programArgs">Optional command-line arguments</param>
     /// <param name="debugMode">Enable enhanced debugging</param>
     /// <param name="reservedMemoryMb">Memory to reserve for emulation (default: 256 MB)</param>
-    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs = null, bool debugMode = false, int reservedMemoryMb = 256)
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs = null, bool debugMode = false, int reservedMemoryMb = 256, bool force32BitStackOps = true)
     {
-        LoadExecutableFromBytes(executableBytes, executableName, programArgs, debugMode, reservedMemoryMb, virtualFileSystem: null);
+        LoadExecutableFromBytes(executableBytes, executableName, programArgs, debugMode, reservedMemoryMb, virtualFileSystem: null, force32BitStackOps: force32BitStackOps);
     }
 
     /// <summary>
@@ -241,7 +241,8 @@ public sealed class Emulator : IDisposable
     /// <param name="debugMode">Enable debug mode</param>
     /// <param name="reservedMemoryMb">Reserved memory in megabytes</param>
     /// <param name="virtualFileSystem">Optional custom virtual file system for file operations</param>
-    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem)
+    /// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true)
     {
         // Use a synthetic path for internal tracking
         var syntheticPath = $"C:\\WASM\\{executableName}";
@@ -260,10 +261,11 @@ public sealed class Emulator : IDisposable
             useJitCpu: false, 
             virtualDiskPath: null,
             preloadedBytes: executableBytes,
-            customVirtualFileSystem: virtualFileSystem);
+            customVirtualFileSystem: virtualFileSystem,
+            force32BitStackOps: force32BitStackOps);
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null, bool force32BitStackOps = true)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -468,7 +470,7 @@ public sealed class Emulator : IDisposable
         }
         else
         {
-            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase);
+            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps);
             if (enableInstructionAnalyzer)
             {
                 LogDebug("[Loader] Instruction analyzer enabled");
@@ -1314,9 +1316,9 @@ public sealed class Emulator : IDisposable
             
             // Validate EIP after execution to catch bad jumps/returns early
             var eipAfterStep = _cpu.GetEip();
-            if (eipAfterStep > 0 && eipAfterStep < 0x00010000)
+            if (eipAfterStep < 0x00010000)
             {
-                // EIP in low memory range (0x1-0xFFFF) is highly suspicious
+                // EIP in low memory range (0x0-0xFFFF) is highly suspicious
                 // This usually indicates a corrupted return address or bad function pointer
                 var esp = _cpu.GetRegister("ESP");
                 var ebp = _cpu.GetRegister("EBP");
