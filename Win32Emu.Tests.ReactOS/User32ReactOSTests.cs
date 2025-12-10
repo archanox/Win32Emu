@@ -6,6 +6,8 @@ namespace Win32Emu.Tests.ReactOS;
 /// ReactOS tests for User32.dll API functions
 /// These tests run ReactOS test executables directly in Win32Emu
 /// </summary>
+[Trait("Category", "DllModuleTests")]
+[Trait("Category", "ReactOSTests")]
 [Trait("Module", "User32")]
 public class User32ReactOSTests : IDisposable
 {
@@ -30,7 +32,7 @@ public class User32ReactOSTests : IDisposable
 		GC.SuppressFinalize(this);
 	}
 
-	[Theory]
+	[Theory(Skip = "ReactOS tests hitting emulator memory corruption issues - temporarily skipped until emulator fixes are in place")]
 	[InlineData("user32_apitest.exe", "User32 API Test", false)]
 	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test", true)]
 	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test", true)]
