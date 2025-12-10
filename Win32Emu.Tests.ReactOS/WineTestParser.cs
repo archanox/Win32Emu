@@ -101,12 +101,10 @@ public static class WineTestParser
 
 		// Extract failure messages
 		var lines = output.Split('\n');
-		foreach (var line in lines)
+		var failedLines = lines.Where(line => TestFailedRegex.IsMatch(line));
+		foreach (var line in failedLines)
 		{
-			if (TestFailedRegex.IsMatch(line))
-			{
-				result.FailureMessages.Add(line.Trim());
-			}
+			result.FailureMessages.Add(line.Trim());
 		}
 
 		return result;
