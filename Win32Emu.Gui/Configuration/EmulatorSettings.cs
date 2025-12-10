@@ -22,6 +22,14 @@ public class EmulatorSettings
     public bool EnableInstructionAnalyzer { get; set; } = false;
     public bool EnableLegacyInstructionDecoding { get; set; } = false;
     
+    // CPU Emulation Settings
+    /// <summary>
+    /// Force 32-bit operand size for stack operations (PUSH/POP/CALL/RET) in 32-bit mode,
+    /// ignoring operand-size override prefix (0x66). Improves Win32 compatibility but may
+    /// break Win16 or mixed-mode code. Default: true for Win32 compatibility.
+    /// </summary>
+    public bool Force32BitStackOps { get; set; } = true;
+    
     // OpenTelemetry Settings
     public bool EnableOpenTelemetry { get; set; } = false;
     public bool UseConsoleExporter { get; set; } = false;
