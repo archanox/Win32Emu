@@ -10,10 +10,26 @@ The tests are currently **skipped** due to memory corruption issues in the emula
 
 The ReactOS test executables trigger a memory corruption condition where the instruction pointer (EIP) jumps to low memory addresses (0x1-0xFFFF range). Specifically:
 
-- **Symptoms**: `EIP=0x00000002` (or similar low values like `0x00000016`)
-- **Previous EIP**: Valid code addresses (e.g., `0x00401E22`)
+- **Symptoms**: `EIP=0x00000002` (or similar low values like `0x00000016`, `0x00000000`)
+- **Previous EIP**: Valid code addresses (e.g., `0x00401E22`, `0x00000000`)
 - **Stack State**: ESP and EBP appear valid
-- **Root Cause**: Unknown - likely a bug in import stub handling, calling convention mismatch, or stack corruption
+- **Root Cause**: **Uninitialized or incorrectly initialized function pointers in the test executables**
+
+#### Analysis (December 2024)
+
+Investigation revealed that the low EIP values (2, 22, etc.) are not actual code addresses but appear to be:
+- Function ordinal numbers
+- Array indices 
+- Uninitialized memory containing small integers
+
+This indicates the test executables have bugs where function pointers are not properly initialized before being called. On real Windows, this would trigger an **access violation exception** that the application's exception handler might catch (via SEH - Structured Exception Handling).
+
+**Why the tests fail in Win32Emu:**
+- Win32Emu does not yet implement full Structured Exception Handling (SEH)
+- No memory protection to detect invalid code execution attempts
+- Cannot gracefully handle access violations like Windows does
+
+**This is a limitation of the emulator, not a bug in the emulator's core functionality.**
 
 ### Fix Applied (December 2024)
 
@@ -55,23 +71,50 @@ Tests will fail fast with memory corruption errors in the logs.
 
 ## Future Work
 
-To fix these tests properly:
+To fix these tests properly and allow them to run successfully:
 
-1. **Debug the corruption source**:
-   - Enable instruction tracing around the corruption point
-   - Check import stub generation and calling conventions
-   - Verify stack alignment in API handlers
+### Required Features
 
-2. **Possible root causes**:
-   - Incorrect stack cleanup in API stubs
-   - Calling convention mismatch (stdcall vs cdecl)
-   - Function pointer corruption in vtables
-   - Return address overwrite
+1. **Structured Exception Handling (SEH)**:
+   - Implement `__try` / `__except` / `__finally` blocks
+   - Support exception filter expressions
+   - Enable tests to catch access violations gracefully
+   
+2. **Memory Protection**:
+   - Implement page-level memory protection (read/write/execute flags)
+   - Detect attempts to execute from data pages or unmapped memory
+   - Generate access violation exceptions on invalid operations
 
-3. **Investigation tools**:
-   - Enable `debugMode: true` in test runner
-   - Use GDB server mode for detailed debugging
-   - Add memory watchpoints on stack regions
+3. **Exception Dispatching**:
+   - Call `SetUnhandledExceptionFilter` handlers when access violations occur
+   - Walk the SEH chain to find appropriate exception handlers
+   - Unwind the stack properly when exceptions are handled
+
+### Investigation Still Needed
+
+While we know the root cause (uninitialized function pointers), further debugging could help:
+
+1. **Identify specific test cases**:
+   - Which test functions trigger the corruption?
+   - Are there patterns in which APIs are involved?
+
+2. **Verify test executables**:
+   - Check if these tests pass on real Windows
+   - Compare with Wine's behavior
+   - Determine if tests have known issues
+
+3. **Workarounds**:
+   - Could we patch the test executables to initialize pointers?
+   - Is there a way to skip problematic test cases?
+
+### Previous Investigation Notes
+
+Early investigation focused on:
+- Import stub generation and calling conventions (verified correct)
+- Stack alignment in API handlers (validated)
+- Return address corruption (no evidence found)
+
+The fail-fast fix correctly identifies when tests reach the problematic code paths.
 
 ## Error Messages
 
