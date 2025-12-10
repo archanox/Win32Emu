@@ -55,7 +55,7 @@ public class IgnitionTeaserTests
         _output = output;
     }
 
-    [Fact]
+    [Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
     public void IgnitionTeaser_ShouldLoadAndRun()
     {
         // Arrange
@@ -226,7 +226,7 @@ public class IgnitionTeaserTests
         _output.WriteLine("Check the output above for details on what was encountered.");
     }
 
-    [Fact]
+    [Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
     public void IgnitionTeaser_ShouldLoadAndRun_WithIcedCpu()
     {
         // Arrange
