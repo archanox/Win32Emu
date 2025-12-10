@@ -114,8 +114,10 @@ public class ReactOSTestRunner
 				}
 				catch (AggregateException aex)
 				{
-					// Unwrap inner exception from Task
-					var innerEx = aex.InnerException ?? aex;
+					// Unwrap inner exception(s) from Task
+					// Flatten to handle nested AggregateExceptions properly
+					var flattened = aex.Flatten();
+					var innerEx = flattened.InnerExceptions.FirstOrDefault() ?? aex;
 					_logger?.LogError(innerEx, "Test execution failed: {TestExecutable}", testExecutable);
 					return new ReactOSTestResult
 					{
