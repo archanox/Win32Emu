@@ -533,7 +533,14 @@ public class IcedCpu : IAsyncCpu
 					// The decoder selects the appropriate Code based on bitness and operand-size prefix (66h)
 					// In 16-bit mode: Retnw (default), Retnd (with 66h prefix)
 					// In 32-bit mode: Retnd (default), Retnw (with 66h prefix)
-					bool use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16;
+					//
+					// SPECIAL CASE: In syscall dispatcher and import stub ranges, always use 32-bit operand size
+					// regardless of what the decoder thinks. This is because we control these stubs and they
+					// are designed for Win32 (32-bit) operation. This fixes ReactOS test corruption where
+					// RET was being decoded as 16-bit and only popping 2 bytes instead of 4.
+					bool use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16 ||
+					                        MemoryRegions.IsInSyscallRange(oldEip) || 
+					                        MemoryRegions.IsInImportHookRange(oldEip);
 					
 					if (use32BitOperand)
 					{

@@ -85,7 +85,7 @@ public class ReactOSTestRunner
 					executableBytes,
 					testExecutable,
 					programArgs: null,
-					debugMode: false,
+					debugMode: true,
 					reservedMemoryMb: 256
 				);
 
