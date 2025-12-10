@@ -67,11 +67,13 @@ public class EmulatorService : IDisposable
 	/// <param name="executableBytes">The raw bytes of the executable</param>
 	/// <param name="fileName">The name of the executable file</param>
 	/// <param name="additionalFiles">Optional dictionary of additional files (path -> bytes) for the VFS</param>
+	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
 	/// <returns>True if loading succeeded</returns>
 	public async Task<bool> LoadExecutableAsync(
 		byte[] executableBytes, 
 		string fileName,
-		Dictionary<string, byte[]>? additionalFiles = null)
+		Dictionary<string, byte[]>? additionalFiles = null,
+		bool force32BitStackOps = true)
 	{
 		try
 		{
@@ -182,7 +184,7 @@ public class EmulatorService : IDisposable
 			
 			// Load the executable from bytes using the Emulator's built-in method
 			// with the browser VFS for file operations
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs);
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps);
 			
 			_loadedExecutableName = fileName;
 			EmitDebugOutput($"Successfully loaded: {fileName}");
