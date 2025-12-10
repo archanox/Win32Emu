@@ -2,7 +2,7 @@
 
 **Date:** 2025-12-08  
 **Issue:** https://github.com/archanox/Win32Emu/issues/[TBD]  
-**ReactOS Tests:** https://github.com/reactos/reactos/tree/master/modules/rostests
+**ReactOS Tests:** <https://github.com/reactos/reactos/tree/master/modules/rostests>
 
 ## Executive Summary
 
