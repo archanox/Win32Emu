@@ -1,130 +1,86 @@
-# Win32Emu.Tests.ReactOS
+# ReactOS Test Suite for User32
 
-ReactOS test integration for Win32Emu - runs ReactOS API test executables to validate Win32 API implementations.
+This test project runs ReactOS test executables (apitest and winetest) to verify Win32Emu's User32.dll API implementations.
 
-## Overview
+## Current Status
 
-This test project implements the ReactOS test integration strategy documented in `docs/research/REACTOS_TEST_INTEGRATION.md`. It runs ReactOS test executables (compiled with Wine test framework) directly in Win32Emu and parses the test output.
+The tests are currently **skipped** due to memory corruption issues in the emulator when running these specific test executables.
 
-## Test Structure
+### Memory Corruption Issue
 
-- **ReactOSTestRunner** - Loads and executes ReactOS test executables in Win32Emu
-- **WineTestParser** - Parses Wine test framework output format
-- **User32ReactOSTests** - User32.dll API tests (primary focus)
-- More test classes can be added for other DLLs
+The ReactOS test executables trigger a memory corruption condition where the instruction pointer (EIP) jumps to low memory addresses (0x1-0xFFFF range). Specifically:
 
-## Running Tests
+- **Symptoms**: `EIP=0x00000002` (or similar low values like `0x00000016`)
+- **Previous EIP**: Valid code addresses (e.g., `0x00401E22`)
+- **Stack State**: ESP and EBP appear valid
+- **Root Cause**: Unknown - likely a bug in import stub handling, calling convention mismatch, or stack corruption
 
-```bash
-# Run all ReactOS tests
-dotnet test Win32Emu.Tests.ReactOS
+### Fix Applied (December 2024)
 
-# Run User32 tests only
-dotnet test --filter "Module=User32"
+The emulator was modified to **fail fast** when detecting this corruption:
 
-# Run specific test
-dotnet test --filter "Function=User32_ApiTest"
-```
+1. **Before Fix**: Tests would spam error messages for 90+ minutes until timeout
+2. **After Fix**: Tests fail immediately (~400ms) with clear error message
+3. **Exception Thrown**: `InvalidOperationException` with diagnostic information
+
+This allows developers to see the issue quickly without waiting for timeouts.
 
 ## Test Executables
 
-Test executables are located in `EXEs/ApiTests/`:
-- `user32_apitest.exe` - Main User32 API tests from ReactOS
-- `user32_dynamic_apitest.exe` - Dynamic User32 tests
-- `user32_apitest_menuui.exe` - Menu UI tests
-- `user32_winetest.exe` - Wine project tests (reference)
+Located in `/EXEs/ApiTests/`:
 
-## Test Behavior
+- `user32_apitest.exe` (1.2MB) - Core User32 API tests
+- `user32_apitest_menuui.exe` (33KB) - Menu UI tests
+- `user32_dynamic_apitest.exe` (47KB) - Dynamic API tests
+- `user32_winetest.exe` (2.3MB) - Wine test suite for User32
 
-These tests are marked with:
-- `[assembly: Trait("Category", "DllModuleTests")]` - Optional in CI (non-blocking)
-- `[assembly: Trait("Category", "ReactOSTests")]` - ReactOS test category
+## Running Tests Manually
 
-Tests will:
-1. Load the ReactOS test executable in Win32Emu
-2. Execute the test with a timeout (default: 120 seconds)
-3. Capture console output
-4. Parse Wine test framework output
-5. Report results (passed/failed/skipped counts)
+To investigate the memory corruption:
 
-Tests do NOT assert all tests pass (many APIs may not be implemented yet). Instead, they:
-- Report test results for tracking
-- Fail only if there's an error loading/running the executable
-- Provide visibility into implementation progress
+```bash
+cd Win32Emu.Tests.ReactOS
 
-## Expected Behavior
+# Remove the Skip attribute temporarily
+sed -i 's/\[Theory(Skip = ".*")\]/[Theory]/' User32ReactOSTests.cs
 
-Since Win32Emu is still implementing Win32 APIs, it's normal for some tests to fail:
-- ✅ Test executable loads and runs
-- ✅ Test results are parsed and reported
-- ⚠️ Some tests may fail (unimplemented APIs)
-- ⚠️ Some tests may timeout (missing functionality)
+# Run tests
+dotnet test --filter "User32_ReactOSTests_ShouldExecute"
 
-The goal is to track progress over time as more APIs are implemented.
-
-## Adding Tests for Other DLLs
-
-To add tests for other DLLs (e.g., Kernel32, GDI32):
-
-1. Create a new test class (e.g., `Kernel32ReactOSTests.cs`)
-2. Use the same pattern as `User32ReactOSTests`
-3. Reference the appropriate test executable (e.g., `kernel32_apitest.exe`)
-4. Add `[Trait("Module", "Kernel32")]` to the class
-
-Example:
-```csharp
-[Trait("Module", "Kernel32")]
-public class Kernel32ReactOSTests : IDisposable
-{
-    private readonly ReactOSTestRunner _runner;
-    
-    public Kernel32ReactOSTests()
-    {
-        _runner = new ReactOSTestRunner();
-    }
-    
-    [Fact]
-    public void Kernel32_ApiTest_ShouldExecute()
-    {
-        var result = _runner.Run("kernel32_apitest.exe");
-        Assert.False(result.IsError, result.ErrorMessage);
-    }
-}
+# Restore skip attribute
+git checkout User32ReactOSTests.cs
 ```
 
-## Debugging
+Tests will fail fast with memory corruption errors in the logs.
 
-To debug a failing test:
+## Future Work
 
-1. Run Win32Emu directly with the test executable:
-   ```bash
-   dotnet run --project Win32Emu -- EXEs/ApiTests/user32_apitest.exe
-   ```
+To fix these tests properly:
 
-2. Enable debug logging in the test:
-   ```csharp
-   builder.SetMinimumLevel(LogLevel.Debug);
-   ```
+1. **Debug the corruption source**:
+   - Enable instruction tracing around the corruption point
+   - Check import stub generation and calling conventions
+   - Verify stack alignment in API handlers
 
-3. Check test output for specific failure messages
+2. **Possible root causes**:
+   - Incorrect stack cleanup in API stubs
+   - Calling convention mismatch (stdcall vs cdecl)
+   - Function pointer corruption in vtables
+   - Return address overwrite
 
-## Documentation
+3. **Investigation tools**:
+   - Enable `debugMode: true` in test runner
+   - Use GDB server mode for detailed debugging
+   - Add memory watchpoints on stack regions
 
-For more details, see:
-- [Research Document](../docs/research/REACTOS_TEST_INTEGRATION.md) - Strategy and analysis
-- [Implementation Plan](../docs/implementation/REACTOS_TEST_INTEGRATION_PLAN.md) - Developer guide
-- [Quick Reference](../docs/guides/REACTOS_TESTS_QUICK_REFERENCE.md) - Command reference
+## Error Messages
 
-## Status
+When tests fail, you'll see errors like:
 
-- ✅ Infrastructure implemented (ReactOSTestRunner, WineTestParser)
-- ✅ User32 tests integrated
-- ⏳ Additional DLL tests (can be added as needed)
+```
+Memory corruption detected: EIP=0x00000002 is in suspicious low memory range.
+Previous EIP=0x00000000, ESP=0x002FF004, EBP=0x002FF000.
+This indicates a corrupted return address or bad function pointer.
+```
 
-## Contributing
-
-To improve ReactOS test integration:
-1. Add tests for more DLLs
-2. Improve Wine test output parsing
-3. Add better error handling
-4. Enhance test result reporting
+This is the emulator's safety check preventing infinite loops.
