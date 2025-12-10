@@ -60,6 +60,14 @@
 							<label class="btn btn-outline-primary" for="loadFolder">Folder</label>
 						</div>
 						
+						<div class="form-check mb-2">
+							<input class="form-check-input" type="checkbox" id="force32BitStackOps" @bind="_force32BitStackOps" disabled="@_isRunning" />
+							<label class="form-check-label" for="force32BitStackOps">
+								Force 32-bit Stack Operations
+								<small class="text-muted d-block">Improves Win32 compatibility by forcing PUSH/POP/CALL/RET to use 32-bit operands in 32-bit mode</small>
+							</label>
+						</div>
+						
 						@if (!_folderMode)
 						{
 							<label for="fileInput" class="form-label">Select Executable</label>
@@ -251,6 +259,7 @@
 	private bool _executableLoaded = false;
 	private bool _audioEnabled = false;
 	private bool _folderMode = false;
+	private bool _force32BitStackOps = true; // Default to true for Win32 compatibility
 	private string _loadedFileName = string.Empty;
 	private long _loadedFileSize = 0;
 	private byte[]? _executableData = null;
@@ -523,7 +532,8 @@
 			var loadSuccess = await EmulatorService.LoadExecutableAsync(
 				_executableData, 
 				_loadedFileName,
-				_folderMode ? _loadedFiles : null);
+				_folderMode ? _loadedFiles : null,
+				_force32BitStackOps);
 			
 			if (!loadSuccess)
 			{
