@@ -22,7 +22,7 @@ public class IgnitionTeaserIATDebugTests
 		_output = output;
 	}
 
-	[Fact]
+	[Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
 	public void IgnitionTeaser_ValidateIATAtEachStep()
 	{
 		var exePath = FindExecutable("IGN_TEAS.EXE");

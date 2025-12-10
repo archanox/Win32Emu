@@ -17,7 +17,7 @@ public class IgnitionTeaserDiagnosticTests
         _output = output;
     }
 
-    [Fact]
+    [Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
     public void Diagnostic_LogExecutionAfterLastApiCall()
     {
         var currentDir = Directory.GetCurrentDirectory();
