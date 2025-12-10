@@ -112,6 +112,17 @@ public class ReactOSTestRunner
 						ErrorMessage = $"Test timed out after {timeout} seconds"
 					};
 				}
+				catch (AggregateException aex)
+				{
+					// Unwrap inner exception from Task
+					var innerEx = aex.InnerException ?? aex;
+					_logger?.LogError(innerEx, "Test execution failed: {TestExecutable}", testExecutable);
+					return new ReactOSTestResult
+					{
+						IsError = true,
+						ErrorMessage = $"Test execution failed: {innerEx.Message}"
+					};
+				}
 			}
 			finally
 			{

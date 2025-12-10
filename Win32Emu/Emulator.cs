@@ -1322,6 +1322,13 @@ public sealed class Emulator : IDisposable
                 var ebp = _cpu.GetRegister("EBP");
                 _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in suspicious low memory range. Previous EIP=0x{PrevEip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}. Likely corrupted return address or indirect jump.", 
                     eipAfterStep, eipBeforeStep, esp, ebp);
+                
+                // Halt execution to prevent infinite loop of corruption
+                // This allows tests to fail fast instead of timing out
+                throw new InvalidOperationException(
+                    $"Memory corruption detected: EIP=0x{eipAfterStep:X8} is in suspicious low memory range. " +
+                    $"Previous EIP=0x{eipBeforeStep:X8}, ESP=0x{esp:X8}, EBP=0x{ebp:X8}. " +
+                    "This indicates a corrupted return address or bad function pointer.");
             }
             
             // Check for syscall (INT 0x80 from import stubs)
