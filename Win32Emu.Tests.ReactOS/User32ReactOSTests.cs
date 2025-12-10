@@ -114,13 +114,13 @@ public class User32ReactOSTests : IDisposable
 		);
 	}
 
-	[Fact(Skip = "Wine tests may have different expectations than ReactOS tests")]
+	[Fact]
 	[Trait("Function", "User32_WineTest")]
-	[Trait("Status", "Reference")]
+	[Trait("Status", "Optional")]
 	public void User32_WineTest_ShouldExecute()
 	{
 		// Run the Wine test suite for User32
-		// These tests are from Wine project and may have different expectations
+		// Wine tests provide comprehensive coverage and are equally valuable
 		var result = _runner.Run("user32_winetest.exe", timeout: 120);
 
 		_logger.LogInformation("User32 Wine Test Results: {Summary}", result.Summary);
