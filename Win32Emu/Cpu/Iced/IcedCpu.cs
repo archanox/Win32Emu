@@ -476,8 +476,22 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Call:
 					// Determine operand size based on instruction Code enum
 					// The decoder selects the appropriate Code based on bitness and operand-size prefix (66h)
-					bool use32BitCall = insn.Code == Code.Call_rel32_32 || insn.Code == Code.Call_rel32_64 ||
-					                    insn.Code == Code.Call_rm32 || insn.Code == Code.Call_rm64;
+					//
+					// FIX for ReactOS test corruption: When CPU is initialized with bitness=32 (Win32 protected mode),
+					// ALWAYS use 32-bit operand size for CALL instructions, even if the decoder thinks it's 16-bit.
+					// This ensures return addresses are always pushed as 32-bit values.
+					bool use32BitCall;
+					if (_bitness == 32)
+					{
+						// In 32-bit mode, ALWAYS use 32-bit return addresses
+						use32BitCall = true;
+					}
+					else
+					{
+						// In 16-bit mode, respect the decoder's interpretation
+						use32BitCall = insn.Code == Code.Call_rel32_32 || insn.Code == Code.Call_rel32_64 ||
+						                insn.Code == Code.Call_rm32 || insn.Code == Code.Call_rm64;
+					}
 					
 					// Push return address onto stack
 					if (use32BitCall)
@@ -534,13 +548,27 @@ public class IcedCpu : IAsyncCpu
 					// In 16-bit mode: Retnw (default), Retnd (with 66h prefix)
 					// In 32-bit mode: Retnd (default), Retnw (with 66h prefix)
 					//
-					// SPECIAL CASE: In syscall dispatcher and import stub ranges, always use 32-bit operand size
-					// regardless of what the decoder thinks. This is because we control these stubs and they
-					// are designed for Win32 (32-bit) operation. This fixes ReactOS test corruption where
-					// RET was being decoded as 16-bit and only popping 2 bytes instead of 4.
-					bool use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16 ||
-					                        MemoryRegions.IsInSyscallRange(oldEip) || 
-					                        MemoryRegions.IsInImportHookRange(oldEip);
+					// FIX for ReactOS test corruption: When CPU is initialized with bitness=32 (Win32 protected mode),
+					// ALWAYS use 32-bit operand size for RET instructions, even if the decoder thinks it's 16-bit
+					// due to operand-size prefix (0x66). This is because Win32 executables run in 32-bit protected
+					// mode and should not use 16-bit return addresses. The 0x66 prefix in this context may be
+					// from mixed-mode code or inline assembly, but return addresses must still be 32-bit.
+					//
+					// Without this fix, RET instructions decoded as 16-bit only pop 2 bytes instead of 4,
+					// causing the return address to be truncated (e.g., 0x0E000002 becomes 0x00000002),
+					// leading to crashes when EIP jumps to invalid low memory addresses.
+					bool use32BitOperand;
+					if (_bitness == 32)
+					{
+						// In 32-bit mode, ALWAYS use 32-bit return addresses
+						// Ignore the decoder's interpretation of operand-size prefix
+						use32BitOperand = true;
+					}
+					else
+					{
+						// In 16-bit mode, respect the decoder's interpretation
+						use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16;
+					}
 					
 					if (use32BitOperand)
 					{

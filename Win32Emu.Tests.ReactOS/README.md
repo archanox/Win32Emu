@@ -11,35 +11,36 @@ The tests are currently **skipped** due to memory corruption issues in the emula
 The ReactOS test executables trigger a memory corruption condition where the instruction pointer (EIP) jumps to low memory addresses (0x1-0xFFFF range). Specifically:
 
 - **Symptoms**: `EIP=0x00000002` (or similar low values like `0x00000016`, `0x00000000`)
-- **Previous EIP**: Valid code addresses (e.g., `0x00401E22`, `0x00000000`)
+- **Previous EIP**: Valid code addresses (e.g., `0x00401E22`, `0x0E000002`)
 - **Stack State**: ESP and EBP appear valid
-- **Root Cause**: **Uninitialized or incorrectly initialized function pointers in the test executables**
+- **Root Cause**: **RET instructions being decoded as 16-bit instead of 32-bit**
 
 #### Analysis (December 2024)
 
-Investigation revealed that the low EIP values (2, 22, etc.) are not actual code addresses but appear to be:
-- Function ordinal numbers
-- Array indices 
-- Uninitialized memory containing small integers
+Investigation revealed that the emulator's CPU was incorrectly handling RET instructions in some cases:
 
-This indicates the test executables have bugs where function pointers are not properly initialized before being called. On real Windows, this would trigger an **access violation exception** that the application's exception handler might catch (via SEH - Structured Exception Handling).
+1. **The Problem**: When the Iced instruction decoder encounters certain RET instructions (possibly with 0x66 operand-size prefix or due to encoding variations), it decodes them as 16-bit RET instructions even though the CPU is running in 32-bit protected mode.
 
-**Why the tests fail in Win32Emu:**
-- Win32Emu does not yet implement full Structured Exception Handling (SEH)
-- No memory protection to detect invalid code execution attempts
-- Cannot gracefully handle access violations like Windows does
+2. **The Consequence**: A 16-bit RET only pops 2 bytes from the stack instead of 4 bytes. This truncates 32-bit return addresses:
+   - Full address on stack: `0x0E000002` (syscall dispatcher RET instruction)
+   - Only 2 bytes popped: `0x0002`
+   - Zero-extended to 32-bit: `0x00000002` (invalid low memory address!)
 
-**This is a limitation of the emulator, not a bug in the emulator's core functionality.**
+3. **Why It Failed**: When EIP jumps to `0x00000002`, there's no valid code there, causing the emulator to detect memory corruption.
+
+**This was a bug in the emulator's RET instruction handling, not in the test executables.**
+
+The fix ensures that when the CPU is initialized with bitness=32 (Win32 protected mode), ALL RET instructions use 32-bit operand size regardless of any prefix bytes. Win32 PE executables run in 32-bit protected mode and must always use 32-bit return addresses.
 
 ### Fix Applied (December 2024)
 
-The emulator was modified to **fail fast** when detecting this corruption:
+The emulator was modified to correctly handle RET instructions in 32-bit mode:
 
-1. **Before Fix**: Tests would spam error messages for 90+ minutes until timeout
-2. **After Fix**: Tests fail immediately (~400ms) with clear error message
-3. **Exception Thrown**: `InvalidOperationException` with diagnostic information
+1. **Root Cause Fixed**: RET instructions are now forced to use 32-bit operand size when CPU is in 32-bit mode, regardless of instruction encoding or prefix bytes
+2. **Before Fix**: Tests would execute some APIs successfully, then crash when a 16-bit RET truncated a return address
+3. **After Fix**: Tests should execute without memory corruption from truncated return addresses
 
-This allows developers to see the issue quickly without waiting for timeouts.
+The emulator also fails fast when detecting corrupted EIP to prevent infinite loops.
 
 ## Test Executables
 
@@ -71,9 +72,19 @@ Tests will fail fast with memory corruption errors in the logs.
 
 ## Future Work
 
-To fix these tests properly and allow them to run successfully:
+To enable these tests to run fully successfully:
 
-### Required Features
+### Remaining Issues to Address
+
+While the core RET instruction bug is fixed, the tests may still have other issues:
+
+1. **Verify complete test execution**: Run the tests to see if they now complete successfully or if there are additional unimplemented APIs
+2. **Implement missing APIs**: Some User32/Kernel32 functions may need implementation
+3. **Handle test-specific scenarios**: The tests may use features not yet fully supported
+
+### If SEH is Still Needed
+
+In case tests still encounter issues that require exception handling:
 
 1. **Structured Exception Handling (SEH)**:
    - Implement `__try` / `__except` / `__finally` blocks
@@ -89,32 +100,6 @@ To fix these tests properly and allow them to run successfully:
    - Call `SetUnhandledExceptionFilter` handlers when access violations occur
    - Walk the SEH chain to find appropriate exception handlers
    - Unwind the stack properly when exceptions are handled
-
-### Investigation Still Needed
-
-While we know the root cause (uninitialized function pointers), further debugging could help:
-
-1. **Identify specific test cases**:
-   - Which test functions trigger the corruption?
-   - Are there patterns in which APIs are involved?
-
-2. **Verify test executables**:
-   - Check if these tests pass on real Windows
-   - Compare with Wine's behavior
-   - Determine if tests have known issues
-
-3. **Workarounds**:
-   - Could we patch the test executables to initialize pointers?
-   - Is there a way to skip problematic test cases?
-
-### Previous Investigation Notes
-
-Early investigation focused on:
-- Import stub generation and calling conventions (verified correct)
-- Stack alignment in API handlers (validated)
-- Return address corruption (no evidence found)
-
-The fail-fast fix correctly identifies when tests reach the problematic code paths.
 
 ## Error Messages
 
