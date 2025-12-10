@@ -6,7 +6,7 @@ This document summarizes the integration of ReactOS tests into Win32Emu for comp
 
 ## What Are ReactOS Tests?
 
-ReactOS (https://reactos.org) is an open-source Windows-compatible operating system. The ReactOS project maintains an extensive test suite for Win32 APIs in their repository:
+ReactOS (<https://reactos.org>) is an open-source Windows-compatible operating system. The ReactOS project maintains an extensive test suite for Win32 APIs in their repository:
 - Location: <https://github.com/reactos/reactos/tree/master/modules/rostests/apitests>
 - Coverage: ~60 kernel32 tests, ~80 user32 tests, plus many more DLLs
 - Framework: Wine Test Framework (C-based, compiled to PE executables)
