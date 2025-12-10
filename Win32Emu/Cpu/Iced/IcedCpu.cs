@@ -52,6 +52,11 @@ public class IcedCpu : IAsyncCpu
 	
 	// CPU bitness mode (16 for real mode, 32 for protected mode)
 	private readonly int _bitness;
+	
+	// Force 32-bit operand size for stack operations in 32-bit mode
+	// When true, PUSH/POP/CALL/RET always use 32-bit operands in 32-bit mode,
+	// ignoring operand-size override prefix (0x66). Improves Win32 compatibility.
+	private readonly bool _force32BitStackOps;
 
 	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
 	private readonly double[] _fpu = new double[8];
@@ -102,7 +107,12 @@ public class IcedCpu : IAsyncCpu
 	/// The CPU bitness mode (16 for real mode, 32 for protected mode). Defaults to 32-bit.
 	/// Use 16 for legacy DOS/real mode code, and 32 for Win32 protected mode applications.
 	/// </param>
-	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32)
+	/// <param name="force32BitStackOps">
+	/// Force 32-bit operand size for stack operations (PUSH/POP/CALL/RET) in 32-bit mode,
+	/// ignoring operand-size override prefix (0x66). Improves Win32 compatibility but may
+	/// break Win16 or mixed-mode code. Defaults to true.
+	/// </param>
+	public IcedCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
@@ -110,6 +120,7 @@ public class IcedCpu : IAsyncCpu
 		_stackLimit = stackLimit;
 		_stackBase = stackBase;
 		_bitness = bitness;
+		_force32BitStackOps = force32BitStackOps;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(bitness, _reader, decoderOptions);
 		
@@ -477,18 +488,19 @@ public class IcedCpu : IAsyncCpu
 					// Determine operand size based on instruction Code enum
 					// The decoder selects the appropriate Code based on bitness and operand-size prefix (66h)
 					//
-					// FIX for ReactOS test corruption: When CPU is initialized with bitness=32 (Win32 protected mode),
-					// ALWAYS use 32-bit operand size for CALL instructions, even if the decoder thinks it's 16-bit.
-					// This ensures return addresses are always pushed as 32-bit values.
+					// FIX for ReactOS test corruption: When CPU is initialized with bitness=32 (Win32 protected mode)
+					// and force32BitStackOps is enabled, ALWAYS use 32-bit operand size for CALL instructions,
+					// even if the decoder thinks it's 16-bit. This ensures return addresses are always pushed as
+					// 32-bit values, preventing address truncation bugs.
 					bool use32BitCall;
-					if (_bitness == 32)
+					if (_bitness == 32 && _force32BitStackOps)
 					{
-						// In 32-bit mode, ALWAYS use 32-bit return addresses
+						// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit return addresses
 						use32BitCall = true;
 					}
 					else
 					{
-						// In 16-bit mode, respect the decoder's interpretation
+						// In 16-bit mode or with forced 32-bit disabled, respect the decoder's interpretation
 						use32BitCall = insn.Code == Code.Call_rel32_32 || insn.Code == Code.Call_rel32_64 ||
 						                insn.Code == Code.Call_rm32 || insn.Code == Code.Call_rm64;
 					}
@@ -548,25 +560,26 @@ public class IcedCpu : IAsyncCpu
 					// In 16-bit mode: Retnw (default), Retnd (with 66h prefix)
 					// In 32-bit mode: Retnd (default), Retnw (with 66h prefix)
 					//
-					// FIX for ReactOS test corruption: When CPU is initialized with bitness=32 (Win32 protected mode),
-					// ALWAYS use 32-bit operand size for RET instructions, even if the decoder thinks it's 16-bit
-					// due to operand-size prefix (0x66). This is because Win32 executables run in 32-bit protected
-					// mode and should not use 16-bit return addresses. The 0x66 prefix in this context may be
-					// from mixed-mode code or inline assembly, but return addresses must still be 32-bit.
+					// FIX for ReactOS test corruption: When CPU is initialized with bitness=32 (Win32 protected mode)
+					// and force32BitStackOps is enabled, ALWAYS use 32-bit operand size for RET instructions,
+					// even if the decoder thinks it's 16-bit due to operand-size prefix (0x66). This is because
+					// Win32 executables run in 32-bit protected mode and should not use 16-bit return addresses.
+					// The 0x66 prefix in this context may be from mixed-mode code or inline assembly, but return
+					// addresses must still be 32-bit.
 					//
 					// Without this fix, RET instructions decoded as 16-bit only pop 2 bytes instead of 4,
 					// causing the return address to be truncated (e.g., 0x0E000002 becomes 0x00000002),
 					// leading to crashes when EIP jumps to invalid low memory addresses.
 					bool use32BitOperand;
-					if (_bitness == 32)
+					if (_bitness == 32 && _force32BitStackOps)
 					{
-						// In 32-bit mode, ALWAYS use 32-bit return addresses
+						// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit return addresses
 						// Ignore the decoder's interpretation of operand-size prefix
 						use32BitOperand = true;
 					}
 					else
 					{
-						// In 16-bit mode, respect the decoder's interpretation
+						// In 16-bit mode or with forced 32-bit disabled, respect the decoder's interpretation
 						use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16;
 					}
 					
@@ -1397,7 +1410,21 @@ public class IcedCpu : IAsyncCpu
 		// Determine operand size - in 16-bit mode, default is 16-bit
 		// with o32 prefix making it 32-bit. In 32-bit mode, vice versa.
 		// Note: PUSH never operates on 8-bit values (even PUSH imm8 sign-extends to 16/32 bits)
-		var opSize = GetOpSizeBits(insn, 0);
+		//
+		// FIX for potential stack corruption: When force32BitStackOps is enabled in 32-bit mode,
+		// always use 32-bit operand size to prevent stack misalignment issues.
+		int opSize;
+		if (_bitness == 32 && _force32BitStackOps)
+		{
+			// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit
+			opSize = 32;
+		}
+		else
+		{
+			// Otherwise, respect the instruction's operand size
+			opSize = GetOpSizeBits(insn, 0);
+		}
+		
 		var val = ReadOp(insn, 0);
 		
 		switch (opSize)
@@ -1418,7 +1445,21 @@ public class IcedCpu : IAsyncCpu
 	private void ExecPop(Instruction insn)
 	{
 		// Note: POP never operates on 8-bit values
-		var opSize = GetOpSizeBits(insn, 0);
+		//
+		// FIX for potential stack corruption: When force32BitStackOps is enabled in 32-bit mode,
+		// always use 32-bit operand size to prevent stack misalignment issues.
+		int opSize;
+		if (_bitness == 32 && _force32BitStackOps)
+		{
+			// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit
+			opSize = 32;
+		}
+		else
+		{
+			// Otherwise, respect the instruction's operand size
+			opSize = GetOpSizeBits(insn, 0);
+		}
+		
 		uint v;
 		
 		switch (opSize)
