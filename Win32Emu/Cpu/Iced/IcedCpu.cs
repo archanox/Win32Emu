@@ -492,18 +492,10 @@ public class IcedCpu : IAsyncCpu
 					// and force32BitStackOps is enabled, ALWAYS use 32-bit operand size for CALL instructions,
 					// even if the decoder thinks it's 16-bit. This ensures return addresses are always pushed as
 					// 32-bit values, preventing address truncation bugs.
-					bool use32BitCall;
-					if (_bitness == 32 && _force32BitStackOps)
-					{
-						// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit return addresses
-						use32BitCall = true;
-					}
-					else
-					{
-						// In 16-bit mode or with forced 32-bit disabled, respect the decoder's interpretation
-						use32BitCall = insn.Code == Code.Call_rel32_32 || insn.Code == Code.Call_rel32_64 ||
-						                insn.Code == Code.Call_rm32 || insn.Code == Code.Call_rm64;
-					}
+					bool use32BitCall = (_bitness == 32 && _force32BitStackOps)
+						? true
+						: (insn.Code == Code.Call_rel32_32 || insn.Code == Code.Call_rel32_64 ||
+						   insn.Code == Code.Call_rm32 || insn.Code == Code.Call_rm64);
 					
 					// Push return address onto stack
 					if (use32BitCall)
@@ -570,18 +562,9 @@ public class IcedCpu : IAsyncCpu
 					// Without this fix, RET instructions decoded as 16-bit only pop 2 bytes instead of 4,
 					// causing the return address to be truncated (e.g., 0x0E000002 becomes 0x00000002),
 					// leading to crashes when EIP jumps to invalid low memory addresses.
-					bool use32BitOperand;
-					if (_bitness == 32 && _force32BitStackOps)
-					{
-						// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit return addresses
-						// Ignore the decoder's interpretation of operand-size prefix
-						use32BitOperand = true;
-					}
-					else
-					{
-						// In 16-bit mode or with forced 32-bit disabled, respect the decoder's interpretation
-						use32BitOperand = insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16;
-					}
+					bool use32BitOperand = (_bitness == 32 && _force32BitStackOps)
+						? true
+						: (insn.Code == Code.Retnd || insn.Code == Code.Retnd_imm16);
 					
 					if (use32BitOperand)
 					{
@@ -1413,17 +1396,7 @@ public class IcedCpu : IAsyncCpu
 		//
 		// FIX for potential stack corruption: When force32BitStackOps is enabled in 32-bit mode,
 		// always use 32-bit operand size to prevent stack misalignment issues.
-		int opSize;
-		if (_bitness == 32 && _force32BitStackOps)
-		{
-			// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit
-			opSize = 32;
-		}
-		else
-		{
-			// Otherwise, respect the instruction's operand size
-			opSize = GetOpSizeBits(insn, 0);
-		}
+		int opSize = (_bitness == 32 && _force32BitStackOps) ? 32 : GetOpSizeBits(insn, 0);
 		
 		var val = ReadOp(insn, 0);
 		
@@ -1448,17 +1421,7 @@ public class IcedCpu : IAsyncCpu
 		//
 		// FIX for potential stack corruption: When force32BitStackOps is enabled in 32-bit mode,
 		// always use 32-bit operand size to prevent stack misalignment issues.
-		int opSize;
-		if (_bitness == 32 && _force32BitStackOps)
-		{
-			// In 32-bit mode with forced 32-bit stack ops, ALWAYS use 32-bit
-			opSize = 32;
-		}
-		else
-		{
-			// Otherwise, respect the instruction's operand size
-			opSize = GetOpSizeBits(insn, 0);
-		}
+		int opSize = (_bitness == 32 && _force32BitStackOps) ? 32 : GetOpSizeBits(insn, 0);
 		
 		uint v;
 		

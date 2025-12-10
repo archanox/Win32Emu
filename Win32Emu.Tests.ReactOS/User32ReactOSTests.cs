@@ -32,7 +32,7 @@ public class User32ReactOSTests : IDisposable
 		GC.SuppressFinalize(this);
 	}
 
-	[Theory(Skip = "ReactOS tests trigger memory corruption (EIP jumps to low memory range 0x1-0xFFFF) - emulator now fails fast to prevent timeouts")]
+	[Theory(Skip = "ReactOS tests trigger memory corruption (EIP jumps to low memory range 0x0-0xFFFF). The fix (force32BitStackOps=true by default) has been applied and tests now fail fast instead of timing out, but remaining issues need investigation.")]
 	[InlineData("user32_apitest.exe", "User32 API Test", false)]
 	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test", true)]
 	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test", true)]
