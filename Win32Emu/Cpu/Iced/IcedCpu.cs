@@ -60,6 +60,7 @@ public class IcedCpu : IAsyncCpu
 
 	// x87 FPU state (8 registers in a stack, ST(0) to ST(7))
 	private readonly double[] _fpu = new double[8];
+	private readonly ulong[] _mmx = new ulong[8];
 	private int _fpuTop = 0; // Index of ST(0) in the circular stack
 	private ushort _fpuControlWord = 0x037F; // Default FPU control word
 	private ushort _fpuStatusWord = 0x0000; // FPU status word
@@ -433,6 +434,8 @@ public class IcedCpu : IAsyncCpu
 				case Mnemonic.Fnclex: ExecFnclex(); break;
 				case Mnemonic.Fxam: ExecFxam(); break;
 				case Mnemonic.Wait: break; // FWAIT - no-op for now
+
+				case Mnemonic.Movd: ExecMmxMovd(insn); break;
 				// Bit operations
 				case Mnemonic.Bt: ExecBt(insn); break;
 				case Mnemonic.Bts: ExecBts(insn); break;
@@ -1259,6 +1262,32 @@ public class IcedCpu : IAsyncCpu
 	}
 
 	#region Exec helpers
+
+	private void ExecMmxMovd(Instruction insn)
+	{
+		if (insn.OpCount < 2)
+		{
+			return;
+		}
+
+		if (insn.Op0Kind == OpKind.Register && insn.Op0Register >= Register.MM0 && insn.Op0Register <= Register.MM7)
+		{
+			// Destination is MMX register
+			int mmReg = insn.Op0Register - Register.MM0;
+			uint value = ReadOp(insn, 1);
+			_mmx[mmReg] = value; // Zero-extend to 64 bits
+		}
+		else if (insn.Op1Kind == OpKind.Register && insn.Op1Register >= Register.MM0 && insn.Op1Register <= Register.MM7)
+		{
+			// Source is MMX register
+			int mmReg = insn.Op1Register - Register.MM0;
+			WriteOp(insn, 0, (uint)_mmx[mmReg]);
+		}
+		else
+		{
+			throw new NotImplementedException($"[JitCpu] MOVD with unsupported operand types: {insn.Op0Kind}, {insn.Op1Kind}");
+		}
+	}
 
 	private void ExecMov(Instruction insn)
 	{
