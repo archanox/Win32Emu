@@ -1811,7 +1811,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// If this is a primary surface, present the frame to the rendering backend
-			if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
+			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
 			{
 				try
 				{
@@ -3435,9 +3435,18 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Updates the rendering backend with the current surface pixels.
 		/// This should be called when a surface has been modified and needs to be displayed.
+		/// <para>
+		/// <b>Note:</b> This method should only be called for primary surfaces.
+		/// </para>
 		/// </summary>
 		private void UpdateRenderingBackend(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
+			if (!surface.IsPrimary)
+			{
+				_logger.LogError("[DDraw] UpdateRenderingBackend called for non-primary surface 0x{SurfaceHandle:X8}", surface.Handle);
+				return;
+			}
+
 			if (ddrawObj.RenderingBackend == null || !ddrawObj.RenderingBackend.IsInitialized)
 			{
 				return;
