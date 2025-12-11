@@ -500,12 +500,17 @@ public class ComVtableDispatcher
 	/// <returns>ComAsyncMethodInfo with automatically calculated argBytes</returns>
 	public static ComAsyncMethodInfo FromAsyncDelegate<TDelegate>(Func<ICpu, VirtualMemory, Task<uint>> asyncHandler) where TDelegate : Delegate
 	{
+		if (asyncHandler == null)
+		{
+			throw new ArgumentNullException(nameof(asyncHandler));
+		}
+		
 		var delegateType = typeof(TDelegate);
 		
 		// Verify the delegate has the correct attribute
 		if (!ComDelegateHelper.HasStdCallConvention(delegateType))
 		{
-			throw new InvalidOperationException($"Delegate type {delegateType.Name} must have [UnmanagedFunctionPointer(CallingConvention.StdCall)] attribute");
+			throw new InvalidOperationException($"Delegate type {delegateType.FullName} must have [UnmanagedFunctionPointer(CallingConvention.StdCall)] attribute");
 		}
 		
 		// Calculate argument bytes from delegate signature

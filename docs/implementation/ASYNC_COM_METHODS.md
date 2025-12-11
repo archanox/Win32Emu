@@ -333,7 +333,7 @@ dotnet test Win32Emu.Tests.Emulator --filter "FullyQualifiedName~ComDelegateHelp
 
 ## Performance Considerations
 
-1. **Async Overhead**: Async/await has minimal overhead (~10-50ns per await), which is negligible compared to emulation costs
+1. **Async Overhead**: Async/await has minimal overhead (typically negligible compared to emulation costs)
 2. **State Machine**: The C# compiler generates a state machine for async methods, adding a small amount of memory overhead
 3. **CPU State Management**: The infrastructure properly handles CPU state suspension/resumption across async boundaries
 4. **Cancellation**: When using cancellation tokens, check frequently enough but not too often to balance responsiveness and performance
