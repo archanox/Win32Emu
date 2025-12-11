@@ -77,7 +77,7 @@ public class SingleStepDebugTest
 		// Execute instruction
 		_output.WriteLine("Executing instruction...");
 		cpu.SingleStep(memory);
-		cpu.SingleStep(memory);
+		cpu.SingleStep(memory); //Execute HLT too.
 		
 		var finalEip = cpu.GetEip();
 		_output.WriteLine($"Final EIP: 0x{finalEip:X8}");
