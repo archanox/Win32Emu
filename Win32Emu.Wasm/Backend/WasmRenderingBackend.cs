@@ -29,7 +29,7 @@ public class WasmRenderingBackend : IRenderingBackend
 	private int _height;
 	private string _canvasId = "emulatorCanvas";
 	private byte[]? _frameBuffer;
-	private bool _renderingErrorOccurred = false;
+	private volatile bool _renderingErrorOccurred = false;
 	
 	public event EventHandler<UIEventArgs>? UIEvent;
 	
@@ -203,6 +203,8 @@ public class WasmRenderingBackend : IRenderingBackend
 			_logger.LogDebug("[WASM] Calling updateCanvas: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
 				_canvasId, _width, _height, base64Data.Length);
 			
+			// Use fire-and-forget pattern but with proper error tracking
+			// We return success immediately for performance, but track errors for future calls
 			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", _canvasId, base64Data, _width, _height)
 				.AsTask()
 				.ContinueWith(t =>
@@ -219,9 +221,9 @@ public class WasmRenderingBackend : IRenderingBackend
 						{
 							_jsRuntime.InvokeVoidAsync("stopEmulatorOnError", exception?.Message ?? "Unknown error");
 						}
-						catch
+						catch (Exception notifyEx)
 						{
-							// Ignore if notification fails
+							_logger.LogWarning(notifyEx, "[WASM] Failed to notify JavaScript to stop emulator after rendering error");
 						}
 					}
 					else
@@ -230,7 +232,8 @@ public class WasmRenderingBackend : IRenderingBackend
 					}
 				});
 			
-			return !_renderingErrorOccurred;
+			// Return true immediately (fire-and-forget), errors will be caught on next call
+			return true;
 		}
 		catch (Exception ex)
 		{
