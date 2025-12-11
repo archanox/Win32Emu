@@ -178,29 +178,38 @@ Possible reasons:
 - Tutorial: https://www.codeproject.com/articles/Introduction-to-DirectDraw-and-Surface-Blitting
 - WASM freeze fix: `WASM_FREEZE_FIX.md` (previous async/await improvements)
 
-## Future Improvements
+## Implemented Improvements
 
-### Frame Buffering
+### Frame Buffering ✅
 
-Consider implementing frame buffering to queue frames drawn before initialization:
+**Status**: Implemented as of the latest commit.
 
-```csharp
-private Queue<FrameData> _pendingFrames = new();
+Frame buffering has been implemented to queue frames drawn before initialization completes. This provides an additional safety mechanism for edge cases where frames might be drawn during the initialization process.
 
-if (!backend.IsInitialized && backend.InitializationTask != null)
-{
-    // Buffer frame for later
-    _pendingFrames.Enqueue(new FrameData(surface.Bits, surface.Width, surface.Height));
-    
-    // Process buffered frames once initialized
-    await backend.InitializationTask;
-    while (_pendingFrames.Count > 0)
-    {
-        var frame = _pendingFrames.Dequeue();
-        backend.UpdateFrameBuffer(frame.Data, frame.Pitch);
-    }
-}
+**Implementation Details**:
+- `DirectDrawObject` now includes a `Queue<PendingFrameData>` for buffering frames
+- `PendingFrameData` class stores frame data (RGBA bytes), dimensions, and pitch
+- `UpdateRenderingBackend` buffers frames when backend is not initialized (WASM mode only)
+- `ProcessPendingFrames` replays buffered frames after the first successful frame update
+- Frame buffering is initialized in `SetDisplayMode` for WASM mode
+
+**Key Features**:
+- Frames are automatically buffered if drawn before backend initialization completes
+- Buffered frames are replayed in order once initialization is complete
+- Frame data is copied to prevent modifications during buffering
+- Queue is cleared after replay to free memory
+- Detailed logging for debugging frame buffering operations
+
+**Example Logs**:
 ```
+[DDraw] Initialized frame buffering for WASM mode
+[DDraw] Buffered frame (640x480, 1228800 bytes) - backend not initialized yet. Queue size: 1
+[DDraw] Processing 1 buffered frame(s)
+[DDraw] Replayed buffered frame 1/1 (640x480)
+[DDraw] Successfully replayed 1 buffered frame(s)
+```
+
+### Future Improvements
 
 ### Async COM Methods
 

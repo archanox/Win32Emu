@@ -327,6 +327,29 @@ namespace Win32Emu.Win32.Modules
 			public Rendering.IRenderingBackend? RenderingBackend { get; set; }
 			public uint CooperativeLevel { get; set; }
 			public IntPtr WindowHandle { get; set; }
+			
+			// Frame buffering for WASM mode to queue frames drawn before backend initialization completes
+			public Queue<PendingFrameData>? PendingFrames { get; set; }
+		}
+		
+		/// <summary>
+		/// Represents a frame that was drawn before the rendering backend was fully initialized.
+		/// Used for frame buffering in WASM mode to prevent frame loss during async initialization.
+		/// </summary>
+		private sealed class PendingFrameData
+		{
+			public byte[] Data { get; set; }
+			public int Width { get; set; }
+			public int Height { get; set; }
+			public int Pitch { get; set; }
+			
+			public PendingFrameData(byte[] data, int width, int height, int pitch)
+			{
+				Data = data;
+				Width = width;
+				Height = height;
+				Pitch = pitch;
+			}
 		}
 
 		private sealed class DirectDrawSurface
@@ -3209,6 +3232,11 @@ namespace Win32Emu.Win32.Modules
 					// to the browser event loop through JavaScript interop (Task.Delay in JS setTimeout).
 					if (PlatformHelpers.IsWasm)
 					{
+						// Initialize frame buffering queue for WASM mode as an additional safety mechanism
+						// This ensures frames drawn during initialization (edge cases) are not lost
+						obj.PendingFrames = new Queue<PendingFrameData>();
+						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
+						
 						_logger.LogInformation("[DDraw] Initializing rendering backend with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
 						try
 						{
@@ -3439,6 +3467,10 @@ namespace Win32Emu.Win32.Modules
 		/// <para>
 		/// <b>Note:</b> This method should only be called for primary surfaces.
 		/// </para>
+		/// <para>
+		/// In WASM mode, if the backend is not yet initialized, the frame will be buffered
+		/// and replayed once initialization completes.
+		/// </para>
 		/// </summary>
 		private void UpdateRenderingBackend(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
@@ -3448,8 +3480,50 @@ namespace Win32Emu.Win32.Modules
 				return;
 			}
 
-			if (ddrawObj.RenderingBackend == null || !ddrawObj.RenderingBackend.IsInitialized)
+			if (ddrawObj.RenderingBackend == null)
 			{
+				_logger.LogWarning("[DDraw] Rendering backend is null, skipping frame");
+				return;
+			}
+
+			// Check if backend is initialized
+			if (!ddrawObj.RenderingBackend.IsInitialized)
+			{
+				// In WASM mode, buffer frames drawn before initialization completes
+				if (PlatformHelpers.IsWasm)
+				{
+					// Check if surface bits are available
+					if (surface.Bits == null)
+					{
+						_logger.LogWarning("[DDraw] Surface bits are null, cannot buffer frame");
+						return;
+					}
+
+					// Initialize pending frames queue if needed
+					if (ddrawObj.PendingFrames == null)
+					{
+						ddrawObj.PendingFrames = new Queue<PendingFrameData>();
+					}
+
+					// Convert surface data to RGBA for buffering
+					byte[] displayData = ConvertSurfaceToRGBA(surface, ddrawObj);
+					if (displayData != null)
+					{
+						var displayPitch = surface.Width * BytesPerPixelRgba;
+						
+						// Make a copy of the data to prevent modifications
+						var dataCopy = new byte[displayData.Length];
+						Array.Copy(displayData, dataCopy, displayData.Length);
+						
+						ddrawObj.PendingFrames.Enqueue(new PendingFrameData(dataCopy, surface.Width, surface.Height, displayPitch));
+						_logger.LogInformation("[DDraw] Buffered frame ({Width}x{Height}, {DataSize} bytes) - backend not initialized yet. Queue size: {QueueSize}", 
+							surface.Width, surface.Height, displayData.Length, ddrawObj.PendingFrames.Count);
+					}
+				}
+				else
+				{
+					_logger.LogDebug("[DDraw] Rendering backend not initialized, skipping frame");
+				}
 				return;
 			}
 
@@ -3462,73 +3536,9 @@ namespace Win32Emu.Win32.Modules
 					return;
 				}
 
-				byte[] displayData;
-
-				// Check if we need to convert the surface data based on bit depth
-				if (ddrawObj.BitsPerPixel == 8)
-				{
-					// 8-bit palettized mode
-					if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
-					{
-						// Convert palettized (8-bit indexed) to RGBA using attached palette
-						_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA");
-						displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-							surface.Bits,
-							palette.Entries,
-							surface.Width,
-							surface.Height,
-							surface.Pitch);
-					}
-					else
-					{
-						// No palette set yet - use a default grayscale palette
-						_logger.LogWarning("[DDraw] No palette set for 8-bit surface, using grayscale");
-						var grayscalePalette = new uint[256];
-						for (var i = 0; i < 256; i++)
-						{
-							grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
-						}
-
-						displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-							surface.Bits,
-							grayscalePalette,
-							surface.Width,
-							surface.Height,
-							surface.Pitch);
-					}
-				}
-				else if (ddrawObj.BitsPerPixel == 16)
-				{
-					// Convert 16-bit RGB565 to RGBA
-					_logger.LogDebug("[DDraw] Converting 16-bit RGB565 surface to RGBA");
-					displayData = ddrawObj.RenderingBackend.Convert16BitToRGBA(
-						surface.Bits,
-						surface.Width,
-						surface.Height,
-						surface.Pitch);
-				}
-				else if (ddrawObj.BitsPerPixel == 24)
-				{
-					// Convert 24-bit RGB/BGR to RGBA
-					_logger.LogDebug("[DDraw] Converting 24-bit surface to RGBA");
-					displayData = ddrawObj.RenderingBackend.Convert24BitToRGBA(
-						surface.Bits,
-						surface.Width,
-						surface.Height,
-						surface.Pitch);
-				}
-				else if (ddrawObj.BitsPerPixel == 32)
-				{
-					// 32-bit RGBA - pass through
-					displayData = surface.Bits;
-				}
-				else
-				{
-					// Unknown format - treat as RGBA
-					_logger.LogWarning("[DDraw] Unknown bit depth {Bpp}, treating as RGBA", ddrawObj.BitsPerPixel);
-					displayData = surface.Bits;
-				}
-
+				// Convert surface to RGBA format
+				byte[] displayData = ConvertSurfaceToRGBA(surface, ddrawObj);
+				
 				// Update the rendering backend texture with the converted surface data
 				if (displayData != null)
 				{
@@ -3537,12 +3547,153 @@ namespace Win32Emu.Win32.Modules
 						surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length);
 					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
 					_logger.LogDebug("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
+					
+					// Process any buffered frames after the first successful frame update
+					ProcessPendingFrames(ddrawObj);
 				}
 			}
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[DDraw] Failed to update rendering backend texture");
 			}
+		}
+		
+		/// <summary>
+		/// Converts surface data to RGBA format based on the surface's bit depth.
+		/// </summary>
+		/// <param name="surface">The DirectDraw surface to convert</param>
+		/// <param name="ddrawObj">The DirectDraw object containing rendering backend and bit depth info</param>
+		/// <returns>RGBA byte array, or null if conversion fails</returns>
+		private byte[] ConvertSurfaceToRGBA(DirectDrawSurface surface, DirectDrawObject ddrawObj)
+		{
+			if (surface.Bits == null)
+			{
+				return null!;
+			}
+
+			if (ddrawObj.RenderingBackend == null)
+			{
+				_logger.LogWarning("[DDraw] Rendering backend is null during conversion");
+				return null!;
+			}
+
+			byte[] displayData;
+
+			// Check if we need to convert the surface data based on bit depth
+			if (ddrawObj.BitsPerPixel == 8)
+			{
+				// 8-bit palettized mode
+				if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
+				{
+					// Convert palettized (8-bit indexed) to RGBA using attached palette
+					_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA");
+					displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
+						surface.Bits,
+						palette.Entries,
+						surface.Width,
+						surface.Height,
+						surface.Pitch);
+				}
+				else
+				{
+					// No palette set yet - use a default grayscale palette
+					_logger.LogWarning("[DDraw] No palette set for 8-bit surface, using grayscale");
+					var grayscalePalette = new uint[256];
+					for (var i = 0; i < 256; i++)
+					{
+						grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
+					}
+
+					displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
+						surface.Bits,
+						grayscalePalette,
+						surface.Width,
+						surface.Height,
+						surface.Pitch);
+				}
+			}
+			else if (ddrawObj.BitsPerPixel == 16)
+			{
+				// Convert 16-bit RGB565 to RGBA
+				_logger.LogDebug("[DDraw] Converting 16-bit RGB565 surface to RGBA");
+				displayData = ddrawObj.RenderingBackend.Convert16BitToRGBA(
+					surface.Bits,
+					surface.Width,
+					surface.Height,
+					surface.Pitch);
+			}
+			else if (ddrawObj.BitsPerPixel == 24)
+			{
+				// Convert 24-bit RGB/BGR to RGBA
+				_logger.LogDebug("[DDraw] Converting 24-bit surface to RGBA");
+				displayData = ddrawObj.RenderingBackend.Convert24BitToRGBA(
+					surface.Bits,
+					surface.Width,
+					surface.Height,
+					surface.Pitch);
+			}
+			else if (ddrawObj.BitsPerPixel == 32)
+			{
+				// 32-bit RGBA - pass through
+				displayData = surface.Bits;
+			}
+			else
+			{
+				// Unknown format - treat as RGBA
+				_logger.LogWarning("[DDraw] Unknown bit depth {Bpp}, treating as RGBA", ddrawObj.BitsPerPixel);
+				displayData = surface.Bits;
+			}
+
+			return displayData;
+		}
+		
+		/// <summary>
+		/// Processes any frames that were buffered before the rendering backend was initialized.
+		/// This ensures frames drawn during initialization are not lost.
+		/// </summary>
+		/// <param name="ddrawObj">The DirectDraw object containing the pending frames queue</param>
+		private void ProcessPendingFrames(DirectDrawObject ddrawObj)
+		{
+			if (ddrawObj.PendingFrames == null || ddrawObj.PendingFrames.Count == 0)
+			{
+				return;
+			}
+
+			if (ddrawObj.RenderingBackend == null || !ddrawObj.RenderingBackend.IsInitialized)
+			{
+				return;
+			}
+
+			_logger.LogInformation("[DDraw] Processing {Count} buffered frame(s)", ddrawObj.PendingFrames.Count);
+
+			var processedCount = 0;
+			while (ddrawObj.PendingFrames.Count > 0)
+			{
+				var frame = ddrawObj.PendingFrames.Dequeue();
+				try
+				{
+					var result = ddrawObj.RenderingBackend.UpdateFrameBuffer(frame.Data, frame.Pitch);
+					if (result)
+					{
+						processedCount++;
+						_logger.LogDebug("[DDraw] Replayed buffered frame {Index}/{Total} ({Width}x{Height})", 
+							processedCount, processedCount, frame.Width, frame.Height);
+					}
+					else
+					{
+						_logger.LogWarning("[DDraw] Failed to replay buffered frame {Index}", processedCount + 1);
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[DDraw] Error replaying buffered frame");
+				}
+			}
+
+			_logger.LogInformation("[DDraw] Successfully replayed {Count} buffered frame(s)", processedCount);
+			
+			// Clear the queue to free memory
+			ddrawObj.PendingFrames = null;
 		}
 
 		// IDirectDrawClipper interface methods
