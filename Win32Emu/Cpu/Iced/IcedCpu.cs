@@ -1285,7 +1285,7 @@ public class IcedCpu : IAsyncCpu
 		}
 		else
 		{
-			throw new NotImplementedException($"[JitCpu] MOVD with unsupported operand types: {insn.Op0Kind}, {insn.Op1Kind}");
+			throw new NotImplementedException($"[IcedCpu] MOVD with unsupported operand types: {insn.Op0Kind}, {insn.Op1Kind}");
 		}
 	}
 
