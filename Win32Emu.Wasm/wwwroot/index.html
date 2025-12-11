@@ -377,20 +377,31 @@
 			console.log("Emulator canvas initialized successfully");
 		};
 		
+		// Global flag to stop emulator on error
+		window.emulatorStopped = false;
+		window.emulatorError = null;
+		
+		// Function to stop emulator on error
+		window.stopEmulatorOnError = (errorMessage) => {
+			window.emulatorStopped = true;
+			window.emulatorError = errorMessage;
+			console.error("🛑 EMULATOR STOPPED DUE TO ERROR:");
+			console.error(errorMessage);
+			alert(`Emulator stopped due to rendering error:\n\n${errorMessage}\n\nCheck console for details.`);
+		};
+		
 		// Update canvas with RGBA frame buffer data
 		window.updateCanvas = (canvasId, base64Data, width, height) => {
 			const BYTES_PER_PIXEL = 4; // RGBA format
 			
 			const canvas = document.getElementById(canvasId);
 			if (!canvas) {
-				console.error("Canvas not found: " + canvasId);
-				return;
+				throw new Error("Canvas not found: " + canvasId);
 			}
 			
 			const ctx = canvas.getContext('2d');
 			if (!ctx) {
-				console.error("Could not get 2D context");
-				return;
+				throw new Error("Could not get 2D context");
 			}
 			
 			// Resize canvas if dimensions changed
@@ -411,14 +422,52 @@
 			// Validate data length matches expected size
 			const expectedLength = width * height * BYTES_PER_PIXEL;
 			if (len !== expectedLength) {
-				console.error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${len} bytes`);
-				return;
+				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${len} bytes`);
 			}
 			
 			// Create ImageData and draw to canvas
 			const imageData = new ImageData(bytes, width, height);
 			ctx.putImageData(imageData, 0, 0);
 			console.log(`Canvas updated successfully: ${width}x${height}`);
+		};
+		
+		// Wrapper function that stops emulator on error
+		window.updateCanvasWithErrorHandling = (canvasId, base64Data, width, height) => {
+			// Check if emulator was already stopped
+			if (window.emulatorStopped) {
+				console.error("🛑 Emulator is stopped, ignoring canvas update");
+				throw new Error("Emulator stopped due to previous error: " + window.emulatorError);
+			}
+			
+			try {
+				console.log(`[updateCanvas] Called: ${canvasId}, ${width}x${height}, data length: ${base64Data?.length || 0}`);
+				
+				// Validate inputs
+				if (!canvasId) {
+					throw new Error("Canvas ID is null or undefined");
+				}
+				if (!base64Data) {
+					throw new Error("Base64 data is null or undefined");
+				}
+				if (width <= 0 || height <= 0) {
+					throw new Error(`Invalid dimensions: ${width}x${height}`);
+				}
+				
+				// Call the actual update function
+				window.updateCanvas(canvasId, base64Data, width, height);
+				
+				console.log(`[updateCanvas] SUCCESS`);
+			} catch (error) {
+				// Stop the emulator on any error
+				const errorMsg = `Canvas update failed: ${error.message}\n\nStack: ${error.stack}`;
+				console.error("🛑 CRITICAL ERROR in updateCanvas:");
+				console.error(errorMsg);
+				
+				window.stopEmulatorOnError(errorMsg);
+				
+				// Re-throw to propagate to C#
+				throw error;
+			}
 		};
 		
 		// Web Audio API
