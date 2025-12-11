@@ -396,14 +396,12 @@
 			
 			const canvas = document.getElementById(canvasId);
 			if (!canvas) {
-				console.error("Canvas not found: " + canvasId);
-				return;
+				throw new Error("Canvas not found: " + canvasId);
 			}
 			
 			const ctx = canvas.getContext('2d');
 			if (!ctx) {
-				console.error("Could not get 2D context");
-				return;
+				throw new Error("Could not get 2D context");
 			}
 			
 			// Resize canvas if dimensions changed
@@ -424,8 +422,7 @@
 			// Validate data length matches expected size
 			const expectedLength = width * height * BYTES_PER_PIXEL;
 			if (len !== expectedLength) {
-				console.error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${len} bytes`);
-				return;
+				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${len} bytes`);
 			}
 			
 			// Create ImageData and draw to canvas
