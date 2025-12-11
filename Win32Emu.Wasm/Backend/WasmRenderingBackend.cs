@@ -29,6 +29,7 @@ public class WasmRenderingBackend : IRenderingBackend
 	private int _height;
 	private string _canvasId = "emulatorCanvas";
 	private byte[]? _frameBuffer;
+	private bool _renderingErrorOccurred = false;
 	
 	public event EventHandler<UIEventArgs>? UIEvent;
 	
@@ -154,6 +155,13 @@ public class WasmRenderingBackend : IRenderingBackend
 
 	public bool UpdateFrameBuffer(byte[] data, int pitch)
 	{
+		// Stop rendering if a previous error occurred
+		if (_renderingErrorOccurred)
+		{
+			_logger.LogError("[WASM] Rendering stopped due to previous error. Emulator execution halted.");
+			return false;
+		}
+
 		if (!_initialized || _frameBuffer == null)
 		{
 			_logger.LogWarning("[WASM] UpdateFrameBuffer called but backend not initialized (_initialized={Initialized}, _frameBuffer={FrameBufferNull})", 
@@ -188,25 +196,46 @@ public class WasmRenderingBackend : IRenderingBackend
 				}
 			}
 			
-			// Update canvas through JavaScript
-			// Note: We don't await this to avoid blocking, but we use ContinueWith to log any errors
-			// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
+			// Update canvas through JavaScript with better error handling
 			var base64Data = Convert.ToBase64String(_frameBuffer);
-			_jsRuntime.InvokeVoidAsync("updateCanvas", _canvasId, base64Data, _width, _height)
+			
+			// Log the call for debugging
+			_logger.LogDebug("[WASM] Calling updateCanvas: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
+				_canvasId, _width, _height, base64Data.Length);
+			
+			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", _canvasId, base64Data, _width, _height)
 				.AsTask()
 				.ContinueWith(t =>
 				{
 					if (t.IsFaulted)
 					{
-						_logger.LogError(t.Exception?.GetBaseException(), "[WASM] Failed to invoke updateCanvas JavaScript function");
+						_renderingErrorOccurred = true;
+						var exception = t.Exception?.GetBaseException();
+						_logger.LogCritical(exception, "[WASM] CRITICAL ERROR in updateCanvas - Stopping emulator execution!");
+						_logger.LogError("[WASM] Error details: {Message}", exception?.Message);
+						
+						// Try to notify JavaScript to stop the emulator
+						try
+						{
+							_jsRuntime.InvokeVoidAsync("stopEmulatorOnError", exception?.Message ?? "Unknown error");
+						}
+						catch
+						{
+							// Ignore if notification fails
+						}
+					}
+					else
+					{
+						_logger.LogTrace("[WASM] Canvas update completed successfully");
 					}
 				});
 			
-			return true;
+			return !_renderingErrorOccurred;
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[WASM] Failed to update frame buffer");
+			_renderingErrorOccurred = true;
+			_logger.LogCritical(ex, "[WASM] CRITICAL ERROR in UpdateFrameBuffer - Stopping emulator execution!");
 			return false;
 		}
 	}
