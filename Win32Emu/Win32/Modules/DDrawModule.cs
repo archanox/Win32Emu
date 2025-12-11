@@ -3438,7 +3438,7 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		private void UpdateRenderingBackend(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
-			if (!ddrawObj.RenderingBackend?.IsInitialized ?? true)
+			if (ddrawObj.RenderingBackend?.IsInitialized != true)
 			{
 				return;
 			}
