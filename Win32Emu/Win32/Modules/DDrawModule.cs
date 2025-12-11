@@ -3248,12 +3248,13 @@ namespace Win32Emu.Win32.Modules
 							else
 							{
 								_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
+								return (uint)DDResult.DDERR_GENERIC;
 							}
 						}
 						catch (Exception ex)
 						{
 							_logger.LogError(ex, "[DDraw] Rendering backend initialization failed (WASM mode)");
-							// Continue anyway - UpdateRenderingBackend will check IsInitialized
+							return (uint)DDResult.DDERR_GENERIC;
 						}
 					}
 					else
