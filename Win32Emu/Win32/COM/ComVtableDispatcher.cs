@@ -490,10 +490,74 @@ public class ComVtableDispatcher
 	}
 	
 	/// <summary>
+	/// Helper to create ComAsyncMethodInfo from a delegate type for async COM method handlers.
+	/// Automatically calculates argBytes from the delegate signature.
+	/// This enables proper async/await throughout the COM call chain for operations that need to yield
+	/// to the browser event loop in WASM or perform other async operations.
+	/// </summary>
+	/// <typeparam name="TDelegate">Delegate type with [UnmanagedFunctionPointer(CallingConvention.StdCall)]</typeparam>
+	/// <param name="asyncHandler">Async handler function that implements the delegate logic</param>
+	/// <returns>ComAsyncMethodInfo with automatically calculated argBytes</returns>
+	public static ComAsyncMethodInfo FromAsyncDelegate<TDelegate>(Func<ICpu, VirtualMemory, Task<uint>> asyncHandler) where TDelegate : Delegate
+	{
+		var delegateType = typeof(TDelegate);
+		
+		// Verify the delegate has the correct attribute
+		if (!ComDelegateHelper.HasStdCallConvention(delegateType))
+		{
+			throw new InvalidOperationException($"Delegate type {delegateType.Name} must have [UnmanagedFunctionPointer(CallingConvention.StdCall)] attribute");
+		}
+		
+		// Calculate argument bytes from delegate signature
+		var argBytes = ComDelegateHelper.GetArgBytes(delegateType);
+		
+		return new ComAsyncMethodInfo(asyncHandler, argBytes);
+	}
+	
+	/// <summary>
 	/// Create a COM object with async vtable handlers
 	/// </summary>
 	public uint CreateComObjectAsync(string interfaceName, Dictionary<string, ComAsyncMethodInfo> methods)
 	{
+		return CreateComObjectInternal(
+			interfaceName,
+			methods,
+			info => null,
+			info => info.AsyncHandler,
+			info => info.ArgBytes,
+			isAsync: true);
+	}
+	
+	/// <summary>
+	/// Create a COM object with async vtable handlers using an ordered list to ensure correct method order.
+	/// This is the REQUIRED way to create async COM objects to ensure vtable methods are in correct order.
+	/// </summary>
+	/// <remarks>
+	/// IMPORTANT: This method MUST be used when vtable method order matters, which is ALWAYS for COM interfaces.
+	/// COM interfaces require methods to be at specific offsets in the vtable. Incorrect ordering will cause
+	/// crashes when programs call methods at the wrong offsets.
+	/// 
+	/// The async variant allows proper async/await throughout the COM call chain for operations that need to
+	/// yield to the browser event loop in WASM or perform other async operations.
+	/// 
+	/// Example:
+	/// <code>
+	/// var methods = new List&lt;KeyValuePair&lt;string, ComAsyncMethodInfo&gt;&gt;
+	/// {
+	///     new("QueryInterface", ComVtableDispatcher.FromAsyncDelegate&lt;IDirectDraw.QueryInterface&gt;(async (cpu, mem) => await ComQueryInterfaceAsync(cpu, mem))),
+	///     new("AddRef", ComVtableDispatcher.FromAsyncDelegate&lt;IDirectDraw.AddRef&gt;(async (cpu, mem) => await ComAddRefAsync(cpu, mem))),
+	///     new("Release", ComVtableDispatcher.FromAsyncDelegate&lt;IDirectDraw.Release&gt;(async (cpu, mem) => await ComReleaseAsync(cpu, mem))),
+	///     new("SetDisplayMode", ComVtableDispatcher.FromAsyncDelegate&lt;IDirectDraw.SetDisplayMode&gt;(async (cpu, mem) => await DDraw_SetDisplayModeAsync(cpu, mem, ddrawHandle))),
+	///     // ... other methods in exact COM interface order
+	/// };
+	/// var comAddr = dispatcher.CreateComObjectAsyncOrdered("IDirectDraw", methods);
+	/// </code>
+	/// </remarks>
+	/// <param name="interfaceName">Name of the COM interface</param>
+	/// <param name="methods">Ordered list of method name/async info pairs in exact COM interface order</param>
+	public uint CreateComObjectAsyncOrdered(string interfaceName, List<KeyValuePair<string, ComAsyncMethodInfo>> methods)
+	{
+		// Pass the list directly - no conversion to dictionary to preserve order
 		return CreateComObjectInternal(
 			interfaceName,
 			methods,
