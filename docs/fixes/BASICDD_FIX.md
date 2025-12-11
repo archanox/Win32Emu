@@ -32,7 +32,7 @@ A runtime binary patch is applied when BasicDD.exe is detected:
 
 ### Implementation
 
-**Location**: `Win32Emu/Emulator.cs`, lines 765-804
+**Location**: `Win32Emu/Emulator.cs`, `ApplyExecutableSpecificWorkarounds()` method
 
 **Patch Details**:
 - Address: `0x00401412` (epilogue of FUN_00401310)
@@ -40,18 +40,18 @@ A runtime binary patch is applied when BasicDD.exe is detected:
 - Patched byte: `0x94` (148 decimal)
 - Effect: Corrects stack cleanup from 140 bytes to 148 bytes
 
-**Code**:
+**Code** (see `Win32Emu/Emulator.cs` for full implementation):
 ```csharp
 private const uint BASICDD_EPILOGUE_PATCH_ADDRESS = 0x00401412u;
 private const byte BASICDD_ORIGINAL_STACK_ADJUSTMENT = 0x8C;  // 140 bytes
 private const byte BASICDD_CORRECTED_STACK_ADJUSTMENT = 0x94; // 148 bytes (adds 8 bytes)
 
-// Patch applied during emulator initialization
+// Patch applied during emulator initialization in ApplyExecutableSpecificWorkarounds()
 if (originalByte == BASICDD_ORIGINAL_STACK_ADJUSTMENT)
 {
     _vm.Write8(BASICDD_EPILOGUE_PATCH_ADDRESS, BASICDD_CORRECTED_STACK_ADJUSTMENT);
-    _logger.LogWarning("[Emulator] Applied BasicDD.exe workaround: Patched function epilogue at 0x{Address:X8} (0x{Original:X2} -> 0x{Corrected:X2})", 
-        BASICDD_EPILOGUE_PATCH_ADDRESS, BASICDD_ORIGINAL_STACK_ADJUSTMENT, BASICDD_CORRECTED_STACK_ADJUSTMENT);
+    _logger.LogWarning("[Emulator] Applied BasicDD.exe workaround: Patched function epilogue at 0x{Address:X8}", 
+        BASICDD_EPILOGUE_PATCH_ADDRESS);
 }
 ```
 
@@ -185,6 +185,6 @@ The fix was developed through extensive analysis documented in:
 ---
 
 **Status**: Fixed ✅  
-**Last Verified**: 2025-12-11  
+**Last Verified**: December 2024  
 **Emulator Version**: Latest  
 **Executable**: BasicDD.exe from DirectX SDK
