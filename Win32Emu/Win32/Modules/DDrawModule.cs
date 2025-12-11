@@ -175,36 +175,36 @@ namespace Win32Emu.Win32.Modules
 			};
 			_ddrawObjects[ddrawHandle] = ddrawObj;
 
-			// Create COM vtable for IDirectDraw interface
-			var vtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
+			// Create COM vtable for IDirectDraw interface with async handlers
+			var vtableMethods = new List<KeyValuePair<string, ComAsyncMethodInfo>>
 			{
-				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
-				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
-				new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
-				new("Compact", ComVtableDispatcher.FromDelegate<IDirectDraw.Compact>((cpu, mem) => DDraw_Compact(cpu, mem))),
-				new("CreateClipper", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateClipper>((cpu, mem) => DDraw_CreateClipper(cpu, mem))),
-				new("CreatePalette", ComVtableDispatcher.FromDelegate<IDirectDraw.CreatePalette>((cpu, mem) => DDraw_CreatePalette(cpu, mem))),
-				new("CreateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateSurface>((cpu, mem) => DDraw_CreateSurface(cpu, mem))),
-				new("DuplicateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.DuplicateSurface>((cpu, mem) => DDraw_DuplicateSurface(cpu, mem))),
-				new("EnumDisplayModes", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumDisplayModes>((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem))),
-				new("EnumSurfaces", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumSurfaces>((cpu, mem) => DDraw_EnumSurfaces(cpu, mem))),
-				new("FlipToGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.FlipToGDISurface>((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem))),
-				new("GetCaps", ComVtableDispatcher.FromDelegate<IDirectDraw.GetCaps>((cpu, mem) => DDraw_GetCaps(cpu, mem))),
-				new("GetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.GetDisplayMode>((cpu, mem) => DDraw_GetDisplayMode(cpu, mem))),
-				new("GetFourCCCodes", ComVtableDispatcher.FromDelegate<IDirectDraw.GetFourCCCodes>((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem))),
-				new("GetGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.GetGDISurface>((cpu, mem) => DDraw_GetGDISurface(cpu, mem))),
-				new("GetMonitorFrequency", ComVtableDispatcher.FromDelegate<IDirectDraw.GetMonitorFrequency>((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem))),
-				new("GetScanLine", ComVtableDispatcher.FromDelegate<IDirectDraw.GetScanLine>((cpu, mem) => DDraw_GetScanLine(cpu, mem))),
-				new("GetVerticalBlankStatus", ComVtableDispatcher.FromDelegate<IDirectDraw.GetVerticalBlankStatus>((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem))),
-				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDraw.Initialize>((cpu, mem) => DDraw_Initialize(cpu, mem))),
-				new("RestoreDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.RestoreDisplayMode>((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem))),
-				new("SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectDraw.SetCooperativeLevel>((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle))),
-				new("SetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.SetDisplayMode>((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle))),
-				new("WaitForVerticalBlank", ComVtableDispatcher.FromDelegate<IDirectDraw.WaitForVerticalBlank>((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem)))
+				new("QueryInterface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.QueryInterface>(async (cpu, mem) => await ComQueryInterfaceAsync(cpu, mem))),
+				new("AddRef", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.AddRef>(async (cpu, mem) => await ComAddRefAsync(cpu, mem))),
+				new("Release", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Release>(async (cpu, mem) => await ComReleaseAsync(cpu, mem))),
+				new("Compact", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Compact>(async (cpu, mem) => await Task.FromResult(DDraw_Compact(cpu, mem)))),
+				new("CreateClipper", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateClipper>(async (cpu, mem) => await Task.FromResult(DDraw_CreateClipper(cpu, mem)))),
+				new("CreatePalette", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreatePalette>(async (cpu, mem) => await Task.FromResult(DDraw_CreatePalette(cpu, mem)))),
+				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_CreateSurface(cpu, mem)))),
+				new("DuplicateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.DuplicateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_DuplicateSurface(cpu, mem)))),
+				new("EnumDisplayModes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumDisplayModes>(async (cpu, mem) => await Task.FromResult(DDraw_EnumDisplayModes(cpu, mem)))),
+				new("EnumSurfaces", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumSurfaces>(async (cpu, mem) => await Task.FromResult(DDraw_EnumSurfaces(cpu, mem)))),
+				new("FlipToGDISurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.FlipToGDISurface>(async (cpu, mem) => await Task.FromResult(DDraw_FlipToGDISurface(cpu, mem)))),
+				new("GetCaps", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetCaps>(async (cpu, mem) => await Task.FromResult(DDraw_GetCaps(cpu, mem)))),
+				new("GetDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetDisplayMode>(async (cpu, mem) => await Task.FromResult(DDraw_GetDisplayMode(cpu, mem)))),
+				new("GetFourCCCodes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetFourCCCodes>(async (cpu, mem) => await Task.FromResult(DDraw_GetFourCCCodes(cpu, mem)))),
+				new("GetGDISurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetGDISurface>(async (cpu, mem) => await Task.FromResult(DDraw_GetGDISurface(cpu, mem)))),
+				new("GetMonitorFrequency", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetMonitorFrequency>(async (cpu, mem) => await Task.FromResult(DDraw_GetMonitorFrequency(cpu, mem)))),
+				new("GetScanLine", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetScanLine>(async (cpu, mem) => await Task.FromResult(DDraw_GetScanLine(cpu, mem)))),
+				new("GetVerticalBlankStatus", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetVerticalBlankStatus>(async (cpu, mem) => await Task.FromResult(DDraw_GetVerticalBlankStatus(cpu, mem)))),
+				new("Initialize", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Initialize>(async (cpu, mem) => await Task.FromResult(DDraw_Initialize(cpu, mem)))),
+				new("RestoreDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.RestoreDisplayMode>(async (cpu, mem) => await Task.FromResult(DDraw_RestoreDisplayMode(cpu, mem)))),
+				new("SetCooperativeLevel", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetCooperativeLevel>(async (cpu, mem) => await Task.FromResult(DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle)))),
+				new("SetDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetDisplayMode>(async (cpu, mem) => await DDraw_SetDisplayModeAsync(cpu, mem, ddrawHandle))),
+				new("WaitForVerticalBlank", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.WaitForVerticalBlank>(async (cpu, mem) => await Task.FromResult(DDraw_WaitForVerticalBlank(cpu, mem))))
 			};
 
-			// Create the COM object with vtable
-			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDraw", vtableMethods);
+			// Create the COM object with async vtable
+			var comObjectAddr = _env.ComDispatcher.CreateComObjectAsyncOrdered("IDirectDraw", vtableMethods);
 
 			// Store the COM object address in the DirectDraw object for reverse lookup
 			ddrawObj.ComObjectAddress = comObjectAddr;
@@ -262,38 +262,38 @@ namespace Win32Emu.Win32.Modules
 			};
 			_ddrawObjects[ddrawHandle] = ddrawObj;
 
-			// Create COM vtable for IDirectDraw interface
+			// Create COM vtable for IDirectDraw interface with async handlers
 			// IMPORTANT: Methods MUST be in exact COM interface order
 			// Using List<KeyValuePair> to guarantee insertion order
-			var vtableMethods = new List<KeyValuePair<string, ComMethodInfo>>
+			var vtableMethods = new List<KeyValuePair<string, ComAsyncMethodInfo>>
 			{
-				new("QueryInterface", ComVtableDispatcher.FromDelegate<IDirectDraw.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
-				new("AddRef", ComVtableDispatcher.FromDelegate<IDirectDraw.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
-				new("Release", ComVtableDispatcher.FromDelegate<IDirectDraw.Release>((cpu, mem) => ComRelease(cpu, mem))),
-				new("Compact", ComVtableDispatcher.FromDelegate<IDirectDraw.Compact>((cpu, mem) => DDraw_Compact(cpu, mem))),
-				new("CreateClipper", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateClipper>((cpu, mem) => DDraw_CreateClipper(cpu, mem))),
-				new("CreatePalette", ComVtableDispatcher.FromDelegate<IDirectDraw.CreatePalette>((cpu, mem) => DDraw_CreatePalette(cpu, mem))),
-				new("CreateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.CreateSurface>((cpu, mem) => DDraw_CreateSurface(cpu, mem))),
-				new("DuplicateSurface", ComVtableDispatcher.FromDelegate<IDirectDraw.DuplicateSurface>((cpu, mem) => DDraw_DuplicateSurface(cpu, mem))),
-				new("EnumDisplayModes", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumDisplayModes>((cpu, mem) => DDraw_EnumDisplayModes(cpu, mem))),
-				new("EnumSurfaces", ComVtableDispatcher.FromDelegate<IDirectDraw.EnumSurfaces>((cpu, mem) => DDraw_EnumSurfaces(cpu, mem))),
-				new("FlipToGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.FlipToGDISurface>((cpu, mem) => DDraw_FlipToGDISurface(cpu, mem))),
-				new("GetCaps", ComVtableDispatcher.FromDelegate<IDirectDraw.GetCaps>((cpu, mem) => DDraw_GetCaps(cpu, mem))),
-				new("GetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.GetDisplayMode>((cpu, mem) => DDraw_GetDisplayMode(cpu, mem))),
-				new("GetFourCCCodes", ComVtableDispatcher.FromDelegate<IDirectDraw.GetFourCCCodes>((cpu, mem) => DDraw_GetFourCCCodes(cpu, mem))),
-				new("GetGDISurface", ComVtableDispatcher.FromDelegate<IDirectDraw.GetGDISurface>((cpu, mem) => DDraw_GetGDISurface(cpu, mem))),
-				new("GetMonitorFrequency", ComVtableDispatcher.FromDelegate<IDirectDraw.GetMonitorFrequency>((cpu, mem) => DDraw_GetMonitorFrequency(cpu, mem))),
-				new("GetScanLine", ComVtableDispatcher.FromDelegate<IDirectDraw.GetScanLine>((cpu, mem) => DDraw_GetScanLine(cpu, mem))),
-				new("GetVerticalBlankStatus", ComVtableDispatcher.FromDelegate<IDirectDraw.GetVerticalBlankStatus>((cpu, mem) => DDraw_GetVerticalBlankStatus(cpu, mem))),
-				new("Initialize", ComVtableDispatcher.FromDelegate<IDirectDraw.Initialize>((cpu, mem) => DDraw_Initialize(cpu, mem))),
-				new("RestoreDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.RestoreDisplayMode>((cpu, mem) => DDraw_RestoreDisplayMode(cpu, mem))),
-				new("SetCooperativeLevel", ComVtableDispatcher.FromDelegate<IDirectDraw.SetCooperativeLevel>((cpu, mem) => DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle))),
-				new("SetDisplayMode", ComVtableDispatcher.FromDelegate<IDirectDraw.SetDisplayMode>((cpu, mem) => DDraw_SetDisplayMode(cpu, mem, ddrawHandle))),
-				new("WaitForVerticalBlank", ComVtableDispatcher.FromDelegate<IDirectDraw.WaitForVerticalBlank>((cpu, mem) => DDraw_WaitForVerticalBlank(cpu, mem)))
+				new("QueryInterface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.QueryInterface>(async (cpu, mem) => await ComQueryInterfaceAsync(cpu, mem))),
+				new("AddRef", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.AddRef>(async (cpu, mem) => await ComAddRefAsync(cpu, mem))),
+				new("Release", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Release>(async (cpu, mem) => await ComReleaseAsync(cpu, mem))),
+				new("Compact", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Compact>(async (cpu, mem) => await Task.FromResult(DDraw_Compact(cpu, mem)))),
+				new("CreateClipper", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateClipper>(async (cpu, mem) => await Task.FromResult(DDraw_CreateClipper(cpu, mem)))),
+				new("CreatePalette", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreatePalette>(async (cpu, mem) => await Task.FromResult(DDraw_CreatePalette(cpu, mem)))),
+				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_CreateSurface(cpu, mem)))),
+				new("DuplicateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.DuplicateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_DuplicateSurface(cpu, mem)))),
+				new("EnumDisplayModes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumDisplayModes>(async (cpu, mem) => await Task.FromResult(DDraw_EnumDisplayModes(cpu, mem)))),
+				new("EnumSurfaces", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumSurfaces>(async (cpu, mem) => await Task.FromResult(DDraw_EnumSurfaces(cpu, mem)))),
+				new("FlipToGDISurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.FlipToGDISurface>(async (cpu, mem) => await Task.FromResult(DDraw_FlipToGDISurface(cpu, mem)))),
+				new("GetCaps", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetCaps>(async (cpu, mem) => await Task.FromResult(DDraw_GetCaps(cpu, mem)))),
+				new("GetDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetDisplayMode>(async (cpu, mem) => await Task.FromResult(DDraw_GetDisplayMode(cpu, mem)))),
+				new("GetFourCCCodes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetFourCCCodes>(async (cpu, mem) => await Task.FromResult(DDraw_GetFourCCCodes(cpu, mem)))),
+				new("GetGDISurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetGDISurface>(async (cpu, mem) => await Task.FromResult(DDraw_GetGDISurface(cpu, mem)))),
+				new("GetMonitorFrequency", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetMonitorFrequency>(async (cpu, mem) => await Task.FromResult(DDraw_GetMonitorFrequency(cpu, mem)))),
+				new("GetScanLine", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetScanLine>(async (cpu, mem) => await Task.FromResult(DDraw_GetScanLine(cpu, mem)))),
+				new("GetVerticalBlankStatus", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetVerticalBlankStatus>(async (cpu, mem) => await Task.FromResult(DDraw_GetVerticalBlankStatus(cpu, mem)))),
+				new("Initialize", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Initialize>(async (cpu, mem) => await Task.FromResult(DDraw_Initialize(cpu, mem)))),
+				new("RestoreDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.RestoreDisplayMode>(async (cpu, mem) => await Task.FromResult(DDraw_RestoreDisplayMode(cpu, mem)))),
+				new("SetCooperativeLevel", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetCooperativeLevel>(async (cpu, mem) => await Task.FromResult(DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle)))),
+				new("SetDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetDisplayMode>(async (cpu, mem) => await DDraw_SetDisplayModeAsync(cpu, mem, ddrawHandle))),
+				new("WaitForVerticalBlank", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.WaitForVerticalBlank>(async (cpu, mem) => await Task.FromResult(DDraw_WaitForVerticalBlank(cpu, mem))))
 			};
 
-			// Create the COM object with vtable
-			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectDraw", vtableMethods);
+			// Create the COM object with async vtable
+			var comObjectAddr = _env.ComDispatcher.CreateComObjectAsyncOrdered("IDirectDraw", vtableMethods);
 
 			// Store the COM object address in the DirectDraw object for reverse lookup
 			ddrawObj.ComObjectAddress = comObjectAddr;
@@ -554,6 +554,24 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DDraw COM] IUnknown::Release(this=0x{ThisPtr:X8})", thisPtr);
 			return 0; // Reference count after release
+		}
+
+		// Async wrapper methods for COM base interface methods
+		// These are simple wrappers that return completed tasks for consistency with async COM interfaces
+
+		private async Task<uint> ComQueryInterfaceAsync(ICpu cpu, VirtualMemory memory)
+		{
+			return await Task.FromResult(ComQueryInterface(cpu, memory));
+		}
+
+		private async Task<uint> ComAddRefAsync(ICpu cpu, VirtualMemory memory)
+		{
+			return await Task.FromResult(ComAddRef(cpu, memory));
+		}
+
+		private async Task<uint> ComReleaseAsync(ICpu cpu, VirtualMemory memory)
+		{
+			return await Task.FromResult(ComRelease(cpu, memory));
 		}
 
 		private uint Palette_GetCaps(ICpu cpu, VirtualMemory memory)
@@ -3260,6 +3278,156 @@ namespace Win32Emu.Win32.Modules
 					else
 					{
 						var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
+						if (!success)
+						{
+							// In headless/nogui mode (Host == null), rendering backend initialization may fail
+							// due to lack of video device. This is expected and should not cause the application to crash.
+							// We log the failure but still return success to allow headless testing.
+							if (_env.Host == null)
+							{
+								_logger.LogWarning("[DDraw] Failed to initialize rendering backend in headless mode (expected - no video device)");
+								_logger.LogInformation("[DDraw] SetDisplayMode succeeded in headless mode (rendering disabled)");
+							}
+							else
+							{
+								// In GUI mode, initialization failure is an actual error
+								_logger.LogError("[DDraw] Failed to initialize rendering backend");
+								_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
+								return (uint)DDResult.DDERR_GENERIC;
+							}
+						}
+						else
+						{
+							_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
+						}
+					}
+				}
+
+				// Subscribe to UI events from the rendering backend
+				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
+				if (obj.RenderingBackend != null)
+				{
+					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
+					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
+				}
+
+				_logger.LogInformation("[DDraw COM] SetDisplayMode succeeded, returning DD_OK (0)");
+			}
+			else
+			{
+				_logger.LogError("[DDraw] SetDisplayMode: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
+				_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
+
+			return (uint)DDResult.DD_OK;
+		}
+
+		/// <summary>
+		/// Async version of SetDisplayMode that uses proper async/await for backend initialization.
+		/// This is the recommended approach for WASM and other scenarios requiring async operations.
+		/// </summary>
+		private async Task<uint> DDraw_SetDisplayModeAsync(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
+		{
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwWidth = args.UInt32(1);
+			var dwHeight = args.UInt32(2);
+			var dwBPP = args.UInt32(3);
+
+			_logger.LogInformation("[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{ThisPtr:X8}, width={DwWidth}, height={DwHeight}, bpp={DwBpp})", thisPtr, dwWidth, dwHeight, dwBPP);
+
+			// Validate parameters
+			if (dwWidth == 0 || dwHeight == 0)
+			{
+				_logger.LogError("[DDraw COM] SetDisplayMode: Invalid dimensions ({Width}x{Height})", dwWidth, dwHeight);
+				return (uint)DDResult.DDERR_INVALIDPARAMS;
+			}
+
+			if (dwBPP != 8 && dwBPP != 16 && dwBPP != 24 && dwBPP != 32)
+			{
+				_logger.LogWarning("[DDraw COM] SetDisplayMode: Unusual BPP value {Bpp}, accepting anyway", dwBPP);
+			}
+
+			// Look up the actual handle from the COM object address
+			if (!_comObjectToHandle.TryGetValue(thisPtr, out var actualHandle))
+			{
+				_logger.LogWarning("[DDraw] SetDisplayMode: Could not find DirectDraw handle for COM object 0x{ThisPtr:X8}, using captured handle 0x{Handle:X8}", thisPtr, ddrawHandle);
+				actualHandle = ddrawHandle;
+			}
+
+			// Store display mode settings
+			if (_ddrawObjects.TryGetValue(actualHandle, out var obj))
+			{
+				obj.Width = (int)dwWidth;
+				obj.Height = (int)dwHeight;
+				obj.BitsPerPixel = (int)dwBPP;
+
+				// Update ProcessEnvironment with display mode for GetSystemMetrics
+				_env.DisplayWidth = (int)dwWidth;
+				_env.DisplayHeight = (int)dwHeight;
+				_env.DisplayBitsPerPixel = (int)dwBPP;
+				_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
+
+				// Initialize rendering backend with the specified dimensions
+				if (obj.RenderingBackend == null)
+				{
+					if (_env.BackendFactory != null)
+					{
+						obj.RenderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
+						if (_env.Host != null)
+						{
+							_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
+						}
+					}
+					else
+					{
+						_logger.LogWarning("[DDraw] BackendFactory not available, rendering backend not created");
+					}
+				}
+
+				// Initialize the window with the specified dimensions
+				var title = "Win32Emu DirectDraw";
+				if (obj.RenderingBackend?.IsInitialized == true)
+				{
+					// If already initialized, we would need to recreate with new dimensions
+					// For now, we'll just log this situation
+					_logger.LogInformation("[DDraw] Display mode changed to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
+				}
+				else if (obj.RenderingBackend != null)
+				{
+					// Use proper async/await for backend initialization
+					// This allows the browser event loop to continue in WASM mode
+					if (PlatformHelpers.IsWasm)
+					{
+						// Initialize frame buffering queue for WASM mode as an additional safety mechanism
+						// This ensures frames drawn during initialization (edge cases) are not lost
+						obj.PendingFrames = new Queue<PendingFrameData>();
+						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
+						
+						_logger.LogInformation("[DDraw] Initializing rendering backend with {Width}x{Height} (WASM mode - async)", dwWidth, dwHeight);
+						try
+						{
+							var success = await obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title);
+							if (success)
+							{
+								_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height} (WASM mode - async)", dwWidth, dwHeight);
+							}
+							else
+							{
+								_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode - async)");
+								return (uint)DDResult.DDERR_GENERIC;
+							}
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "[DDraw] Rendering backend initialization failed (WASM mode - async)");
+							return (uint)DDResult.DDERR_GENERIC;
+						}
+					}
+					else
+					{
+						var success = await obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title);
 						if (!success)
 						{
 							// In headless/nogui mode (Host == null), rendering backend initialization may fail
