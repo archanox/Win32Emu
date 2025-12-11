@@ -248,3 +248,91 @@ This would allow proper async/await throughout the COM call chain.
 The WASM rendering race condition has been fixed by replacing fire-and-forget initialization with proper await. The rendering backend is now guaranteed to be initialized before any drawing operations, preventing frame loss.
 
 However, BasicDD.exe may still crash due to a separate issue in the application code. Testing with other DirectDraw applications or creating a simpler test program based on the tutorial is recommended.
+
+## Update: December 2025 - Revert to Fire-and-Forget for WASM
+
+### Issue Discovered
+
+The solution described above (using `.GetAwaiter().GetResult()`) **does not work in WASM** despite the initial assessment. The error encountered was:
+
+```
+System.PlatformNotSupportedException: Cannot wait on monitors on this runtime.
+   at System.Threading.Monitor.ObjWait(Int32 , Object )
+   at System.Threading.Monitor.Wait(Object , Int32 )
+   at System.Threading.ManualResetEventSlim.Wait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.SpinThenBlockingWait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWaitCore(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWait(Int32 , CancellationToken )
+```
+
+### Root Cause
+
+`.GetAwaiter().GetResult()` internally calls `Task.InternalWait()`, which uses `Monitor.Wait()` and other blocking synchronization primitives. These are **not supported in WASM** regardless of whether the underlying async method "properly yields" or not. The .NET WASM runtime throws `PlatformNotSupportedException` when any blocking wait is attempted.
+
+### Corrected Solution
+
+Reverted to **fire-and-forget with frame buffering** for WASM:
+
+```csharp
+if (PlatformHelpers.IsWasm)
+{
+    // WASM-specific initialization: Use fire-and-forget to avoid blocking
+    // .GetAwaiter().GetResult() throws PlatformNotSupportedException in WASM
+    // because it uses Monitor.Wait internally, which is not supported.
+    // Frame buffering ensures no frames are lost during async initialization.
+    obj.PendingFrames = new Queue<PendingFrameData>();
+    _logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
+    
+    _logger.LogInformation("[DDraw] Starting async rendering backend initialization with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
+    
+    // Start initialization asynchronously without blocking
+    _ = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title)
+        .ContinueWith(task =>
+        {
+            if (task.IsFaulted)
+            {
+                _logger.LogError(task.Exception?.GetBaseException(), "[DDraw] Rendering backend initialization failed (WASM mode)");
+            }
+            else if (task.IsCompletedSuccessfully)
+            {
+                if (task.Result)
+                {
+                    _logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
+                }
+                else
+                {
+                    _logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
+                }
+            }
+        }, TaskScheduler.Default);
+    
+    // Return success immediately - frame buffering will handle frames until initialization completes
+    _logger.LogInformation("[DDraw] SetDisplayMode returning success immediately (WASM mode - async initialization in progress)");
+}
+```
+
+### Key Differences
+
+1. **No blocking**: Uses `ContinueWith` instead of `.GetAwaiter().GetResult()`
+2. **Fire-and-forget**: Returns immediately without waiting for initialization
+3. **Frame buffering**: Relies on `PendingFrames` queue to buffer frames drawn during initialization
+4. **Error handling**: Logs errors in continuation instead of throwing exceptions
+
+### Impact
+
+- ✅ No `PlatformNotSupportedException` in WASM
+- ✅ Browser remains responsive during initialization
+- ✅ Frame buffering prevents frame loss
+- ⚠️ Small race condition window where frames may be buffered (acceptable trade-off)
+
+### Lessons Learned
+
+**For WASM:**
+- ❌ Cannot use `.GetAwaiter().GetResult()` - **ever**
+- ❌ Cannot use any blocking primitives (`Monitor.Wait`, `lock`, `Semaphore.Wait`, etc.)
+- ✅ Must use fire-and-forget with proper buffering/queuing mechanisms
+- ✅ Must design async workflows that don't require blocking waits
+
+**For Desktop:**
+- ✅ Can use `.GetAwaiter().GetResult()` as before
+- ✅ Blocking is acceptable and often necessary for synchronous COM APIs
