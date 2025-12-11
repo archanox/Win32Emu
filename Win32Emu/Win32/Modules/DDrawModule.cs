@@ -3438,7 +3438,7 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		private void UpdateRenderingBackend(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
-			if (ddrawObj.RenderingBackend?.IsInitialized != true)
+			if (ddrawObj.RenderingBackend == null || !ddrawObj.RenderingBackend.IsInitialized)
 			{
 				return;
 			}
@@ -3523,8 +3523,8 @@ namespace Win32Emu.Win32.Modules
 				if (displayData != null)
 				{
 					var displayPitch = surface.Width * BytesPerPixelRgba; // RGBA format
-					_logger.LogDebug("[DDraw] Calling UpdateFrameBuffer: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
-						surface.Width, surface.Height, displayPitch, displayData.Length);
+					_logger.LogDebug("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
+						surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length);
 					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
 					_logger.LogDebug("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
 				}
