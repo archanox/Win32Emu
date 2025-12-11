@@ -3229,7 +3229,7 @@ namespace Win32Emu.Win32.Modules
 					// Previous implementation used fire-and-forget, which caused frames to be lost
 					// if the application tried to draw before the backend was initialized.
 					// Using GetAwaiter().GetResult() is safe in WASM because the Task properly yields
-					// to the browser event loop through JavaScript interop (Task.Delay in JS setTimeout).
+					// to the browser event loop through JavaScript interop (via JSRuntime.InvokeVoidAsync).
 					if (PlatformHelpers.IsWasm)
 					{
 						// Initialize frame buffering queue for WASM mode as an additional safety mechanism

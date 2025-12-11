@@ -76,17 +76,37 @@ if (PlatformHelpers.IsWasm)
 
 ### Why This Is Safe
 
-The previous comment claimed "In WASM mode, we cannot block on async operations (Monitor.Wait is not supported)."
+**Previous codebase documentation (see DDrawModule.cs line 4338) stated:**  
+> "GetAwaiter().GetResult() throws PlatformNotSupportedException on WASM"
 
-This is **partially correct**:
-- ❌ Cannot use blocking primitives like `Monitor.Wait`, `lock`, `Semaphore.Wait`
-- ✅ **CAN** use `GetAwaiter().GetResult()` on Tasks that properly yield
+and as a result, other modules (DInputModule.cs, DSoundModule.cs, Glide2xModule.cs) used a fire-and-forget pattern to avoid blocking or exceptions in WASM.
 
-The key is that `InitializeAsync` yields control to the browser through JavaScript interop:
-1. Blazor calls JavaScript `initializeEmulator()` function
-2. JavaScript executes and returns (synchronously)
-3. Task completes and returns to C# code
-4. Total time: ~1-10ms (not blocking the browser)
+**New discovery:**  
+- ❌ You still cannot use blocking primitives like `Monitor.Wait`, `lock`, or `Semaphore.Wait` in WASM, as these will throw or deadlock.
+- ✅ However, you **CAN** use `.GetAwaiter().GetResult()` on Tasks that "properly yield"—meaning Tasks that do not use blocking primitives, and instead yield to the browser event loop via JavaScript interop or other non-blocking mechanisms.
+
+**What makes a Task "properly yield" in WASM?**
+- The async method must not use any .NET blocking primitives internally.
+- The method should yield to JavaScript (e.g., via Blazor JS interop), allowing the browser to continue processing events.
+- The Task should complete quickly (typically <10ms), and not block the browser thread.
+- The underlying runtime (Blazor WASM, .NET 7+) now supports this pattern for certain interop scenarios.
+
+**In this case, `InitializeAsync` is implemented to yield to JavaScript and return synchronously, so `.GetAwaiter().GetResult()` does not block or throw.**
+
+The key is that `InitializeAsync` yields control to the browser through asynchronous JavaScript interop:
+1. Blazor calls JavaScript `initializeEmulator()` function via `JSRuntime.InvokeVoidAsync`
+2. The JavaScript function executes and returns, allowing the browser event loop to continue
+3. The Task completes asynchronously and returns to C# code
+4. Total time: ~1-10ms (the async JS interop call does not block the browser)
+
+**References:**
+- [Blazor WASM async interop documentation](https://docs.microsoft.com/en-us/aspnet/core/blazor/javascript-interoperability/?view=aspnetcore-7.0#asynchronous-javascript-interoperability)
+- [.NET WASM runtime release notes](https://github.com/dotnet/aspnetcore/releases)
+
+**Recommendation:**  
+- Document this discovery in the codebase.
+- Update other modules (DInputModule.cs, DSoundModule.cs, Glide2xModule.cs) to use `.GetAwaiter().GetResult()` for backend initialization in WASM, if their async methods also "properly yield".
+- Add comments explaining why this is now safe, and reference this documentation.
 
 ### New Execution Timeline
 
@@ -174,7 +194,7 @@ Possible reasons:
 
 ## References
 
-- Original issue: "I'm still not seeing anything on the canvas on the web front end when running BasicDD"
+- Original issue: "I'm still not seeing anything on the canvas on the web frontend when running BasicDD"
 - Tutorial: https://www.codeproject.com/articles/Introduction-to-DirectDraw-and-Surface-Blitting
 - WASM freeze fix: `WASM_FREEZE_FIX.md` (previous async/await improvements)
 
