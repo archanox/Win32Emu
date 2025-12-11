@@ -3225,37 +3225,40 @@ namespace Win32Emu.Win32.Modules
 				}
 				else if (obj.RenderingBackend != null)
 				{
-					// In WASM mode, we need to properly await initialization to prevent race conditions.
-					// Previous implementation used fire-and-forget, which caused frames to be lost
-					// if the application tried to draw before the backend was initialized.
-					// Using GetAwaiter().GetResult() is safe in WASM because the Task properly yields
-					// to the browser event loop through JavaScript interop (via JSRuntime.InvokeVoidAsync).
 					if (PlatformHelpers.IsWasm)
 					{
-						// Initialize frame buffering queue for WASM mode as an additional safety mechanism
-						// This ensures frames drawn during initialization (edge cases) are not lost
+						// WASM-specific initialization: Use fire-and-forget to avoid blocking
+						// .GetAwaiter().GetResult() throws PlatformNotSupportedException in WASM
+						// because it uses Monitor.Wait internally, which is not supported.
+						// Frame buffering ensures no frames are lost during async initialization.
 						obj.PendingFrames = new Queue<PendingFrameData>();
 						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
 						
-						_logger.LogInformation("[DDraw] Initializing rendering backend with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
-						try
-						{
-							var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
-							if (success)
+						_logger.LogInformation("[DDraw] Starting async rendering backend initialization with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
+						
+						// Start initialization asynchronously without blocking
+						_ = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title)
+							.ContinueWith(task =>
 							{
-								_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
-							}
-							else
-							{
-								_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
-								return (uint)DDResult.DDERR_GENERIC;
-							}
-						}
-						catch (Exception ex)
-						{
-							_logger.LogError(ex, "[DDraw] Rendering backend initialization failed (WASM mode)");
-							return (uint)DDResult.DDERR_GENERIC;
-						}
+								if (task.IsFaulted)
+								{
+									_logger.LogError(task.Exception?.GetBaseException(), "[DDraw] Rendering backend initialization failed (WASM mode)");
+								}
+								else if (task.IsCompletedSuccessfully)
+								{
+									if (task.Result)
+									{
+										_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
+									}
+									else
+									{
+										_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
+									}
+								}
+							}, TaskScheduler.Default);
+						
+						// Return success immediately - frame buffering will handle frames until initialization completes
+						_logger.LogInformation("[DDraw] SetDisplayMode returning success immediately (WASM mode - async initialization in progress)");
 					}
 					else
 					{
