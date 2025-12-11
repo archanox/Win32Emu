@@ -1815,10 +1815,17 @@ namespace Win32Emu.Win32.Modules
 			{
 				try
 				{
+					// If the surface is dirty (e.g., modified by BltFast), update the rendering backend
+					if (surface.IsTextureDirty)
+					{
+						_logger.LogDebug("[DDraw] Surface is dirty, updating rendering backend before flip");
+						UpdateRenderingBackend(surface, ddrawObj);
+						surface.IsTextureDirty = false;
+					}
+
 					// Process events to keep the window responsive
 					ddrawObj.RenderingBackend.ProcessEvents();
 
-					// The frame was already updated in Surface_Unlock, so Flip just ensures presentation
 					_logger.LogInformation("[DDraw] Flipped primary surface");
 				}
 				catch (Exception ex)
@@ -3416,102 +3423,116 @@ namespace Win32Emu.Win32.Modules
 			surface.IsLocked = false;
 
 			// If this is a primary surface, update the rendering backend texture
-			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null && ddrawObj.RenderingBackend.IsInitialized)
+			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
 			{
-				try
-				{
-					// Check if surface bits are available
-					if (surface.Bits == null)
-					{
-						_logger.LogWarning("[DDraw] Surface bits are null, skipping flip");
-						return (uint)DDResult.DD_OK;
-					}
-
-					byte[] displayData;
-
-					// Check if we need to convert the surface data based on bit depth
-					if (ddrawObj.BitsPerPixel == 8)
-					{
-						// 8-bit palettized mode
-						if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
-						{
-							// Convert palettized (8-bit indexed) to RGBA using attached palette
-							_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA");
-							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-								surface.Bits,
-								palette.Entries,
-								surface.Width,
-								surface.Height,
-								surface.Pitch);
-						}
-						else
-						{
-							// No palette set yet - use a default grayscale palette
-							_logger.LogWarning("[DDraw] No palette set for 8-bit surface, using grayscale");
-							var grayscalePalette = new uint[256];
-							for (var i = 0; i < 256; i++)
-							{
-								grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
-							}
-
-							displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-								surface.Bits,
-								grayscalePalette,
-								surface.Width,
-								surface.Height,
-								surface.Pitch);
-						}
-					}
-					else if (ddrawObj.BitsPerPixel == 16)
-					{
-						// Convert 16-bit RGB565 to RGBA
-						_logger.LogInformation("[DDraw] Converting 16-bit RGB565 surface to RGBA");
-						displayData = ddrawObj.RenderingBackend.Convert16BitToRGBA(
-							surface.Bits,
-							surface.Width,
-							surface.Height,
-							surface.Pitch);
-					}
-					else if (ddrawObj.BitsPerPixel == 24)
-					{
-						// Convert 24-bit RGB/BGR to RGBA
-						_logger.LogDebug("[DDraw] Converting 24-bit surface to RGBA");
-						displayData = ddrawObj.RenderingBackend.Convert24BitToRGBA(
-							surface.Bits,
-							surface.Width,
-							surface.Height,
-							surface.Pitch);
-					}
-					else if (ddrawObj.BitsPerPixel == 32)
-					{
-						// 32-bit RGBA - pass through
-						displayData = surface.Bits;
-					}
-					else
-					{
-						// Unknown format - treat as RGBA
-						_logger.LogWarning("[DDraw] Unknown bit depth {Bpp}, treating as RGBA", ddrawObj.BitsPerPixel);
-						displayData = surface.Bits;
-					}
-
-					// Update the rendering backend texture with the converted surface data
-					if (displayData != null)
-					{
-						var displayPitch = surface.Width * BytesPerPixelRgba; // RGBA format
-						_logger.LogDebug("[DDraw] Calling UpdateFrameBuffer: surface={SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
-							surfaceHandle, surface.Width, surface.Height, displayPitch, displayData.Length);
-						var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
-						_logger.LogDebug("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
-					}
-				}
-				catch (Exception ex)
-				{
-					_logger.LogError(ex, "[DDraw] Failed to update rendering backend texture for primary surface");
-				}
+				UpdateRenderingBackend(surface, ddrawObj);
 			}
 
 			_logger.LogInformation("[DDraw] Unlocked surface 0x{SurfaceHandle:X8}", surfaceHandle);
 			return (uint)DDResult.DD_OK;
+		}
+
+		/// <summary>
+		/// Updates the rendering backend with the current surface pixels.
+		/// This should be called when a surface has been modified and needs to be displayed.
+		/// </summary>
+		private void UpdateRenderingBackend(DirectDrawSurface surface, DirectDrawObject ddrawObj)
+		{
+			if (!ddrawObj.RenderingBackend?.IsInitialized ?? true)
+			{
+				return;
+			}
+
+			try
+			{
+				// Check if surface bits are available
+				if (surface.Bits == null)
+				{
+					_logger.LogWarning("[DDraw] Surface bits are null, skipping update");
+					return;
+				}
+
+				byte[] displayData;
+
+				// Check if we need to convert the surface data based on bit depth
+				if (ddrawObj.BitsPerPixel == 8)
+				{
+					// 8-bit palettized mode
+					if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
+					{
+						// Convert palettized (8-bit indexed) to RGBA using attached palette
+						_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA");
+						displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
+							surface.Bits,
+							palette.Entries,
+							surface.Width,
+							surface.Height,
+							surface.Pitch);
+					}
+					else
+					{
+						// No palette set yet - use a default grayscale palette
+						_logger.LogWarning("[DDraw] No palette set for 8-bit surface, using grayscale");
+						var grayscalePalette = new uint[256];
+						for (var i = 0; i < 256; i++)
+						{
+							grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
+						}
+
+						displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
+							surface.Bits,
+							grayscalePalette,
+							surface.Width,
+							surface.Height,
+							surface.Pitch);
+					}
+				}
+				else if (ddrawObj.BitsPerPixel == 16)
+				{
+					// Convert 16-bit RGB565 to RGBA
+					_logger.LogDebug("[DDraw] Converting 16-bit RGB565 surface to RGBA");
+					displayData = ddrawObj.RenderingBackend.Convert16BitToRGBA(
+						surface.Bits,
+						surface.Width,
+						surface.Height,
+						surface.Pitch);
+				}
+				else if (ddrawObj.BitsPerPixel == 24)
+				{
+					// Convert 24-bit RGB/BGR to RGBA
+					_logger.LogDebug("[DDraw] Converting 24-bit surface to RGBA");
+					displayData = ddrawObj.RenderingBackend.Convert24BitToRGBA(
+						surface.Bits,
+						surface.Width,
+						surface.Height,
+						surface.Pitch);
+				}
+				else if (ddrawObj.BitsPerPixel == 32)
+				{
+					// 32-bit RGBA - pass through
+					displayData = surface.Bits;
+				}
+				else
+				{
+					// Unknown format - treat as RGBA
+					_logger.LogWarning("[DDraw] Unknown bit depth {Bpp}, treating as RGBA", ddrawObj.BitsPerPixel);
+					displayData = surface.Bits;
+				}
+
+				// Update the rendering backend texture with the converted surface data
+				if (displayData != null)
+				{
+					var displayPitch = surface.Width * BytesPerPixelRgba; // RGBA format
+					_logger.LogDebug("[DDraw] Calling UpdateFrameBuffer: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
+						surface.Width, surface.Height, displayPitch, displayData.Length);
+					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
+					_logger.LogDebug("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
+				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DDraw] Failed to update rendering backend texture");
+			}
 		}
 
 		// IDirectDrawClipper interface methods
