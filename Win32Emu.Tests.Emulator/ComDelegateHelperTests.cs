@@ -254,4 +254,57 @@ public class ComDelegateHelperTests
 		// Assert - 2 parameters = 8 bytes, regardless of return type
 		Assert.Equal(8, voidTwoParams); // IntPtr (4) + uint (4) = 8 bytes
 	}
+	
+	[Fact]
+	public void FromAsyncDelegate_CreatesComAsyncMethodInfoWithCorrectArgBytes()
+	{
+		// Arrange
+		static async Task<uint> TestAsyncHandler(Cpu.ICpu cpu, Memory.VirtualMemory mem)
+		{
+			await Task.CompletedTask;
+			return 0;
+		}
+		
+		// Act
+		var methodInfo = ComVtableDispatcher.FromAsyncDelegate<IDirectInputDevice.Acquire>(TestAsyncHandler);
+		
+		// Assert
+		Assert.Equal(4, methodInfo.ArgBytes); // Acquire has only 'this' pointer
+		Assert.NotNull(methodInfo.AsyncHandler);
+	}
+	
+	[Fact]
+	public void FromAsyncDelegate_ThrowsException_ForNonStdCallDelegate()
+	{
+		// Arrange
+		static async Task<uint> TestAsyncHandler(Cpu.ICpu cpu, Memory.VirtualMemory mem)
+		{
+			await Task.CompletedTask;
+			return 0;
+		}
+		
+		// Act & Assert
+		Assert.Throws<InvalidOperationException>(() => 
+			ComVtableDispatcher.FromAsyncDelegate<CdeclMethod>(TestAsyncHandler));
+	}
+	
+	[Fact]
+	public void FromAsyncDelegate_AndFromDelegate_ProduceSameArgBytes()
+	{
+		// Arrange
+		static uint TestSyncHandler(Cpu.ICpu cpu, Memory.VirtualMemory mem) => 0;
+		static async Task<uint> TestAsyncHandler(Cpu.ICpu cpu, Memory.VirtualMemory mem)
+		{
+			await Task.CompletedTask;
+			return 0;
+		}
+		
+		// Act
+		var syncMethodInfo = ComVtableDispatcher.FromDelegate<IDirectInput.QueryInterface>(TestSyncHandler);
+		var asyncMethodInfo = ComVtableDispatcher.FromAsyncDelegate<IDirectInput.QueryInterface>(TestAsyncHandler);
+		
+		// Assert - Both should calculate the same argBytes for the same delegate type
+		Assert.Equal(syncMethodInfo.ArgBytes, asyncMethodInfo.ArgBytes);
+		Assert.Equal(12, asyncMethodInfo.ArgBytes); // QueryInterface: this + riid + ppvObject = 12 bytes
+	}
 }
