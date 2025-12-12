@@ -9,7 +9,7 @@ profile:
 include:
   - name: CheckDependencyLicenses
 bootstrap: |
-  curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0 --install-dir /usr/share/dotnet --no-path
+  curl -sSL https://dot.net/v1/dotnet-install.sh | bash /dev/stdin --channel 10.0 --install-dir /usr/share/dotnet
   export PATH="/usr/share/dotnet:$PATH"
   export DOTNET_ROOT="/usr/share/dotnet"
   dotnet --version
