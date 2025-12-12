@@ -28,7 +28,7 @@ Added heap execution detection with early termination:
 5. **Throttled logging**: Only log warning when EIP changes to reduce spam
 
 ## Code Changes
-File: `Win32Emu/Emulator.cs` in `RunNormalAsync()` method (lines ~1186-1226)
+File: `Win32Emu/Emulator.cs` in `RunNormalAsync()` method (lines ~961 and ~1186-1231)
 
 ```csharp
 // Track consecutive heap executions

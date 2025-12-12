@@ -78,6 +78,12 @@ public sealed class Emulator : IDisposable
     private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 200000;       // WASM: 200K (~0.2-2 seconds)
     private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 100000000;  // Native: 100M instructions
     
+    // Max consecutive heap executions before stopping emulation
+    // If we've been executing in heap memory for more than 10 iterations,
+    // this is definitely wrong - stop execution to prevent infinite loops
+    // (10 iterations at ~2 bytes each = executing about 20 bytes of heap memory)
+    private const ulong MAX_CONSECUTIVE_HEAP_EXECUTIONS = 10;
+    
     // Instruction tracing for debugging BasicDD crash
     private int _instructionTraceCount = 0;
     private const int MAX_TRACE_INSTRUCTIONS = 1000; // Trace 1000 instructions to find stack corruption
@@ -1191,16 +1197,11 @@ public sealed class Emulator : IDisposable
                 // Log warning only when EIP changes to reduce log noise
                 if (eipBeforeStep != lastHeapEipWarning)
                 {
-                    var esp = _cpu.GetRegister("ESP");
                     _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in heap memory range (0x{HeapBase:X8}-0x{HeapLimit:X8}). This may indicate a bad jump or return address. Consecutive heap executions: {Count}", 
                         eipBeforeStep, _heapBase, HEAP_LIMIT - 1, consecutiveHeapExecutions);
                     lastHeapEipWarning = eipBeforeStep;
                 }
                 
-                // If we've been executing in heap memory for more than 10 iterations,
-                // this is definitely wrong - stop execution to prevent infinite loops
-                // (10 iterations at ~2 bytes each = executing about 20 bytes of heap memory)
-                const ulong MAX_CONSECUTIVE_HEAP_EXECUTIONS = 10;
                 if (consecutiveHeapExecutions >= MAX_CONSECUTIVE_HEAP_EXECUTIONS)
                 {
                     var esp = _cpu.GetRegister("ESP");
