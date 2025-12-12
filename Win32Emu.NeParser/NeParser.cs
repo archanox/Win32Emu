@@ -38,6 +38,15 @@ namespace Win32Emu.NeParser
 	// NE relocation record constants
 	private const int NE_RELOC_HEADER_SIZE = 2;  // Relocation table starts with count (2 bytes)
 	private const int NE_RELOC_ENTRY_SIZE = 8;   // Each relocation entry is 8 bytes
+	private const byte NE_RELOC_TARGET_TYPE_MASK = 0x03;  // Mask to extract target type from relocation type byte
+	
+	// Module reference table format detection
+	private const ushort MAX_STANDARD_FORMAT_OFFSET = 0x1000;  // Threshold to distinguish standard vs inline format
+	
+	// String validation constants
+	private const int MAX_MODULE_NAME_LENGTH = 50;  // Maximum length for module names
+	private const byte ASCII_PRINTABLE_MIN = 32;    // Minimum printable ASCII character
+	private const byte ASCII_PRINTABLE_MAX = 126;   // Maximum printable ASCII character
 	
 	// NE name table entry suffix size (name length byte + 2-byte ordinal)
 	private const int NE_NAME_ENTRY_SUFFIX_SIZE = 3;
@@ -518,17 +527,17 @@ namespace Win32Emu.NeParser
 		// Otherwise use inline format
 		bool useInlineFormat = false;
 		
-		if (firstValue < 0x1000 && potentialNameAddr + 1 < bytes.Length)
+		if (firstValue < MAX_STANDARD_FORMAT_OFFSET && potentialNameAddr + 1 < bytes.Length)
 		{
 			var nameLen = bytes[potentialNameAddr];
-			if (nameLen > 0 && nameLen < 50 && potentialNameAddr + nameLen + 1 < bytes.Length)
+			if (nameLen > 0 && nameLen < MAX_MODULE_NAME_LENGTH && potentialNameAddr + nameLen + 1 < bytes.Length)
 			{
 				// Check if it's a valid string
 				bool validString = true;
 				for (int j = 1; j <= nameLen && validString; j++)
 				{
 					var ch = bytes[potentialNameAddr + j];
-					if (ch < 32 || ch > 126)
+					if (ch < ASCII_PRINTABLE_MIN || ch > ASCII_PRINTABLE_MAX)
 						validString = false;
 				}
 				if (!validString)
@@ -568,7 +577,7 @@ namespace Win32Emu.NeParser
 				for (var j = 1; j <= nameLength; j++)
 				{
 					var ch = bytes[offset + j];
-					if (ch < 32 || ch > 126)
+					if (ch < ASCII_PRINTABLE_MIN || ch > ASCII_PRINTABLE_MAX)
 					{
 						valid = false;
 						break;
@@ -604,7 +613,7 @@ namespace Win32Emu.NeParser
 					continue;
 				
 				var nameLength = bytes[actualOffset];
-				if (nameLength == 0 || nameLength > 50)
+				if (nameLength == 0 || nameLength > MAX_MODULE_NAME_LENGTH)
 					continue;
 				
 				if (actualOffset + nameLength + 1 > bytes.Length)
@@ -615,7 +624,7 @@ namespace Win32Emu.NeParser
 				for (var j = 1; j <= nameLength; j++)
 				{
 					var ch = (char)bytes[actualOffset + j];
-					if (ch < 32 || ch > 126)
+					if (ch < ASCII_PRINTABLE_MIN || ch > ASCII_PRINTABLE_MAX)
 					{
 						isValidName = false;
 						break;
@@ -648,16 +657,12 @@ namespace Win32Emu.NeParser
 
 		try
 		{
-			var neHeaderOffset = header.BaseOffset;
 			var importedNamesTableOffset = header.BaseOffset + header.ImportedNamesTableOffset;
 			var segments = ParseSegmentTable(fileBytes, header);
 			
 			// Parse relocation records in each segment to find imports
-			foreach (var segment in segments)
+			foreach (var segment in segments.Where(s => (s.Flags & (ushort)NeSegmentFlags.HasRelocations) != 0))
 			{
-				// Check if segment has relocations (bit 0x0100 in flags)
-				if ((segment.Flags & 0x0100) == 0)
-					continue; // No relocations
 				
 				// Relocations are stored at the end of the segment data
 				// The last 2 bytes of the segment give the count of relocation entries
@@ -676,6 +681,9 @@ namespace Win32Emu.NeParser
 				// Relocation entries follow the count
 				var relocOffset = relocCountOffset + NE_RELOC_HEADER_SIZE;
 				
+				// Track seen imports to avoid duplicates efficiently
+				var seenImports = new HashSet<string>();
+				
 				for (var i = 0; i < relocCount; i++)
 				{
 					if (relocOffset + NE_RELOC_ENTRY_SIZE > fileBytes.Length)
@@ -687,20 +695,12 @@ namespace Win32Emu.NeParser
 					// Bytes 2-3: Offset in segment
 					// Bytes 4-7: Target specification
 					
-					var addressType = fileBytes[relocOffset];
 					var relocationType = fileBytes[relocOffset + 1];
-					var sourceOffset = BitConverter.ToUInt16(fileBytes, relocOffset + 2);
 					
 					// Extract relocation target type from lower 3 bits
-					var targetType = (byte)(relocationType & 0x03);
+					var targetType = (NeRelocationTargetType)(relocationType & NE_RELOC_TARGET_TYPE_MASK);
 					
-					// Target types:
-					// 0 = Internal reference
-					// 1 = Imported ordinal
-					// 2 = Imported name
-					// 3 = OSFIXUP
-					
-					if (targetType == 1 || targetType == 2)
+					if (targetType == NeRelocationTargetType.ImportOrdinal || targetType == NeRelocationTargetType.ImportName)
 					{
 						// This is an import!
 						// Bytes 4-5: Module index (1-based)
@@ -715,17 +715,22 @@ namespace Win32Emu.NeParser
 							if (!importsByModule.ContainsKey(moduleName))
 								importsByModule[moduleName] = new List<NeImportedFunction>();
 							
-							if (targetType == 1)
+							if (targetType == NeRelocationTargetType.ImportOrdinal)
 							{
 								// Imported by ordinal
-								importsByModule[moduleName].Add(new NeImportedFunction
+								var importKey = $"{moduleName}:Ordinal_{importRef}";
+								if (!seenImports.Contains(importKey))
 								{
-									Name = $"Ordinal_{importRef}",
-									Ordinal = importRef,
-									ImportedByOrdinal = true
-								});
+									seenImports.Add(importKey);
+									importsByModule[moduleName].Add(new NeImportedFunction
+									{
+										Name = $"Ordinal_{importRef}",
+										Ordinal = importRef,
+										ImportedByOrdinal = true
+									});
+								}
 							}
-							else if (targetType == 2)
+							else if (targetType == NeRelocationTargetType.ImportName)
 							{
 								// Imported by name
 								var nameOffset = importedNamesTableOffset + importRef;
@@ -738,8 +743,10 @@ namespace Win32Emu.NeParser
 										if (!string.IsNullOrWhiteSpace(functionName))
 										{
 											// Avoid duplicates
-											if (!importsByModule[moduleName].Any(f => f.Name == functionName))
+											var importKey = $"{moduleName}:{functionName}";
+											if (!seenImports.Contains(importKey))
 											{
+												seenImports.Add(importKey);
 												importsByModule[moduleName].Add(new NeImportedFunction
 												{
 													Name = functionName,
