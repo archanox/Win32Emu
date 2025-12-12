@@ -50,7 +50,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
-    <PackageReference Include="SDL3-CS" Version="3.3.2.1" />
+    <PackageReference Include="SDL3-CS" Version="3.3.3" />
     <PackageReference Include="SDL3-CS.Native" Version="3.3.2" />
     <PackageReference Include="SharpMetal" Version="1.1.0" />
     <PackageReference Include="Silk.NET.GLFW" Version="2.22.0" />
