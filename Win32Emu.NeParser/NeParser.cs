@@ -35,6 +35,10 @@ namespace Win32Emu.NeParser
 	private const int NE_ENTRY_FIXED_SIZE = 3;
 	private const int NE_IMPORTED_ENTRY_SIZE = 6;  // Size of an imported entry in the entry table
 	
+	// NE relocation record constants
+	private const int NE_RELOC_HEADER_SIZE = 2;  // Relocation table starts with count (2 bytes)
+	private const int NE_RELOC_ENTRY_SIZE = 8;   // Each relocation entry is 8 bytes
+	
 	// NE name table entry suffix size (name length byte + 2-byte ordinal)
 	private const int NE_NAME_ENTRY_SUFFIX_SIZE = 3;
 	
@@ -563,15 +567,10 @@ namespace Win32Emu.NeParser
 	
 	/// <summary>
 	/// Parses the NE (New Executable) format to extract imported functions with module and function details.
+	/// In NE format, imports are stored in segment relocation records, not in the entry table.
 	/// </summary>
 	private static Dictionary<string, List<NeImportedFunction>> ParseNeImports(byte[] fileBytes, NeHeader header, List<string> importModules)
 	{
-		// NE format constants for entry table parsing
-		const byte ImportedSegmentIndicator = 0xFF;
-		const byte FixedSegmentIndicator = 0xFE;
-		const ushort OrdinalHighBitMask = 0x8000;
-		const ushort OrdinalValueMask = 0x7FFF;
-
 		var importsByModule = new Dictionary<string, List<NeImportedFunction>>(StringComparer.OrdinalIgnoreCase);
 
 		if (fileBytes == null || header == null || importModules == null || importModules.Count == 0)
@@ -581,99 +580,112 @@ namespace Win32Emu.NeParser
 
 		try
 		{
-			// Use values from the parsed header instead of re-parsing
-			var neHeaderOffset = (uint)header.BaseOffset;
-			var entryTableOffset = header.EntryTableOffset;
-			var entryTableLength = header.EntryTableLength;
-			var importedNamesTableOffset = header.ImportedNamesTableOffset;
+			var neHeaderOffset = header.BaseOffset;
+			var importedNamesTableOffset = header.BaseOffset + header.ImportedNamesTableOffset;
+			var segments = ParseSegmentTable(fileBytes, header);
 			
-			// Parse Entry Table to find imported functions
-			var absEntryTableOffset = neHeaderOffset + entryTableOffset;
-			var entryTableEnd = absEntryTableOffset + entryTableLength;
-			var absImportedNamesTableOffset = neHeaderOffset + importedNamesTableOffset;
-			var currentOffset = absEntryTableOffset;
-
-			while (currentOffset < entryTableEnd && currentOffset < fileBytes.Length)
+			// Parse relocation records in each segment to find imports
+			foreach (var segment in segments)
 			{
-				// Each bundle starts with a count byte
-				var count = fileBytes[currentOffset];
-				if (count == 0)
-					break; // End of Entry Table
-
-				currentOffset++;
-
-				if (currentOffset >= fileBytes.Length)
-					break;
-
-				// Segment indicator byte
-				var segmentIndicator = fileBytes[currentOffset];
-				currentOffset++;
-
-				// ImportedSegmentIndicator (0xFF) means imported entries
-				if (segmentIndicator == ImportedSegmentIndicator)
+				// Check if segment has relocations (bit 0x0100 in flags)
+				if ((segment.Flags & 0x0100) == 0)
+					continue; // No relocations
+				
+				// Relocations are stored at the end of the segment data
+				// The last 2 bytes of the segment give the count of relocation entries
+				if (segment.FileOffset == 0 || segment.Length == 0)
+					continue;
+				
+				// Read relocation count from end of segment
+				var relocCountOffset = (int)(segment.FileOffset + segment.Length);
+				if (relocCountOffset + 2 > fileBytes.Length)
+					continue;
+				
+				var relocCount = BitConverter.ToUInt16(fileBytes, relocCountOffset);
+				if (relocCount == 0)
+					continue;
+				
+				// Relocation entries follow the count
+				var relocOffset = relocCountOffset + NE_RELOC_HEADER_SIZE;
+				
+				for (var i = 0; i < relocCount; i++)
 				{
-					// These are imported ordinals
-					for (int i = 0; i < count; i++)
+					if (relocOffset + NE_RELOC_ENTRY_SIZE > fileBytes.Length)
+						break;
+					
+					// Relocation entry structure (8 bytes):
+					// Byte 0: Address type (source type)
+					// Byte 1: Relocation type (target flags)
+					// Bytes 2-3: Offset in segment
+					// Bytes 4-7: Target specification
+					
+					var addressType = fileBytes[relocOffset];
+					var relocationType = fileBytes[relocOffset + 1];
+					var sourceOffset = BitConverter.ToUInt16(fileBytes, relocOffset + 2);
+					
+					// Extract relocation target type from lower 3 bits
+					var targetType = (byte)(relocationType & 0x03);
+					
+					// Target types:
+					// 0 = Internal reference
+					// 1 = Imported ordinal
+					// 2 = Imported name
+					// 3 = OSFIXUP
+					
+					if (targetType == 1 || targetType == 2)
 					{
-						if (currentOffset + NE_IMPORTED_ENTRY_SIZE > fileBytes.Length)
-							break;
-
-						// Read import entry (6 bytes)
-						var moduleIndex = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 1);
-						var importOrdinal = BitConverter.ToUInt16(fileBytes, (int)currentOffset + 3);
-
-						currentOffset += NE_IMPORTED_ENTRY_SIZE;
-
-						// Module index is 1-based
+						// This is an import!
+						// Bytes 4-5: Module index (1-based)
+						// Bytes 6-7: Ordinal or name offset
+						var moduleIndex = BitConverter.ToUInt16(fileBytes, relocOffset + 4);
+						var importRef = BitConverter.ToUInt16(fileBytes, relocOffset + 6);
+						
 						if (moduleIndex > 0 && moduleIndex <= importModules.Count)
 						{
 							var moduleName = importModules[moduleIndex - 1];
-
+							
 							if (!importsByModule.ContainsKey(moduleName))
 								importsByModule[moduleName] = new List<NeImportedFunction>();
-
-							// Check if it's imported by name or ordinal
-							if (importOrdinal < OrdinalHighBitMask)
+							
+							if (targetType == 1)
 							{
-								// Import by name
-								var functionNameOffset = absImportedNamesTableOffset + importOrdinal;
-								if (functionNameOffset < fileBytes.Length)
+								// Imported by ordinal
+								importsByModule[moduleName].Add(new NeImportedFunction
 								{
-									var funcNameLength = fileBytes[functionNameOffset];
-									if (funcNameLength > 0 && functionNameOffset + 1 + funcNameLength <= fileBytes.Length)
+									Name = $"Ordinal_{importRef}",
+									Ordinal = importRef,
+									ImportedByOrdinal = true
+								});
+							}
+							else if (targetType == 2)
+							{
+								// Imported by name
+								var nameOffset = importedNamesTableOffset + importRef;
+								if (nameOffset < fileBytes.Length)
+								{
+									var nameLength = fileBytes[nameOffset];
+									if (nameLength > 0 && nameOffset + 1 + nameLength <= fileBytes.Length)
 									{
-										var functionName = Encoding.ASCII.GetString(fileBytes, (int)functionNameOffset + 1, funcNameLength);
+										var functionName = Encoding.ASCII.GetString(fileBytes, (int)nameOffset + 1, nameLength);
 										if (!string.IsNullOrWhiteSpace(functionName))
 										{
-											importsByModule[moduleName].Add(new NeImportedFunction
+											// Avoid duplicates
+											if (!importsByModule[moduleName].Any(f => f.Name == functionName))
 											{
-												Name = functionName,
-												ImportedByOrdinal = false
-											});
+												importsByModule[moduleName].Add(new NeImportedFunction
+												{
+													Name = functionName,
+													ImportedByOrdinal = false
+												});
+											}
 										}
 									}
 								}
 							}
-							else
-							{
-								// Import by ordinal
-								var ordinal = (ushort)(importOrdinal & OrdinalValueMask);
-								importsByModule[moduleName].Add(new NeImportedFunction
-								{
-									Name = $"Ordinal_{ordinal}",
-									Ordinal = ordinal,
-									ImportedByOrdinal = true
-								});
-							}
 						}
 					}
-				}
-				else
-				{
-					// Fixed or moveable segment entries - skip them
-					// Fixed segments use 3 bytes per entry, moveable use 6 bytes
-					uint entrySize = (segmentIndicator == FixedSegmentIndicator) ? (uint)NE_ENTRY_FIXED_SIZE : (uint)NE_ENTRY_MOVABLE_SIZE;
-					currentOffset += count * entrySize;
+					
+					relocOffset += NE_RELOC_ENTRY_SIZE;
 				}
 			}
 		}
