@@ -957,8 +957,8 @@ public sealed class Emulator : IDisposable
             : MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE;
         
         // Throttle noisy warning logs to reduce spam
-        var lastSuspiciousEipWarning = 0u;
         var lastHeapEipWarning = 0u;
+        var consecutiveHeapExecutions = 0ul; // Track consecutive executions in heap to detect stuck execution
         
         // WASM emergency yield: Track last yield time to prevent prolonged browser freezes
         // If more than 100ms passes without yielding, force an emergency yield
@@ -1023,19 +1023,6 @@ public sealed class Emulator : IDisposable
                 lastLogTime = now;
             }
             
-            // DEBUG: Log EIP at start of each iteration to catch when it gets corrupted
-            var eipAtLoopStart = _cpu!.GetEip();
-            // Check if EIP is in heap area (likely executing data)
-            // Exclude special emulator infrastructure ranges (syscall dispatcher, import stubs, COM vtables)
-            // Throttle: Only log this warning when EIP changes to reduce log noise
-            var isInHeapRange = eipAtLoopStart >= _heapBase && eipAtLoopStart < HEAP_LIMIT;
-            var isInSpecialRange = MemoryRegions.IsInSpecialRange(eipAtLoopStart);
-            if (isInHeapRange && !isInSpecialRange && eipAtLoopStart != lastSuspiciousEipWarning)
-            {
-                var esp = _cpu.GetRegister("ESP");
-                _logger.LogWarning("[Emulator] LOOP START: EIP=0x{Eip:X8} is already in suspicious range at loop start! ESP=0x{Esp:X8}", eipAtLoopStart, esp);
-                lastSuspiciousEipWarning = eipAtLoopStart;
-            }
             
             // Check pause state periodically without blocking
             if (!_pauseEvent.WaitOne(0))
@@ -1195,17 +1182,35 @@ public sealed class Emulator : IDisposable
             
             // Guard: detect execution in heap memory (likely executing data)
             // Exclude special emulator infrastructure ranges (syscall dispatcher, import stubs, COM vtables)
-            // Throttle: Only log this warning when EIP changes to reduce log noise
             var isExecutingInHeapRange = eipBeforeStep >= _heapBase && eipBeforeStep < HEAP_LIMIT;
             var isExecutingInSpecialRange = MemoryRegions.IsInSpecialRange(eipBeforeStep);
-            if (isExecutingInHeapRange && !isExecutingInSpecialRange && eipBeforeStep != lastHeapEipWarning)
+            if (isExecutingInHeapRange && !isExecutingInSpecialRange)
             {
-                // EIP in heap range is suspicious - likely executing data or unmapped memory
-                // This range is typically used for data segments, not code
-                _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in heap memory range (0x{HeapBase:X8}-0x{HeapLimit:X8}). This may indicate a bad jump or return address. Attempting to verify memory is mapped...", 
-                    eipBeforeStep, _heapBase, HEAP_LIMIT - 1);
-                lastHeapEipWarning = eipBeforeStep;
+                consecutiveHeapExecutions++;
                 
+                // Log warning only when EIP changes to reduce log noise
+                if (eipBeforeStep != lastHeapEipWarning)
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    _logger.LogWarning("[Emulator] EIP=0x{Eip:X8} is in heap memory range (0x{HeapBase:X8}-0x{HeapLimit:X8}). This may indicate a bad jump or return address. Consecutive heap executions: {Count}", 
+                        eipBeforeStep, _heapBase, HEAP_LIMIT - 1, consecutiveHeapExecutions);
+                    lastHeapEipWarning = eipBeforeStep;
+                }
+                
+                // If we've been executing in heap memory for more than 10 iterations,
+                // this is definitely wrong - stop execution to prevent infinite loops
+                // (10 iterations at ~2 bytes each = executing about 20 bytes of heap memory)
+                const ulong MAX_CONSECUTIVE_HEAP_EXECUTIONS = 10;
+                if (consecutiveHeapExecutions >= MAX_CONSECUTIVE_HEAP_EXECUTIONS)
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    _logger.LogError("[Emulator] HEAP EXECUTION DETECTED: EIP has been in heap memory range for {Count} consecutive iterations. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}. Stopping emulation.", 
+                        consecutiveHeapExecutions, eipBeforeStep, esp);
+                    _logger.LogError("[Emulator] This indicates the program jumped into data memory (likely due to a bug or corrupted return address). Normal programs should never execute code from the heap region.");
+                    break; // Stop emulation
+                }
+                
+                // Verify memory is mapped before attempting to execute
                 try
                 {
                     // Try to read a few bytes to check if memory is mapped and accessible
@@ -1218,6 +1223,11 @@ public sealed class Emulator : IDisposable
                     _logger.LogError(ex, "[Emulator] EIP=0x{Eip:X8} points to unmapped memory. ESP=0x{Esp:X8}. Execution cannot continue.", eipBeforeStep, esp);
                     throw new InvalidOperationException($"EIP=0x{eipBeforeStep:X8} points to unmapped memory. Likely a bad jump or corrupted return address.", ex);
                 }
+            }
+            else
+            {
+                // Reset counter when we're not in heap range
+                consecutiveHeapExecutions = 0;
             }
 
             CpuStepResult step;
