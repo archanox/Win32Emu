@@ -503,63 +503,131 @@ namespace Win32Emu.NeParser
 		
 		var moduleCount = header.ModuleReferenceCount;
 		
-		for (var i = 0; i < moduleCount; i++)
+		// The Module Reference Table format varies between NE implementations:
+		// Standard format: Array of 2-byte offsets into the Imported Names Table
+		// Alternative format (Windows ME and some others): Inline Pascal strings
+		
+		// Try to detect which format by checking if the first entry looks like an offset or a string
+		if (moduleTableOffset + 2 > bytes.Length)
+			return modules;
+		
+		var firstValue = BitConverter.ToUInt16(bytes, moduleTableOffset);
+		var potentialNameAddr = importNamesOffset + firstValue;
+		
+		// If first value is a small number and the target address has a valid Pascal string, use standard format
+		// Otherwise use inline format
+		bool useInlineFormat = false;
+		
+		if (firstValue < 0x1000 && potentialNameAddr + 1 < bytes.Length)
 		{
-			var offset = moduleTableOffset + (i * NE_MODULE_REF_ENTRY_SIZE);
-			
-			// Validate bounds for reading module reference entry
-			if (offset + NE_MODULE_REF_ENTRY_SIZE > bytes.Length)
+			var nameLen = bytes[potentialNameAddr];
+			if (nameLen > 0 && nameLen < 50 && potentialNameAddr + nameLen + 1 < bytes.Length)
 			{
-				break;
-			}
-			
-			var nameOffset = BitConverter.ToUInt16(bytes, offset);
-			if (nameOffset == 0)
-			{
-				continue;
-			}
-			
-			// Module reference table entries contain offsets into the imported names table
-			var actualOffset = importNamesOffset + nameOffset;
-			
-			// Validate offset is within bounds
-			if (actualOffset + 1 > bytes.Length)
-			{
-				continue;
-			}
-			
-			// Read length byte
-			var nameLength = bytes[actualOffset];
-			if (nameLength == 0)
-			{
-				continue;
-			}
-			
-			// Validate name doesn't extend beyond file
-			if (actualOffset + nameLength + 1 > bytes.Length)
-			{
-				continue;
-			}
-			
-			// Validate printable ASCII characters
-			var isValidName = true;
-			for (var j = 1; j <= nameLength; j++)
-			{
-				var ch = (char)bytes[actualOffset + j];
-				if (ch < 32 || ch > 126)
+				// Check if it's a valid string
+				bool validString = true;
+				for (int j = 1; j <= nameLen && validString; j++)
 				{
-					isValidName = false;
-					break;
+					var ch = bytes[potentialNameAddr + j];
+					if (ch < 32 || ch > 126)
+						validString = false;
 				}
+				if (!validString)
+					useInlineFormat = true;
 			}
-			
-			if (!isValidName)
+			else
 			{
-				continue;
+				useInlineFormat = true;
 			}
-			
-			var moduleName = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
-			modules.Add(moduleName);
+		}
+		else
+		{
+			useInlineFormat = true;
+		}
+		
+		if (useInlineFormat)
+		{
+			// Parse inline Pascal strings
+			var offset = moduleTableOffset;
+			for (var i = 0; i < moduleCount; i++)
+			{
+				if (offset + 1 > bytes.Length)
+					break;
+				
+				var nameLength = bytes[offset];
+				if (nameLength == 0)
+				{
+					offset++;
+					continue;
+				}
+				
+				if (offset + nameLength + 1 > bytes.Length)
+					break;
+				
+				// Validate printable ASCII
+				bool valid = true;
+				for (var j = 1; j <= nameLength; j++)
+				{
+					var ch = bytes[offset + j];
+					if (ch < 32 || ch > 126)
+					{
+						valid = false;
+						break;
+					}
+				}
+				
+				if (valid)
+				{
+					var moduleName = Encoding.ASCII.GetString(bytes, offset + 1, nameLength);
+					modules.Add(moduleName);
+				}
+				
+				offset += nameLength + 1;
+			}
+		}
+		else
+		{
+			// Standard format: 2-byte offsets
+			for (var i = 0; i < moduleCount; i++)
+			{
+				var offset = moduleTableOffset + (i * NE_MODULE_REF_ENTRY_SIZE);
+				
+				if (offset + NE_MODULE_REF_ENTRY_SIZE > bytes.Length)
+					break;
+				
+				var nameOffset = BitConverter.ToUInt16(bytes, offset);
+				if (nameOffset == 0)
+					continue;
+				
+				var actualOffset = importNamesOffset + nameOffset;
+				
+				if (actualOffset + 1 > bytes.Length)
+					continue;
+				
+				var nameLength = bytes[actualOffset];
+				if (nameLength == 0 || nameLength > 50)
+					continue;
+				
+				if (actualOffset + nameLength + 1 > bytes.Length)
+					continue;
+				
+				// Validate printable ASCII characters
+				bool isValidName = true;
+				for (var j = 1; j <= nameLength; j++)
+				{
+					var ch = (char)bytes[actualOffset + j];
+					if (ch < 32 || ch > 126)
+					{
+						isValidName = false;
+						break;
+					}
+				}
+				
+				if (!isValidName)
+					continue;
+				
+				var moduleName = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
+				modules.Add(moduleName);
+			}
 		}
 		
 		return modules;
