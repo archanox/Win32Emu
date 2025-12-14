@@ -327,7 +327,8 @@
 		DebugLogService.LogReceived += OnBackendLogReceived;
 		
 		// Note: EmulatorHost event subscription is deferred until after LoadExecutableAsync
-		// because the host is created lazily during load. See SubscribeToEmulatorHost().
+		// to ensure proper timing after the emulator and backend are fully initialized.
+		// See SubscribeToEmulatorHost() called from StartEmulation.
 	}
 	
 	/// <summary>
