@@ -82,13 +82,29 @@
 	private bool ShowRetryButton => (Info.Type & MB_TYPEMASK) == MB_ABORTRETRYIGNORE || (Info.Type & MB_TYPEMASK) == MB_RETRYCANCEL;
 	private bool ShowIgnoreButton => (Info.Type & MB_TYPEMASK) == MB_ABORTRETRYIGNORE;
 	
+	// Track if result has been submitted to prevent double-clicks
+	private bool _resultSubmitted = false;
+	
 	private async Task HandleButtonClick(ButtonResult result)
 	{
+		// Prevent double-clicks by checking if result was already submitted
+		if (_resultSubmitted)
+		{
+			return;
+		}
+		
+		_resultSubmitted = true;
 		await OnResult.InvokeAsync((int)result);
 	}
 	
 	private async Task HandleBackdropClick()
 	{
+		// Prevent double-clicks
+		if (_resultSubmitted)
+		{
+			return;
+		}
+		
 		// Click outside the message box acts as Cancel (if available) or OK
 		if (ShowCancelButton)
 		{

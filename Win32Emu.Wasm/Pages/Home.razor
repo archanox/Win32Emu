@@ -315,6 +315,9 @@
 	private MessageBoxInfo? _activeMessageBox = null;
 	private Win32Emu.Wasm.Services.WasmEmulatorHost.MessageBoxEventArgs? _activeMessageBoxEventArgs = null;
 	
+	// Track the currently subscribed host to avoid double subscriptions and enable proper cleanup
+	private Win32Emu.Wasm.Services.WasmEmulatorHost? _subscribedHost = null;
+	
 	/// <summary>
 	/// Called when the component is initialized. Subscribe to the debug log service.
 	/// </summary>
@@ -323,14 +326,8 @@
 		// Subscribe to the centralized debug log service to receive logs from all backend components
 		DebugLogService.LogReceived += OnBackendLogReceived;
 		
-		// Subscribe to EmulatorHost events for windows/dialogs
-		if (EmulatorService.EmulatorHost is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
-		{
-			wasmHost.WindowCreated += OnWindowCreated;
-			wasmHost.DialogCreateRequested += OnDialogCreateRequested;
-			wasmHost.MessageBoxRequested += OnMessageBoxRequested;
-			wasmHost.DialogEnded += OnDialogEnded;
-		}
+		// Note: EmulatorHost event subscription is deferred until after LoadExecutableAsync
+		// because the host is created lazily during load. See SubscribeToEmulatorHost().
 	}
 	
 	/// <summary>
@@ -566,6 +563,9 @@
 			EmulatorService.OnStdOutput += OnEmulatorStdOutput;
 			EmulatorService.OnStateChanged += OnEmulatorStateChanged;
 			
+			// Subscribe to EmulatorHost events now that it's been created by LoadExecutableAsync
+			SubscribeToEmulatorHost();
+			
 			// Load the executable using the real emulator
 			AddDebugOutput($"Loading PE executable: {_loadedFileName}");
 			AddDebugOutput($"SIMD: {EmulatorService.GetSimdCapabilities()}");
@@ -751,6 +751,52 @@
 	}
 	
 	/// <summary>
+	/// Subscribe to EmulatorHost events for windows/dialogs.
+	/// This is called after LoadExecutableAsync returns and EmulatorHost is non-null.
+	/// Guards against double subscription by tracking the currently subscribed host.
+	/// </summary>
+	private void SubscribeToEmulatorHost()
+	{
+		var currentHost = EmulatorService.EmulatorHost;
+		
+		// If already subscribed to this host, no-op
+		if (currentHost == _subscribedHost)
+		{
+			return;
+		}
+		
+		// Unsubscribe from previous host if different
+		UnsubscribeFromEmulatorHost();
+		
+		// Subscribe to the new host
+		if (currentHost != null)
+		{
+			currentHost.WindowCreated += OnWindowCreated;
+			currentHost.DialogCreateRequested += OnDialogCreateRequested;
+			currentHost.MessageBoxRequested += OnMessageBoxRequested;
+			currentHost.DialogEnded += OnDialogEnded;
+			_subscribedHost = currentHost;
+			
+			AddDebugOutput("Subscribed to EmulatorHost events");
+		}
+	}
+	
+	/// <summary>
+	/// Unsubscribe from the currently subscribed EmulatorHost.
+	/// </summary>
+	private void UnsubscribeFromEmulatorHost()
+	{
+		if (_subscribedHost != null)
+		{
+			_subscribedHost.WindowCreated -= OnWindowCreated;
+			_subscribedHost.DialogCreateRequested -= OnDialogCreateRequested;
+			_subscribedHost.MessageBoxRequested -= OnMessageBoxRequested;
+			_subscribedHost.DialogEnded -= OnDialogEnded;
+			_subscribedHost = null;
+		}
+	}
+	
+	/// <summary>
 	/// Handle window creation events from the emulator.
 	/// </summary>
 	private async void OnWindowCreated(object? sender, WindowCreateInfo info)
@@ -849,7 +895,11 @@
 		if (_activeDialogEventArgs != null)
 		{
 			AddDebugOutput($"Dialog result: {result}");
-			_activeDialogEventArgs.CompletionSource.SetResult(result);
+			// Use TrySetResult to avoid exceptions if already completed
+			if (!_activeDialogEventArgs.CompletionSource.TrySetResult(result))
+			{
+				Logger.LogWarning("Dialog result was already set, ignoring duplicate completion");
+			}
 			_activeDialog = null;
 			_activeDialogEventArgs = null;
 			StateHasChanged();
@@ -864,7 +914,11 @@
 		if (_activeMessageBoxEventArgs != null)
 		{
 			AddDebugOutput($"MessageBox result: {result}");
-			_activeMessageBoxEventArgs.CompletionSource.SetResult(result);
+			// Use TrySetResult to avoid exceptions if already completed
+			if (!_activeMessageBoxEventArgs.CompletionSource.TrySetResult(result))
+			{
+				Logger.LogWarning("MessageBox result was already set, ignoring duplicate completion");
+			}
 			_activeMessageBox = null;
 			_activeMessageBoxEventArgs = null;
 			StateHasChanged();
@@ -884,13 +938,7 @@
 		EmulatorService.OnStdOutput -= OnEmulatorStdOutput;
 		EmulatorService.OnStateChanged -= OnEmulatorStateChanged;
 		
-		// Unsubscribe from host events
-		if (EmulatorService.EmulatorHost is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
-		{
-			wasmHost.WindowCreated -= OnWindowCreated;
-			wasmHost.DialogCreateRequested -= OnDialogCreateRequested;
-			wasmHost.MessageBoxRequested -= OnMessageBoxRequested;
-			wasmHost.DialogEnded -= OnDialogEnded;
-		}
+		// Unsubscribe from host events using the helper method
+		UnsubscribeFromEmulatorHost();
 	}
 }
