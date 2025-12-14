@@ -409,7 +409,8 @@ public class EmulatorService : IDisposable
 		_emulator?.Dispose();
 		_browserVfs?.Dispose();
 		
-		// Clear references to allow garbage collection (but don't null out readonly fields)
+		// Clear nullable references to allow garbage collection
+		// Note: _emulatorHost is readonly and initialized in constructor, so it's not cleared here
 		_backendFactory = null;
 	}
 }
