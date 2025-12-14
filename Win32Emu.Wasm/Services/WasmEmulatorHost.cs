@@ -21,9 +21,56 @@ public class WasmEmulatorHost : IEmulatorHost
 	/// </summary>
 	public event EventHandler<string>? StdOutputReceived;
 	
+	/// <summary>
+	/// Event fired when a window is created.
+	/// </summary>
+	public event EventHandler<WindowCreateInfo>? WindowCreated;
+	
+	/// <summary>
+	/// Event fired when a dialog needs to be displayed and awaits user interaction.
+	/// </summary>
+	public event EventHandler<DialogCreateEventArgs>? DialogCreateRequested;
+	
+	/// <summary>
+	/// Event fired when a message box needs to be displayed and awaits user response.
+	/// </summary>
+	public event EventHandler<MessageBoxEventArgs>? MessageBoxRequested;
+	
+	/// <summary>
+	/// Event fired when a dialog ends.
+	/// </summary>
+	public event EventHandler<DialogEndEventArgs>? DialogEnded;
+	
 	public WasmEmulatorHost(ILogger<WasmEmulatorHost> logger)
 	{
 		_logger = logger;
+	}
+	
+	/// <summary>
+	/// Event arguments for dialog creation requests.
+	/// </summary>
+	public class DialogCreateEventArgs : EventArgs
+	{
+		public required DialogCreateInfo Info { get; init; }
+		public TaskCompletionSource<int> CompletionSource { get; } = new();
+	}
+	
+	/// <summary>
+	/// Event arguments for message box requests.
+	/// </summary>
+	public class MessageBoxEventArgs : EventArgs
+	{
+		public required MessageBoxInfo Info { get; init; }
+		public TaskCompletionSource<int> CompletionSource { get; } = new();
+	}
+	
+	/// <summary>
+	/// Event arguments for dialog end notifications.
+	/// </summary>
+	public class DialogEndEventArgs : EventArgs
+	{
+		public uint DialogHandle { get; init; }
+		public int Result { get; init; }
 	}
 	
 	public void OnDebugOutput(string message, DebugLevel level)
@@ -47,28 +94,46 @@ public class WasmEmulatorHost : IEmulatorHost
 	public void OnWindowCreate(WindowCreateInfo info)
 	{
 		_logger.LogInformation("[EmulatorHost] Window created: {Title}", info.Title);
-		// WASM doesn't support native window creation - handled by canvas
+		// Forward to UI for display
+		WindowCreated?.Invoke(this, info);
 	}
 	
 	public Task<int> OnDialogCreate(DialogCreateInfo info)
 	{
 		_logger.LogInformation("[EmulatorHost] Dialog created: {Title}", info.Template.Title);
-		// Return 0 to indicate dialog was "cancelled" (not supported in WASM POC)
-		return Task.FromResult(0);
+		
+		// Create event args with completion source
+		var eventArgs = new DialogCreateEventArgs { Info = info };
+		
+		// Raise event to UI (this is async-friendly)
+		DialogCreateRequested?.Invoke(this, eventArgs);
+		
+		// Return the task that will be completed when the user interacts with the dialog
+		return eventArgs.CompletionSource.Task;
 	}
 	
 	public void OnDialogEnd(uint dialogHandle, int result)
 	{
 		_logger.LogInformation("[EmulatorHost] Dialog ended: Handle=0x{Handle:X8}, Result={Result}", dialogHandle, result);
+		DialogEnded?.Invoke(this, new DialogEndEventArgs { DialogHandle = dialogHandle, Result = result });
 	}
 	
 	public int OnMessageBox(MessageBoxInfo info)
 	{
 		_logger.LogInformation("[EmulatorHost] MessageBox: {Title} - {Text}", info.Caption, info.Text);
+		
 		// Forward to stdout so user can see it in the WASM UI
 		StdOutputReceived?.Invoke(this, $"[MessageBox] {info.Caption}: {info.Text}\n");
-		// Return IDOK (1) as default response
-		return 1;
+		
+		// Create event args with completion source
+		var eventArgs = new MessageBoxEventArgs { Info = info };
+		
+		// Raise event to UI
+		MessageBoxRequested?.Invoke(this, eventArgs);
+		
+		// Wait synchronously for the result (MessageBox is a blocking API in Win32)
+		// Note: This may block the emulator thread, but that's consistent with Win32 behavior
+		return eventArgs.CompletionSource.Task.Result;
 	}
 	
 	public void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text)

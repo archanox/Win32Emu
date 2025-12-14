@@ -43,6 +43,11 @@ public class EmulatorService : IDisposable
 	public string? LoadedExecutableName => _loadedExecutableName;
 	
 	/// <summary>
+	/// Gets the emulator host instance for registering to events.
+	/// </summary>
+	public WasmEmulatorHost? Host => _emulatorHost;
+	
+	/// <summary>
 	/// Gets the number of instructions executed by the emulator.
 	/// Note: In WASM mode, telemetry is not enabled, so this will return 0.
 	/// This is a placeholder for future implementation.

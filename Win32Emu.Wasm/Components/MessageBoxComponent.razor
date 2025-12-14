@@ -1,0 +1,98 @@
+@using Win32Emu
+
+<div class="win32-messagebox-overlay" @onclick="HandleBackdropClick">
+	<div class="win32-messagebox" @onclick:stopPropagation="true">
+		<div class="win32-messagebox-titlebar">
+			<span class="win32-messagebox-title">@Info.Caption</span>
+		</div>
+		<div class="win32-messagebox-content">
+			<div class="win32-messagebox-text">
+				@Info.Text
+			</div>
+		</div>
+		<div class="win32-messagebox-buttons">
+			@if (ShowOkButton)
+			{
+				<button class="win32-button" @onclick="() => HandleButtonClick(ButtonResult.Ok)">OK</button>
+			}
+			@if (ShowCancelButton)
+			{
+				<button class="win32-button" @onclick="() => HandleButtonClick(ButtonResult.Cancel)">Cancel</button>
+			}
+			@if (ShowYesButton)
+			{
+				<button class="win32-button" @onclick="() => HandleButtonClick(ButtonResult.Yes)">Yes</button>
+			}
+			@if (ShowNoButton)
+			{
+				<button class="win32-button" @onclick="() => HandleButtonClick(ButtonResult.No)">No</button>
+			}
+			@if (ShowAbortButton)
+			{
+				<button class="win32-button" @onclick="() => HandleButtonClick(ButtonResult.Abort)">Abort</button>
+			}
+			@if (ShowRetryButton)
+			{
+				<button class="win32-button" @onclick="() => HandleButtonClick(ButtonResult.Retry)">Retry</button>
+			}
+			@if (ShowIgnoreButton)
+			{
+				<button class="win32-button" @onclick="() => HandleButtonClick(ButtonResult.Ignore)">Ignore</button>
+			}
+		</div>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public required MessageBoxInfo Info { get; set; }
+	
+	[Parameter]
+	public EventCallback<int> OnResult { get; set; }
+	
+	// MessageBox button combinations (MB_*)
+	private const uint MB_OK = 0x00000000;
+	private const uint MB_OKCANCEL = 0x00000001;
+	private const uint MB_ABORTRETRYIGNORE = 0x00000002;
+	private const uint MB_YESNOCANCEL = 0x00000003;
+	private const uint MB_YESNO = 0x00000004;
+	private const uint MB_RETRYCANCEL = 0x00000005;
+	
+	// MessageBox return values (ID*)
+	private enum ButtonResult
+	{
+		Ok = 1,
+		Cancel = 2,
+		Abort = 3,
+		Retry = 4,
+		Ignore = 5,
+		Yes = 6,
+		No = 7
+	}
+	
+	private bool ShowOkButton => (Info.Type & 0x0F) == MB_OK || (Info.Type & 0x0F) == MB_OKCANCEL;
+	private bool ShowCancelButton => (Info.Type & 0x0F) == MB_OKCANCEL || (Info.Type & 0x0F) == MB_YESNOCANCEL || (Info.Type & 0x0F) == MB_RETRYCANCEL;
+	private bool ShowYesButton => (Info.Type & 0x0F) == MB_YESNOCANCEL || (Info.Type & 0x0F) == MB_YESNO;
+	private bool ShowNoButton => (Info.Type & 0x0F) == MB_YESNOCANCEL || (Info.Type & 0x0F) == MB_YESNO;
+	private bool ShowAbortButton => (Info.Type & 0x0F) == MB_ABORTRETRYIGNORE;
+	private bool ShowRetryButton => (Info.Type & 0x0F) == MB_ABORTRETRYIGNORE || (Info.Type & 0x0F) == MB_RETRYCANCEL;
+	private bool ShowIgnoreButton => (Info.Type & 0x0F) == MB_ABORTRETRYIGNORE;
+	
+	private async Task HandleButtonClick(ButtonResult result)
+	{
+		await OnResult.InvokeAsync((int)result);
+	}
+	
+	private async Task HandleBackdropClick()
+	{
+		// Click outside the message box acts as Cancel (if available) or OK
+		if (ShowCancelButton)
+		{
+			await HandleButtonClick(ButtonResult.Cancel);
+		}
+		else if (ShowOkButton)
+		{
+			await HandleButtonClick(ButtonResult.Ok);
+		}
+	}
+}

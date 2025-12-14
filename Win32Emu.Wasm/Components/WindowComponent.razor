@@ -1,0 +1,27 @@
+@using Win32Emu
+
+<div class="win32-window" 
+	 style="left: @(Info.X)px; top: @(Info.Y)px; width: @(Info.Width)px; height: @(Info.Height)px;">
+	<div class="win32-window-titlebar">
+		<span class="win32-window-title">@Info.Title</span>
+		<button class="win32-window-close" @onclick="HandleClose">×</button>
+	</div>
+	<div class="win32-window-content">
+		<p>Window: @Info.ClassName</p>
+		<p>Handle: 0x@Info.Handle.ToString("X8")</p>
+		<small class="text-muted">Window rendering is handled by the emulator canvas below.</small>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public required WindowCreateInfo Info { get; set; }
+	
+	[Parameter]
+	public EventCallback OnClose { get; set; }
+	
+	private async Task HandleClose()
+	{
+		await OnClose.InvokeAsync();
+	}
+}
