@@ -3,7 +3,7 @@
 
 <div class="win32-dialog-overlay" @onclick="HandleBackdropClick">
 	<div class="win32-dialog" 
-		 style="width: @(Info.Template.Width * 2)px; height: @(Info.Template.Height * 2)px;"
+		 style="width: @(Info.Template.Width * DialogScaleFactor)px; height: @(Info.Template.Height * DialogScaleFactor)px;"
 		 @onclick:stopPropagation="true">
 		<div class="win32-dialog-titlebar">
 			<span class="win32-dialog-title">@Info.Template.Title</span>
@@ -13,7 +13,7 @@
 			@foreach (var item in Info.Template.Items)
 			{
 				<div class="win32-dialog-control" 
-					 style="position: absolute; left: @(item.X * 2)px; top: @(item.Y * 2)px; width: @(item.Width * 2)px; height: @(item.Height * 2)px;">
+					 style="position: absolute; left: @(item.X * DialogScaleFactor)px; top: @(item.Y * DialogScaleFactor)px; width: @(item.Width * DialogScaleFactor)px; height: @(item.Height * DialogScaleFactor)px;">
 					@RenderControl(item)
 				</div>
 			}
@@ -28,7 +28,12 @@
 	[Parameter]
 	public EventCallback<int> OnResult { get; set; }
 	
-	// Dialog control styles
+	// Dialog scaling factor to convert dialog units (DLU) to pixels
+	// Dialog units are typically half the pixel size, so we use 2x scaling
+	private const int DialogScaleFactor = 2;
+	
+	// Win32 Dialog control styles (should match Win32 API values)
+	// These are duplicated here for UI rendering without coupling to emulator internals
 	private const uint BS_PUSHBUTTON = 0x00000000;
 	private const uint BS_DEFPUSHBUTTON = 0x00000001;
 	private const uint ES_LEFT = 0x00000000;
@@ -36,7 +41,7 @@
 	private const uint SS_LEFT = 0x00000000;
 	private const uint SS_CENTER = 0x00000001;
 	
-	// Window styles
+	// Win32 Window styles (should match Win32 API values)
 	private const uint WS_VISIBLE = 0x10000000;
 	private const uint WS_DISABLED = 0x08000000;
 	

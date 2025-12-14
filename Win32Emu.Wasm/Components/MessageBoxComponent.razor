@@ -50,7 +50,8 @@
 	[Parameter]
 	public EventCallback<int> OnResult { get; set; }
 	
-	// MessageBox button combinations (MB_*)
+	// Win32 MessageBox button combinations (should match Win32 API MB_* values)
+	// These are duplicated here for UI rendering without coupling to emulator internals
 	private const uint MB_OK = 0x00000000;
 	private const uint MB_OKCANCEL = 0x00000001;
 	private const uint MB_ABORTRETRYIGNORE = 0x00000002;
@@ -58,16 +59,16 @@
 	private const uint MB_YESNO = 0x00000004;
 	private const uint MB_RETRYCANCEL = 0x00000005;
 	
-	// MessageBox return values (ID*)
+	// Win32 MessageBox return values (should match Win32 API ID* values)
 	private enum ButtonResult
 	{
-		Ok = 1,
-		Cancel = 2,
-		Abort = 3,
-		Retry = 4,
-		Ignore = 5,
-		Yes = 6,
-		No = 7
+		Ok = 1,      // IDOK
+		Cancel = 2,  // IDCANCEL
+		Abort = 3,   // IDABORT
+		Retry = 4,   // IDRETRY
+		Ignore = 5,  // IDIGNORE
+		Yes = 6,     // IDYES
+		No = 7       // IDNO
 	}
 	
 	private bool ShowOkButton => (Info.Type & 0x0F) == MB_OK || (Info.Type & 0x0F) == MB_OKCANCEL;
