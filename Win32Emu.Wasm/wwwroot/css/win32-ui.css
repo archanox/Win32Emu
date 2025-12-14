@@ -1,0 +1,305 @@
+/* Win32-style UI Components for WASM Frontend */
+
+/* Overlay container for all Win32 UI elements */
+.win32-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	pointer-events: none;
+	z-index: 1000;
+}
+
+.win32-overlay > * {
+	pointer-events: auto;
+}
+
+/* Message Box Styles */
+.win32-messagebox-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2000;
+}
+
+.win32-messagebox {
+	background-color: #c0c0c0;
+	border: 2px outset #ffffff;
+	min-width: 300px;
+	max-width: 500px;
+	box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+}
+
+.win32-messagebox-titlebar {
+	background: linear-gradient(to right, #000080, #1084d0);
+	color: white;
+	padding: 3px 5px;
+	font-weight: bold;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.win32-messagebox-title {
+	font-size: 11px;
+}
+
+.win32-messagebox-content {
+	padding: 20px;
+	background-color: #c0c0c0;
+}
+
+.win32-messagebox-text {
+	margin-bottom: 20px;
+	color: #000000;
+}
+
+.win32-messagebox-buttons {
+	display: flex;
+	justify-content: center;
+	gap: 10px;
+	padding: 10px 20px 20px 20px;
+}
+
+/* Dialog Styles */
+.win32-dialog-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2000;
+}
+
+.win32-dialog {
+	background-color: #c0c0c0;
+	border: 2px outset #ffffff;
+	box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+	display: flex;
+	flex-direction: column;
+}
+
+.win32-dialog-titlebar {
+	background: linear-gradient(to right, #000080, #1084d0);
+	color: white;
+	padding: 3px 5px;
+	font-weight: bold;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.win32-dialog-title {
+	font-size: 11px;
+}
+
+.win32-dialog-close {
+	background-color: #c0c0c0;
+	border: 1px outset #ffffff;
+	color: #000000;
+	width: 16px;
+	height: 14px;
+	font-size: 10px;
+	line-height: 10px;
+	padding: 0;
+	cursor: pointer;
+	font-weight: bold;
+}
+
+.win32-dialog-close:hover {
+	background-color: #d0d0d0;
+}
+
+.win32-dialog-close:active {
+	border-style: inset;
+}
+
+.win32-dialog-content {
+	background-color: #c0c0c0;
+	flex: 1;
+	position: relative;
+	padding: 10px;
+}
+
+.win32-dialog-control {
+	position: absolute;
+}
+
+/* Window Styles */
+.win32-window {
+	position: absolute;
+	background-color: #c0c0c0;
+	border: 2px outset #ffffff;
+	box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+	z-index: 1500;
+}
+
+.win32-window-titlebar {
+	background: linear-gradient(to right, #000080, #1084d0);
+	color: white;
+	padding: 3px 5px;
+	font-weight: bold;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	cursor: move;
+}
+
+.win32-window-title {
+	font-size: 11px;
+}
+
+.win32-window-close {
+	background-color: #c0c0c0;
+	border: 1px outset #ffffff;
+	color: #000000;
+	width: 16px;
+	height: 14px;
+	font-size: 10px;
+	line-height: 10px;
+	padding: 0;
+	cursor: pointer;
+	font-weight: bold;
+}
+
+.win32-window-close:hover {
+	background-color: #d0d0d0;
+}
+
+.win32-window-close:active {
+	border-style: inset;
+}
+
+.win32-window-content {
+	background-color: #c0c0c0;
+	padding: 10px;
+	min-height: 100px;
+}
+
+/* Button Styles */
+.win32-button {
+	background-color: #c0c0c0;
+	border: 2px outset #ffffff;
+	color: #000000;
+	padding: 4px 12px;
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+	cursor: pointer;
+	min-width: 75px;
+}
+
+.win32-button:hover {
+	background-color: #d0d0d0;
+}
+
+.win32-button:active {
+	border-style: inset;
+	background-color: #a0a0a0;
+}
+
+.win32-button:disabled {
+	color: #808080;
+	cursor: default;
+}
+
+.win32-button-default {
+	border: 3px outset #000000;
+	font-weight: bold;
+}
+
+/* Edit Control Styles */
+.win32-edit {
+	background-color: #ffffff;
+	border: 2px inset #808080;
+	color: #000000;
+	padding: 2px 4px;
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.win32-edit:focus {
+	outline: 1px dotted #000000;
+	outline-offset: -3px;
+}
+
+.win32-edit:disabled {
+	background-color: #c0c0c0;
+	color: #808080;
+}
+
+.win32-edit-multiline {
+	resize: vertical;
+	min-height: 60px;
+}
+
+/* Static Text Styles */
+.win32-static {
+	color: #000000;
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+	padding: 2px;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+}
+
+/* ListBox Styles */
+.win32-listbox {
+	background-color: #ffffff;
+	border: 2px inset #808080;
+	color: #000000;
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+	width: 100%;
+	padding: 2px;
+}
+
+.win32-listbox:focus {
+	outline: 1px dotted #000000;
+	outline-offset: -3px;
+}
+
+/* ComboBox Styles */
+.win32-combobox {
+	background-color: #ffffff;
+	border: 2px inset #808080;
+	color: #000000;
+	font-family: "MS Sans Serif", "Tahoma", sans-serif;
+	font-size: 11px;
+	width: 100%;
+	padding: 2px 4px;
+}
+
+.win32-combobox:focus {
+	outline: 1px dotted #000000;
+	outline-offset: -3px;
+}
+
+/* Unknown Control Styles */
+.win32-control-unknown {
+	background-color: #ffcccc;
+	border: 1px dashed #ff0000;
+	color: #cc0000;
+	font-family: monospace;
+	font-size: 10px;
+	padding: 4px;
+	text-align: center;
+}

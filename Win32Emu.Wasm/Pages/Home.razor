@@ -1,6 +1,8 @@
 @page "/"
 @implements IDisposable
 @using System.Text
+@using Win32Emu
+@using Win32Emu.Wasm.Components
 @inject IJSRuntime JS
 @inject ILogger<Home> Logger
 @inject Win32Emu.Wasm.Services.EmulatorService EmulatorService
@@ -32,12 +34,33 @@
 					}
 				</div>
 				<div class="card-body p-0">
-					<div class="canvas-container" style="background-color: #000; min-height: 480px; display: flex; align-items: center; justify-content: center;">
+					<div class="canvas-container" style="background-color: #000; min-height: 480px; display: flex; align-items: center; justify-content: center; position: relative;">
 						<canvas id="emulatorCanvas" 
 								width="640" 
 								height="480"
 								style="max-width: 100%; height: auto; image-rendering: pixelated;">
 						</canvas>
+						
+						<!-- Windows and dialogs overlay -->
+						@if (_activeWindows.Count > 0 || _activeDialog != null || _activeMessageBox != null)
+						{
+							<div class="win32-overlay">
+								@foreach (var window in _activeWindows.Values)
+								{
+									<WindowComponent Info="window" OnClose="() => HandleWindowClose(window.Handle)" />
+								}
+								
+								@if (_activeDialog != null)
+								{
+									<DialogComponent Info="_activeDialog" OnResult="HandleDialogResult" />
+								}
+								
+								@if (_activeMessageBox != null)
+								{
+									<MessageBoxComponent Info="_activeMessageBox" OnResult="HandleMessageBoxResult" />
+								}
+							</div>
+						}
 					</div>
 				</div>
 			</div>
@@ -240,6 +263,7 @@
 					<li>✅ WASM backend factory for rendering, audio, and input</li>
 					<li>✅ EmulatorService for lifecycle management</li>
 					<li>✅ Browser-based VFS for game data files (in-memory, case-insensitive)</li>
+					<li>✅ Win32 windows and dialogs rendering (MessageBox, DialogBox, CreateWindow)</li>
 				</ul>
 				<p class="mb-0">
 					<strong>Remaining work:</strong>
@@ -248,6 +272,7 @@
 					<li>IndexedDB persistence for VFS (save games)</li>
 					<li>Keyboard/Mouse input forwarding to emulated Windows</li>
 					<li>Performance optimization for real-time emulation</li>
+					<li>Dialog control state synchronization with emulator</li>
 				</ul>
 			</div>
 		</div>
@@ -283,6 +308,13 @@
 	private const int LogRotationBufferMargin = 1000;
 	private const string LogTruncationPrefix = "... (older logs truncated) ...\n";
 	
+	// Windows and dialogs state
+	private Dictionary<uint, WindowCreateInfo> _activeWindows = new();
+	private DialogCreateInfo? _activeDialog = null;
+	private Win32Emu.Wasm.Services.WasmEmulatorHost.DialogCreateEventArgs? _activeDialogEventArgs = null;
+	private MessageBoxInfo? _activeMessageBox = null;
+	private Win32Emu.Wasm.Services.WasmEmulatorHost.MessageBoxEventArgs? _activeMessageBoxEventArgs = null;
+	
 	/// <summary>
 	/// Called when the component is initialized. Subscribe to the debug log service.
 	/// </summary>
@@ -290,6 +322,15 @@
 	{
 		// Subscribe to the centralized debug log service to receive logs from all backend components
 		DebugLogService.LogReceived += OnBackendLogReceived;
+		
+		// Subscribe to EmulatorHost events for windows/dialogs
+		if (EmulatorService.Host is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
+		{
+			wasmHost.WindowCreated += OnWindowCreated;
+			wasmHost.DialogCreateRequested += OnDialogCreateRequested;
+			wasmHost.MessageBoxRequested += OnMessageBoxRequested;
+			wasmHost.DialogEnded += OnDialogEnded;
+		}
 	}
 	
 	/// <summary>
@@ -710,6 +751,99 @@
 	}
 	
 	/// <summary>
+	/// Handle window creation events from the emulator.
+	/// </summary>
+	private async void OnWindowCreated(object? sender, WindowCreateInfo info)
+	{
+		await InvokeAsync(() =>
+		{
+			_activeWindows[info.Handle] = info;
+			AddDebugOutput($"Window created: {info.Title} (0x{info.Handle:X8})");
+			StateHasChanged();
+		});
+	}
+	
+	/// <summary>
+	/// Handle dialog creation requests from the emulator.
+	/// </summary>
+	private async void OnDialogCreateRequested(object? sender, Win32Emu.Wasm.Services.WasmEmulatorHost.DialogCreateEventArgs e)
+	{
+		await InvokeAsync(() =>
+		{
+			_activeDialog = e.Info;
+			_activeDialogEventArgs = e;
+			AddDebugOutput($"Dialog requested: {e.Info.Template.Title}");
+			StateHasChanged();
+		});
+	}
+	
+	/// <summary>
+	/// Handle message box requests from the emulator.
+	/// </summary>
+	private async void OnMessageBoxRequested(object? sender, Win32Emu.Wasm.Services.WasmEmulatorHost.MessageBoxEventArgs e)
+	{
+		await InvokeAsync(() =>
+		{
+			_activeMessageBox = e.Info;
+			_activeMessageBoxEventArgs = e;
+			AddDebugOutput($"MessageBox: {e.Info.Caption}");
+			StateHasChanged();
+		});
+	}
+	
+	/// <summary>
+	/// Handle dialog end notifications from the emulator.
+	/// </summary>
+	private async void OnDialogEnded(object? sender, Win32Emu.Wasm.Services.WasmEmulatorHost.DialogEndEventArgs e)
+	{
+		await InvokeAsync(() =>
+		{
+			AddDebugOutput($"Dialog ended: 0x{e.DialogHandle:X8}, result={e.Result}");
+			StateHasChanged();
+		});
+	}
+	
+	/// <summary>
+	/// Handle window close events.
+	/// </summary>
+	private void HandleWindowClose(uint windowHandle)
+	{
+		_activeWindows.Remove(windowHandle);
+		AddDebugOutput($"Window closed: 0x{windowHandle:X8}");
+		StateHasChanged();
+	}
+	
+	/// <summary>
+	/// Handle dialog result from user interaction.
+	/// </summary>
+	private void HandleDialogResult(int result)
+	{
+		if (_activeDialogEventArgs != null)
+		{
+			AddDebugOutput($"Dialog result: {result}");
+			_activeDialogEventArgs.CompletionSource.SetResult(result);
+			_activeDialog = null;
+			_activeDialogEventArgs = null;
+			StateHasChanged();
+		}
+	}
+	
+	/// <summary>
+	/// Handle message box result from user interaction.
+	/// </summary>
+	private void HandleMessageBoxResult(int result)
+	{
+		if (_activeMessageBoxEventArgs != null)
+		{
+			AddDebugOutput($"MessageBox result: {result}");
+			_activeMessageBoxEventArgs.CompletionSource.SetResult(result);
+			_activeMessageBox = null;
+			_activeMessageBoxEventArgs = null;
+			StateHasChanged();
+		}
+	}
+	
+	/// <summary>
 	/// Unsubscribe from emulator events to prevent memory leaks
 	/// </summary>
 	public void Dispose()
@@ -721,5 +855,14 @@
 		EmulatorService.OnDebugOutput -= OnEmulatorDebugOutput;
 		EmulatorService.OnStdOutput -= OnEmulatorStdOutput;
 		EmulatorService.OnStateChanged -= OnEmulatorStateChanged;
+		
+		// Unsubscribe from host events
+		if (EmulatorService.Host is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
+		{
+			wasmHost.WindowCreated -= OnWindowCreated;
+			wasmHost.DialogCreateRequested -= OnDialogCreateRequested;
+			wasmHost.MessageBoxRequested -= OnMessageBoxRequested;
+			wasmHost.DialogEnded -= OnDialogEnded;
+		}
 	}
 }

@@ -1,0 +1,144 @@
+@using Win32Emu
+@using Win32Emu.Win32
+
+<div class="win32-dialog-overlay" @onclick="HandleBackdropClick">
+	<div class="win32-dialog" 
+		 style="width: @(Info.Template.Width * 2)px; height: @(Info.Template.Height * 2)px;"
+		 @onclick:stopPropagation="true">
+		<div class="win32-dialog-titlebar">
+			<span class="win32-dialog-title">@Info.Template.Title</span>
+			<button class="win32-dialog-close" @onclick="HandleClose">×</button>
+		</div>
+		<div class="win32-dialog-content">
+			@foreach (var item in Info.Template.Items)
+			{
+				<div class="win32-dialog-control" 
+					 style="position: absolute; left: @(item.X * 2)px; top: @(item.Y * 2)px; width: @(item.Width * 2)px; height: @(item.Height * 2)px;">
+					@RenderControl(item)
+				</div>
+			}
+		</div>
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public required DialogCreateInfo Info { get; set; }
+	
+	[Parameter]
+	public EventCallback<int> OnResult { get; set; }
+	
+	// Dialog control styles
+	private const uint BS_PUSHBUTTON = 0x00000000;
+	private const uint BS_DEFPUSHBUTTON = 0x00000001;
+	private const uint ES_LEFT = 0x00000000;
+	private const uint ES_MULTILINE = 0x00000004;
+	private const uint SS_LEFT = 0x00000000;
+	private const uint SS_CENTER = 0x00000001;
+	
+	// Window styles
+	private const uint WS_VISIBLE = 0x10000000;
+	private const uint WS_DISABLED = 0x08000000;
+	
+	private Dictionary<int, string> _controlValues = new();
+	
+	private RenderFragment RenderControl(DialogItem item)
+	{
+		var className = item.WindowClass.ToUpperInvariant();
+		var isVisible = (item.Style & WS_VISIBLE) != 0;
+		var isDisabled = (item.Style & WS_DISABLED) != 0;
+		
+		if (!isVisible)
+		{
+			return @<text></text>;
+		}
+		
+		return className switch
+		{
+			"BUTTON" => RenderButton(item, isDisabled),
+			"EDIT" => RenderEdit(item, isDisabled),
+			"STATIC" => RenderStatic(item),
+			"LISTBOX" => RenderListBox(item, isDisabled),
+			"COMBOBOX" => RenderComboBox(item, isDisabled),
+			_ => RenderUnknown(item)
+		};
+	}
+	
+	private RenderFragment RenderButton(DialogItem item, bool isDisabled)
+	{
+		var isDefault = (item.Style & BS_DEFPUSHBUTTON) != 0;
+		var cssClass = isDefault ? "win32-button win32-button-default" : "win32-button";
+		
+		return @<button class="@cssClass" 
+						disabled="@isDisabled"
+						@onclick="() => HandleControlClick(item.Id)">
+			@item.Title
+		</button>;
+	}
+	
+	private RenderFragment RenderEdit(DialogItem item, bool isDisabled)
+	{
+		var isMultiline = (item.Style & ES_MULTILINE) != 0;
+		if (!_controlValues.ContainsKey(item.Id))
+		{
+			_controlValues[item.Id] = item.Title;
+		}
+		
+		if (isMultiline)
+		{
+			return @<textarea class="win32-edit win32-edit-multiline" 
+							  disabled="@isDisabled"
+							  @bind="_controlValues[item.Id]"></textarea>;
+		}
+		else
+		{
+			return @<input type="text" 
+						   class="win32-edit" 
+						   disabled="@isDisabled"
+						   @bind="_controlValues[item.Id]" />;
+		}
+	}
+	
+	private RenderFragment RenderStatic(DialogItem item)
+	{
+		var alignment = (item.Style & SS_CENTER) != 0 ? "center" : "left";
+		return @<div class="win32-static" style="text-align: @alignment">@item.Title</div>;
+	}
+	
+	private RenderFragment RenderListBox(DialogItem item, bool isDisabled)
+	{
+		return @<select class="win32-listbox" size="5" disabled="@isDisabled">
+			<option>@item.Title</option>
+		</select>;
+	}
+	
+	private RenderFragment RenderComboBox(DialogItem item, bool isDisabled)
+	{
+		return @<select class="win32-combobox" disabled="@isDisabled">
+			<option>@item.Title</option>
+		</select>;
+	}
+	
+	private RenderFragment RenderUnknown(DialogItem item)
+	{
+		return @<div class="win32-control-unknown">[@item.WindowClass]</div>;
+	}
+	
+	private async Task HandleControlClick(int controlId)
+	{
+		// Handle button clicks by returning the control ID as the result
+		await OnResult.InvokeAsync(controlId);
+	}
+	
+	private async Task HandleClose()
+	{
+		// Return 0 to indicate dialog was cancelled
+		await OnResult.InvokeAsync(0);
+	}
+	
+	private async Task HandleBackdropClick()
+	{
+		// Click outside the dialog acts as cancel
+		await HandleClose();
+	}
+}
