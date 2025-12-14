@@ -311,3 +311,20 @@
 	padding: 4px;
 	text-align: center;
 }
+
+/* ScrollBar Styles */
+.win32-scrollbar {
+	background-color: var(--win32-bg-color);
+	border: 1px solid #808080;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.win32-scrollbar-track {
+	background-color: #808080;
+	width: 80%;
+	height: 4px;
+}
