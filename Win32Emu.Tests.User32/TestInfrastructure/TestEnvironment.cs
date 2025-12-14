@@ -162,6 +162,17 @@ public class TestEnvironment : IDisposable
     }
 
     /// <summary>
+    /// Write a null-terminated Unicode string to memory and return its address
+    /// </summary>
+    public uint WriteStringW(string str)
+    {
+        var bytes = Encoding.Unicode.GetBytes(str + "\0");
+        var addr = ProcessEnv.SimpleAlloc((uint)bytes.Length);
+        Memory.WriteBytes(addr, bytes);
+        return addr;
+    }
+
+    /// <summary>
     /// Read a null-terminated string from memory
     /// </summary>
     public string ReadString(uint addr)
@@ -201,24 +212,24 @@ public class TestEnvironment : IDisposable
     /// Write a WNDCLASSA structure to memory
     /// </summary>
     public uint WriteWndClassA(
+        string? className = null,
         uint style = 0,
         uint wndProc = 0x00401000,
-        int clsExtra = 0,
-        int wndExtra = 0,
+        int cbClsExtra = 0,
+        int cbWndExtra = 0,
         uint hInstance = 0,
         uint hIcon = 0,
         uint hCursor = 0,
         uint hbrBackground = 0,
-        string? menuName = null,
-        string? className = null)
+        string? menuName = null)
     {
         var addr = AllocateMemory(40); // Size of WNDCLASSA
         
         Memory.Write32(addr + 0, style);
         Memory.Write32(addr + 4, wndProc);
-        Memory.Write32(addr + 8, (uint)clsExtra);
-        Memory.Write32(addr + 12, (uint)wndExtra);
-        Memory.Write32(addr + 16, hInstance);
+        Memory.Write32(addr + 8, (uint)cbClsExtra);
+        Memory.Write32(addr + 12, (uint)cbWndExtra);
+        Memory.Write32(addr + 16, hInstance == 0 ? 0x00400000 : hInstance); // Use default module instance
         Memory.Write32(addr + 20, hIcon);
         Memory.Write32(addr + 24, hCursor);
         Memory.Write32(addr + 28, hbrBackground);
@@ -226,6 +237,26 @@ public class TestEnvironment : IDisposable
         Memory.Write32(addr + 36, className != null ? WriteString(className) : 0);
         
         return addr;
+    }
+
+    /// <summary>
+    /// Call a Kernel32 API function with the given arguments
+    /// </summary>
+    public uint CallKernel32Api(string functionName, params uint[] args)
+    {
+        // Setup mock CPU with args
+        Cpu.SetupStackArgs(Memory, args);
+        
+        // For test purposes, we'll create a temporary Kernel32 module
+        var kernel32 = new Win32.Modules.Kernel32Module(ProcessEnv, 0x00400000, PeLoader, Microsoft.Extensions.Logging.Abstractions.NullLogger.Instance);
+        
+        var success = kernel32.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
+        if (!success)
+        {
+            throw new InvalidOperationException($"Failed to invoke {functionName}");
+        }
+        
+        return returnValue;
     }
 
     public void Dispose()
