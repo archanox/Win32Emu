@@ -132,8 +132,9 @@ public class WasmEmulatorHost : IEmulatorHost
 		MessageBoxRequested?.Invoke(this, eventArgs);
 		
 		// Wait synchronously for the result (MessageBox is a blocking API in Win32)
-		// Note: This may block the emulator thread, but that's consistent with Win32 behavior
-		return eventArgs.CompletionSource.Task.Result;
+		// Note: This blocks the emulator thread, but that's consistent with Win32 behavior
+		// Using GetAwaiter().GetResult() instead of .Result to avoid potential deadlocks
+		return eventArgs.CompletionSource.Task.GetAwaiter().GetResult();
 	}
 	
 	public void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text)
