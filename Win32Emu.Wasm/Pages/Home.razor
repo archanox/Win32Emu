@@ -768,17 +768,14 @@
 		// Unsubscribe from previous host if different
 		UnsubscribeFromEmulatorHost();
 		
-		// Subscribe to the new host
-		if (currentHost != null)
-		{
-			currentHost.WindowCreated += OnWindowCreated;
-			currentHost.DialogCreateRequested += OnDialogCreateRequested;
-			currentHost.MessageBoxRequested += OnMessageBoxRequested;
-			currentHost.DialogEnded += OnDialogEnded;
-			_subscribedHost = currentHost;
-			
-			AddDebugOutput("Subscribed to EmulatorHost events");
-		}
+		// Subscribe to the new host (currentHost is guaranteed non-null)
+		currentHost.WindowCreated += OnWindowCreated;
+		currentHost.DialogCreateRequested += OnDialogCreateRequested;
+		currentHost.MessageBoxRequested += OnMessageBoxRequested;
+		currentHost.DialogEnded += OnDialogEnded;
+		_subscribedHost = currentHost;
+		
+		AddDebugOutput("Subscribed to EmulatorHost events");
 	}
 	
 	/// <summary>

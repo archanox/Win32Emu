@@ -161,6 +161,12 @@
 	
 	private async Task HandleBackdropClick()
 	{
+		// Prevent duplicate submissions - same check as HandleClose
+		if (_resultSubmitted)
+		{
+			return;
+		}
+		
 		// Click outside the dialog acts as cancel
 		await HandleClose();
 	}
