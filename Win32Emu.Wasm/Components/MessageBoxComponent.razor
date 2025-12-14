@@ -59,6 +59,9 @@
 	private const uint MB_YESNO = 0x00000004;
 	private const uint MB_RETRYCANCEL = 0x00000005;
 	
+	// Mask to extract button type from uType flags
+	private const uint MB_TYPEMASK = 0x0F;
+	
 	// Win32 MessageBox return values (should match Win32 API ID* values)
 	private enum ButtonResult
 	{
@@ -71,13 +74,13 @@
 		No = 7       // IDNO
 	}
 	
-	private bool ShowOkButton => (Info.Type & 0x0F) == MB_OK || (Info.Type & 0x0F) == MB_OKCANCEL;
-	private bool ShowCancelButton => (Info.Type & 0x0F) == MB_OKCANCEL || (Info.Type & 0x0F) == MB_YESNOCANCEL || (Info.Type & 0x0F) == MB_RETRYCANCEL;
-	private bool ShowYesButton => (Info.Type & 0x0F) == MB_YESNOCANCEL || (Info.Type & 0x0F) == MB_YESNO;
-	private bool ShowNoButton => (Info.Type & 0x0F) == MB_YESNOCANCEL || (Info.Type & 0x0F) == MB_YESNO;
-	private bool ShowAbortButton => (Info.Type & 0x0F) == MB_ABORTRETRYIGNORE;
-	private bool ShowRetryButton => (Info.Type & 0x0F) == MB_ABORTRETRYIGNORE || (Info.Type & 0x0F) == MB_RETRYCANCEL;
-	private bool ShowIgnoreButton => (Info.Type & 0x0F) == MB_ABORTRETRYIGNORE;
+	private bool ShowOkButton => (Info.Type & MB_TYPEMASK) == MB_OK || (Info.Type & MB_TYPEMASK) == MB_OKCANCEL;
+	private bool ShowCancelButton => (Info.Type & MB_TYPEMASK) == MB_OKCANCEL || (Info.Type & MB_TYPEMASK) == MB_YESNOCANCEL || (Info.Type & MB_TYPEMASK) == MB_RETRYCANCEL;
+	private bool ShowYesButton => (Info.Type & MB_TYPEMASK) == MB_YESNOCANCEL || (Info.Type & MB_TYPEMASK) == MB_YESNO;
+	private bool ShowNoButton => (Info.Type & MB_TYPEMASK) == MB_YESNOCANCEL || (Info.Type & MB_TYPEMASK) == MB_YESNO;
+	private bool ShowAbortButton => (Info.Type & MB_TYPEMASK) == MB_ABORTRETRYIGNORE;
+	private bool ShowRetryButton => (Info.Type & MB_TYPEMASK) == MB_ABORTRETRYIGNORE || (Info.Type & MB_TYPEMASK) == MB_RETRYCANCEL;
+	private bool ShowIgnoreButton => (Info.Type & MB_TYPEMASK) == MB_ABORTRETRYIGNORE;
 	
 	private async Task HandleButtonClick(ButtonResult result)
 	{

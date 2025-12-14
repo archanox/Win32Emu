@@ -45,9 +45,9 @@
 						@if (_activeWindows.Count > 0 || _activeDialog != null || _activeMessageBox != null)
 						{
 							<div class="win32-overlay">
-								@foreach (var window in _activeWindows.Values)
+								@foreach (var windowInfo in _activeWindows.Values)
 								{
-									<WindowComponent Info="window" OnClose="() => HandleWindowClose(window.Handle)" />
+									<WindowComponent Info="windowInfo" OnClose="() => HandleWindowClose(windowInfo.Handle)" />
 								}
 								
 								@if (_activeDialog != null)
@@ -309,7 +309,7 @@
 	private const string LogTruncationPrefix = "... (older logs truncated) ...\n";
 	
 	// Windows and dialogs state
-	private Dictionary<uint, WindowCreateInfo> _activeWindows = new();
+	private readonly Dictionary<uint, WindowCreateInfo> _activeWindows = new();
 	private DialogCreateInfo? _activeDialog = null;
 	private Win32Emu.Wasm.Services.WasmEmulatorHost.DialogCreateEventArgs? _activeDialogEventArgs = null;
 	private MessageBoxInfo? _activeMessageBox = null;
@@ -324,7 +324,7 @@
 		DebugLogService.LogReceived += OnBackendLogReceived;
 		
 		// Subscribe to EmulatorHost events for windows/dialogs
-		if (EmulatorService.Host is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
+		if (EmulatorService.EmulatorHost is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
 		{
 			wasmHost.WindowCreated += OnWindowCreated;
 			wasmHost.DialogCreateRequested += OnDialogCreateRequested;
@@ -755,12 +755,19 @@
 	/// </summary>
 	private async void OnWindowCreated(object? sender, WindowCreateInfo info)
 	{
-		await InvokeAsync(() =>
+		try
 		{
-			_activeWindows[info.Handle] = info;
-			AddDebugOutput($"Window created: {info.Title} (0x{info.Handle:X8})");
-			StateHasChanged();
-		});
+			await InvokeAsync(() =>
+			{
+				_activeWindows[info.Handle] = info;
+				AddDebugOutput($"Window created: {info.Title} (0x{info.Handle:X8})");
+				StateHasChanged();
+			});
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error handling window creation");
+		}
 	}
 	
 	/// <summary>
@@ -768,13 +775,20 @@
 	/// </summary>
 	private async void OnDialogCreateRequested(object? sender, Win32Emu.Wasm.Services.WasmEmulatorHost.DialogCreateEventArgs e)
 	{
-		await InvokeAsync(() =>
+		try
 		{
-			_activeDialog = e.Info;
-			_activeDialogEventArgs = e;
-			AddDebugOutput($"Dialog requested: {e.Info.Template.Title}");
-			StateHasChanged();
-		});
+			await InvokeAsync(() =>
+			{
+				_activeDialog = e.Info;
+				_activeDialogEventArgs = e;
+				AddDebugOutput($"Dialog requested: {e.Info.Template.Title}");
+				StateHasChanged();
+			});
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error handling dialog creation request");
+		}
 	}
 	
 	/// <summary>
@@ -782,13 +796,20 @@
 	/// </summary>
 	private async void OnMessageBoxRequested(object? sender, Win32Emu.Wasm.Services.WasmEmulatorHost.MessageBoxEventArgs e)
 	{
-		await InvokeAsync(() =>
+		try
 		{
-			_activeMessageBox = e.Info;
-			_activeMessageBoxEventArgs = e;
-			AddDebugOutput($"MessageBox: {e.Info.Caption}");
-			StateHasChanged();
-		});
+			await InvokeAsync(() =>
+			{
+				_activeMessageBox = e.Info;
+				_activeMessageBoxEventArgs = e;
+				AddDebugOutput($"MessageBox: {e.Info.Caption}");
+				StateHasChanged();
+			});
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error handling message box request");
+		}
 	}
 	
 	/// <summary>
@@ -796,11 +817,18 @@
 	/// </summary>
 	private async void OnDialogEnded(object? sender, Win32Emu.Wasm.Services.WasmEmulatorHost.DialogEndEventArgs e)
 	{
-		await InvokeAsync(() =>
+		try
 		{
-			AddDebugOutput($"Dialog ended: 0x{e.DialogHandle:X8}, result={e.Result}");
-			StateHasChanged();
-		});
+			await InvokeAsync(() =>
+			{
+				AddDebugOutput($"Dialog ended: 0x{e.DialogHandle:X8}, result={e.Result}");
+				StateHasChanged();
+			});
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error handling dialog end notification");
+		}
 	}
 	
 	/// <summary>
@@ -857,7 +885,7 @@
 		EmulatorService.OnStateChanged -= OnEmulatorStateChanged;
 		
 		// Unsubscribe from host events
-		if (EmulatorService.Host is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
+		if (EmulatorService.EmulatorHost is Win32Emu.Wasm.Services.WasmEmulatorHost wasmHost)
 		{
 			wasmHost.WindowCreated -= OnWindowCreated;
 			wasmHost.DialogCreateRequested -= OnDialogCreateRequested;

@@ -43,9 +43,9 @@ public class EmulatorService : IDisposable
 	public string? LoadedExecutableName => _loadedExecutableName;
 	
 	/// <summary>
-	/// Gets the emulator host instance for registering to events.
+	/// Gets the WASM emulator host instance for registering to events.
 	/// </summary>
-	public WasmEmulatorHost? Host => _emulatorHost;
+	public WasmEmulatorHost? EmulatorHost => _emulatorHost;
 	
 	/// <summary>
 	/// Gets the number of instructions executed by the emulator.
