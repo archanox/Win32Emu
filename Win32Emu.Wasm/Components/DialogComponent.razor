@@ -29,7 +29,8 @@
 	public EventCallback<int> OnResult { get; set; }
 	
 	// Dialog scaling factor to convert dialog units (DLU) to pixels
-	// Dialog units are typically half the pixel size, so we use 2x scaling
+	// This assumes 8pt MS Sans Serif at 96 DPI (standard Windows dialog font)
+	// At this DPI/font combination, 1 DLU ≈ 0.5 pixels, so we use 2x scaling
 	private const int DialogScaleFactor = 2;
 	
 	// Win32 Dialog control styles (should match Win32 API values)
@@ -45,7 +46,7 @@
 	private const uint WS_VISIBLE = 0x10000000;
 	private const uint WS_DISABLED = 0x08000000;
 	
-	private Dictionary<int, string> _controlValues = new();
+	private readonly Dictionary<int, string> _controlValues = new();
 	
 	private RenderFragment RenderControl(DialogItem item)
 	{
