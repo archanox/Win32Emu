@@ -62,13 +62,21 @@
 			return @<text></text>;
 		}
 		
+		// Standard Win32 control classes (ordinals are in decimal)
+		// #128 = 0x80 = BUTTON
+		// #129 = 0x81 = EDIT
+		// #130 = 0x82 = STATIC
+		// #131 = 0x83 = LISTBOX
+		// #132 = 0x84 = SCROLLBAR
+		// #133 = 0x85 = COMBOBOX
 		return className switch
 		{
-			"BUTTON" => RenderButton(item, isDisabled),
-			"EDIT" => RenderEdit(item, isDisabled),
-			"STATIC" => RenderStatic(item),
-			"LISTBOX" => RenderListBox(item, isDisabled),
-			"COMBOBOX" => RenderComboBox(item, isDisabled),
+			"BUTTON" or "#128" => RenderButton(item, isDisabled),
+			"EDIT" or "#129" => RenderEdit(item, isDisabled),
+			"STATIC" or "#130" => RenderStatic(item),
+			"LISTBOX" or "#131" => RenderListBox(item, isDisabled),
+			"COMBOBOX" or "#133" => RenderComboBox(item, isDisabled),
+			"SCROLLBAR" or "#132" => RenderScrollBar(item, isDisabled),
 			_ => RenderUnknown(item)
 		};
 	}
@@ -126,6 +134,15 @@
 		return @<select class="win32-combobox" disabled="@isDisabled">
 			<option>@item.Title</option>
 		</select>;
+	}
+	
+	private RenderFragment RenderScrollBar(DialogItem item, bool isDisabled)
+	{
+		// Scrollbars are rendered as a simple visual representation
+		// Full scrollbar functionality would require more complex state management
+		return @<div class="win32-scrollbar">
+			<div class="win32-scrollbar-track"></div>
+		</div>;
 	}
 	
 	private RenderFragment RenderUnknown(DialogItem item)
