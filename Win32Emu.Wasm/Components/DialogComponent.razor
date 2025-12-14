@@ -48,6 +48,9 @@
 	
 	private readonly Dictionary<int, string> _controlValues = new();
 	
+	// Track if result has been submitted to prevent double-clicks
+	private bool _resultSubmitted = false;
+	
 	private RenderFragment RenderControl(DialogItem item)
 	{
 		var className = item.WindowClass.ToUpperInvariant();
@@ -132,12 +135,26 @@
 	
 	private async Task HandleControlClick(int controlId)
 	{
+		// Prevent double-clicks by checking if result was already submitted
+		if (_resultSubmitted)
+		{
+			return;
+		}
+		
+		_resultSubmitted = true;
 		// Handle button clicks by returning the control ID as the result
 		await OnResult.InvokeAsync(controlId);
 	}
 	
 	private async Task HandleClose()
 	{
+		// Prevent double-clicks
+		if (_resultSubmitted)
+		{
+			return;
+		}
+		
+		_resultSubmitted = true;
 		// Return 0 to indicate dialog was cancelled
 		await OnResult.InvokeAsync(0);
 	}

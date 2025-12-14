@@ -17,7 +17,7 @@ public class EmulatorService : IDisposable
 	private readonly ILogger<EmulatorService> _logger;
 	
 	private Emulator? _emulator;
-	private WasmEmulatorHost? _emulatorHost;
+	private readonly WasmEmulatorHost _emulatorHost;
 	private WasmBackendFactory? _backendFactory;
 	private BrowserVirtualFileSystem? _browserVfs;
 	private CancellationTokenSource? _emulationCts;
@@ -44,8 +44,9 @@ public class EmulatorService : IDisposable
 	
 	/// <summary>
 	/// Gets the WASM emulator host instance for registering to events.
+	/// The host is initialized in the constructor and is never null.
 	/// </summary>
-	public WasmEmulatorHost? EmulatorHost => _emulatorHost;
+	public WasmEmulatorHost EmulatorHost => _emulatorHost;
 	
 	/// <summary>
 	/// Gets the number of instructions executed by the emulator.
@@ -64,6 +65,16 @@ public class EmulatorService : IDisposable
 		_jsRuntime = jsRuntime;
 		_loggerFactory = loggerFactory;
 		_logger = loggerFactory.CreateLogger<EmulatorService>();
+		
+		// Initialize EmulatorHost early to ensure it's never null for event subscriptions
+		_emulatorHost = new WasmEmulatorHost(_loggerFactory.CreateLogger<WasmEmulatorHost>());
+		
+		// Wire up host events to forward to service events
+		_debugOutputHandler = (sender, message) => EmitDebugOutput(message);
+		_stdOutputHandler = (sender, message) => EmitStdOutput(message);
+		
+		_emulatorHost.DebugOutputReceived += _debugOutputHandler;
+		_emulatorHost.StdOutputReceived += _stdOutputHandler;
 	}
 	
 	/// <summary>
@@ -93,20 +104,7 @@ public class EmulatorService : IDisposable
 			// Create backend factory if not already created
 			_backendFactory ??= new WasmBackendFactory(_jsRuntime, _loggerFactory);
 			
-			// Create emulator host once and reuse it across multiple loads
-			// This avoids memory leaks from orphaned event handlers
-			if (_emulatorHost == null)
-			{
-				_emulatorHost = new WasmEmulatorHost(_loggerFactory.CreateLogger<WasmEmulatorHost>());
-				
-				// Wire up host events to forward to service events (only once)
-				// Store handlers so we can unsubscribe later
-				_debugOutputHandler = (sender, message) => EmitDebugOutput(message);
-				_stdOutputHandler = (sender, message) => EmitStdOutput(message);
-				
-				_emulatorHost.DebugOutputReceived += _debugOutputHandler;
-				_emulatorHost.StdOutputReceived += _stdOutputHandler;
-			}
+			// Note: EmulatorHost is now initialized in the constructor, no need to create it here
 			
 			// Create browser-based virtual file system
 			_browserVfs?.Dispose();
@@ -411,8 +409,7 @@ public class EmulatorService : IDisposable
 		_emulator?.Dispose();
 		_browserVfs?.Dispose();
 		
-		// Clear references to allow garbage collection
-		_emulatorHost = null;
+		// Clear references to allow garbage collection (but don't null out readonly fields)
 		_backendFactory = null;
 	}
 }
