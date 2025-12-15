@@ -79,7 +79,8 @@ public class PeResourceReader : IResourceReader
 			}
 			
 			// Generate a unique handle for this string-named resource
-			var resourceHandle = 0x80000000u | (uint)_stringResourceCache.Count;
+			// Use high address range (0x90000000+) to avoid collisions with numeric handles (0x80000000+)
+			var resourceHandle = 0x90000000u + (uint)_stringResourceCache.Count;
 			_stringResourceCache[resourceHandle] = resourceData;
 			_preferredLanguage = wLanguage;
 			return resourceHandle;
@@ -96,6 +97,7 @@ public class PeResourceReader : IResourceReader
 	
 	private ushort _preferredLanguage = 0x0409; // Default to English (US)
 	private readonly Dictionary<uint, byte[]> _stringResourceCache = new();
+	private uint _nextResourceAddress = 0x0D000000; // Tracks next available address for resource allocation
 
 	/// <summary>
 	/// Loads a resource into memory.
@@ -115,7 +117,8 @@ public class PeResourceReader : IResourceReader
 		if (_stringResourceCache.TryGetValue(hResInfo, out var cachedData))
 		{
 			// Allocate resource in a safe memory range
-			var cachedAddress = 0x0D000000u + (uint)(_resourceCache.Count * 0x10000);
+			var cachedAddress = _nextResourceAddress;
+			_nextResourceAddress += 0x10000;
 			_resourceCache[cachedAddress] = cachedData;
 			return cachedAddress;
 		}
@@ -139,7 +142,8 @@ public class PeResourceReader : IResourceReader
 
 		// Allocate resource in a safe memory range
 		// Use 0x0D000000 - 0x0E000000 range for resources (208-224 MB range, before imports at 0x0F000000)
-		var resourceAddress = 0x0D000000u + (uint)(_resourceCache.Count * 0x10000);
+		var resourceAddress = _nextResourceAddress;
+		_nextResourceAddress += 0x10000;
 		_resourceCache[resourceAddress] = resourceData;
 
 		return resourceAddress;
@@ -158,6 +162,12 @@ public class PeResourceReader : IResourceReader
 		if (hResInfo == 0)
 		{
 			return 0;
+		}
+
+		// Check if this is a string-named resource
+		if (_stringResourceCache.TryGetValue(hResInfo, out var cachedData))
+		{
+			return (uint)cachedData.Length;
 		}
 
 		var resources = _image.Resources;
@@ -237,12 +247,10 @@ public class PeResourceReader : IResourceReader
 				ResourceData? preferredData = null;
 				ResourceData? fallbackData = null;
 				
-				foreach (var langEntry in nameDir.Entries)
+				foreach (var data in nameDir.Entries.OfType<ResourceData>().Where(d => d.Contents != null))
 				{
-					if (langEntry is ResourceData data && data.Contents != null)
-					{
 						// Check if this is the preferred language
-						if (langEntry.Id == _preferredLanguage)
+						if (data.Id == _preferredLanguage)
 						{
 							preferredData = data;
 							break; // Found exact match
@@ -251,7 +259,6 @@ public class PeResourceReader : IResourceReader
 						// Keep the first entry as fallback
 						fallbackData ??= data;
 					}
-				}
 				
 				// Use preferred language if found, otherwise use fallback
 				var selectedData = preferredData ?? fallbackData;
@@ -486,6 +493,16 @@ public class PeResourceReader : IResourceReader
 
 		return resourceNames;
 	}
+	/// <summary>
+	/// Finds resource data by navigating the resource directory tree, supporting both numeric IDs and string names.
+	/// </summary>
+	/// <param name="directory">The root resource directory to search</param>
+	/// <param name="typeId">The numeric resource type ID, or null if searching by type name</param>
+	/// <param name="typeName">The resource type name, or null if searching by type ID</param>
+	/// <param name="nameId">The numeric resource name ID, or null if searching by name string</param>
+	/// <param name="nameName">The resource name string, or null if searching by name ID</param>
+	/// <param name="wLanguage">The language ID to match (0 for default)</param>
+	/// <returns>The resource data as a byte array if found, otherwise null</returns>
 private byte[]? FindResourceDataByName(ResourceDirectory directory, uint? typeId, string? typeName, uint? nameId, string? nameName, ushort wLanguage)
 {
 // Navigate: Type -> Name -> Language
@@ -540,12 +557,10 @@ continue;
 ResourceData? preferredData = null;
 ResourceData? fallbackData = null;
 
-foreach (var langEntry in nameDir.Entries)
-{
-if (langEntry is ResourceData data && data.Contents != null)
-{
+foreach (var data in nameDir.Entries.OfType<ResourceData>().Where(d => d.Contents != null))
+				{
 // Check if this is the preferred language
-if (langEntry.Id == wLanguage)
+if (data.Id == wLanguage)
 {
 preferredData = data;
 break; // Found exact match
@@ -554,9 +569,8 @@ break; // Found exact match
 // Keep the first entry as fallback
 fallbackData ??= data;
 }
-}
-
-// Use preferred language if found, otherwise use fallback
+				
+				// Use preferred language if found, otherwise use fallback
 var selectedData = preferredData ?? fallbackData;
 if (selectedData?.Contents != null)
 {
