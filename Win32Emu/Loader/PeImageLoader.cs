@@ -974,7 +974,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				// Skip corrupted sections that extend beyond file boundaries during info extraction
 				// This can happen with malformed PE files where section headers indicate
 				// sizes that don't match actual file data
-				// Note: The actual section data loading (lines 230-289) already handles this,
+				// Note: The section loading code in the LoadFromImage method already handles this,
 				// but we need to also handle it here when extracting metadata
 				var sectionName = section.Name ?? string.Empty;
 				logger?.LogWarning("Skipping corrupted section {SectionName} at RVA {SectionRva:X8} during info extraction: {ErrorMessage}", 
