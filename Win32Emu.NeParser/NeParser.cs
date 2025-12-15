@@ -289,8 +289,9 @@ namespace Win32Emu.NeParser
 			var minAllocation = BitConverter.ToUInt16(bytes, offset + 6);
 			
 			// If length is 0, it means full 64KB segment
+			// According to NE specification, a length of 0 indicates 64KB
 			uint length = lengthRaw;
-			if (length == 0 && minAllocation > 0)
+			if (length == 0)
 			{
 				length = 0x10000; // 64KB full segment
 			}
