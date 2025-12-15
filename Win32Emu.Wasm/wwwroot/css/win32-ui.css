@@ -323,6 +323,10 @@
 	justify-content: center;
 }
 
+.win32-scrollbar.disabled {
+	opacity: 0.5;
+}
+
 .win32-scrollbar-track {
 	background-color: #808080;
 	width: 80%;

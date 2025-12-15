@@ -140,7 +140,8 @@
 	{
 		// Scrollbars are rendered as a simple visual representation
 		// Full scrollbar functionality would require more complex state management
-		return @<div class="win32-scrollbar">
+		var scrollbarClass = isDisabled ? "win32-scrollbar disabled" : "win32-scrollbar";
+		return @<div class="@scrollbarClass">
 			<div class="win32-scrollbar-track"></div>
 		</div>;
 	}
