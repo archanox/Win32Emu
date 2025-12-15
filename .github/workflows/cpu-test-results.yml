@@ -278,6 +278,11 @@ jobs:
           </html>
           EOF
 
+      - name: Create .nojekyll file
+        run: |
+          touch pages/.nojekyll
+          echo "Created .nojekyll file to prevent Jekyll processing"
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
