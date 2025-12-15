@@ -115,49 +115,38 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		
 		foreach (var segment in neExe.Segments)
 		{
-			try
+			// Calculate memory allocation size
+			var memorySize = segment.MinAllocation > 0 ? Math.Max(segment.Length, segment.MinAllocation) : segment.Length;
+			if (memorySize == 0)
 			{
-				// Calculate memory allocation size
-				var memorySize = segment.MinAllocation > 0 ? Math.Max(segment.Length, segment.MinAllocation) : segment.Length;
-				if (memorySize == 0)
-				{
-					memorySize = FULL_SEGMENT_SIZE; // 64KB for zero-length segments with allocation
-				}
-				
-				// Align to paragraph boundary (16 bytes)
-				currentAddress = (currentAddress + PARAGRAPH_MASK) & PARAGRAPH_ALIGN;
-				
-				// Store segment mapping with allocated size
-				segmentMap[segment.SegmentNumber] = (currentAddress, memorySize);
-				
-				// Load segment data from file if present
-				if (segment.FileOffset > 0 && segment.Length > 0 && segment.FileOffset + segment.Length <= bytes.Length)
-				{
-					var segmentData = new byte[segment.Length];
-					Array.Copy(bytes, segment.FileOffset, segmentData, 0, segment.Length);
-					vm.WriteBytes(currentAddress, segmentData);
-					
-					var segFlags = (NeParser.NeSegmentFlags)segment.Flags;
-					logger?.LogDebug("[NE Loader] Loaded segment {Num}: Address=0x{Addr:X8}, FileSize=0x{FileSize:X4}, MemSize=0x{MemSize:X4}, Flags={Flags}",
-						segment.SegmentNumber, currentAddress, segment.Length, memorySize, segFlags);
-				}
-				else if (memorySize > 0)
-				{
-					// Zero-initialize BSS segments
-					logger?.LogDebug("[NE Loader] Initialized segment {Num}: Address=0x{Addr:X8}, MemSize=0x{MemSize:X4} (no file data)",
-						segment.SegmentNumber, currentAddress, memorySize);
-				}
-				
-				currentAddress += memorySize;
+				memorySize = FULL_SEGMENT_SIZE; // 64KB for zero-length segments with allocation
 			}
-			catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or OutOfMemoryException)
+			
+			// Align to paragraph boundary (16 bytes)
+			currentAddress = (currentAddress + PARAGRAPH_MASK) & PARAGRAPH_ALIGN;
+			
+			// Store segment mapping with allocated size
+			segmentMap[segment.SegmentNumber] = (currentAddress, memorySize);
+			
+			// Load segment data from file if present
+			if (segment.FileOffset > 0 && segment.Length > 0 && segment.FileOffset + segment.Length <= bytes.Length)
 			{
-				// Skip corrupted segments that have invalid data
-				// This can happen with malformed NE files where segment headers indicate
-				// sizes or offsets that don't match actual file data
-				logger?.LogWarning("Skipping corrupted segment {SegmentNum} at offset 0x{Offset:X8}: {ErrorMessage}", 
-					segment.SegmentNumber, segment.FileOffset, ex.Message);
+				var segmentData = new byte[segment.Length];
+				Array.Copy(bytes, segment.FileOffset, segmentData, 0, segment.Length);
+				vm.WriteBytes(currentAddress, segmentData);
+				
+				var segFlags = (NeParser.NeSegmentFlags)segment.Flags;
+				logger?.LogDebug("[NE Loader] Loaded segment {Num}: Address=0x{Addr:X8}, FileSize=0x{FileSize:X4}, MemSize=0x{MemSize:X4}, Flags={Flags}",
+					segment.SegmentNumber, currentAddress, segment.Length, memorySize, segFlags);
 			}
+			else if (memorySize > 0)
+			{
+				// Zero-initialize BSS segments
+				logger?.LogDebug("[NE Loader] Initialized segment {Num}: Address=0x{Addr:X8}, MemSize=0x{MemSize:X4} (no file data)",
+					segment.SegmentNumber, currentAddress, memorySize);
+			}
+			
+			currentAddress += memorySize;
 		}
 		
 		// Process segment relocations
@@ -579,16 +568,9 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		Dictionary<int, (uint address, uint size)> segmentMap,
 		uint baseAddress)
 	{
-		var sections = new List<PeSection>();
-		
-		foreach (var segment in segments)
-		{
-			if (!segmentMap.ContainsKey(segment.SegmentNumber))
-			{
-				continue;
-			}
-			
-			try
+		return segments
+			.Where(segment => segmentMap.ContainsKey(segment.SegmentNumber))
+			.Select(segment =>
 			{
 				var mappedSegment = segmentMap[segment.SegmentNumber];
 				var rva = mappedSegment.address - baseAddress;
@@ -616,17 +598,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					characteristics |= PeSectionCharacteristics.MemWrite;
 				}
 				
-				sections.Add(new PeSection(name, rva, mappedSegment.size, mappedSegment.size, characteristics));
-			}
-			catch (Exception ex) when (ex is ArgumentException or OverflowException)
-			{
-				// Skip corrupted segments that cause errors during section conversion
-				// This can happen with malformed NE files where segment data is invalid
-				logger?.LogWarning("Skipping corrupted segment {SegmentNum} during section conversion: {ErrorMessage}", 
-					segment.SegmentNumber, ex.Message);
-			}
-		}
-		
-		return sections.ToArray();
+				return new PeSection(name, rva, mappedSegment.size, mappedSegment.size, characteristics);
+			})
+			.ToArray();
 	}
 }
