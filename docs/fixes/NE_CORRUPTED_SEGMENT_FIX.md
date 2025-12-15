@@ -39,6 +39,8 @@ foreach (var segment in neExe.Segments)
     catch (Exception ex) when (ex is ArgumentException or ArgumentOutOfRangeException or OutOfMemoryException)
     {
         // Skip corrupted segments that have invalid data
+        // When an exception is caught, the segment is skipped and processing continues with the next segment
+        // A warning is logged with the segment number and error details to aid debugging
         logger?.LogWarning("Skipping corrupted segment {SegmentNum} at offset 0x{Offset:X8}: {ErrorMessage}", 
             segment.SegmentNumber, segment.FileOffset, ex.Message);
     }
@@ -46,9 +48,11 @@ foreach (var segment in neExe.Segments)
 ```
 
 **Exception Types Caught:**
-- `ArgumentException`: Invalid arguments to Array.Copy or memory operations
-- `ArgumentOutOfRangeException`: Invalid array indices or sizes
-- `OutOfMemoryException`: Segment size is impossibly large
+- `ArgumentException`: Invalid arguments to Array.Copy or memory operations (segment skipped, processing continues)
+- `ArgumentOutOfRangeException`: Invalid array indices or sizes (segment skipped, processing continues)
+- `OutOfMemoryException`: Segment size is impossibly large (segment skipped, processing continues)
+
+**Recovery Strategy:** When any of these exceptions occur, the corrupted segment is skipped and logged as a warning. The loader continues processing remaining segments, allowing the executable to load partially if other segments are valid.
 
 ### 2. CreateSectionsFromSegments Refactoring
 
@@ -73,6 +77,7 @@ private PeSection[] CreateSectionsFromSegments(...)
         }
         catch (Exception ex) when (ex is ArgumentException or OverflowException)
         {
+            // When an exception occurs during section conversion, skip the segment and continue
             logger?.LogWarning("Skipping corrupted segment {SegmentNum} during section conversion: {ErrorMessage}", 
                 segment.SegmentNumber, ex.Message);
         }
@@ -82,9 +87,13 @@ private PeSection[] CreateSectionsFromSegments(...)
 }
 ```
 
+**Exception Types Caught:**
+- `ArgumentException`: Invalid arguments during section construction (segment skipped, processing continues)
+- `OverflowException`: Arithmetic overflow in RVA or size calculations (segment skipped, processing continues)
+
 **Benefits of Refactoring:**
 - Each segment is processed independently - one corrupted segment doesn't stop processing of others
-- Exceptions are logged with context (segment number, error message)
+- Exceptions are logged with context (segment number, error message) to aid debugging
 - Returns partial results rather than throwing on first error
 - Consistent with PE loader's `ExtractSectionInfo` pattern
 
