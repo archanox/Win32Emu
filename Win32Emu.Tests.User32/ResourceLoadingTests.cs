@@ -165,4 +165,46 @@ public class ResourceLoadingTests
             System.Diagnostics.Debug.WriteLine("No bitmap resources found");
         }
     }
+
+
+[Fact]
+public void FindResource_WithStringName_LoadsIgnpicBitmap()
+{
+// Arrange
+var setupExePath = Path.Combine("EXEs", "ign_install", "SETUP.EXE");
+if (!File.Exists(setupExePath))
+{
+// Skip test if file doesn't exist
+return;
+}
+
+var peFile = PEFile.FromFile(setupExePath);
+var peImage = PEImage.FromFile(peFile);
+var memory = new VirtualMemory();
+var resourceReader = new PeResourceReader(peImage, 0x00400000, memory);
+
+// Simulate FindResourceA call with RT_BITMAP (2) and "IGNPIC" name
+// In the emulator, the string would be at some address in memory
+// For this test, we'll use the address as a marker and write the string there
+uint bitmapTypeId = 2; // RT_BITMAP
+uint ignpicNameAddr = 0x00100000;
+memory.WriteBytes(ignpicNameAddr, System.Text.Encoding.ASCII.GetBytes("IGNPIC\0"));
+
+// Act - FindResource should now handle string-named resources
+var hResInfo = resourceReader.FindResource(bitmapTypeId, ignpicNameAddr, 0);
+
+// Assert
+_output.WriteLine($"FindResource returned handle: 0x{hResInfo:X8}");
+Assert.NotEqual(0u, hResInfo); // Should find the resource
+
+// Now try to LoadResource and verify it works
+var hResData = resourceReader.LoadResource(0x00400000, hResInfo);
+_output.WriteLine($"LoadResource returned data handle: 0x{hResData:X8}");
+Assert.NotEqual(0u, hResData);
+
+// Get the size to verify we got actual data
+var resourceSize = resourceReader.SizeofResource(0x00400000, hResInfo);
+_output.WriteLine($"Resource size: {resourceSize} bytes");
+Assert.True(resourceSize > 0);
+}
 }
