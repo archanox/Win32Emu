@@ -4367,8 +4367,9 @@ namespace Win32Emu.Win32.Modules
 					return handle;
 				}
 
-				_logger.LogWarning("[User32] LoadImageA: Bitmap \"{ImageName}\" not found in resources or files", imageName);
+				_logger.LogDebug("[User32] LoadImageA: Bitmap \"{ImageName}\" not found in resources or files", imageName);
 				// Error 1814 = ERROR_RESOURCE_NAME_NOT_FOUND
+				// This is expected behavior when a bitmap resource doesn't exist - Windows API also returns NULL
 				return 0;
 			}
 
