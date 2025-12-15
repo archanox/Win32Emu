@@ -68,15 +68,34 @@ public class PeResourceReader : IResourceReader
 		// Create a resource handle (synthetic identifier)
 		// Format: 0x80000000 | (type << 16) | name | (language << 0)
 		// Note: We don't encode language in the handle as we'll use the stored _preferredLanguage
-		var resourceHandle = 0x80000000u | ((typeId ?? 0) << 16) | (nameId ?? 0);
+		// If we have a string name, we need to find the resource immediately
+		// because the handle encoding doesn't support string names
+		if (nameNameStr != null || typeName != null)
+		{
+			var resourceData = FindResourceDataByName(resources, typeId, typeName, nameId, nameNameStr, wLanguage);
+			if (resourceData == null || resourceData.Length == 0)
+			{
+				return 0;
+			}
+			
+			// Generate a unique handle for this string-named resource
+			var resourceHandle = 0x80000000u | (uint)_stringResourceCache.Count;
+			_stringResourceCache[resourceHandle] = resourceData;
+			_preferredLanguage = wLanguage;
+			return resourceHandle;
+		}
+		
+		// For numeric IDs, use the original encoding
+		var numericHandle = 0x80000000u | ((typeId ?? 0) << 16) | (nameId ?? 0);
 		
 		// Store the preferred language for this lookup
 		_preferredLanguage = wLanguage;
 		
-		return resourceHandle;
+		return numericHandle;
 	}
 	
 	private ushort _preferredLanguage = 0x0409; // Default to English (US)
+	private readonly Dictionary<uint, byte[]> _stringResourceCache = new();
 
 	/// <summary>
 	/// Loads a resource into memory.
@@ -92,6 +111,15 @@ public class PeResourceReader : IResourceReader
 		}
 
 		// Get the resource directory from the PE image
+		// Check if this is a string-named resource we cached in FindResource
+		if (_stringResourceCache.TryGetValue(hResInfo, out var cachedData))
+		{
+			// Allocate resource in a safe memory range
+			var cachedAddress = 0x0D000000u + (uint)(_resourceCache.Count * 0x10000);
+			_resourceCache[cachedAddress] = cachedData;
+			return cachedAddress;
+		}
+		
 		var resources = _image.Resources;
 		if (resources == null)
 		{
@@ -458,4 +486,86 @@ public class PeResourceReader : IResourceReader
 
 		return resourceNames;
 	}
+private byte[]? FindResourceDataByName(ResourceDirectory directory, uint? typeId, string? typeName, uint? nameId, string? nameName, ushort wLanguage)
+{
+// Navigate: Type -> Name -> Language
+foreach (var typeEntry in directory.Entries)
+{
+// Check if this is the type we're looking for
+var typeMatch = false;
+if (typeId != null && typeEntry.Id == typeId)
+{
+typeMatch = true;
+}
+else if (typeName != null && string.Equals(typeEntry.Name, typeName, StringComparison.OrdinalIgnoreCase))
+{
+typeMatch = true;
+}
+
+if (!typeMatch)
+{
+continue;
+}
+
+// Type matched, now look for the name
+if (typeEntry is not ResourceDirectory typeDir)
+{
+continue;
+}
+
+foreach (var nameEntry in typeDir.Entries)
+{
+var nameMatch = false;
+if (nameId != null && nameEntry.Id == nameId)
+{
+nameMatch = true;
+}
+else if (nameName != null && string.Equals(nameEntry.Name, nameName, StringComparison.OrdinalIgnoreCase))
+{
+nameMatch = true;
+}
+
+if (!nameMatch)
+{
+continue;
+}
+
+// Name matched, now get the language entry
+if (nameEntry is not ResourceDirectory nameDir)
+{
+continue;
+}
+
+// Try to find the preferred language first
+ResourceData? preferredData = null;
+ResourceData? fallbackData = null;
+
+foreach (var langEntry in nameDir.Entries)
+{
+if (langEntry is ResourceData data && data.Contents != null)
+{
+// Check if this is the preferred language
+if (langEntry.Id == wLanguage)
+{
+preferredData = data;
+break; // Found exact match
+}
+
+// Keep the first entry as fallback
+fallbackData ??= data;
+}
+}
+
+// Use preferred language if found, otherwise use fallback
+var selectedData = preferredData ?? fallbackData;
+if (selectedData?.Contents != null)
+{
+return selectedData.Contents.WriteIntoArray();
+}
+}
+}
+
+return null;
+}
+
 }
