@@ -19,8 +19,8 @@ System.IO.EndOfStreamException: Offset and address reach outside of the boundari
 
 The issue was an inconsistency in error handling between two parts of the PE loader:
 
-1. **Section Loading Code (lines 230-289)**: Had proper exception handling for corrupted sections that extend beyond file boundaries
-2. **ExtractSectionInfo Method (lines 950-973)**: Did NOT have exception handling when calling `WriteIntoArray()` to get section metadata
+1. **Section Loading Code** (in `LoadFromImage` method): Had proper exception handling for corrupted sections that extend beyond file boundaries
+2. **ExtractSectionInfo Method**: Did NOT have exception handling when calling `WriteIntoArray()` to get section metadata
 
 When the loader encountered the corrupted `.rsrc` section in `calc.exe`:
 - First pass (section loading): The exception was caught and logged as a warning, execution continued
