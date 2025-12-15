@@ -223,7 +223,7 @@ public class TestEnvironment : IDisposable
         uint hbrBackground = 0,
         string? menuName = null)
     {
-        var addr = AllocateMemory(40); // Size of WNDCLASSA
+        var addr = AllocateMemory((uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeTypes.WNDCLASSA>());
         
         Memory.Write32(addr + 0, style);
         Memory.Write32(addr + 4, wndProc);

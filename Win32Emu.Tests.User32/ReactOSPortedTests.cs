@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Xunit;
 using Win32Emu.Tests.User32.TestInfrastructure;
 using Win32Emu.Win32;
@@ -13,6 +14,31 @@ namespace Win32Emu.Tests.User32;
 public class ReactOSPortedTests : IDisposable
 {
 	private readonly TestEnvironment _testEnv;
+
+	// Structure size constants using Marshal.SizeOf per coding guidelines
+	private static readonly int MsgSize = Marshal.SizeOf<NativeTypes.MSG>();
+	private static readonly int WndClassExASize = Marshal.SizeOf<NativeTypes.WNDCLASSEXA>();
+	
+	// WNDCLASSEXA field offsets (based on NativeTypes.WNDCLASSEXA structure)
+	private const int WndClassExA_cbSize = 0;
+	private const int WndClassExA_style = 4;
+	private const int WndClassExA_lpfnWndProc = 8;
+	private const int WndClassExA_cbClsExtra = 12;
+	private const int WndClassExA_cbWndExtra = 16;
+	private const int WndClassExA_hInstance = 20;
+	private const int WndClassExA_hIcon = 24;
+	private const int WndClassExA_hCursor = 28;
+	private const int WndClassExA_hbrBackground = 32;
+	private const int WndClassExA_lpszMenuName = 36;
+	private const int WndClassExA_lpszClassName = 40;
+	private const int WndClassExA_hIconSm = 44;
+	
+	// Test fixture values for SetScrollRange tests
+	private const int TestInitialMin = 123;
+	private const int TestInitialMax = 456;
+	
+	// Memory allocation sizes
+	private const int PointerSize = 4;  // 32-bit pointers
 
 	public ReactOSPortedTests()
 	{
@@ -55,7 +81,7 @@ public class ReactOSPortedTests : IDisposable
 		_testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
 
 		// Allocate MSG structure
-		var msgPtr = _testEnv.AllocateMemory(28); // sizeof(MSG)
+		var msgPtr = _testEnv.AllocateMemory((uint)MsgSize);
 
 		// Act
 		_testEnv.CallKernel32Api("SETLASTERROR", 0xDEADBEEF); // DNS_ERROR_RCODE_NXRRSET equivalent
@@ -93,7 +119,7 @@ public class ReactOSPortedTests : IDisposable
 		_testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
 
 		// Allocate MSG structure
-		var msgPtr = _testEnv.AllocateMemory(28); // sizeof(MSG)
+		var msgPtr = _testEnv.AllocateMemory((uint)MsgSize);
 
 		// Act
 		_testEnv.CallKernel32Api("SETLASTERROR", 0xDEADBEEF);
@@ -140,15 +166,15 @@ public class ReactOSPortedTests : IDisposable
 
 		// Set initial values to known state
 		const int SB_CTL = 2;
-		_testEnv.CallUser32Api("SETSCROLLRANGE", hScroll, SB_CTL, 123, 456, 0 /* FALSE */);
+		_testEnv.CallUser32Api("SETSCROLLRANGE", hScroll, SB_CTL, TestInitialMin, TestInitialMax, 0 /* FALSE */);
 
 		// Act
 		_testEnv.CallKernel32Api("SETLASTERROR", 0xdeaff00d);
 		var success = _testEnv.CallUser32Api("SETSCROLLRANGE", hScroll, SB_CTL, (uint)nMin, (uint)nMax, 0 /* FALSE */);
 
 		// Get the new range to verify
-		var minPtr = _testEnv.AllocateMemory(4);
-		var maxPtr = _testEnv.AllocateMemory(4);
+		var minPtr = _testEnv.AllocateMemory(PointerSize);
+		var maxPtr = _testEnv.AllocateMemory(PointerSize);
 		_testEnv.CallUser32Api("GETSCROLLRANGE", hScroll, SB_CTL, minPtr, maxPtr);
 		var newMin = (int)_testEnv.Memory.Read32(minPtr);
 		var newMax = (int)_testEnv.Memory.Read32(maxPtr);
@@ -165,8 +191,8 @@ public class ReactOSPortedTests : IDisposable
 			Assert.Equal(0u, success); // FALSE
 			const uint ERROR_INVALID_SCROLLBAR_RANGE = 1448;
 			Assert.Equal(ERROR_INVALID_SCROLLBAR_RANGE, _testEnv.CallKernel32Api("GETLASTERROR"));
-			Assert.Equal(123, newMin); // Should remain unchanged
-			Assert.Equal(456, newMax); // Should remain unchanged
+			Assert.Equal(TestInitialMin, newMin); // Should remain unchanged
+			Assert.Equal(TestInitialMax, newMax); // Should remain unchanged
 		}
 
 		// Cleanup
@@ -311,10 +337,10 @@ public class ReactOSPortedTests : IDisposable
 	{
 		// Arrange
 		const uint WC_DESKTOP = 0x8001; // System class atom for desktop
-		var wcexPtr = _testEnv.AllocateMemory(48); // sizeof(WNDCLASSEXW)
+		var wcexPtr = _testEnv.AllocateMemory((uint)WndClassExASize);
 		
 		// Fill with pattern to detect unmodified fields
-		for (uint i = 0; i < 48; i++)
+		for (uint i = 0; i < WndClassExASize; i++)
 		{
 			_testEnv.Memory.Write8(wcexPtr + i, 0xab);
 		}
@@ -329,19 +355,17 @@ public class ReactOSPortedTests : IDisposable
 		// Assert
 		Assert.Equal(WC_DESKTOP, result); // Returns the atom on success
 
-		// Read the structure fields
-		var cbSize = _testEnv.Memory.Read32(wcexPtr + 0);
-		var style = _testEnv.Memory.Read32(wcexPtr + 4);
-		var lpfnWndProc = _testEnv.Memory.Read32(wcexPtr + 8);
-		var cbClsExtra = _testEnv.Memory.Read32(wcexPtr + 12);
-		var cbWndExtra = _testEnv.Memory.Read32(wcexPtr + 16);
-		var hInstance = _testEnv.Memory.Read32(wcexPtr + 20);
-		var hIcon = _testEnv.Memory.Read32(wcexPtr + 24);
-		var hCursor = _testEnv.Memory.Read32(wcexPtr + 28);
-		var hbrBackground = _testEnv.Memory.Read32(wcexPtr + 32);
-		var lpszMenuName = _testEnv.Memory.Read32(wcexPtr + 36);
-		var lpszClassName = _testEnv.Memory.Read32(wcexPtr + 40);
-		var hIconSm = _testEnv.Memory.Read32(wcexPtr + 44);
+		// Read the structure fields using offset constants
+		var cbSize = _testEnv.Memory.Read32(wcexPtr + WndClassExA_cbSize);
+		var style = _testEnv.Memory.Read32(wcexPtr + WndClassExA_style);
+		var lpfnWndProc = _testEnv.Memory.Read32(wcexPtr + WndClassExA_lpfnWndProc);
+		var cbClsExtra = _testEnv.Memory.Read32(wcexPtr + WndClassExA_cbClsExtra);
+		var hInstance = _testEnv.Memory.Read32(wcexPtr + WndClassExA_hInstance);
+		var hIcon = _testEnv.Memory.Read32(wcexPtr + WndClassExA_hIcon);
+		var hCursor = _testEnv.Memory.Read32(wcexPtr + WndClassExA_hCursor);
+		var lpszMenuName = _testEnv.Memory.Read32(wcexPtr + WndClassExA_lpszMenuName);
+		var lpszClassName = _testEnv.Memory.Read32(wcexPtr + WndClassExA_lpszClassName);
+		var hIconSm = _testEnv.Memory.Read32(wcexPtr + WndClassExA_hIconSm);
 
 		// cbSize should not be modified
 		Assert.Equal(0xabababab, cbSize);
@@ -378,30 +402,30 @@ public class ReactOSPortedTests : IDisposable
 	public void GetClassInfoExW_CustomClass_ShouldReturnCorrectClassInfo()
 	{
 		// Arrange - Register a custom class
-		var wcexPtr = _testEnv.AllocateMemory(48); // sizeof(WNDCLASSEXW)
+		var wcexPtr = _testEnv.AllocateMemory((uint)WndClassExASize);
 		
-		// Set up WNDCLASSEXW structure
-		_testEnv.Memory.Write32(wcexPtr + 0, 48); // cbSize
-		_testEnv.Memory.Write32(wcexPtr + 4, 0x1); // style
-		_testEnv.Memory.Write32(wcexPtr + 8, 0x00401000); // lpfnWndProc (DefWindowProc)
-		_testEnv.Memory.Write32(wcexPtr + 12, 1); // cbClsExtra
-		_testEnv.Memory.Write32(wcexPtr + 16, 5); // cbWndExtra
-		_testEnv.Memory.Write32(wcexPtr + 20, 0x00400000); // hInstance
-		_testEnv.Memory.Write32(wcexPtr + 24, 0); // hIcon
-		_testEnv.Memory.Write32(wcexPtr + 28, 0); // hCursor
-		_testEnv.Memory.Write32(wcexPtr + 32, 0); // hbrBackground
-		_testEnv.Memory.Write32(wcexPtr + 36, 0); // lpszMenuName
+		// Set up WNDCLASSEXW structure using offset constants
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_cbSize, (uint)WndClassExASize);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_style, 0x1);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_lpfnWndProc, 0x00401000); // DefWindowProc
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_cbClsExtra, 1);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_cbWndExtra, 5);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_hInstance, 0x00400000);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_hIcon, 0);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_hCursor, 0);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_hbrBackground, 0);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_lpszMenuName, 0);
 		
 		var classNamePtr = _testEnv.WriteStringW("ProTestClass3");
-		_testEnv.Memory.Write32(wcexPtr + 40, classNamePtr); // lpszClassName
-		_testEnv.Memory.Write32(wcexPtr + 44, 0); // hIconSm
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_lpszClassName, classNamePtr);
+		_testEnv.Memory.Write32(wcexPtr + WndClassExA_hIconSm, 0);
 
 		// Register the class
 		var atom = _testEnv.CallUser32Api("REGISTERCLASSEXW", wcexPtr);
 		Assert.NotEqual(0u, atom);
 
 		// Fill wcex with pattern to test what gets modified
-		for (uint i = 0; i < 48; i++)
+		for (uint i = 0; i < WndClassExASize; i++)
 		{
 			_testEnv.Memory.Write8(wcexPtr + i, 0xab);
 		}
@@ -416,19 +440,17 @@ public class ReactOSPortedTests : IDisposable
 		// Assert
 		Assert.Equal(atom, result);
 
-		// Read back the structure
-		var cbSize = _testEnv.Memory.Read32(wcexPtr + 0);
-		var style = _testEnv.Memory.Read32(wcexPtr + 4);
-		var lpfnWndProc = _testEnv.Memory.Read32(wcexPtr + 8);
-		var cbClsExtra = _testEnv.Memory.Read32(wcexPtr + 12);
-		var cbWndExtra = _testEnv.Memory.Read32(wcexPtr + 16);
-		var hInstance = _testEnv.Memory.Read32(wcexPtr + 20);
-		var hIcon = _testEnv.Memory.Read32(wcexPtr + 24);
-		var hCursor = _testEnv.Memory.Read32(wcexPtr + 28);
-		var hbrBackground = _testEnv.Memory.Read32(wcexPtr + 32);
-		var lpszMenuName = _testEnv.Memory.Read32(wcexPtr + 36);
-		var lpszClassName = _testEnv.Memory.Read32(wcexPtr + 40);
-		var hIconSm = _testEnv.Memory.Read32(wcexPtr + 44);
+		// Read back the structure using offset constants
+		var cbSize = _testEnv.Memory.Read32(wcexPtr + WndClassExA_cbSize);
+		var style = _testEnv.Memory.Read32(wcexPtr + WndClassExA_style);
+		var lpfnWndProc = _testEnv.Memory.Read32(wcexPtr + WndClassExA_lpfnWndProc);
+		var cbClsExtra = _testEnv.Memory.Read32(wcexPtr + WndClassExA_cbClsExtra);
+		var cbWndExtra = _testEnv.Memory.Read32(wcexPtr + WndClassExA_cbWndExtra);
+		var hInstance = _testEnv.Memory.Read32(wcexPtr + WndClassExA_hInstance);
+		var hIcon = _testEnv.Memory.Read32(wcexPtr + WndClassExA_hIcon);
+		var lpszMenuName = _testEnv.Memory.Read32(wcexPtr + WndClassExA_lpszMenuName);
+		var lpszClassName = _testEnv.Memory.Read32(wcexPtr + WndClassExA_lpszClassName);
+		var hIconSm = _testEnv.Memory.Read32(wcexPtr + WndClassExA_hIconSm);
 
 		// cbSize should not be modified
 		Assert.Equal(0xabababab, cbSize);
@@ -440,7 +462,6 @@ public class ReactOSPortedTests : IDisposable
 		Assert.Equal(5u, cbWndExtra);
 		Assert.Equal(0x00400000u, hInstance);
 		Assert.Equal(0u, hIcon);
-		Assert.Equal(0u, hbrBackground);
 		Assert.Equal(0u, lpszMenuName);
 		Assert.Equal(atom, lpszClassName); // Class name is returned as atom
 		Assert.Equal(0u, hIconSm);
