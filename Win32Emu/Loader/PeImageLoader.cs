@@ -953,19 +953,33 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 
 		foreach (var section in pe.Sections)
 		{
-			var name = section.Name ?? string.Empty;
-			var rva = section.Rva;
-			var virtualSize = section.Contents?.GetVirtualSize() ?? 0;
-			// Note: WriteIntoArray() creates a copy to get the length. This is acceptable since
-			// it only happens once during PE load time (not performance-critical path).
-			// AsmResolver's PESection doesn't expose raw data size directly - must materialize contents.
-			var rawSize = (uint)(section.Contents?.WriteIntoArray().Length ?? 0);
-			var characteristics = (PeSectionCharacteristics)(uint)section.Characteristics;
+			try
+			{
+				var name = section.Name ?? string.Empty;
+				var rva = section.Rva;
+				var virtualSize = section.Contents?.GetVirtualSize() ?? 0;
+				// Note: WriteIntoArray() creates a copy to get the length. This is acceptable since
+				// it only happens once during PE load time (not performance-critical path).
+				// AsmResolver's PESection doesn't expose raw data size directly - must materialize contents.
+				var rawSize = (uint)(section.Contents?.WriteIntoArray().Length ?? 0);
+				var characteristics = (PeSectionCharacteristics)(uint)section.Characteristics;
 
-			sections.Add(new PeSection(name, rva, virtualSize, rawSize, characteristics));
+				sections.Add(new PeSection(name, rva, virtualSize, rawSize, characteristics));
 
-			logger?.LogDebug("[Loader] Section {Name}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawSize=0x{RawSize:X8}, Characteristics=0x{Chars:X8}",
-				name, rva, virtualSize, rawSize, (uint)characteristics);
+				logger?.LogDebug("[Loader] Section {Name}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawSize=0x{RawSize:X8}, Characteristics=0x{Chars:X8}",
+					name, rva, virtualSize, rawSize, (uint)characteristics);
+			}
+			catch (Exception ex) when (ex is System.IO.EndOfStreamException or ArgumentException)
+			{
+				// Skip corrupted sections that extend beyond file boundaries during info extraction
+				// This can happen with malformed PE files where section headers indicate
+				// sizes that don't match actual file data
+				// Note: The actual section data loading (lines 230-289) already handles this,
+				// but we need to also handle it here when extracting metadata
+				var sectionName = section.Name ?? string.Empty;
+				logger?.LogWarning("Skipping corrupted section {SectionName} at RVA {SectionRva:X8} during info extraction: {ErrorMessage}", 
+					sectionName, section.Rva, ex.Message);
+			}
 		}
 
 		logger?.LogInformation("[Loader] Extracted {Count} sections from PE file", sections.Count);
