@@ -1,3 +1,3 @@
 namespace Win32Emu.Cpu;
 
-public readonly record struct CpuStepResult(bool IsCall, uint CallTarget, bool IsSyscall = false);
+public readonly record struct CpuStepResult(bool IsCall, uint CallTarget, bool IsSyscall = false, bool IsDosInterrupt = false);

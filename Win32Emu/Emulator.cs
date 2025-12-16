@@ -1355,6 +1355,13 @@ public sealed class Emulator : IDisposable
                 iterationsSinceLastSyscall = 0; // Reset counter on syscall
                 continue; // Continue to next iteration, let CPU execute RET
             }
+
+            // Check for DOS interrupt (INT 21h from Win16 NE executables)
+            if (step.IsDosInterrupt)
+            {
+                await HandleDosInterruptAsync().ConfigureAwait(false);
+                continue; // Continue to next iteration
+            }
             
             // Check for thread exit (return address is 0xFFFFFFFF)
             var eip = _cpu!.GetEip();
@@ -1650,6 +1657,14 @@ public sealed class Emulator : IDisposable
                         i++;
                         continue;
                     }
+                }
+
+                // Check for DOS interrupt (INT 21h from Win16 NE executables)
+                if (step.IsDosInterrupt)
+                {
+                    HandleDosInterruptAsync().GetAwaiter().GetResult();
+                    i++;
+                    continue;
                 }
 
                 // Check for COM vtable method calls
@@ -2299,6 +2314,94 @@ public sealed class Emulator : IDisposable
         // This is safe on desktop/server runtimes in these specific contexts where
         // there's no synchronization context that could cause deadlock
         return HandleSyscallAsync().GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Handles DOS interrupt (INT 21h) for Win16 NE executables and DOS programs.
+    /// </summary>
+    private async Task HandleDosInterruptAsync(CancellationToken cancellationToken = default)
+    {
+        // DOS services are accessed via INT 21h with function number in AH
+        var ah = (_cpu!.GetRegister("EAX") >> 8) & 0xFF;
+        var al = _cpu.GetRegister("EAX") & 0xFF;
+
+        _logger.LogDebug("[DOS INT 21h] Function AH=0x{Ah:X2}, AL=0x{Al:X2}", ah, al);
+
+        // Implement common DOS functions
+        switch (ah)
+        {
+            case 0x00: // Terminate program
+                _logger.LogInformation("[DOS INT 21h] Program termination requested (AH=0x00)");
+                _shouldStop = true;
+                break;
+
+            case 0x4C: // Terminate with return code
+                var exitCode = al;
+                _logger.LogInformation("[DOS INT 21h] Program termination with exit code {ExitCode} (AH=0x4C)", exitCode);
+                _shouldStop = true;
+                break;
+
+            case 0x09: // Write string to standard output (DS:DX points to '$'-terminated string)
+                {
+                    var dx = _cpu.GetRegister("EDX") & 0xFFFF;
+                    var ds = _cpu.GetSegmentRegister("DS");
+                    var address = (ds << 4) + dx; // Real mode addressing
+                    
+                    // For flat memory model in protected mode, just use DX directly
+                    if (ds == 0)
+                    {
+                        address = dx;
+                    }
+
+                    try
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        var offset = 0u;
+                        while (true)
+                        {
+                            var ch = (char)_vm!.Read8(address + offset);
+                            if (ch == '$') break;
+                            if (offset > 1024) break; // Safety limit
+                            sb.Append(ch);
+                            offset++;
+                        }
+                        var text = sb.ToString();
+                        _logger.LogInformation("[DOS INT 21h] Print string: {Text}", text);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[DOS INT 21h] Failed to read string at address 0x{Address:X8}", address);
+                    }
+                }
+                break;
+
+            case 0x02: // Write character to standard output (DL = character)
+                {
+                    var dl = (_cpu.GetRegister("EDX") & 0xFF);
+                    _logger.LogInformation("[DOS INT 21h] Print character: '{Char}' (0x{Dl:X2})", (char)dl, dl);
+                }
+                break;
+
+            case 0x25: // Set interrupt vector (AL = interrupt number, DS:DX = handler address)
+                // Win16 apps may try to set interrupt handlers - we'll just acknowledge it
+                _logger.LogDebug("[DOS INT 21h] Set interrupt vector AL=0x{Al:X2} (ignored)", al);
+                break;
+
+            case 0x35: // Get interrupt vector (AL = interrupt number) - returns ES:BX
+                // Return a dummy handler address
+                _logger.LogDebug("[DOS INT 21h] Get interrupt vector AL=0x{Al:X2} (returning dummy)", al);
+                _cpu.SetRegister("EBX", 0x0000);
+                _cpu.SetSegmentRegister("ES", 0x0000);
+                break;
+
+            default:
+                _logger.LogWarning("[DOS INT 21h] Unimplemented function AH=0x{Ah:X2}", ah);
+                // Set carry flag to indicate error
+                _cpu.SetFlag("CF", true);
+                break;
+        }
+
+        await Task.CompletedTask;
     }
 
     private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
