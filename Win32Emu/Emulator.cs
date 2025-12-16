@@ -473,7 +473,7 @@ public sealed class Emulator : IDisposable
             LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
         }
 
-        _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger, _backendFactory);
+        _env = new ProcessEnvironment(_vm, CalculateHeapBase(_image), _host, _logger, _backendFactory);
         
         // Initialize virtual file system - prioritize custom VFS, then disk path
         if (customVirtualFileSystem != null)
@@ -574,7 +574,7 @@ public sealed class Emulator : IDisposable
         _cpu.SetRegister("EBP", initialEsp); // Initialize frame pointer to match stack pointer
         
         // Store heap base for use in checks
-        _heapBase = CalculateHeapBase();
+        _heapBase = CalculateHeapBase(_image);
         
         // Store memory layout in ProcessEnvironment for use by Win32 modules
         _env.StackBase = _stackBase;
@@ -2827,16 +2827,27 @@ public sealed class Emulator : IDisposable
     /// </summary>
     
     /// <summary>
-    /// Returns the default heap base address for memory allocation.
-    /// The heap base is always set to 0x01000000 for compatibility.
+    /// Returns the heap base address for memory allocation.
+    /// The heap base is calculated as the image base address plus the image size,
+    /// aligned to a 64KB boundary (standard Windows allocation granularity).
+    /// This ensures the heap region starts after the loaded PE image to avoid
+    /// false positives in heap execution detection.
     /// The PE header's SizeOfHeapReserve value is available in LoadedImage but not used
     /// to determine heap placement - it's available for the memory allocator to manage heap growth.
     /// </summary>
+    /// <param name="image">The loaded image containing base address and size information</param>
     /// <returns>The heap base address to use for memory allocation</returns>
-    private static uint CalculateHeapBase()
+    private static uint CalculateHeapBase(LoadedImage image)
     {
-        const uint DEFAULT_HEAP_BASE = 0x01000000;
-        return DEFAULT_HEAP_BASE;
+        // Calculate heap base as image base + image size
+        var heapBase = image.BaseAddress + image.ImageSize;
+        
+        // Align to 64KB boundary (0x10000) - standard Windows allocation granularity
+        // This ensures proper alignment for VirtualAlloc and similar operations
+        const uint ALLOCATION_GRANULARITY = 0x10000;
+        heapBase = (heapBase + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1);
+        
+        return heapBase;
     }
     
     // Constants for memory validation
