@@ -14,6 +14,7 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     
     # Test categorization using xUnit traits:
     # - DllModuleTests: Win32 DLL module tests (Kernel32, User32, etc.) - optional, won't block PRs
@@ -47,20 +48,24 @@ jobs:
     - name: Check for tests
       id: check-tests
       run: |
-        # Check for any tests in the solution
-        if dotnet test --list-tests --verbosity quiet 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
-          echo "has-tests=true" >> $GITHUB_OUTPUT
-        else
-          echo "has-tests=false" >> $GITHUB_OUTPUT
-        fi
-        
         # Build test filter for core tests
         # Exclude: ConformanceTests (CPU conformance suite) and DllModuleTests (Win32 DLL module tests)
         test_filter="Category!=ConformanceTests&Category!=DllModuleTests"
         echo "core-test-filter=$test_filter" >> $GITHUB_OUTPUT
         
+        # Check for any tests and core tests in a single pass (use --no-build to avoid rebuilding)
+        test_list=$(dotnet test --list-tests --no-build --verbosity quiet 2>&1 || true)
+        
+        if echo "$test_list" | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
+          echo "has-tests=true" >> $GITHUB_OUTPUT
+        else
+          echo "has-tests=false" >> $GITHUB_OUTPUT
+        fi
+        
         # Check for core tests (anything not marked with ConformanceTests or DllModuleTests traits)
-        if dotnet test --list-tests --verbosity quiet --filter "$test_filter" 2>&1 | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
+        core_test_list=$(dotnet test --list-tests --no-build --verbosity quiet --filter "$test_filter" 2>&1 || true)
+        
+        if echo "$core_test_list" | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
           echo "has-core-tests=true" >> $GITHUB_OUTPUT
         else
           echo "has-core-tests=false" >> $GITHUB_OUTPUT
@@ -68,9 +73,11 @@ jobs:
       
     - name: Run core emulator tests (required)
       if: steps.check-tests.outputs.has-core-tests == 'true'
+      timeout-minutes: 10
       run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "${{ steps.check-tests.outputs.core-test-filter }}"
       
     - name: Run Win32 DLL module tests (optional)
+      timeout-minutes: 5
       run: |
         echo "Running Win32 DLL module tests (optional, non-blocking)..."
         dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "Category=DllModuleTests" || true
@@ -78,6 +85,7 @@ jobs:
       
     - name: Run CPU conformance tests (optional - informational only)
       if: steps.check-tests.outputs.has-core-tests == 'true'
+      timeout-minutes: 5
       run: |
         echo "Running CPU conformance tests (SingleStepTests)..."
         echo "These tests validate CPU instruction implementation against real 386 hardware behavior."
