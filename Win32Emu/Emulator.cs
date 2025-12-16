@@ -98,6 +98,65 @@ public sealed class Emulator : IDisposable
     private string? _traceTriggerDll = null;
     private string? _traceTriggerFunction = null;
     
+    // DOS interrupt constants
+    private const byte DOS_INTERRUPT = 0x21;
+    private const byte SYSCALL_INTERRUPT = 0x80;
+    private const byte DOS_SPACE_CHAR = 0x20;
+    private const byte DOS_STRING_TERMINATOR = 0x24; // '$' character
+    private const byte DOS_NO_INPUT = 0x00;
+    private const byte DOS_INPUT_READY = 0xFF;
+    private const byte DOS_DRIVE_C = 0x02; // 0=default, 1=A, 2=B, 3=C
+    private const ushort DOS_VERSION_MAJOR = 6;
+    private const ushort DOS_VERSION_MINOR = 22;
+    private const ushort DOS_VERSION_6_22 = 0x1606; // 6.22 in DOS format (AL=minor, AH=major)
+    private const ushort DOS_PARAGRAPH_SIZE = 16; // DOS memory paragraphs are 16 bytes
+    private const ushort DOS_STDOUT_HANDLE = 1;
+    private const ushort DOS_STDERR_HANDLE = 2;
+    private const ushort DOS_DUMMY_FILE_HANDLE = 0x0005;
+    private const ushort DOS_FILE_ATTR_ARCHIVE = 0x0020;
+    private const uint DOS_ERROR_INVALID_FUNCTION = 0xFFFFFFFF;
+    private const int MAX_DOS_STRING_LENGTH = 1024;
+    private const int MAX_NULL_TERMINATED_STRING_LENGTH = 256;
+    private const int DOS_MAX_CURRENT_DIR_LENGTH = 63;
+    
+    /// <summary>
+    /// DOS INT 21h function numbers
+    /// </summary>
+    private enum DosFunction : byte
+    {
+        Terminate = 0x00,
+        CharInputWithEcho = 0x01,
+        CharOutput = 0x02,
+        DirectConsoleIO = 0x06,
+        DirectCharInputNoEcho = 0x07,
+        CharInputNoEcho = 0x08,
+        WriteString = 0x09,
+        BufferedInput = 0x0A,
+        CheckStdinStatus = 0x0B,
+        GetCurrentDrive = 0x19,
+        SetInterruptVector = 0x25,
+        GetSystemDate = 0x2A,
+        SetSystemDate = 0x2B,
+        GetSystemTime = 0x2C,
+        SetSystemTime = 0x2D,
+        GetDosVersion = 0x30,
+        GetSetCtrlBreak = 0x33,
+        GetInterruptVector = 0x35,
+        CreateFile = 0x3C,
+        OpenFile = 0x3D,
+        CloseFile = 0x3E,
+        ReadFile = 0x3F,
+        WriteFile = 0x40,
+        SeekFile = 0x42,
+        GetSetFileAttributes = 0x43,
+        GetCurrentDirectory = 0x47,
+        AllocateMemory = 0x48,
+        FreeMemory = 0x49,
+        ResizeMemory = 0x4A,
+        TerminateWithReturnCode = 0x4C,
+        GetReturnCode = 0x4D
+    }
+    
     /// <summary>
     /// Enable instruction-level tracing for the next N instructions.
     /// Used for debugging crashes and understanding execution flow.
@@ -2331,22 +2390,22 @@ public sealed class Emulator : IDisposable
         _logger.LogDebug("[DOS INT 21h] Function AH=0x{Ah:X2}, AL=0x{Al:X2}", ah, al);
 
         // Implement common DOS functions
-        switch (ah)
+        switch ((DosFunction)ah)
         {
-            case 0x00: // Terminate program
+            case DosFunction.Terminate:
                 _logger.LogInformation("[DOS INT 21h] Program termination requested (AH=0x00)");
                 _stopRequested = true;
                 break;
 
-            case 0x01: // Character input with echo - read from stdin
+            case DosFunction.CharInputWithEcho:
                 {
                     _logger.LogDebug("[DOS INT 21h] Read character from stdin (AH=0x01)");
                     // Return a dummy character (space) for now
-                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x20); // Space character
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_SPACE_CHAR);
                 }
                 break;
 
-            case 0x02: // Write character to standard output (DL = character)
+            case DosFunction.CharOutput:
                 {
                     var dl = (_cpu.GetRegister("EDX") & 0xFF);
                     var ch = (char)dl;
@@ -2355,14 +2414,14 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x06: // Direct console I/O
+            case DosFunction.DirectConsoleIO:
                 {
                     var dl = (_cpu.GetRegister("EDX") & 0xFF);
-                    if (dl == 0xFF)
+                    if (dl == DOS_INPUT_READY)
                     {
                         // Input - return dummy character or 0 if no input available
                         _logger.LogDebug("[DOS INT 21h] Direct console input (AH=0x06)");
-                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00); // No character available
+                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_NO_INPUT);
                     }
                     else
                     {
@@ -2374,16 +2433,16 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x07: // Direct character input without echo
-            case 0x08: // Character input without echo
+            case DosFunction.DirectCharInputNoEcho:
+            case DosFunction.CharInputNoEcho:
                 {
                     _logger.LogDebug("[DOS INT 21h] Read character without echo (AH=0x{Ah:X2})", ah);
                     // Return a dummy character (space)
-                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x20);
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_SPACE_CHAR);
                 }
                 break;
 
-            case 0x09: // Write string to standard output (DS:DX points to '$'-terminated string)
+            case DosFunction.WriteString:
                 {
                     try
                     {
@@ -2392,8 +2451,8 @@ public sealed class Emulator : IDisposable
                         while (true)
                         {
                             var ch = (char)_vm!.Read8(dx + offset);
-                            if (ch == '$') break;
-                            if (offset > 1024) break; // Safety limit
+                            if (ch == (char)DOS_STRING_TERMINATOR) break;
+                            if (offset > MAX_DOS_STRING_LENGTH) break; // Safety limit
                             sb.Append(ch);
                             offset++;
                         }
@@ -2401,7 +2460,7 @@ public sealed class Emulator : IDisposable
                         _env!.WriteToStdOutput(text);
                         _logger.LogDebug("[DOS INT 21h] Print string: {Text}", text);
                         // Return DL (last character) in AL
-                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x24); // '$'
+                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_STRING_TERMINATOR);
                     }
                     catch (Exception ex)
                     {
@@ -2410,7 +2469,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x0A: // Buffered input
+            case DosFunction.BufferedInput:
                 {
                     _logger.LogDebug("[DOS INT 21h] Buffered input (AH=0x0A) - not fully implemented");
                     // DS:DX points to buffer: first byte = max chars, second byte = actual chars read
@@ -2422,27 +2481,27 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x0B: // Check stdin status
+            case DosFunction.CheckStdinStatus:
                 {
                     _logger.LogDebug("[DOS INT 21h] Check stdin status (AH=0x0B)");
                     // Return 0 = no character available, 0xFF = character available
-                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00);
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_NO_INPUT);
                 }
                 break;
 
-            case 0x19: // Get current drive
+            case DosFunction.GetCurrentDrive:
                 {
                     _logger.LogDebug("[DOS INT 21h] Get current drive (AH=0x19)");
                     // Return drive 2 (C:) - drives are 0=A, 1=B, 2=C, etc.
-                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x02);
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_DRIVE_C);
                 }
                 break;
 
-            case 0x25: // Set interrupt vector (AL = interrupt number, DS:DX = handler address)
+            case DosFunction.SetInterruptVector:
                 _logger.LogDebug("[DOS INT 21h] Set interrupt vector AL=0x{Al:X2} (ignored)", al);
                 break;
 
-            case 0x2A: // Get system date
+            case DosFunction.GetSystemDate:
                 {
                     var now = DateTime.Now;
                     _logger.LogDebug("[DOS INT 21h] Get system date (AH=0x2A): {Date}", now.ToShortDateString());
@@ -2453,7 +2512,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x2B: // Set system date
+            case DosFunction.SetSystemDate:
                 {
                     var year = cx;
                     var month = (dx >> 8) & 0xFF;
@@ -2464,7 +2523,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x2C: // Get system time
+            case DosFunction.GetSystemTime:
                 {
                     var now = DateTime.Now;
                     _logger.LogDebug("[DOS INT 21h] Get system time (AH=0x2C): {Time}", now.ToLongTimeString());
@@ -2474,7 +2533,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x2D: // Set system time
+            case DosFunction.SetSystemTime:
                 {
                     var hour = (cx >> 8) & 0xFF;
                     var minute = cx & 0xFF;
@@ -2485,18 +2544,18 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x30: // Get DOS version
+            case DosFunction.GetDosVersion:
                 {
                     _logger.LogDebug("[DOS INT 21h] Get DOS version (AH=0x30)");
                     // Return version 6.22 (DOS 6.22): AL=major (6), AH=minor (22)
-                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | 0x1606); // 6.22
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_VERSION_6_22);
                     // BH = 0xFF (DOS is in HMA), BL:CX = 0 (serial number)
                     _cpu.SetRegister("EBX", (_cpu.GetRegister("EBX") & 0xFFFF0000) | 0xFF00);
                     _cpu.SetRegister("ECX", 0);
                 }
                 break;
 
-            case 0x33: // Get/Set Ctrl-Break flag
+            case DosFunction.GetSetCtrlBreak:
                 {
                     if (al == 0x00)
                     {
@@ -2512,7 +2571,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x35: // Get interrupt vector (AL = interrupt number) - returns ES:BX
+            case DosFunction.GetInterruptVector:
                 {
                     _logger.LogDebug("[DOS INT 21h] Get interrupt vector AL=0x{Al:X2} (returning dummy)", al);
                     _cpu.SetRegister("EBX", 0x0000);
@@ -2520,28 +2579,26 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x3C: // Create or truncate file
+            case DosFunction.CreateFile:
                 {
                     var filename = ReadNullTerminatedString(dx);
                     _logger.LogDebug("[DOS INT 21h] Create file: {Filename} (AH=0x3C)", filename);
                     // Return dummy file handle in AX
-                    var handle = 0x0005; // Dummy handle
-                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (uint)handle);
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_DUMMY_FILE_HANDLE);
                 }
                 break;
 
-            case 0x3D: // Open file
+            case DosFunction.OpenFile:
                 {
                     var filename = ReadNullTerminatedString(dx);
                     var accessMode = al & 0x03; // 0=read, 1=write, 2=read/write
                     _logger.LogDebug("[DOS INT 21h] Open file: {Filename}, mode={Mode} (AH=0x3D)", filename, accessMode);
                     // Return dummy file handle in AX
-                    var handle = 0x0005; // Dummy handle
-                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (uint)handle);
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_DUMMY_FILE_HANDLE);
                 }
                 break;
 
-            case 0x3E: // Close file
+            case DosFunction.CloseFile:
                 {
                     var handle = bx;
                     _logger.LogDebug("[DOS INT 21h] Close file handle: 0x{Handle:X4} (AH=0x3E)", handle);
@@ -2549,7 +2606,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x3F: // Read from file
+            case DosFunction.ReadFile:
                 {
                     var handle = bx;
                     var count = cx;
@@ -2560,7 +2617,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x40: // Write to file or device
+            case DosFunction.WriteFile:
                 {
                     var handle = bx;
                     var count = cx;
@@ -2568,7 +2625,7 @@ public sealed class Emulator : IDisposable
                     _logger.LogDebug("[DOS INT 21h] Write to handle 0x{Handle:X4}, {Count} bytes from 0x{Buffer:X8} (AH=0x40)", handle, count, buffer);
                     
                     // If handle is stdout (1) or stderr (2), write to console
-                    if (handle == 1 || handle == 2)
+                    if (handle == DOS_STDOUT_HANDLE || handle == DOS_STDERR_HANDLE)
                     {
                         try
                         {
@@ -2591,7 +2648,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x42: // Seek in file
+            case DosFunction.SeekFile:
                 {
                     var handle = bx;
                     var method = al; // 0=from start, 1=from current, 2=from end
@@ -2603,7 +2660,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x43: // Get/Set file attributes
+            case DosFunction.GetSetFileAttributes:
                 {
                     var filename = ReadNullTerminatedString(dx);
                     if (al == 0x00)
@@ -2611,7 +2668,7 @@ public sealed class Emulator : IDisposable
                         // Get attributes
                         _logger.LogDebug("[DOS INT 21h] Get file attributes: {Filename} (AH=0x43, AL=0x00)", filename);
                         // Return normal file attribute in CX
-                        _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | 0x0020); // Archive bit
+                        _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | DOS_FILE_ATTR_ARCHIVE);
                     }
                     else if (al == 0x01)
                     {
@@ -2621,7 +2678,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x47: // Get current directory
+            case DosFunction.GetCurrentDirectory:
                 {
                     var drive = dx & 0xFF; // 0=default, 1=A, 2=B, 3=C, etc.
                     var buffer = (_cpu.GetRegister("ESI") & 0xFFFF); // DS:SI points to buffer
@@ -2633,7 +2690,7 @@ public sealed class Emulator : IDisposable
                     
                     try
                     {
-                        for (var i = 0; i < path.Length && i < 63; i++)
+                        for (var i = 0; i < path.Length && i < DOS_MAX_CURRENT_DIR_LENGTH; i++)
                         {
                             _vm!.Write8(buffer + (uint)i, (byte)path[i]);
                         }
@@ -2646,10 +2703,10 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x48: // Allocate memory
+            case DosFunction.AllocateMemory:
                 {
                     var paragraphs = bx; // Size in 16-byte paragraphs
-                    var bytes = paragraphs * 16u;
+                    var bytes = paragraphs * DOS_PARAGRAPH_SIZE;
                     _logger.LogDebug("[DOS INT 21h] Allocate memory: {Paragraphs} paragraphs ({Bytes} bytes) (AH=0x48)", paragraphs, bytes);
                     
                     // Use SimpleAlloc to allocate memory
@@ -2661,7 +2718,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x49: // Free memory
+            case DosFunction.FreeMemory:
                 {
                     var segment = (_cpu.GetRegister("ES") & 0xFFFF); // ES = segment to free
                     _logger.LogDebug("[DOS INT 21h] Free memory: segment=0x{Segment:X4} (AH=0x49)", segment);
@@ -2669,7 +2726,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x4A: // Resize memory block
+            case DosFunction.ResizeMemory:
                 {
                     var segment = (_cpu.GetRegister("ES") & 0xFFFF);
                     var newParagraphs = bx;
@@ -2678,7 +2735,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x4C: // Terminate with return code
+            case DosFunction.TerminateWithReturnCode:
                 {
                     var exitCode = al;
                     _logger.LogInformation("[DOS INT 21h] Program termination with exit code {ExitCode} (AH=0x4C)", exitCode);
@@ -2686,7 +2743,7 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x4D: // Get return code
+            case DosFunction.GetReturnCode:
                 {
                     _logger.LogDebug("[DOS INT 21h] Get return code (AH=0x4D)");
                     // Return 0 in AX
@@ -2697,7 +2754,7 @@ public sealed class Emulator : IDisposable
             default:
                 _logger.LogWarning("[DOS INT 21h] Unimplemented function AH=0x{Ah:X2}", ah);
                 // Return error value in AX
-                _cpu.SetRegister("EAX", 0xFFFFFFFF);
+                _cpu.SetRegister("EAX", DOS_ERROR_INVALID_FUNCTION);
                 break;
         }
 
@@ -2713,7 +2770,7 @@ public sealed class Emulator : IDisposable
         var offset = 0u;
         try
         {
-            while (offset < 256) // Safety limit
+            while (offset < MAX_NULL_TERMINATED_STRING_LENGTH) // Safety limit
             {
                 var ch = _vm!.Read8(address + offset);
                 if (ch == 0) break;
@@ -2721,9 +2778,9 @@ public sealed class Emulator : IDisposable
                 offset++;
             }
         }
-        catch
+        catch (Exception ex)
         {
-            // Return partial string on error
+            _logger.LogWarning(ex, "[DOS INT 21h] Error reading null-terminated string from memory at 0x{Address:X8} (offset {Offset}). Returning partial string.", address, offset);
         }
         return sb.ToString();
     }
