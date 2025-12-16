@@ -292,6 +292,7 @@ public class IcedCpu : IAsyncCpu
 		
 		var isCall = false;
 		var isSyscall = false;
+		var isDosInterrupt = false;
 		uint callTarget = 0;
 		try
 		{
@@ -738,6 +739,7 @@ public class IcedCpu : IAsyncCpu
 						{
 							// Regular INT3 - for now, just print a message and continue
 							_logger.LogWarning("[IcedCpu] INT3 breakpoint at 0x{OldEip:X8}", oldEip);
+							_eip = oldEip + (uint)insn.Length;
 						}
 					}
 					else if (insn.Immediate8 == 0x80)
@@ -751,9 +753,20 @@ public class IcedCpu : IAsyncCpu
 						// INT 0x80 is 2 bytes (CD 80), so advance by instruction length
 						_eip = oldEip + (uint)insn.Length;
 					}
+					else if (insn.Immediate8 == 0x21)
+					{
+						// INT 0x21 - DOS services interrupt
+						// Used by Win16 NE executables and DOS programs
+						// Signal as a DOS interrupt and advance EIP
+						isDosInterrupt = true;
+						_logger.LogDebug("[IcedCpu] INT 0x21 DOS services at 0x{OldEip:X8}, AH=0x{Ah:X2}", oldEip, (_eax >> 8) & 0xFF);
+						_eip = oldEip + (uint)insn.Length;
+					}
 					else
 					{
+						// Unhandled interrupt - advance EIP to prevent infinite loop
 						_logger.LogWarning("[IcedCpu] Unhandled interrupt INT {InsnImmediate8:X2} at 0x{OldEip:X8}", insn.Immediate8, oldEip);
+						_eip = oldEip + (uint)insn.Length;
 					}
 
 					break;
@@ -1005,7 +1018,7 @@ public class IcedCpu : IAsyncCpu
 			_eip = (uint)_decoder.IP;
 		}
 
-		return new CpuStepResult(isCall, callTarget, isSyscall);
+		return new CpuStepResult(isCall, callTarget, isSyscall, isDosInterrupt);
 	}
 
 	/// <summary>

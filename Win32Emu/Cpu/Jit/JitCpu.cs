@@ -258,6 +258,7 @@ public class JitCpu : IAsyncCpu
 		
 		var isCall = insn.Mnemonic == Mnemonic.Call;
 		var isSyscall = false;
+		var isDosInterrupt = false;
 		uint callTarget = 0;
 		
 		if (isCall)
@@ -307,8 +308,17 @@ public class JitCpu : IAsyncCpu
 					isSyscall = true;
 					_logger.LogDebug("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
 				}
+				else if (insn.Immediate8 == 0x21)
+				{
+					// INT 0x21 - DOS services interrupt
+					// Used by Win16 NE executables and DOS programs
+					// Signal as a DOS interrupt
+					isDosInterrupt = true;
+					_logger.LogDebug("[JitCpu] INT 0x21 DOS services at 0x{OldEip:X8}, AH=0x{Ah:X2}", oldEip, (_eax >> 8) & 0xFF);
+				}
 				else
 				{
+					// Unhandled interrupt - just log warning
 					_logger.LogWarning("[JitCpu] Unhandled interrupt INT {InsnImmediate8:X2} at 0x{OldEip:X8}", insn.Immediate8, oldEip);
 				}
 				break;
@@ -1131,7 +1141,7 @@ public class JitCpu : IAsyncCpu
 				break;
 		}
 		
-		return new CpuStepResult(isCall, callTarget, isSyscall);
+		return new CpuStepResult(isCall, callTarget, isSyscall, isDosInterrupt);
 	}
 
 	private RtlCompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
