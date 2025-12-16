@@ -41,15 +41,13 @@
 								style="max-width: 100%; height: auto; image-rendering: pixelated;">
 						</canvas>
 						
-						<!-- Windows and dialogs overlay -->
-						@if (_activeWindows.Count > 0 || _activeDialog != null || _activeMessageBox != null)
+						<!-- Dialogs and message boxes overlay -->
+						<!-- Note: WindowComponent overlays are NOT rendered because regular windows (CreateWindowEx)
+						     render their content directly on the canvas via DirectDraw/GDI. Only dialogs and message boxes
+						     need HTML overlays since they use Win32 controls that aren't rendered via DirectDraw. -->
+						@if (_activeDialog != null || _activeMessageBox != null)
 						{
 							<div class="win32-overlay">
-								@foreach (var windowInfo in _activeWindows.Values)
-								{
-									<WindowComponent Info="windowInfo" OnClose="() => HandleWindowClose(windowInfo.Handle)" />
-								}
-								
 								@if (_activeDialog != null)
 								{
 									<DialogComponent Info="_activeDialog" OnResult="HandleDialogResult" />

@@ -21,9 +21,11 @@ The implementation consists of three main Blazor components located in `Win32Emu
    - Two-way binding for edit controls
    - Returns control ID on button clicks
 
-3. **WindowComponent.razor** - Renders Win32 CreateWindow notifications
-   - Displays basic window information (title, handle, class name)
-   - Note: Actual window content rendering still happens in the emulator canvas
+3. **WindowComponent.razor** - (Not currently used)
+   - Originally designed to show window metadata as overlays
+   - **Not rendered** to avoid occluding the canvas where DirectDraw content is displayed
+   - Regular windows render their content directly on the canvas via DirectDraw/GDI
+   - Window creation events are still tracked for debugging purposes
 
 ### Event Flow
 
@@ -95,9 +97,10 @@ The WASM UI will:
 - ComboBox
 - Visibility and disabled state handling
 
-✅ **Windows**
-- Window creation notifications
-- Display of window metadata (title, handle, class)
+⚠️ **Windows (Not Rendered as HTML Overlays)**
+- Regular windows (CreateWindowEx) render their content directly on the canvas via DirectDraw/GDI
+- WindowComponent overlays are intentionally NOT rendered to avoid occluding the canvas
+- Window creation events are still tracked for debugging purposes
 
 ## Limitations and Future Work
 
