@@ -2324,6 +2324,9 @@ public sealed class Emulator : IDisposable
         // DOS services are accessed via INT 21h with function number in AH
         var ah = (_cpu!.GetRegister("EAX") >> 8) & 0xFF;
         var al = _cpu.GetRegister("EAX") & 0xFF;
+        var bx = _cpu.GetRegister("EBX") & 0xFFFF;
+        var cx = _cpu.GetRegister("ECX") & 0xFFFF;
+        var dx = _cpu.GetRegister("EDX") & 0xFFFF;
 
         _logger.LogDebug("[DOS INT 21h] Function AH=0x{Ah:X2}, AL=0x{Al:X2}", ah, al);
 
@@ -2335,17 +2338,53 @@ public sealed class Emulator : IDisposable
                 _stopRequested = true;
                 break;
 
-            case 0x4C: // Terminate with return code
-                var exitCode = al;
-                _logger.LogInformation("[DOS INT 21h] Program termination with exit code {ExitCode} (AH=0x4C)", exitCode);
-                _stopRequested = true;
+            case 0x01: // Character input with echo - read from stdin
+                {
+                    _logger.LogDebug("[DOS INT 21h] Read character from stdin (AH=0x01)");
+                    // Return a dummy character (space) for now
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x20); // Space character
+                }
+                break;
+
+            case 0x02: // Write character to standard output (DL = character)
+                {
+                    var dl = (_cpu.GetRegister("EDX") & 0xFF);
+                    var ch = (char)dl;
+                    _env!.WriteToStdOutput(ch.ToString());
+                    _logger.LogDebug("[DOS INT 21h] Print character: '{Char}' (0x{Dl:X2})", ch, dl);
+                }
+                break;
+
+            case 0x06: // Direct console I/O
+                {
+                    var dl = (_cpu.GetRegister("EDX") & 0xFF);
+                    if (dl == 0xFF)
+                    {
+                        // Input - return dummy character or 0 if no input available
+                        _logger.LogDebug("[DOS INT 21h] Direct console input (AH=0x06)");
+                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00); // No character available
+                    }
+                    else
+                    {
+                        // Output
+                        var ch = (char)dl;
+                        _env!.WriteToStdOutput(ch.ToString());
+                        _logger.LogDebug("[DOS INT 21h] Direct console output: '{Char}'", ch);
+                    }
+                }
+                break;
+
+            case 0x07: // Direct character input without echo
+            case 0x08: // Character input without echo
+                {
+                    _logger.LogDebug("[DOS INT 21h] Read character without echo (AH=0x{Ah:X2})", ah);
+                    // Return a dummy character (space)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x20);
+                }
                 break;
 
             case 0x09: // Write string to standard output (DS:DX points to '$'-terminated string)
                 {
-                    // For flat memory model, just use DX directly as a pointer
-                    var dx = _cpu.GetRegister("EDX") & 0xFFFF;
-
                     try
                     {
                         var sb = new System.Text.StringBuilder();
@@ -2359,7 +2398,10 @@ public sealed class Emulator : IDisposable
                             offset++;
                         }
                         var text = sb.ToString();
-                        _logger.LogInformation("[DOS INT 21h] Print string: {Text}", text);
+                        _env!.WriteToStdOutput(text);
+                        _logger.LogDebug("[DOS INT 21h] Print string: {Text}", text);
+                        // Return DL (last character) in AL
+                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x24); // '$'
                     }
                     catch (Exception ex)
                     {
@@ -2368,34 +2410,322 @@ public sealed class Emulator : IDisposable
                 }
                 break;
 
-            case 0x02: // Write character to standard output (DL = character)
+            case 0x0A: // Buffered input
                 {
-                    var dl = (_cpu.GetRegister("EDX") & 0xFF);
-                    _logger.LogInformation("[DOS INT 21h] Print character: '{Char}' (0x{Dl:X2})", (char)dl, dl);
+                    _logger.LogDebug("[DOS INT 21h] Buffered input (AH=0x0A) - not fully implemented");
+                    // DS:DX points to buffer: first byte = max chars, second byte = actual chars read
+                    // For now, just return empty input
+                    if (dx != 0)
+                    {
+                        _vm!.Write8(dx + 1, 0); // No characters read
+                    }
+                }
+                break;
+
+            case 0x0B: // Check stdin status
+                {
+                    _logger.LogDebug("[DOS INT 21h] Check stdin status (AH=0x0B)");
+                    // Return 0 = no character available, 0xFF = character available
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00);
+                }
+                break;
+
+            case 0x19: // Get current drive
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get current drive (AH=0x19)");
+                    // Return drive 2 (C:) - drives are 0=A, 1=B, 2=C, etc.
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x02);
                 }
                 break;
 
             case 0x25: // Set interrupt vector (AL = interrupt number, DS:DX = handler address)
-                // Win16 apps may try to set interrupt handlers - we'll just acknowledge it
                 _logger.LogDebug("[DOS INT 21h] Set interrupt vector AL=0x{Al:X2} (ignored)", al);
                 break;
 
+            case 0x2A: // Get system date
+                {
+                    var now = DateTime.Now;
+                    _logger.LogDebug("[DOS INT 21h] Get system date (AH=0x2A): {Date}", now.ToShortDateString());
+                    // CX = year, DH = month, DL = day, AL = day of week (0=Sunday)
+                    _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | (uint)now.Year);
+                    _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFF0000) | ((uint)now.Month << 8) | (uint)now.Day);
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | (uint)now.DayOfWeek);
+                }
+                break;
+
+            case 0x2B: // Set system date
+                {
+                    var year = cx;
+                    var month = (dx >> 8) & 0xFF;
+                    var day = dx & 0xFF;
+                    _logger.LogDebug("[DOS INT 21h] Set system date (AH=0x2B): {Year}-{Month:D2}-{Day:D2} (ignored)", year, month, day);
+                    // Return AL=0 for success (but we don't actually set it)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00);
+                }
+                break;
+
+            case 0x2C: // Get system time
+                {
+                    var now = DateTime.Now;
+                    _logger.LogDebug("[DOS INT 21h] Get system time (AH=0x2C): {Time}", now.ToLongTimeString());
+                    // CH = hour, CL = minute, DH = second, DL = hundredths
+                    _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | ((uint)now.Hour << 8) | (uint)now.Minute);
+                    _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFF0000) | ((uint)now.Second << 8) | (uint)(now.Millisecond / 10));
+                }
+                break;
+
+            case 0x2D: // Set system time
+                {
+                    var hour = (cx >> 8) & 0xFF;
+                    var minute = cx & 0xFF;
+                    var second = (dx >> 8) & 0xFF;
+                    _logger.LogDebug("[DOS INT 21h] Set system time (AH=0x2D): {Hour:D2}:{Minute:D2}:{Second:D2} (ignored)", hour, minute, second);
+                    // Return AL=0 for success
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00);
+                }
+                break;
+
+            case 0x30: // Get DOS version
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get DOS version (AH=0x30)");
+                    // Return version 6.22 (DOS 6.22): AL=major (6), AH=minor (22)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | 0x1606); // 6.22
+                    // BH = 0xFF (DOS is in HMA), BL:CX = 0 (serial number)
+                    _cpu.SetRegister("EBX", (_cpu.GetRegister("EBX") & 0xFFFF0000) | 0xFF00);
+                    _cpu.SetRegister("ECX", 0);
+                }
+                break;
+
+            case 0x33: // Get/Set Ctrl-Break flag
+                {
+                    if (al == 0x00)
+                    {
+                        // Get Ctrl-Break flag
+                        _logger.LogDebug("[DOS INT 21h] Get Ctrl-Break flag (AH=0x33, AL=0x00)");
+                        _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFFFF00) | 0x01); // Enabled
+                    }
+                    else if (al == 0x01)
+                    {
+                        // Set Ctrl-Break flag
+                        _logger.LogDebug("[DOS INT 21h] Set Ctrl-Break flag (AH=0x33, AL=0x01, DL={Dl})", dx & 0xFF);
+                    }
+                }
+                break;
+
             case 0x35: // Get interrupt vector (AL = interrupt number) - returns ES:BX
-                // Return a dummy handler address
-                _logger.LogDebug("[DOS INT 21h] Get interrupt vector AL=0x{Al:X2} (returning dummy)", al);
-                _cpu.SetRegister("EBX", 0x0000);
-                // ES segment register not accessible through ICpu interface, so we skip setting it
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get interrupt vector AL=0x{Al:X2} (returning dummy)", al);
+                    _cpu.SetRegister("EBX", 0x0000);
+                    // ES segment register not accessible through ICpu interface, so we skip setting it
+                }
+                break;
+
+            case 0x3C: // Create or truncate file
+                {
+                    var filename = ReadNullTerminatedString(dx);
+                    _logger.LogDebug("[DOS INT 21h] Create file: {Filename} (AH=0x3C)", filename);
+                    // Return dummy file handle in AX
+                    var handle = 0x0005; // Dummy handle
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (uint)handle);
+                }
+                break;
+
+            case 0x3D: // Open file
+                {
+                    var filename = ReadNullTerminatedString(dx);
+                    var accessMode = al & 0x03; // 0=read, 1=write, 2=read/write
+                    _logger.LogDebug("[DOS INT 21h] Open file: {Filename}, mode={Mode} (AH=0x3D)", filename, accessMode);
+                    // Return dummy file handle in AX
+                    var handle = 0x0005; // Dummy handle
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (uint)handle);
+                }
+                break;
+
+            case 0x3E: // Close file
+                {
+                    var handle = bx;
+                    _logger.LogDebug("[DOS INT 21h] Close file handle: 0x{Handle:X4} (AH=0x3E)", handle);
+                    // Return success (carry flag clear, but we can't set it)
+                }
+                break;
+
+            case 0x3F: // Read from file
+                {
+                    var handle = bx;
+                    var count = cx;
+                    var buffer = dx;
+                    _logger.LogDebug("[DOS INT 21h] Read from file handle 0x{Handle:X4}, {Count} bytes to 0x{Buffer:X8} (AH=0x3F)", handle, count, buffer);
+                    // Return 0 bytes read (EOF)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | 0x0000);
+                }
+                break;
+
+            case 0x40: // Write to file or device
+                {
+                    var handle = bx;
+                    var count = cx;
+                    var buffer = dx;
+                    _logger.LogDebug("[DOS INT 21h] Write to handle 0x{Handle:X4}, {Count} bytes from 0x{Buffer:X8} (AH=0x40)", handle, count, buffer);
+                    
+                    // If handle is stdout (1) or stderr (2), write to console
+                    if (handle == 1 || handle == 2)
+                    {
+                        try
+                        {
+                            var data = new byte[count];
+                            for (var i = 0; i < count; i++)
+                            {
+                                data[i] = _vm!.Read8(buffer + (uint)i);
+                            }
+                            var text = System.Text.Encoding.ASCII.GetString(data);
+                            _env!.WriteToStdOutput(text);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "[DOS INT 21h] Failed to write to console");
+                        }
+                    }
+                    
+                    // Return bytes written in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (uint)count);
+                }
+                break;
+
+            case 0x42: // Seek in file
+                {
+                    var handle = bx;
+                    var method = al; // 0=from start, 1=from current, 2=from end
+                    var offset = ((uint)cx << 16) | dx;
+                    _logger.LogDebug("[DOS INT 21h] Seek in file handle 0x{Handle:X4}, method={Method}, offset=0x{Offset:X8} (AH=0x42)", handle, method, offset);
+                    // Return new position in DX:AX (just return the offset)
+                    _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFF0000) | ((offset >> 16) & 0xFFFF));
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (offset & 0xFFFF));
+                }
+                break;
+
+            case 0x43: // Get/Set file attributes
+                {
+                    var filename = ReadNullTerminatedString(dx);
+                    if (al == 0x00)
+                    {
+                        // Get attributes
+                        _logger.LogDebug("[DOS INT 21h] Get file attributes: {Filename} (AH=0x43, AL=0x00)", filename);
+                        // Return normal file attribute in CX
+                        _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | 0x0020); // Archive bit
+                    }
+                    else if (al == 0x01)
+                    {
+                        // Set attributes
+                        _logger.LogDebug("[DOS INT 21h] Set file attributes: {Filename}, attrs=0x{Attrs:X4} (AH=0x43, AL=0x01)", filename, cx);
+                    }
+                }
+                break;
+
+            case 0x47: // Get current directory
+                {
+                    var drive = dx & 0xFF; // 0=default, 1=A, 2=B, 3=C, etc.
+                    var buffer = (_cpu.GetRegister("ESI") & 0xFFFF); // DS:SI points to buffer
+                    _logger.LogDebug("[DOS INT 21h] Get current directory, drive={Drive} (AH=0x47)", drive);
+                    
+                    // Write current directory to buffer (e.g., "WINDOWS\SYSTEM32")
+                    var path = _env!.CurrentDirectory.TrimStart('C', ':', '\\');
+                    if (string.IsNullOrEmpty(path)) path = "";
+                    
+                    try
+                    {
+                        for (var i = 0; i < path.Length && i < 63; i++)
+                        {
+                            _vm!.Write8(buffer + (uint)i, (byte)path[i]);
+                        }
+                        _vm!.Write8(buffer + (uint)path.Length, 0); // Null terminator
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[DOS INT 21h] Failed to write current directory");
+                    }
+                }
+                break;
+
+            case 0x48: // Allocate memory
+                {
+                    var paragraphs = bx; // Size in 16-byte paragraphs
+                    var bytes = paragraphs * 16u;
+                    _logger.LogDebug("[DOS INT 21h] Allocate memory: {Paragraphs} paragraphs ({Bytes} bytes) (AH=0x48)", paragraphs, bytes);
+                    
+                    // Use SimpleAlloc to allocate memory
+                    var address = _env!.SimpleAlloc(bytes);
+                    var segment = address >> 4; // Convert to segment
+                    
+                    // Return segment in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (segment & 0xFFFF));
+                }
+                break;
+
+            case 0x49: // Free memory
+                {
+                    var segment = (_cpu.GetRegister("ES") & 0xFFFF); // ES = segment to free
+                    _logger.LogDebug("[DOS INT 21h] Free memory: segment=0x{Segment:X4} (AH=0x49)", segment);
+                    // We don't actually free it since we don't have a proper memory manager
+                }
+                break;
+
+            case 0x4A: // Resize memory block
+                {
+                    var segment = (_cpu.GetRegister("ES") & 0xFFFF);
+                    var newParagraphs = bx;
+                    _logger.LogDebug("[DOS INT 21h] Resize memory: segment=0x{Segment:X4}, new size={NewSize} paragraphs (AH=0x4A)", segment, newParagraphs);
+                    // Return success
+                }
+                break;
+
+            case 0x4C: // Terminate with return code
+                {
+                    var exitCode = al;
+                    _logger.LogInformation("[DOS INT 21h] Program termination with exit code {ExitCode} (AH=0x4C)", exitCode);
+                    _stopRequested = true;
+                }
+                break;
+
+            case 0x4D: // Get return code
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get return code (AH=0x4D)");
+                    // Return 0 in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | 0x0000);
+                }
                 break;
 
             default:
                 _logger.LogWarning("[DOS INT 21h] Unimplemented function AH=0x{Ah:X2}", ah);
-                // Carry flag not accessible through ICpu interface
-                // DOS functions typically return error status in AX or set carry flag
-                _cpu.SetRegister("EAX", 0xFFFFFFFF); // Return error value
+                // Return error value in AX
+                _cpu.SetRegister("EAX", 0xFFFFFFFF);
                 break;
         }
 
         await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Helper method to read a null-terminated string from memory.
+    /// </summary>
+    private string ReadNullTerminatedString(uint address)
+    {
+        var sb = new System.Text.StringBuilder();
+        var offset = 0u;
+        try
+        {
+            while (offset < 256) // Safety limit
+            {
+                var ch = _vm!.Read8(address + offset);
+                if (ch == 0) break;
+                sb.Append((char)ch);
+                offset++;
+            }
+        }
+        catch
+        {
+            // Return partial string on error
+        }
+        return sb.ToString();
     }
 
     private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
