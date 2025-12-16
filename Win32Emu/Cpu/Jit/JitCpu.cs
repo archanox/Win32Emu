@@ -30,6 +30,10 @@ public class JitCpu : IAsyncCpu
 	private ushort _fpuStatusWord = 0x0000;
 	private ushort _fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
 	
+	// Interrupt numbers
+	private const byte DOS_INTERRUPT = 0x21;
+	private const byte SYSCALL_INTERRUPT = 0x80;
+	
 	// MMX state - shares physical registers with FPU (MM0-MM7 alias to ST(0)-ST(7))
 	// Each MMX register is 64 bits
 	// NOTE: In real hardware, MMX and FPU share the same physical registers. This implementation
@@ -302,13 +306,13 @@ public class JitCpu : IAsyncCpu
 						_logger.LogWarning("[JitCpu] INT3 breakpoint at 0x{OldEip:X8}", oldEip);
 					}
 				}
-				else if (insn.Immediate8 == 0x80)
+				else if (insn.Immediate8 == SYSCALL_INTERRUPT)
 				{
 					// INT 0x80 - Syscall dispatcher
 					isSyscall = true;
 					_logger.LogDebug("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
 				}
-				else if (insn.Immediate8 == 0x21)
+				else if (insn.Immediate8 == DOS_INTERRUPT)
 				{
 					// INT 0x21 - DOS services interrupt
 					// Used by Win16 NE executables and DOS programs

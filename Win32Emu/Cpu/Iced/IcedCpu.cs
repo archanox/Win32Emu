@@ -26,6 +26,10 @@ public class IcedCpu : IAsyncCpu
 	// EFLAGS bit positions
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
 
+	// Interrupt numbers
+	private const byte DOS_INTERRUPT = 0x21;
+	private const byte SYSCALL_INTERRUPT = 0x80;
+
 	// Default image base if not specified (typical default for Win32 executables)
 	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
 	
@@ -742,7 +746,7 @@ public class IcedCpu : IAsyncCpu
 							_eip = oldEip + (uint)insn.Length;
 						}
 					}
-					else if (insn.Immediate8 == 0x80)
+					else if (insn.Immediate8 == SYSCALL_INTERRUPT)
 					{
 						// INT 0x80 - Syscall dispatcher (retrowin32-style)
 						// This is triggered when import stubs call the syscall dispatcher
@@ -753,7 +757,7 @@ public class IcedCpu : IAsyncCpu
 						// INT 0x80 is 2 bytes (CD 80), so advance by instruction length
 						_eip = oldEip + (uint)insn.Length;
 					}
-					else if (insn.Immediate8 == 0x21)
+					else if (insn.Immediate8 == DOS_INTERRUPT)
 					{
 						// INT 0x21 - DOS services interrupt
 						// Used by Win16 NE executables and DOS programs
