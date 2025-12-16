@@ -2332,26 +2332,19 @@ public sealed class Emulator : IDisposable
         {
             case 0x00: // Terminate program
                 _logger.LogInformation("[DOS INT 21h] Program termination requested (AH=0x00)");
-                _shouldStop = true;
+                _stopRequested = true;
                 break;
 
             case 0x4C: // Terminate with return code
                 var exitCode = al;
                 _logger.LogInformation("[DOS INT 21h] Program termination with exit code {ExitCode} (AH=0x4C)", exitCode);
-                _shouldStop = true;
+                _stopRequested = true;
                 break;
 
             case 0x09: // Write string to standard output (DS:DX points to '$'-terminated string)
                 {
+                    // For flat memory model, just use DX directly as a pointer
                     var dx = _cpu.GetRegister("EDX") & 0xFFFF;
-                    var ds = _cpu.GetSegmentRegister("DS");
-                    var address = (ds << 4) + dx; // Real mode addressing
-                    
-                    // For flat memory model in protected mode, just use DX directly
-                    if (ds == 0)
-                    {
-                        address = dx;
-                    }
 
                     try
                     {
@@ -2359,7 +2352,7 @@ public sealed class Emulator : IDisposable
                         var offset = 0u;
                         while (true)
                         {
-                            var ch = (char)_vm!.Read8(address + offset);
+                            var ch = (char)_vm!.Read8(dx + offset);
                             if (ch == '$') break;
                             if (offset > 1024) break; // Safety limit
                             sb.Append(ch);
@@ -2370,7 +2363,7 @@ public sealed class Emulator : IDisposable
                     }
                     catch (Exception ex)
                     {
-                        _logger.LogError(ex, "[DOS INT 21h] Failed to read string at address 0x{Address:X8}", address);
+                        _logger.LogError(ex, "[DOS INT 21h] Failed to read string at address 0x{Address:X8}", dx);
                     }
                 }
                 break;
@@ -2391,13 +2384,14 @@ public sealed class Emulator : IDisposable
                 // Return a dummy handler address
                 _logger.LogDebug("[DOS INT 21h] Get interrupt vector AL=0x{Al:X2} (returning dummy)", al);
                 _cpu.SetRegister("EBX", 0x0000);
-                _cpu.SetSegmentRegister("ES", 0x0000);
+                // ES segment register not accessible through ICpu interface, so we skip setting it
                 break;
 
             default:
                 _logger.LogWarning("[DOS INT 21h] Unimplemented function AH=0x{Ah:X2}", ah);
-                // Set carry flag to indicate error
-                _cpu.SetFlag("CF", true);
+                // Carry flag not accessible through ICpu interface
+                // DOS functions typically return error status in AX or set carry flag
+                _cpu.SetRegister("EAX", 0xFFFFFFFF); // Return error value
                 break;
         }
 
