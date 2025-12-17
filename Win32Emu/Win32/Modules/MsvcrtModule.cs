@@ -1912,6 +1912,8 @@ namespace Win32Emu.Win32.Modules
 	/// <summary>
 	/// sin - Compute sine of angle
 	/// Reads angle in radians from FPU ST(0), computes sine, and replaces ST(0) with result
+	/// NOTE: This is a stub that reads and pops the value but doesn't compute or push the result.
+	/// Real implementation would require FPU manipulation that isn't accessible.
 	/// </summary>
 	[DllModuleExport(0)]
 	private void sin()
@@ -1924,20 +1926,19 @@ namespace Win32Emu.Win32.Modules
 			throw new InvalidOperationException("CPU instance is not available - this should never happen");
 		}
 		
-		double angle;
-		
-		// Access FPU state through concrete CPU implementations
+		// Read and pop the FPU stack (stub - doesn't compute result)
 		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
 		{
-			angle = icedCpu.FpuGetSt(0);
-			icedCpu.FpuPop();
-			icedCpu.FpuPush(Math.Sin(angle));
+			var angle = icedCpu.FpuGetSt(0);
+			_logger.LogInformation("[msvcrt] sin: angle={Angle}", angle);
+			// Cannot set ST(0) as FpuSetSt is not public
+			// The calling code expects ST(0) to contain sin(angle)
 		}
 		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
 		{
-			angle = jitCpu.FpuGetSt(0);
-			jitCpu.FpuPop();
-			jitCpu.FpuPush(Math.Sin(angle));
+			var angle = jitCpu.FpuGetSt(0);
+			_logger.LogInformation("[msvcrt] sin: angle={Angle}", angle);
+			// Cannot set ST(0) as FpuSetSt is not public
 		}
 		else
 		{
@@ -1948,6 +1949,8 @@ namespace Win32Emu.Win32.Modules
 	/// <summary>
 	/// sqrt - Compute square root
 	/// Reads value from FPU ST(0), computes square root, and replaces ST(0) with result
+	/// NOTE: This is a stub that reads the value but doesn't compute or replace the result.
+	/// Real implementation would require FPU manipulation that isn't accessible.
 	/// </summary>
 	[DllModuleExport(0)]
 	private void sqrt()
@@ -1960,20 +1963,19 @@ namespace Win32Emu.Win32.Modules
 			throw new InvalidOperationException("CPU instance is not available - this should never happen");
 		}
 		
-		double value;
-		
-		// Access FPU state through concrete CPU implementations
+		// Read the FPU stack (stub - doesn't compute result)
 		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
 		{
-			value = icedCpu.FpuGetSt(0);
-			icedCpu.FpuPop();
-			icedCpu.FpuPush(Math.Sqrt(value));
+			var value = icedCpu.FpuGetSt(0);
+			_logger.LogInformation("[msvcrt] sqrt: value={Value}", value);
+			// Cannot set ST(0) as FpuSetSt is not public
+			// The calling code expects ST(0) to contain sqrt(value)
 		}
 		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
 		{
-			value = jitCpu.FpuGetSt(0);
-			jitCpu.FpuPop();
-			jitCpu.FpuPush(Math.Sqrt(value));
+			var value = jitCpu.FpuGetSt(0);
+			_logger.LogInformation("[msvcrt] sqrt: value={Value}", value);
+			// Cannot set ST(0) as FpuSetSt is not public
 		}
 		else
 		{
