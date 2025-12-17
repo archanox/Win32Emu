@@ -132,6 +132,7 @@ public class ConfigurationService
             GdbPauseOnStart = _settings.GdbPauseOnStart,
             EnableInstructionAnalyzer = _settings.EnableInstructionAnalyzer,
             EnableLegacyInstructionDecoding = _settings.EnableLegacyInstructionDecoding,
+            Force32BitStackOps = _settings.Force32BitStackOps,
             EnableOpenTelemetry = _settings.EnableOpenTelemetry,
             UseConsoleExporter = _settings.UseConsoleExporter,
             UseOtlpExporter = _settings.UseOtlpExporter,
@@ -187,6 +188,7 @@ public class ConfigurationService
         _settings.GdbPauseOnStart = configuration.GdbPauseOnStart;
         _settings.EnableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
         _settings.EnableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
+        _settings.Force32BitStackOps = configuration.Force32BitStackOps;
         _settings.EnableOpenTelemetry = configuration.EnableOpenTelemetry;
         _settings.UseConsoleExporter = configuration.UseConsoleExporter;
         _settings.UseOtlpExporter = configuration.UseOtlpExporter;
