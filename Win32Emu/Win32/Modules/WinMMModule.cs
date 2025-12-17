@@ -788,7 +788,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]      UINT     fuCreate
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint MmioCreateChunk(uint hmmio, uint pmmcki, uint fuCreate)
 		{
 			_logger.LogInformation("[WinMM] mmioCreateChunk(hmmio=0x{Hmmio:X8}, pmmcki=0x{Pmmcki:X8}, fuCreate=0x{FuCreate:X8})",
@@ -819,7 +819,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] LONG   cch
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint MmioWrite(uint hmmio, uint pch, uint cch)
 		{
 			_logger.LogInformation("[WinMM] mmioWrite(hmmio=0x{Hmmio:X8}, pch=0x{Pch:X8}, cch={Cch})",
@@ -1614,7 +1614,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] UINT      cbmh
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiOutPrepareHeader(uint hmo, uint pmh, uint cbmh)
 		{
 			_logger.LogInformation("[WinMM] midiOutPrepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
@@ -1636,7 +1636,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDIOUT hmo
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiOutReset(uint hmo)
 		{
 			_logger.LogInformation("[WinMM] midiOutReset(hmo=0x{Hmo:X8})", hmo);
@@ -1650,7 +1650,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] DWORD    dwVolume
 		/// );
 		/// </summary>
-		[DllModuleExport(8, IsStub = true)]
+		[DllModuleExport(8)]
 		private uint MidiOutSetVolume(uint hmo, uint dwVolume)
 		{
 			_logger.LogInformation("[WinMM] midiOutSetVolume(hmo=0x{Hmo:X8}, dwVolume=0x{DwVolume:X8})",
@@ -1665,7 +1665,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] DWORD    dwMsg
 		/// );
 		/// </summary>
-		[DllModuleExport(8, IsStub = true)]
+		[DllModuleExport(8)]
 		private uint MidiOutShortMsg(uint hmo, uint dwMsg)
 		{
 			_logger.LogInformation("[WinMM] midiOutShortMsg(hmo=0x{Hmo:X8}, dwMsg=0x{DwMsg:X8})",
@@ -1681,7 +1681,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] UINT      cbmh
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiOutUnprepareHeader(uint hmo, uint pmh, uint cbmh)
 		{
 			_logger.LogInformation("[WinMM] midiOutUnprepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
@@ -1717,7 +1717,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamClose(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamClose(hms=0x{Hms:X8})", hms);
@@ -1741,7 +1741,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]  DWORD       fdwOpen
 		/// );
 		/// </summary>
-		[DllModuleExport(24, IsStub = true)]
+		[DllModuleExport(24)]
 		private uint MidiStreamOpen(uint phms, uint puDeviceID, uint cMidi, uint dwCallback, uint dwInstance, uint fdwOpen)
 		{
 			_logger.LogInformation("[WinMM] midiStreamOpen(phms=0x{Phms:X8}, puDeviceID=0x{PuDeviceID:X8}, cMidi={CMidi}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
@@ -1778,7 +1778,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] UINT      cbmh
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiStreamOut(uint hms, uint pmh, uint cbmh)
 		{
 			_logger.LogInformation("[WinMM] midiStreamOut(hms=0x{Hms:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
@@ -1805,7 +1805,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamPause(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamPause(hms=0x{Hms:X8})", hms);
@@ -1827,7 +1827,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]      DWORD     dwProperty
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiStreamProperty(uint hms, uint lppropdata, uint dwProperty)
 		{
 			_logger.LogInformation("[WinMM] midiStreamProperty(hms=0x{Hms:X8}, lppropdata=0x{Lppropdata:X8}, dwProperty=0x{DwProperty:X8})",
@@ -1848,7 +1848,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamRestart(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamRestart(hms=0x{Hms:X8})", hms);
@@ -1868,7 +1868,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamStop(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamStop(hms=0x{Hms:X8})", hms);
