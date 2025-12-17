@@ -11623,7 +11623,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	///   [in] DWORD   dwFlags
 	/// );
 	/// </summary>
-	[DllModuleExport(11)]
+	[DllModuleExport(49)]
 	private uint LoadLibraryExA(in LpcStr lpLibFileName, uint hFile, uint dwFlags)
 	{
 		var fileName = lpLibFileName.ToString();
