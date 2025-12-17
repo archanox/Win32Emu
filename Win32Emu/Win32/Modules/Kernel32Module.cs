@@ -11626,7 +11626,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(49)]
 	private uint LoadLibraryExA(in LpcStr lpLibFileName, uint hFile, uint dwFlags)
 	{
-		var fileName = lpLibFileName.ToString();
+		var fileName = lpLibFileName.ToString() ?? string.Empty;
 		_logger.LogInformation("[Kernel32] LoadLibraryExA(lpLibFileName={LpLibFileName}, hFile=0x{HFile:X8}, dwFlags=0x{DwFlags:X8})",
 			fileName, hFile, dwFlags);
 		
