@@ -994,6 +994,30 @@ public static class NativeTypes
 		public uint hStdError;       // Offset 64
 	}
 
+	// STARTUPINFOW structure (68 bytes)
+	// Specifies startup information for a process (Unicode version)
+	public struct STARTUPINFOW
+	{
+		public uint cb;              // Offset 0 - Size of structure
+		public uint lpReserved;      // Offset 4
+		public uint lpDesktop;       // Offset 8
+		public uint lpTitle;         // Offset 12
+		public uint dwX;             // Offset 16
+		public uint dwY;             // Offset 20
+		public uint dwXSize;         // Offset 24
+		public uint dwYSize;         // Offset 28
+		public uint dwXCountChars;   // Offset 32
+		public uint dwYCountChars;   // Offset 36
+		public uint dwFillAttribute; // Offset 40
+		public uint dwFlags;         // Offset 44
+		public ushort wShowWindow;   // Offset 48
+		public ushort cbReserved2;   // Offset 50
+		public uint lpReserved2;     // Offset 52
+		public uint hStdInput;       // Offset 56
+		public uint hStdOutput;      // Offset 60
+		public uint hStdError;       // Offset 64
+	}
+
 	// EXCEPTION_POINTERS structure (8 bytes)
 	// Contains exception record and context pointers
 	public struct EXCEPTION_POINTERS

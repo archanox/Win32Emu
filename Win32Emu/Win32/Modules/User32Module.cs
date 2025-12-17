@@ -1009,6 +1009,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = InsertMenuA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.LpcStr(4));
 					return true;
 
+				case "INSERTMENUW":
+					returnValue = InsertMenuW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.LpcWStr(4));
+					return true;
+
 				case "INSERTMENUITEMA":
 					returnValue = InsertMenuItemA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
@@ -7944,6 +7948,18 @@ namespace Win32Emu.Win32.Modules
 		{
 			var itemName = lpNewItem.Read(_env.Memory) ?? "";
 			_logger.LogInformation("[User32] InsertMenuA(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X8}, uIDNewItem={UIDNewItem}, lpNewItem='{LpNewItem}')",
+				hMenu, uPosition, uFlags, uIDNewItem, itemName);
+			return 1;
+		}
+
+		/// <summary>
+		/// Inserts a new menu item into a menu, moving other items down the menu (Unicode version).
+		/// </summary>
+		[DllModuleExport(20, IsStub = true)]
+		private uint InsertMenuW(uint hMenu, uint uPosition, uint uFlags, uint uIDNewItem, in LpcWStr lpNewItem)
+		{
+			var itemName = lpNewItem.Read(_env.Memory) ?? "";
+			_logger.LogInformation("[User32] InsertMenuW(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X8}, uIDNewItem={UIDNewItem}, lpNewItem='{LpNewItem}')",
 				hMenu, uPosition, uFlags, uIDNewItem, itemName);
 			return 1;
 		}

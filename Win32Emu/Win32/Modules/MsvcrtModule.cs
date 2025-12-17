@@ -16,6 +16,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 		private uint _cachedAcmdlnPtr = 0;
+		private uint _cachedWcmdlnPtr = 0;
 		
 		// CPU instance is set by TryInvokeUnsafe before calling exported methods
 		// Cannot be passed as parameter to [DllModuleExport] methods as it breaks source generation
@@ -101,8 +102,17 @@ namespace Win32Emu.Win32.Modules
 				case "__GETMAINARGS":
 					returnValue = (uint)__getmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
 					return true;
+				case "__WGETMAINARGS":
+					returnValue = (uint)__wgetmainargs(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+					return true;
 				case "__P___INITENV":
 					returnValue = __p___initenv();
+					return true;
+				case "__P___WINITENV":
+					returnValue = __p___winitenv();
+					return true;
+				case "__WINITENV":
+					returnValue = __winitenv();
 					return true;
 				case "__P__ACMDLN":
 					returnValue = __p__acmdln();
@@ -124,6 +134,9 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "_ACMDLN":
 					returnValue = _acmdln();
+					return true;
+				case "_WCMDLN":
+					returnValue = _wcmdln();
 					return true;
 				case "_ADJUST_FDIV":
 					returnValue = _adjust_fdiv();
@@ -377,6 +390,14 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		[DllModuleExport(0)]
+		private uint __p___winitenv()
+		{
+			_logger.LogInformation("[msvcrt] __p___winitenv()");
+			// Return pointer to environment variables (Unicode version)
+			return _env.GetEnvironmentStringsW();
+		}
+
+		[DllModuleExport(0)]
 		private uint __p__commode()
 		{
 			_logger.LogInformation("[msvcrt] __p__commode()");
@@ -489,6 +510,81 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success
 		}
 
+		[DllModuleExport(20)]
+		private int __wgetmainargs(uint pargc, uint pargv, uint penv, int doWildcard, uint startupInfo)
+		{
+			_logger.LogInformation("[msvcrt] __wgetmainargs(pargc=0x{Pargc:X8}, pargv=0x{Pargv:X8}, penv=0x{Penv:X8}, doWildcard={DoWildcard}, startupInfo=0x{StartupInfo:X8})", 
+				pargc, pargv, penv, doWildcard, startupInfo);
+
+			// Parse command line into argc/argv (Unicode version)
+			var cmdLinePtr = _env.CommandLinePtrW;
+			var cmdLine = cmdLinePtr != 0 ? _env.ReadUnicodeString(cmdLinePtr) : "";
+			
+			// Simple command line parsing - split on spaces, respecting quotes
+			var args = new List<string>();
+			var inQuote = false;
+			var current = new System.Text.StringBuilder();
+			
+			foreach (var ch in cmdLine)
+			{
+				if (ch == '"')
+				{
+					inQuote = !inQuote;
+				}
+				else if (ch == ' ' && !inQuote)
+				{
+					if (current.Length > 0)
+					{
+						args.Add(current.ToString());
+						current.Clear();
+					}
+				}
+				else
+				{
+					current.Append(ch);
+				}
+			}
+			
+			if (current.Length > 0)
+			{
+				args.Add(current.ToString());
+			}
+			
+			// Ensure we have at least one argument (program name)
+			if (args.Count == 0)
+			{
+				args.Add("msconfig.exe");
+			}
+			
+			// Allocate argv array (need argc+1 for NULL terminator)
+			var argc = args.Count;
+			var argvArray = _env.HeapAlloc(0, (uint)((argc + 1) * 4)); // Array of pointers + NULL
+			
+			// Write each argument string and store pointer
+			for (var i = 0; i < argc; i++)
+			{
+				var argPtr = _env.WriteUnicodeString(args[i] + '\0');
+				_env.MemWrite32(argvArray + (uint)(i * 4), argPtr);
+			}
+			
+			// Add NULL terminator to argv array
+			_env.MemWrite32(argvArray + (uint)(argc * 4), 0);
+			
+			// Write argc
+			_env.MemWrite32(pargc, (uint)argc);
+			
+			// Write argv pointer
+			_env.MemWrite32(pargv, argvArray);
+			
+			// Write environment pointer
+			var envPtr = _env.GetEnvironmentStringsW();
+			_env.MemWrite32(penv, envPtr);
+			
+			_logger.LogInformation("[msvcrt] __wgetmainargs: argc={Argc}, argv=0x{Argv:X8}, env=0x{Env:X8}", argc, argvArray, envPtr);
+			
+			return 0; // Success
+		}
+
 		[DllModuleExport(0)]
 		private uint __p__acmdln()
 		{
@@ -509,6 +605,20 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[msvcrt] _acmdln()");
 			// Return pointer to command line string
 			return _env.CommandLinePtr;
+		}
+
+		[DllModuleExport(0)]
+		private uint _wcmdln()
+		{
+			_logger.LogInformation("[msvcrt] _wcmdln()");
+			// Return pointer to command line string (Unicode version)
+			// Cache to avoid memory leak from repeated allocations
+			if (_cachedWcmdlnPtr == 0)
+			{
+				_cachedWcmdlnPtr = _env.HeapAlloc(0, 4);
+				_env.MemWrite32(_cachedWcmdlnPtr, _env.CommandLinePtrW);
+			}
+			return _cachedWcmdlnPtr;
 		}
 
 		[DllModuleExport(0)]
@@ -1261,6 +1371,18 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[msvcrt] __initenv()");
 		// Return pointer to environment variables (same as __p___initenv)
 		return _env.GetEnvironmentStringsA();
+	}
+
+	/// <summary>
+	/// __winitenv - Get pointer to environment variables (Unicode version)
+	/// Returns pointer to array of Unicode environment strings
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint __winitenv()
+	{
+		_logger.LogInformation("[msvcrt] __winitenv()");
+		// Return pointer to environment variables (same as __p___winitenv)
+		return _env.GetEnvironmentStringsW();
 	}
 
 	/// <summary>
