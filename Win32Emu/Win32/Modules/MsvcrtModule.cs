@@ -241,6 +241,9 @@ namespace Win32Emu.Win32.Modules
 				case "_STRICMP":
 					returnValue = (uint)_stricmp(a.LpcStr(0), a.LpcStr(1));
 					return true;
+				case "_STRNICMP":
+					returnValue = (uint)_strnicmp(a.LpcStr(0), a.LpcStr(1), a.UInt32(2));
+					return true;
 				case "_STRREV":
 					returnValue = _strrev(a.UInt32(0));
 					return true;
@@ -946,6 +949,40 @@ namespace Win32Emu.Win32.Modules
 		var s2 = str2.ToString() ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _stricmp(\"{S1}\", \"{S2}\")", s1, s2);
 		return string.Compare(s1, s2, StringComparison.OrdinalIgnoreCase);
+	}
+
+	/// <summary>
+	/// _strnicmp - Compare two strings case-insensitively up to n characters
+	/// Performs lexicographic comparison of two null-terminated strings up to a maximum count,
+	/// ignoring case differences
+	/// </summary>
+	[DllModuleExport(12)]
+	private int _strnicmp(in LpcStr str1, in LpcStr str2, uint count)
+	{
+		var s1 = str1.ToString() ?? string.Empty;
+		var s2 = str2.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] _strnicmp(\"{S1}\", \"{S2}\", count={Count})", s1, s2, count);
+		
+		// Compare strings up to count characters, case-insensitive
+		var compareLength = (int)Math.Min(count, Math.Min(s1.Length, s2.Length));
+		var result = string.Compare(s1, 0, s2, 0, compareLength, StringComparison.OrdinalIgnoreCase);
+		
+		// Handle the case where one string is shorter than count but they match up to the shorter length
+		if (result == 0 && compareLength < count)
+		{
+			// If s1 is shorter, it's "less than" s2
+			if (s1.Length < s2.Length && s1.Length < count)
+			{
+				return -1;
+			}
+			// If s2 is shorter, s1 is "greater than" s2
+			if (s2.Length < s1.Length && s2.Length < count)
+			{
+				return 1;
+			}
+		}
+		
+		return result;
 	}
 
 	[DllModuleExport(4)]
