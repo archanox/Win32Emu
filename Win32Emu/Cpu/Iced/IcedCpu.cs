@@ -634,6 +634,21 @@ public class IcedCpu : IAsyncCpu
 					}
 
 					break;
+				case Mnemonic.Retf:
+					// Far return - pop EIP and CS from stack
+					// In 32-bit protected mode with a flat memory model, the segment selector (CS) is ignored on far returns,
+					// so we only update EIP and skip the CS value on the stack. This differs from real-mode far returns,
+					// where both CS and IP are restored from the stack.
+					_eip = Read32(_esp);
+					_esp += 4; // Pop EIP
+					_esp += 4; // Skip CS value on stack (ignored in flat memory model)
+					
+					// Handle stack cleanup parameter if present
+					if (insn.Immediate16 != 0)
+					{
+						_esp += insn.Immediate16;
+					}
+					break;
 				case Mnemonic.Leave: ExecLeave(); break;
 				case Mnemonic.Nop: break;
 				case Mnemonic.Cld: ClearFlag(Df); break;
