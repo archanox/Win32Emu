@@ -224,6 +224,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "LOADLIBRARYW":
 				returnValue = LoadLibraryW(a.UInt32(0));
 				return true;
+			case "LOADLIBRARYEXA":
+				returnValue = LoadLibraryExA(a.LpcStr(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "LOADLIBRARYEXW":
 				returnValue = LoadLibraryExW(a.LpcWStr(0), a.UInt32(1), a.UInt32(2));
 				return true;
@@ -11610,6 +11613,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var str2 = lpString2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogDebug("[Kernel32] lstrcmpiW(lpString1={LpString1}, lpString2={LpString2})", str1, str2);
 		return string.Compare(str1, str2, StringComparison.OrdinalIgnoreCase);
+	}
+
+	/// <summary>
+	/// Loads an ANSI DLL module with additional options.
+	/// HMODULE LoadLibraryExA(
+	///   [in] LPCSTR lpLibFileName,
+	///   [in] HANDLE  hFile,
+	///   [in] DWORD   dwFlags
+	/// );
+	/// </summary>
+	[DllModuleExport(11)]
+	private uint LoadLibraryExA(in LpcStr lpLibFileName, uint hFile, uint dwFlags)
+	{
+		var fileName = lpLibFileName.ToString();
+		_logger.LogInformation("[Kernel32] LoadLibraryExA(lpLibFileName={LpLibFileName}, hFile=0x{HFile:X8}, dwFlags=0x{DwFlags:X8})",
+			fileName, hFile, dwFlags);
+		
+		// Call existing LoadLibraryA implementation (ignoring flags for now)
+		return LoadLibraryA(lpLibFileName);
 	}
 
 	/// <summary>
