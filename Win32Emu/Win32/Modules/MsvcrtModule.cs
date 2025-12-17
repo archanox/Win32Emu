@@ -954,7 +954,9 @@ namespace Win32Emu.Win32.Modules
 	/// <summary>
 	/// _strnicmp - Compare two strings case-insensitively up to n characters
 	/// Performs lexicographic comparison of two null-terminated strings up to a maximum count,
-	/// ignoring case differences
+	/// ignoring case differences.
+	/// Returns a negative value if str1 is less than str2, 0 if they are equal (within count characters),
+	/// and a positive value if str1 is greater than str2.
 	/// </summary>
 	[DllModuleExport(12)]
 	private int _strnicmp(in LpcStr str1, in LpcStr str2, uint count)

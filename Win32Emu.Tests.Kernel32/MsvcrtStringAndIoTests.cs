@@ -275,6 +275,24 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		Assert.Equal(0u, returnValue); // Comparing 0 characters always returns 0
 	}
 
+	[Fact]
+	public void Strnicmp_WithShorterFirstString_ShouldReturnNegative()
+	{
+		// Arrange - str1 is shorter than str2 within count boundary
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("He\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hello\0");
+		var count = 5u; // Compare up to 5 characters, but str1 is only 2
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		var result = unchecked((int)returnValue);
+		Assert.True(result < 0, "Shorter string should be less than longer string when they match up to shorter length");
+	}
+
 	public void Dispose()
 	{
 		_testEnv.Dispose();
