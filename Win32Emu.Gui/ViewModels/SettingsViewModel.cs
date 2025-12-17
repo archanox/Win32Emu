@@ -49,6 +49,9 @@ public partial class SettingsViewModel : ViewModelBase
     private bool _enableLegacyInstructionDecoding;
     
     [ObservableProperty]
+    private bool _force32BitStackOps;
+    
+    [ObservableProperty]
     private bool _enableOpenTelemetry;
     
     [ObservableProperty]
@@ -137,6 +140,7 @@ public partial class SettingsViewModel : ViewModelBase
         _gdbPauseOnStart = configuration.GdbPauseOnStart;
         _enableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
         _enableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
+        _force32BitStackOps = configuration.Force32BitStackOps;
         _enableOpenTelemetry = configuration.EnableOpenTelemetry;
         _useConsoleExporter = configuration.UseConsoleExporter;
         _useOtlpExporter = configuration.UseOtlpExporter;
@@ -216,6 +220,12 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnEnableLegacyInstructionDecodingChanged(bool value)
     {
         _configuration.EnableLegacyInstructionDecoding = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnForce32BitStackOpsChanged(bool value)
+    {
+        _configuration.Force32BitStackOps = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
     
