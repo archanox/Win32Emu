@@ -967,16 +967,15 @@ namespace Win32Emu.Win32.Modules
 		var compareLength = (int)Math.Min(count, Math.Min(s1.Length, s2.Length));
 		var result = string.Compare(s1, 0, s2, 0, compareLength, StringComparison.OrdinalIgnoreCase);
 		
-		// Handle the case where one string is shorter than count but they match up to the shorter length
+		// If strings are equal up to compareLength, check if one is shorter within count
 		if (result == 0 && compareLength < count)
 		{
-			// If s1 is shorter, it's "less than" s2
-			if (s1.Length < s2.Length && s1.Length < count)
+			// If one string is shorter, it compares as "less than" the longer string
+			if (s1.Length < s2.Length)
 			{
 				return -1;
 			}
-			// If s2 is shorter, s1 is "greater than" s2
-			if (s2.Length < s1.Length && s2.Length < count)
+			if (s2.Length < s1.Length)
 			{
 				return 1;
 			}
