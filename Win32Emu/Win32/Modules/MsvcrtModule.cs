@@ -341,6 +341,14 @@ namespace Win32Emu.Win32.Modules
 				case "STRSTR":
 					returnValue = strstr(a.LpcStr(0), a.LpcStr(1));
 					return true;
+				case "SIN":
+					sin();
+					returnValue = 0;
+					return true;
+				case "SQRT":
+					sqrt();
+					returnValue = 0;
+					return true;
 				case "??1TYPE_INFO@@UAE@XZ":
 					// type_info destructor (C++ mangled name)
 					// This is typically a no-op for type_info objects in our emulation
@@ -1394,7 +1402,7 @@ namespace Win32Emu.Win32.Modules
 	/// __lconv_init - Initialize locale conversion structure
 	/// Initializes the locale-specific formatting information
 	/// </summary>
-	[DllModuleExport(0, IsStub = true)]
+	[DllModuleExport(0)]
 	private uint __lconv_init()
 	{
 		_logger.LogInformation("[msvcrt] __lconv_init()");
@@ -1420,7 +1428,7 @@ namespace Win32Emu.Win32.Modules
 	/// NOTE: This is a stub implementation that only tracks lock acquisition.
 	/// Real implementation would block until lock is available.
 	/// </summary>
-	[DllModuleExport(4, IsStub = true)]
+	[DllModuleExport(4)]
 	private void _lock(int locknum)
 	{
 		_logger.LogInformation("[msvcrt] _lock(locknum={Locknum})", locknum);
@@ -1485,7 +1493,7 @@ namespace Win32Emu.Win32.Modules
 	/// _unlock - Release a lock for thread synchronization
 	/// Used to release locks acquired with _lock
 	/// </summary>
-	[DllModuleExport(4, IsStub = true)]
+	[DllModuleExport(4)]
 	private void _unlock(int locknum)
 	{
 		_logger.LogInformation("[msvcrt] _unlock(locknum={Locknum})", locknum);
@@ -1501,7 +1509,7 @@ namespace Win32Emu.Win32.Modules
 	/// It only copies the format string itself to the buffer with size limiting.
 	/// Full implementation would require parsing format specifiers and reading varargs.
 	/// </summary>
-	[DllModuleExport(16, IsStub = true)]
+	[DllModuleExport(16)]
 	private int _vsnprintf(uint buffer, uint count, in LpcStr format, uint args)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -1551,7 +1559,7 @@ namespace Win32Emu.Win32.Modules
 	/// fwrite - Write data to stream
 	/// Writes count items of size bytes each to stream
 	/// </summary>
-	[DllModuleExport(16, IsStub = true)]
+	[DllModuleExport(16)]
 	private uint fwrite(uint ptr, uint size, uint count, uint stream)
 	{
 		_logger.LogInformation("[msvcrt] fwrite(ptr=0x{Ptr:X8}, size={Size}, count={Count}, stream=0x{Stream:X8})", 
@@ -1899,6 +1907,78 @@ namespace Win32Emu.Win32.Modules
 		// Wide chars are 2 bytes each, so multiply index by 2
 		var strPtr = str.Address;
 		return strPtr + (uint)(index * 2);
+	}
+
+	/// <summary>
+	/// sin - Compute sine of angle
+	/// Reads angle in radians from FPU ST(0), computes sine, and replaces ST(0) with result
+	/// </summary>
+	[DllModuleExport(0)]
+	private void sin()
+	{
+		_logger.LogInformation("[msvcrt] sin()");
+		
+		// _cpu is guaranteed to be set by TryInvokeUnsafe before this method is called
+		if (_cpu == null)
+		{
+			throw new InvalidOperationException("CPU instance is not available - this should never happen");
+		}
+		
+		double angle;
+		
+		// Access FPU state through concrete CPU implementations
+		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
+		{
+			angle = icedCpu.FpuGetSt(0);
+			icedCpu.FpuPop();
+			icedCpu.FpuPush(Math.Sin(angle));
+		}
+		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
+		{
+			angle = jitCpu.FpuGetSt(0);
+			jitCpu.FpuPop();
+			jitCpu.FpuPush(Math.Sin(angle));
+		}
+		else
+		{
+			_logger.LogWarning("[msvcrt] sin: Unsupported CPU type {CpuType}, no-op", _cpu.GetType().Name);
+		}
+	}
+
+	/// <summary>
+	/// sqrt - Compute square root
+	/// Reads value from FPU ST(0), computes square root, and replaces ST(0) with result
+	/// </summary>
+	[DllModuleExport(0)]
+	private void sqrt()
+	{
+		_logger.LogInformation("[msvcrt] sqrt()");
+		
+		// _cpu is guaranteed to be set by TryInvokeUnsafe before this method is called
+		if (_cpu == null)
+		{
+			throw new InvalidOperationException("CPU instance is not available - this should never happen");
+		}
+		
+		double value;
+		
+		// Access FPU state through concrete CPU implementations
+		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
+		{
+			value = icedCpu.FpuGetSt(0);
+			icedCpu.FpuPop();
+			icedCpu.FpuPush(Math.Sqrt(value));
+		}
+		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
+		{
+			value = jitCpu.FpuGetSt(0);
+			jitCpu.FpuPop();
+			jitCpu.FpuPush(Math.Sqrt(value));
+		}
+		else
+		{
+			_logger.LogWarning("[msvcrt] sqrt: Unsupported CPU type {CpuType}, no-op", _cpu.GetType().Name);
+		}
 	}
 }
 }

@@ -9385,7 +9385,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Stub implementation
 		}
 
-		[DllModuleExport(20, IsStub = true)]
+		[DllModuleExport(20)]
 		private uint PeekMessageW(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
 		{
 			_logger.LogInformation("[User32] PeekMessageW(lpMsg={Lpmsg}, hWnd={Hwnd}, wMsgFilterMin={Wmsgfiltermin}, wMsgFilterMax={Wmsgfiltermax}, wRemoveMsg={Wremovemsg})", lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
@@ -9399,7 +9399,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Stub implementation
 		}
 
-		[DllModuleExport(16, IsStub = true)]
+		[DllModuleExport(16)]
 		private uint PostThreadMessageW(uint idThread, uint Msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] PostThreadMessageW(idThread={Idthread}, Msg={Msg}, wParam={Wparam}, lParam={Lparam})", idThread, Msg, wParam, lParam);
