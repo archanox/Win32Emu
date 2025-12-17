@@ -171,6 +171,110 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		Assert.Equal(0u, returnValue); // Success returns 0
 	}
 
+	[Fact]
+	public void Strnicmp_WithEqualStrings_ShouldReturnZero()
+	{
+		// Arrange - allocate two equal strings (case-insensitive)
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hello\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("HELLO\0");
+		var count = 5u;
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // Equal strings (case-insensitive) return 0
+	}
+
+	[Fact]
+	public void Strnicmp_WithFirstStringLess_ShouldReturnNegative()
+	{
+		// Arrange - str1 < str2 (case-insensitive)
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("abc\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("XYZ\0");
+		var count = 3u;
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		var result = unchecked((int)returnValue);
+		Assert.True(result < 0, "First string less than second (case-insensitive) should return negative value");
+	}
+
+	[Fact]
+	public void Strnicmp_WithFirstStringGreater_ShouldReturnPositive()
+	{
+		// Arrange - str1 > str2 (case-insensitive)
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("XYZ\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("abc\0");
+		var count = 3u;
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		var result = unchecked((int)returnValue);
+		Assert.True(result > 0, "First string greater than second (case-insensitive) should return positive value");
+	}
+
+	[Fact]
+	public void Strnicmp_WithPartialMatch_ShouldCompareUpToCount()
+	{
+		// Arrange - strings differ after count characters
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hello World\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("HELLO THERE\0");
+		var count = 5u; // Compare only first 5 characters
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // First 5 characters match (case-insensitive)
+	}
+
+	[Fact]
+	public void Strnicmp_WithCountLargerThanStrings_ShouldCompareFullStrings()
+	{
+		// Arrange - count is larger than string length
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hi\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("HI\0");
+		var count = 100u; // Much larger than string length
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // Strings are equal (case-insensitive)
+	}
+
+	[Fact]
+	public void Strnicmp_WithZeroCount_ShouldReturnZero()
+	{
+		// Arrange - count is 0
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("abc\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("xyz\0");
+		var count = 0u; // Compare 0 characters
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // Comparing 0 characters always returns 0
+	}
+
 	public void Dispose()
 	{
 		_testEnv.Dispose();
