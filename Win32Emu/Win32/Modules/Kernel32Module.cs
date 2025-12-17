@@ -236,6 +236,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETSTARTUPINFOA":
 				returnValue = GetStartupInfoA(a.UInt32(0));
 				return true;
+			case "GETSTARTUPINFOW":
+				returnValue = GetStartupInfoW(a.UInt32(0));
+				return true;
 			case "GETCOMMANDLINEA":
 				returnValue = GetCommandLineA();
 				return true;
@@ -2680,6 +2683,26 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		_env.MemZero(lpStartupInfo, 68);
 		var si = new StartupInfoARef(_env.Memory, lpStartupInfo);
+		si.cb = 68;
+		// Write actual handle values, not pseudo-handle constants
+		// When a console is allocated, these should be real inheritable handles
+		// When no console exists, these will be 0 (NULL)
+		si.hStdInput = _env.StdInputHandle;
+		si.hStdOutput = _env.StdOutputHandle;
+		si.hStdError = _env.StdErrorHandle;
+		return 0;
+	}
+
+	[DllModuleExport(4)]
+	private uint GetStartupInfoW(uint lpStartupInfo)
+	{
+		if (lpStartupInfo == 0)
+		{
+			return 0;
+		}
+
+		_env.MemZero(lpStartupInfo, 68);
+		var si = new StartupInfoWRef(_env.Memory, lpStartupInfo);
 		si.cb = 68;
 		// Write actual handle values, not pseudo-handle constants
 		// When a console is allocated, these should be real inheritable handles
