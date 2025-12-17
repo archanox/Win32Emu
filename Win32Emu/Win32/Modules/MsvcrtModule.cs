@@ -16,7 +16,6 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 		private uint _cachedAcmdlnPtr = 0;
-		private uint _cachedWcmdlnPtr = 0;
 		
 		// CPU instance is set by TryInvokeUnsafe before calling exported methods
 		// Cannot be passed as parameter to [DllModuleExport] methods as it breaks source generation
@@ -435,17 +434,12 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(20)]
-		private int __getmainargs(uint pargc, uint pargv, uint penv, int doWildcard, uint startupInfo)
+		/// <summary>
+		/// Helper method to parse command line into arguments.
+		/// Splits on spaces while respecting quoted sections.
+		/// </summary>
+		private List<string> ParseCommandLine(string cmdLine)
 		{
-			_logger.LogInformation("[msvcrt] __getmainargs(pargc=0x{Pargc:X8}, pargv=0x{Pargv:X8}, penv=0x{Penv:X8}, doWildcard={DoWildcard}, startupInfo=0x{StartupInfo:X8})", 
-				pargc, pargv, penv, doWildcard, startupInfo);
-
-			// Parse command line into argc/argv
-			var cmdLinePtr = _env.CommandLinePtr;
-			var cmdLine = cmdLinePtr != 0 ? _env.ReadAnsiString(cmdLinePtr) : "";
-			
-			// Simple command line parsing - split on spaces, respecting quotes
 			var args = new List<string>();
 			var inQuote = false;
 			var current = new System.Text.StringBuilder();
@@ -480,6 +474,20 @@ namespace Win32Emu.Win32.Modules
 			{
 				args.Add("msconfig.exe");
 			}
+			
+			return args;
+		}
+
+		[DllModuleExport(20)]
+		private int __getmainargs(uint pargc, uint pargv, uint penv, int doWildcard, uint startupInfo)
+		{
+			_logger.LogInformation("[msvcrt] __getmainargs(pargc=0x{Pargc:X8}, pargv=0x{Pargv:X8}, penv=0x{Penv:X8}, doWildcard={DoWildcard}, startupInfo=0x{StartupInfo:X8})", 
+				pargc, pargv, penv, doWildcard, startupInfo);
+
+			// Parse command line into argc/argv
+			var cmdLinePtr = _env.CommandLinePtr;
+			var cmdLine = cmdLinePtr != 0 ? _env.ReadAnsiString(cmdLinePtr) : "";
+			var args = ParseCommandLine(cmdLine);
 			
 			// Allocate argv array (need argc+1 for NULL terminator)
 			var argc = args.Count;
@@ -519,42 +527,7 @@ namespace Win32Emu.Win32.Modules
 			// Parse command line into argc/argv (Unicode version)
 			var cmdLinePtr = _env.CommandLinePtrW;
 			var cmdLine = cmdLinePtr != 0 ? _env.ReadUnicodeString(cmdLinePtr) : "";
-			
-			// Simple command line parsing - split on spaces, respecting quotes
-			var args = new List<string>();
-			var inQuote = false;
-			var current = new System.Text.StringBuilder();
-			
-			foreach (var ch in cmdLine)
-			{
-				if (ch == '"')
-				{
-					inQuote = !inQuote;
-				}
-				else if (ch == ' ' && !inQuote)
-				{
-					if (current.Length > 0)
-					{
-						args.Add(current.ToString());
-						current.Clear();
-					}
-				}
-				else
-				{
-					current.Append(ch);
-				}
-			}
-			
-			if (current.Length > 0)
-			{
-				args.Add(current.ToString());
-			}
-			
-			// Ensure we have at least one argument (program name)
-			if (args.Count == 0)
-			{
-				args.Add("msconfig.exe");
-			}
+			var args = ParseCommandLine(cmdLine);
 			
 			// Allocate argv array (need argc+1 for NULL terminator)
 			var argc = args.Count;
@@ -611,14 +584,8 @@ namespace Win32Emu.Win32.Modules
 		private uint _wcmdln()
 		{
 			_logger.LogInformation("[msvcrt] _wcmdln()");
-			// Return pointer to command line string (Unicode version)
-			// Cache to avoid memory leak from repeated allocations
-			if (_cachedWcmdlnPtr == 0)
-			{
-				_cachedWcmdlnPtr = _env.HeapAlloc(0, 4);
-				_env.MemWrite32(_cachedWcmdlnPtr, _env.CommandLinePtrW);
-			}
-			return _cachedWcmdlnPtr;
+			// Return pointer to Unicode command line string (wide-character version)
+			return _env.CommandLinePtrW;
 		}
 
 		[DllModuleExport(0)]
