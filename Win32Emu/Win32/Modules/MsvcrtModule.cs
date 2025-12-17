@@ -584,7 +584,7 @@ namespace Win32Emu.Win32.Modules
 		private uint _wcmdln()
 		{
 			_logger.LogInformation("[msvcrt] _wcmdln()");
-			// Return pointer to Unicode command line string (wide-character version)
+			// Return pointer to Unicode command line string
 			return _env.CommandLinePtrW;
 		}
 
