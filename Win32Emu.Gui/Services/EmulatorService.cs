@@ -124,7 +124,10 @@ public class EmulatorService
                     _configuration.EnableInstructionAnalyzer,
                     _configuration.EnableLegacyInstructionDecoding,
                     useJitCpu,
-                    virtualDiskPath); // Pass the virtual disk path
+                    virtualDiskPath, // Pass the virtual disk path
+                    preloadedBytes: null,
+                    customVirtualFileSystem: null,
+                    force32BitStackOps: _configuration.Force32BitStackOps); // Pass Force32BitStackOps setting
                 
                 // Run the emulator
                 _currentEmulator.Run();
