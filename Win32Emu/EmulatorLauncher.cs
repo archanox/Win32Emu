@@ -30,6 +30,7 @@ public static class EmulatorLauncher
 		var interactiveDebugMode = args.Contains("--interactive-debug");
 		var gdbServerMode = args.Contains("--gdb-server");
 		var gdbServerPort = 1234; // Default port
+		var force32BitStackOps = !args.Contains("--no-force-32bit-stack-ops"); // Default to true for Win32 compatibility
 		
 		// Check for custom GDB server port
 		if (gdbServerMode)
@@ -253,7 +254,7 @@ public static class EmulatorLauncher
 				// Let critical exceptions propagate
 				
 				using var emulator = new Emulator(null, logger, telemetryService);
-				emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath);
+				emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, preloadedBytes: null, customVirtualFileSystem: null, force32BitStackOps: force32BitStackOps);
 				
 				// Enable API tracing if requested
 				if (enableApiTrace && emulator.Environment != null)
@@ -338,6 +339,7 @@ public static class EmulatorLauncher
 		Console.WriteLine("  --log-file [path]    Enable logging to file (auto-generates MD5-based filename if path not provided)");
 		Console.WriteLine("  --telemetry-console  Enable OpenTelemetry with console exporter");
 		Console.WriteLine("  --telemetry-otlp [endpoint] Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)");
+		Console.WriteLine("  --no-force-32bit-stack-ops   Disable forcing 32-bit operand size for stack operations (default: enabled for Win32 compatibility)");
 		Console.WriteLine();
 		Console.WriteLine("Environment Variables:");
 		Console.WriteLine("  WIN32EMU_BACKEND             Set backend type (SDL, GLFW, Vulkan, Metal, or Software)");
