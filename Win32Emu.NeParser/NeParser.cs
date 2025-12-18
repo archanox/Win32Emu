@@ -522,6 +522,8 @@ namespace Win32Emu.NeParser
 				break;
 			
 			var nameOffset = BitConverter.ToUInt16(bytes, offset);
+			
+			// Skip null offsets (unused module reference slots)
 			if (nameOffset == 0)
 				continue;
 			
@@ -532,28 +534,23 @@ namespace Win32Emu.NeParser
 				continue;
 			
 			var nameLength = bytes[actualOffset];
+			
+			// Skip empty names or unreasonably long names
 			if (nameLength == 0 || nameLength > MAX_MODULE_NAME_LENGTH)
 				continue;
 			
-			if (actualOffset + nameLength + 1 > bytes.Length)
+			if (actualOffset + 1 + nameLength > bytes.Length)
 				continue;
 			
-			// Validate printable ASCII characters
-			bool isValidName = true;
-			for (var j = 1; j <= nameLength; j++)
-			{
-				var ch = bytes[actualOffset + j];
-				if (ch < ASCII_PRINTABLE_MIN || ch > ASCII_PRINTABLE_MAX)
-				{
-					isValidName = false;
-					break;
-				}
-			}
-			
-			if (!isValidName)
-				continue;
-			
+			// Read the module name
+			// Note: Some NE files may have module names with non-standard characters
+			// We'll read the name and let the caller decide how to handle it
 			var moduleName = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
+			
+			// Basic validation: skip if the name is all whitespace or contains null bytes
+			if (string.IsNullOrWhiteSpace(moduleName) || moduleName.Contains('\0'))
+				continue;
+			
 			modules.Add(moduleName);
 		}
 		
