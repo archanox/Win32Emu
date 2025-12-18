@@ -2270,10 +2270,10 @@ namespace Win32Emu.Win32.Modules
 			destSurface.IsTextureDirty = true;
 
 			// If we blitted to a primary surface, update the rendering backend to display the changes
-			if (destSurface.IsPrimary && _ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObjBltFast))
+			if (destSurface.IsPrimary)
 			{
 				_logger.LogDebug("[DDraw] BltFast to primary surface, updating rendering backend");
-				UpdateRenderingBackend(destSurface, ddrawObjBltFast);
+				UpdateRenderingBackend(destSurface, ddrawObj);
 			}
 
 			return (uint)DDResult.DD_OK;
@@ -2369,10 +2369,10 @@ namespace Win32Emu.Win32.Modules
 				destSurface.IsTextureDirty = true;
 
 				// If we filled a primary surface, update the rendering backend to display the changes
-				if (destSurface.IsPrimary && _ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObjFill))
+				if (destSurface.IsPrimary)
 				{
 					_logger.LogDebug("[DDraw] Color fill on primary surface, updating rendering backend");
-					UpdateRenderingBackend(destSurface, ddrawObjFill);
+					UpdateRenderingBackend(destSurface, ddrawObj);
 				}
 
 				_logger.LogInformation("[DDraw] Performed color fill with color 0x{FillColor:X8}", fillColor);
@@ -2493,10 +2493,10 @@ namespace Win32Emu.Win32.Modules
 			destSurface.IsTextureDirty = true;
 
 			// If we blitted to a primary surface, update the rendering backend to display the changes
-			if (destSurface.IsPrimary && _ddrawObjects.TryGetValue(destSurface.DirectDrawHandle, out var ddrawObjBlt))
+			if (destSurface.IsPrimary)
 			{
 				_logger.LogDebug("[DDraw] Blt to primary surface, updating rendering backend");
-				UpdateRenderingBackend(destSurface, ddrawObjBlt);
+				UpdateRenderingBackend(destSurface, ddrawObj2);
 			}
 
 			_logger.LogInformation("[DDraw] Performed blit from source surface");
