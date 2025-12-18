@@ -937,8 +937,14 @@ namespace Win32Emu.Win32.Modules
 		{
 			var fmt = format.ToString() ?? string.Empty;
 			_logger.LogInformation("[msvcrt] vfprintf(stream=0x{Stream:X8}, format=\"{Fmt}\", args=0x{Args:X8})", stream, fmt, args);
-			// Print formatted string with varargs (stub)
-			return fmt.Length;
+			
+			// Format the string using the va_list
+			var formatted = FormatPrintfString(fmt, args);
+			
+			// For now, we treat all streams as stdout since we don't have proper FILE* implementation
+			_env.WriteToStdOutput(formatted);
+			
+			return formatted.Length;
 		}
 
 	[DllModuleExport(12)]
@@ -1025,8 +1031,14 @@ namespace Win32Emu.Win32.Modules
 	{
 		var fmt = format.ToString() ?? string.Empty;
 		_logger.LogInformation("[msvcrt] printf(\"{Fmt}\", args=0x{Args:X8})", fmt, args);
-		// Stub - return length
-		return fmt.Length;
+		
+		// Format the string using the va_list (args points to the first variadic argument)
+		var formatted = FormatPrintfString(fmt, args);
+		
+		// Write to stdout
+		_env.WriteToStdOutput(formatted);
+		
+		return formatted.Length;
 	}
 
 	[DllModuleExport(12)]
@@ -1969,6 +1981,97 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[msvcrt] sqrt: Unsupported CPU type {CpuType}, no-op", _cpu.GetType().Name);
 		}
+	}
+
+	/// <summary>
+	/// Formats a printf-style format string with arguments from a va_list pointer.
+	/// Supports common format specifiers: %s (string), %d/%i (int), %u (uint), %x/%X (hex), %c (char), %% (literal %).
+	/// This implementation is based on the User32Module's FormatStringFromVaList with proper handling
+	/// of variadic arguments.
+	/// </summary>
+	private string FormatPrintfString(string format, uint vaListPtr)
+	{
+		var result = new StringBuilder();
+		uint currentArgPtr = vaListPtr;
+		
+		for (int i = 0; i < format.Length; i++)
+		{
+			if (format[i] == '%' && i + 1 < format.Length)
+			{
+				i++; // Skip the %
+				
+				// Handle %% (literal %)
+				if (format[i] == '%')
+				{
+					result.Append('%');
+					continue;
+				}
+				
+				// Parse format specifier (simplified - doesn't handle width, precision, etc.)
+				char specifier = format[i];
+				
+				switch (specifier)
+				{
+					case 's': // String pointer
+						var strAddr = _env.Memory.Read32(currentArgPtr);
+						currentArgPtr += 4;
+						if (strAddr != 0)
+						{
+							var str = new LpcStr(strAddr, _env.Memory).ToString() ?? string.Empty;
+							result.Append(str);
+						}
+						else
+						{
+							result.Append("(null)");
+						}
+						break;
+					
+					case 'd': // Signed decimal integer
+					case 'i':
+						var intVal = (int)_env.Memory.Read32(currentArgPtr);
+						currentArgPtr += 4;
+						result.Append(intVal);
+						break;
+					
+					case 'u': // Unsigned decimal integer
+						var uintVal = _env.Memory.Read32(currentArgPtr);
+						currentArgPtr += 4;
+						result.Append(uintVal);
+						break;
+					
+					case 'x': // Unsigned hexadecimal (lowercase)
+						var hexVal = _env.Memory.Read32(currentArgPtr);
+						currentArgPtr += 4;
+						result.Append(hexVal.ToString("x"));
+						break;
+					
+					case 'X': // Unsigned hexadecimal (uppercase)
+						var hexValUpper = _env.Memory.Read32(currentArgPtr);
+						currentArgPtr += 4;
+						result.Append(hexValUpper.ToString("X"));
+						break;
+					
+					case 'c': // Character
+						var charVal = (char)_env.Memory.Read32(currentArgPtr);
+						currentArgPtr += 4;
+						result.Append(charVal);
+						break;
+					
+					default:
+						// Unknown specifier - just append it as-is
+						result.Append('%');
+						result.Append(specifier);
+						currentArgPtr += 4; // Still consume an argument
+						break;
+				}
+			}
+			else
+			{
+				result.Append(format[i]);
+			}
+		}
+		
+		return result.ToString();
 	}
 }
 }
