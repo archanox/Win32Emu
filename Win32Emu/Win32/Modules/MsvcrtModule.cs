@@ -1915,18 +1915,12 @@ namespace Win32Emu.Win32.Modules
 	/// NOTE: This is a stub that reads and pops the value but doesn't compute or push the result.
 	/// Real implementation would require FPU manipulation that isn't accessible.
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, IsStub = true)]
 	private void sin()
 	{
 		_logger.LogInformation("[msvcrt] sin()");
 		
-		// _cpu is guaranteed to be set by TryInvokeUnsafe before this method is called
-		if (_cpu == null)
-		{
-			throw new InvalidOperationException("CPU instance is not available - this should never happen");
-		}
-		
-		// Read and pop the FPU stack (stub - doesn't compute result)
+		// Read and log the FPU stack value (stub - doesn't compute result)
 		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
 		{
 			var angle = icedCpu.FpuGetSt(0);
@@ -1952,18 +1946,12 @@ namespace Win32Emu.Win32.Modules
 	/// NOTE: This is a stub that reads the value but doesn't compute or replace the result.
 	/// Real implementation would require FPU manipulation that isn't accessible.
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, IsStub = true)]
 	private void sqrt()
 	{
 		_logger.LogInformation("[msvcrt] sqrt()");
 		
-		// _cpu is guaranteed to be set by TryInvokeUnsafe before this method is called
-		if (_cpu == null)
-		{
-			throw new InvalidOperationException("CPU instance is not available - this should never happen");
-		}
-		
-		// Read the FPU stack (stub - doesn't compute result)
+		// Read and log the FPU stack value (stub - doesn't compute result)
 		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
 		{
 			var value = icedCpu.FpuGetSt(0);
