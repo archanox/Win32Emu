@@ -42,8 +42,6 @@ namespace Win32Emu.NeParser
 	
 	// String validation constants
 	private const int MAX_MODULE_NAME_LENGTH = 50;  // Maximum length for module names
-	private const byte ASCII_PRINTABLE_MIN = 32;    // Minimum printable ASCII character
-	private const byte ASCII_PRINTABLE_MAX = 126;   // Maximum printable ASCII character
 	
 	// NE name table entry suffix size (name length byte + 2-byte ordinal)
 	private const int NE_NAME_ENTRY_SUFFIX_SIZE = 3;
