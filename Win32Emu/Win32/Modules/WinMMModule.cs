@@ -2792,7 +2792,7 @@ namespace Win32Emu.Win32.Modules
 
 			if (pszText != 0 && cchText > 0)
 			{
-				var errorText = "Unknown error";
+				var errorText = GetMMSysErrorText(mmrError);
 				_env.WriteAnsiStringAt(pszText, errorText);
 			}
 
@@ -2816,11 +2816,44 @@ namespace Win32Emu.Win32.Modules
 
 			if (pszText != 0 && cchText > 0)
 			{
-				var errorText = "Unknown error";
+				var errorText = GetMMSysErrorText(mmrError);
 				_env.WriteAnsiStringAt(pszText, errorText);
 			}
 
 			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Helper method to map MMSysError codes to descriptive error messages
+		/// </summary>
+		private static string GetMMSysErrorText(uint errorCode)
+		{
+			return errorCode switch
+			{
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOERROR => "No error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_ERROR => "Unspecified error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID => "Device ID out of range",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOTENABLED => "Driver failed enable",
+				(uint)NativeTypes.MMSysError.MMSYSERR_ALLOCATED => "Device already allocated",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE => "Device handle is invalid",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NODRIVER => "No device driver present",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOMEM => "Memory allocation error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOTSUPPORTED => "Function is not supported",
+				(uint)NativeTypes.MMSysError.MMSYSERR_BADERRNUM => "Error value out of range",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALFLAG => "Invalid flag passed",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM => "Invalid parameter passed",
+				(uint)NativeTypes.MMSysError.MMSYSERR_HANDLEBUSY => "Handle being used simultaneously",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALIDALIAS => "Specified alias not found",
+				(uint)NativeTypes.MMSysError.MMSYSERR_BADDB => "Bad registry database",
+				(uint)NativeTypes.MMSysError.MMSYSERR_KEYNOTFOUND => "Registry key not found",
+				(uint)NativeTypes.MMSysError.MMSYSERR_READERROR => "Registry read error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_WRITEERROR => "Registry write error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_DELETEERROR => "Registry delete error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_VALNOTFOUND => "Registry value not found",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NODRIVERCB => "Driver does not call DriverCallback",
+				(uint)NativeTypes.MMSysError.MMSYSERR_MOREDATA => "More data to be returned",
+				_ => "Unknown error"
+			};
 		}
 
 		#endregion
