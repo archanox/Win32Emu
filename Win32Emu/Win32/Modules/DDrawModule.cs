@@ -2270,11 +2270,7 @@ namespace Win32Emu.Win32.Modules
 			destSurface.IsTextureDirty = true;
 
 			// If we blitted to a primary surface, update the rendering backend to display the changes
-			if (destSurface.IsPrimary)
-			{
-				_logger.LogDebug("[DDraw] BltFast to primary surface, updating rendering backend");
-				UpdateRenderingBackend(destSurface, ddrawObj);
-			}
+			TryUpdatePrimarySurfaceDisplay(destSurface, ddrawObj, "BltFast");
 
 			return (uint)DDResult.DD_OK;
 		}
@@ -2369,11 +2365,7 @@ namespace Win32Emu.Win32.Modules
 				destSurface.IsTextureDirty = true;
 
 				// If we filled a primary surface, update the rendering backend to display the changes
-				if (destSurface.IsPrimary)
-				{
-					_logger.LogDebug("[DDraw] Color fill on primary surface, updating rendering backend");
-					UpdateRenderingBackend(destSurface, ddrawObj);
-				}
+				TryUpdatePrimarySurfaceDisplay(destSurface, ddrawObj, "Color fill");
 
 				_logger.LogInformation("[DDraw] Performed color fill with color 0x{FillColor:X8}", fillColor);
 				return (uint)DDResult.DD_OK;
@@ -2493,11 +2485,7 @@ namespace Win32Emu.Win32.Modules
 			destSurface.IsTextureDirty = true;
 
 			// If we blitted to a primary surface, update the rendering backend to display the changes
-			if (destSurface.IsPrimary)
-			{
-				_logger.LogDebug("[DDraw] Blt to primary surface, updating rendering backend");
-				UpdateRenderingBackend(destSurface, ddrawObj2);
-			}
+			TryUpdatePrimarySurfaceDisplay(destSurface, ddrawObj2, "Blt");
 
 			_logger.LogInformation("[DDraw] Performed blit from source surface");
 
@@ -3649,6 +3637,24 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DDraw] Unlocked surface 0x{SurfaceHandle:X8}", surfaceHandle);
 			return (uint)DDResult.DD_OK;
+		}
+
+		/// <summary>
+		/// Helper method to update the rendering backend if the surface is primary.
+		/// This reduces code duplication across Blt operations.
+		/// </summary>
+		/// <param name="surface">The DirectDraw surface to check and potentially update</param>
+		/// <param name="ddrawObj">The DirectDraw object containing the rendering backend</param>
+		/// <param name="operationName">Name of the operation for logging purposes</param>
+		private void TryUpdatePrimarySurfaceDisplay(DirectDrawSurface surface, DirectDrawObject ddrawObj, string operationName)
+		{
+			if (!surface.IsPrimary)
+			{
+				return;
+			}
+
+			_logger.LogDebug("[DDraw] {Operation} to primary surface, updating rendering backend", operationName);
+			UpdateRenderingBackend(surface, ddrawObj);
 		}
 
 		/// <summary>
