@@ -776,13 +776,13 @@ namespace Win32Emu.Win32.Modules
 				var stdoutPtr = _iobArrayPtr + 32;
 				var stderrPtr = _iobArrayPtr + 64;
 				
-				if (stream == stdoutPtr || stream == _iobArrayPtr + 32)
+				if (stream == stdoutPtr)
 				{
 					_logger.LogDebug("[msvcrt] fprintf detected stdout stream, writing to stdout");
 					_env.WriteToStdOutput(formatted);
 					return formatted.Length;
 				}
-				else if (stream == stderrPtr || stream == _iobArrayPtr + 64)
+				else if (stream == stderrPtr)
 				{
 					_logger.LogDebug("[msvcrt] fprintf detected stderr stream, writing to stderr");
 					_env.WriteToStdError(formatted);
@@ -807,13 +807,13 @@ namespace Win32Emu.Win32.Modules
 				var stdoutPtr = _iobArrayPtr + 32;
 				var stderrPtr = _iobArrayPtr + 64;
 				
-				if (stream == stdoutPtr || stream == _iobArrayPtr + 32)
+				if (stream == stdoutPtr)
 				{
 					_logger.LogDebug("[msvcrt] fputs detected stdout stream, writing to stdout");
 					_env.WriteToStdOutput(s);
 					return 0; // Success
 				}
-				else if (stream == stderrPtr || stream == _iobArrayPtr + 64)
+				else if (stream == stderrPtr)
 				{
 					_logger.LogDebug("[msvcrt] fputs detected stderr stream, writing to stderr");
 					_env.WriteToStdError(s);
