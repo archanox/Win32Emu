@@ -41,8 +41,8 @@ public class GetStringTypeWBlankFlagTests : IDisposable
 		const uint outputAddr = 0x2000;
 
 		// Act - Call GetStringTypeW
-		// Parameters: locale, dwInfoType, lpSrcStr, cchSrc, lpCharType
-		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 0, 1, stringAddr, unchecked((uint)-1), outputAddr);
+		// Parameters: dwInfoType, lpSrcStr, cchSrc, lpCharType (no Locale parameter for GetStringTypeW)
+		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 1, stringAddr, unchecked((uint)-1), outputAddr);
 
 		// Assert
 		var charType = _testEnv.Memory.Read16(outputAddr);
@@ -68,8 +68,8 @@ public class GetStringTypeWBlankFlagTests : IDisposable
 		const uint outputAddr = 0x2000;
 
 		// Act - Call GetStringTypeW
-		// Parameters: locale, dwInfoType, lpSrcStr, cchSrc, lpCharType
-		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 0, 1, stringAddr, unchecked((uint)-1), outputAddr);
+		// Parameters: dwInfoType, lpSrcStr, cchSrc, lpCharType (no Locale parameter for GetStringTypeW)
+		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 1, stringAddr, unchecked((uint)-1), outputAddr);
 
 		// Assert
 		var charType = _testEnv.Memory.Read16(outputAddr);
@@ -95,8 +95,8 @@ public class GetStringTypeWBlankFlagTests : IDisposable
 		const uint outputAddr = 0x2000;
 
 		// Act - Call GetStringTypeW
-		// Parameters: locale, dwInfoType, lpSrcStr, cchSrc, lpCharType
-		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 0, 1, stringAddr, unchecked((uint)-1), outputAddr);
+		// Parameters: dwInfoType, lpSrcStr, cchSrc, lpCharType (no Locale parameter for GetStringTypeW)
+		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 1, stringAddr, unchecked((uint)-1), outputAddr);
 
 		// Assert
 		var charType = _testEnv.Memory.Read16(outputAddr);
@@ -122,8 +122,8 @@ public class GetStringTypeWBlankFlagTests : IDisposable
 		const uint outputAddr = 0x2000;
 
 		// Act - Call GetStringTypeW
-		// Parameters: locale, dwInfoType, lpSrcStr, cchSrc, lpCharType
-		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 0, 1, stringAddr, unchecked((uint)-1), outputAddr);
+		// Parameters: dwInfoType, lpSrcStr, cchSrc, lpCharType (no Locale parameter for GetStringTypeW)
+		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 1, stringAddr, unchecked((uint)-1), outputAddr);
 
 		// Assert
 		var charType = _testEnv.Memory.Read16(outputAddr);
@@ -152,8 +152,8 @@ public class GetStringTypeWBlankFlagTests : IDisposable
 		const uint outputAddr = 0x2000;
 
 		// Act - Call GetStringTypeW with explicit length
-		// Parameters: locale, dwInfoType, lpSrcStr, cchSrc, lpCharType
-		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 0, 1, stringAddr, 4, outputAddr);
+		// Parameters: dwInfoType, lpSrcStr, cchSrc, lpCharType (no Locale parameter for GetStringTypeW)
+		_testEnv.CallKernel32Api("GETSTRINGTYPEW", 1, stringAddr, 4, outputAddr);
 
 		// Assert
 		var spaceType = _testEnv.Memory.Read16(outputAddr);

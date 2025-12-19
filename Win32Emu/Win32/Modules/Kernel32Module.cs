@@ -204,7 +204,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				returnValue = GetStringTypeA(a.UInt32(0), a.UInt32(1), a.Lpstr(2), a.Int32(3), a.UInt32(4));
 				return true;
 			case "GETSTRINGTYPEW":
-				returnValue = GetStringTypeW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.Int32(3), a.UInt32(4));
+				returnValue = GetStringTypeW(a.UInt32(0), a.UInt32(1), a.Int32(2), a.UInt32(3));
 				return true;
 			case "GETMODULEHANDLEA":
 				returnValue = GetModuleHandleA(a.LpcStr(0));
@@ -1891,10 +1891,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(22)]
-	private uint GetStringTypeW(uint locale, uint dwInfoType, uint lpSrcStr, int cchSrc, uint lpCharType)
+	private uint GetStringTypeW(uint dwInfoType, uint lpSrcStr, int cchSrc, uint lpCharType)
 	{
 		// GetStringTypeW retrieves character type information for Unicode characters
-		// Similar to GetStringTypeA but for wide (Unicode) strings
+		// Note: Unlike GetStringTypeA, GetStringTypeW does NOT have a Locale parameter
 		const int maxStringLengthLimit = 1000;
 
 		if (lpSrcStr == 0 || lpCharType == 0)
