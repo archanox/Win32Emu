@@ -522,7 +522,15 @@ public class ProcessEnvironment
 		_logger.LogInformation("[ProcessEnvironment] StdOutput: {Text}", text);
 		
 		// Notify host if available (for GUI display)
-		_host?.OnStdOutput(text);
+		if (_host != null)
+		{
+			_host.OnStdOutput(text);
+		}
+		else
+		{
+			// Fallback to console output when no host is provided (CLI mode)
+			Console.Write(text);
+		}
 	}
 
 	// Guest memory helpers
@@ -793,7 +801,15 @@ public class ProcessEnvironment
 		_logger.LogInformation("[ProcessEnv] StdOutput: {Text}", text);
 		
 		// Notify host if available (for GUI display)
-		_host?.OnStdOutput(text);
+		if (_host != null)
+		{
+			_host.OnStdOutput(text);
+		}
+		else
+		{
+			// Fallback to console output when no host is provided (CLI mode)
+			Console.Write(text);
+		}
 	}
 
 	/// <summary>
@@ -802,10 +818,18 @@ public class ProcessEnvironment
 	public void WriteToStdError(string text)
 	{
 		// Log to console for debugging
-		_logger.LogError("[ProcessEnv] StdOutput: {Text}", text);
+		_logger.LogError("[ProcessEnv] StdError: {Text}", text);
 		
-		// For now, treat stderr the same as stdout
-		_host?.OnStdOutput(text);
+		if (_host != null)
+		{
+			// For GUI mode, send stderr to host (currently same as stdout)
+			_host.OnStdOutput(text);
+		}
+		else
+		{
+			// Fallback to console error stream when no host is provided (CLI mode)
+			Console.Error.Write(text);
+		}
 	}
 
 	public byte[] MemReadBytes(uint addr, int count) => Memory.GetSpan(addr, count);
