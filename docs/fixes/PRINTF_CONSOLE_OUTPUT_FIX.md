@@ -15,10 +15,10 @@ This meant that while the functions executed without errors, no output reached t
 
 ## Solution
 
-Implemented proper console output functionality for the printf family of functions:
+Implemented proper console output functionality for key printf family functions:
 
 ### 1. Updated `printf()`
-**File:** `Win32Emu/Win32/Modules/MsvcrtModule.cs` (Line 1024)
+**File:** `Win32Emu/Win32/Modules/MsvcrtModule.cs` (Line 1030)
 
 ```csharp
 private int printf(in LpcStr format, uint args)
@@ -36,23 +36,7 @@ private int printf(in LpcStr format, uint args)
 }
 ```
 
-### 2. Updated `fprintf()`
-**File:** `Win32Emu/Win32/Modules/MsvcrtModule.cs` (Line 750)
-
-```csharp
-private int fprintf(uint stream, in LpcStr format)
-{
-    var fmt = format.ToString() ?? string.Empty;
-    _logger.LogInformation("[msvcrt] fprintf(stream=0x{Stream:X8}, format=\"{Fmt}\")", stream, fmt);
-    
-    // For now, we treat all streams as stdout since we don't have proper FILE* implementation
-    _env.WriteToStdOutput(fmt);
-    
-    return fmt.Length;
-}
-```
-
-### 3. Updated `vfprintf()`
+### 2. Updated `vfprintf()`
 **File:** `Win32Emu/Win32/Modules/MsvcrtModule.cs` (Line 936)
 
 ```csharp
@@ -71,23 +55,7 @@ private int vfprintf(uint stream, in LpcStr format, uint args)
 }
 ```
 
-### 4. Updated `fputs()`
-**File:** `Win32Emu/Win32/Modules/MsvcrtModule.cs` (Line 760)
-
-```csharp
-private int fputs(in LpcStr str, uint stream)
-{
-    var s = str.ToString() ?? string.Empty;
-    _logger.LogInformation("[msvcrt] fputs(str=\"{S}\", stream=0x{Stream:X8})", s, stream);
-    
-    // For now, we treat all streams as stdout
-    _env.WriteToStdOutput(s);
-    
-    return 0; // Success
-}
-```
-
-### 5. Added `FormatPrintfString()` Helper
+### 3. Added `FormatPrintfString()` Helper
 **File:** `Win32Emu/Win32/Modules/MsvcrtModule.cs` (End of class)
 
 A new helper method that parses printf-style format strings and reads variadic arguments from emulated memory:
@@ -227,9 +195,11 @@ UI "Standard Output" panel
    - Real FILE* handle management not implemented
    - Acceptable for console applications but may cause issues with file I/O
 
-3. **Error Handling**: Limited validation of format strings and arguments
-   - Malformed format strings may produce incorrect output
-   - No bounds checking on argument list
+3. **Error Handling**: Improved validation of format strings and arguments
+   - Bounds checking on va_list pointer to prevent reading invalid memory
+   - Exception handling for memory read failures
+   - Edge case handling for trailing '%' characters
+   - Error messages appended to output when issues are detected
 
 These limitations match the existing codebase patterns and can be enhanced in future updates if needed.
 
