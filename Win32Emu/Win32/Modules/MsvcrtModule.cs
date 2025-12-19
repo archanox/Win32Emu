@@ -1996,8 +1996,17 @@ namespace Win32Emu.Win32.Modules
 		
 		for (int i = 0; i < format.Length; i++)
 		{
-			if (format[i] == '%' && i + 1 < format.Length)
+			if (format[i] == '%')
 			{
+				// If '%' is the last character, treat it as a literal percent.
+				// This matches the existing behavior (it would otherwise fall through
+				// to the else-branch) and makes the intent explicit.
+				if (i + 1 >= format.Length)
+				{
+					result.Append('%');
+					continue;
+				}
+				
 				i++; // Skip the %
 				
 				// Handle %% (literal %)
@@ -2010,59 +2019,77 @@ namespace Win32Emu.Win32.Modules
 				// Parse format specifier (simplified - doesn't handle width, precision, etc.)
 				char specifier = format[i];
 				
-				switch (specifier)
+				// Validate we can read memory safely
+				// Check if currentArgPtr is within reasonable bounds (not null, not at end of 32-bit address space)
+				if (currentArgPtr == 0 || currentArgPtr > 0xFFFFFFF0)
 				{
-					case 's': // String pointer
-						var strAddr = _env.Memory.Read32(currentArgPtr);
-						currentArgPtr += 4;
-						if (strAddr != 0)
-						{
-							var str = new LpcStr(strAddr, _env.Memory).ToString() ?? string.Empty;
-							result.Append(str);
-						}
-						else
-						{
-							result.Append("(null)");
-						}
-						break;
-					
-					case 'd': // Signed decimal integer
-					case 'i':
-						var intVal = (int)_env.Memory.Read32(currentArgPtr);
-						currentArgPtr += 4;
-						result.Append(intVal);
-						break;
-					
-					case 'u': // Unsigned decimal integer
-						var uintVal = _env.Memory.Read32(currentArgPtr);
-						currentArgPtr += 4;
-						result.Append(uintVal);
-						break;
-					
-					case 'x': // Unsigned hexadecimal (lowercase)
-						var hexVal = _env.Memory.Read32(currentArgPtr);
-						currentArgPtr += 4;
-						result.Append(hexVal.ToString("x"));
-						break;
-					
-					case 'X': // Unsigned hexadecimal (uppercase)
-						var hexValUpper = _env.Memory.Read32(currentArgPtr);
-						currentArgPtr += 4;
-						result.Append(hexValUpper.ToString("X"));
-						break;
-					
-					case 'c': // Character
-						var charVal = (char)_env.Memory.Read32(currentArgPtr);
-						currentArgPtr += 4;
-						result.Append(charVal);
-						break;
-					
-					default:
-						// Unknown specifier - just append it as-is
-						result.Append('%');
-						result.Append(specifier);
-						currentArgPtr += 4; // Still consume an argument
-						break;
+					_logger.LogWarning("[msvcrt] FormatPrintfString: Invalid va_list pointer 0x{CurrentArgPtr:X8}", currentArgPtr);
+					result.Append("%[invalid]");
+					break;
+				}
+				
+				try
+				{
+					switch (specifier)
+					{
+						case 's': // String pointer
+							var strAddr = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							if (strAddr != 0)
+							{
+								var str = new LpcStr(strAddr, _env.Memory).ToString() ?? string.Empty;
+								result.Append(str);
+							}
+							else
+							{
+								result.Append("(null)");
+							}
+							break;
+						
+						case 'd': // Signed decimal integer
+						case 'i':
+							var intVal = (int)_env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(intVal);
+							break;
+						
+						case 'u': // Unsigned decimal integer
+							var uintVal = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(uintVal);
+							break;
+						
+						case 'x': // Unsigned hexadecimal (lowercase)
+							var hexVal = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(hexVal.ToString("x"));
+							break;
+						
+						case 'X': // Unsigned hexadecimal (uppercase)
+							var hexValUpper = _env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(hexValUpper.ToString("X"));
+							break;
+						
+						case 'c': // Character
+							var charVal = (char)_env.Memory.Read32(currentArgPtr);
+							currentArgPtr += 4;
+							result.Append(charVal);
+							break;
+						
+						default:
+							// Unknown specifier - just append it as-is
+							result.Append('%');
+							result.Append(specifier);
+							currentArgPtr += 4; // Still consume an argument
+							break;
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.LogWarning(ex, "[msvcrt] FormatPrintfString: Error reading argument at 0x{CurrentArgPtr:X8}", currentArgPtr);
+					result.Append("%[error]");
+					break;
 				}
 			}
 			else
