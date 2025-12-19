@@ -515,7 +515,7 @@ public class ProcessEnvironment
 	/// </summary>
 	public void WriteToStdOutput(byte[] data)
 	{
-		// Convert bytes to string (assuming ANSI/ASCII encoding)
+		// Convert bytes to string (assuming ANSI/ASCII encoding) for logging
 		var text = Encoding.ASCII.GetString(data);
 		
 		// Log to console for debugging
@@ -529,7 +529,9 @@ public class ProcessEnvironment
 		else
 		{
 			// Fallback to console output when no host is provided (CLI mode)
-			Console.Write(text);
+			// Write bytes directly to prevent data loss from encoding conversion
+			using var stdout = Console.OpenStandardOutput();
+			stdout.Write(data, 0, data.Length);
 		}
 	}
 
