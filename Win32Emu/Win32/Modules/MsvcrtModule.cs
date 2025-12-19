@@ -190,7 +190,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = 0;
 					return true;
 				case "FPRINTF":
-					returnValue = (uint)fprintf(a.UInt32(0), a.LpcStr(1));
+					returnValue = (uint)fprintf(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
 					return true;
 				case "FPUTS":
 					returnValue = (uint)fputs(a.LpcStr(0), a.UInt32(1));
@@ -423,12 +423,24 @@ namespace Win32Emu.Win32.Modules
 			return _env.HeapAlloc(0, 4); // Allocate 4 bytes for mode
 		}
 
+		// Cache for _iob array pointer
+		private uint _iobArrayPtr = 0;
+		
 		[DllModuleExport(0)]
 		private uint __p__iob()
 		{
 			_logger.LogInformation("[msvcrt] __p__iob()");
-			// Return pointer to IO buffer array (stdin, stdout, stderr)
-			return _env.HeapAlloc(0, 96); // Simplified stub
+			
+			// Return consistent pointer to IO buffer array (stdin, stdout, stderr)
+			// Each FILE structure is 32 bytes in MSVC runtime
+			// We need stdin (offset 0), stdout (offset 32), stderr (offset 64)
+			if (_iobArrayPtr == 0)
+			{
+				_iobArrayPtr = _env.HeapAlloc(0, 96); // 3 FILE structures * 32 bytes
+				_logger.LogInformation("[msvcrt] __p__iob() allocated _iob array at 0x{Ptr:X8}", _iobArrayPtr);
+			}
+			
+			return _iobArrayPtr;
 		}
 
 		[DllModuleExport(4)]
@@ -747,13 +759,40 @@ namespace Win32Emu.Win32.Modules
 			// Exit process (stub - should exit)
 		}
 
-		[DllModuleExport(8)]
-		private int fprintf(uint stream, in LpcStr format)
+		[DllModuleExport(12)]
+		private int fprintf(uint stream, in LpcStr format, uint args)
 		{
 			var fmt = format.ToString() ?? string.Empty;
-			_logger.LogInformation("[msvcrt] fprintf(stream=0x{Stream:X8}, format=\"{Fmt}\")", stream, fmt);
-			// Print formatted string (stub)
-			return fmt.Length;
+			_logger.LogInformation("[msvcrt] fprintf(stream=0x{Stream:X8}, format=\"{Fmt}\", args=0x{Args:X8})", stream, fmt, args);
+			
+			// Format the string using the va_list
+			var formatted = FormatPrintfString(fmt, args);
+			
+			// Check if stream is stdout or stderr
+			// stdout = _iob + 32 (offset for second FILE structure)
+			// stderr = _iob + 64 (offset for third FILE structure)
+			if (_iobArrayPtr != 0)
+			{
+				var stdoutPtr = _iobArrayPtr + 32;
+				var stderrPtr = _iobArrayPtr + 64;
+				
+				if (stream == stdoutPtr || stream == _iobArrayPtr + 32)
+				{
+					_logger.LogDebug("[msvcrt] fprintf detected stdout stream, writing to stdout");
+					_env.WriteToStdOutput(formatted);
+					return formatted.Length;
+				}
+				else if (stream == stderrPtr || stream == _iobArrayPtr + 64)
+				{
+					_logger.LogDebug("[msvcrt] fprintf detected stderr stream, writing to stderr");
+					_env.WriteToStdError(formatted);
+					return formatted.Length;
+				}
+			}
+			
+			// For unknown streams, just log and return success
+			_logger.LogWarning("[msvcrt] fprintf to unknown stream 0x{Stream:X8}, output: {Output}", stream, formatted);
+			return formatted.Length;
 		}
 
 		[DllModuleExport(8)]
@@ -761,7 +800,29 @@ namespace Win32Emu.Win32.Modules
 		{
 			var s = str.ToString() ?? string.Empty;
 			_logger.LogInformation("[msvcrt] fputs(str=\"{S}\", stream=0x{Stream:X8})", s, stream);
-			// Write string to stream (stub)
+			
+			// Check if stream is stdout or stderr
+			if (_iobArrayPtr != 0)
+			{
+				var stdoutPtr = _iobArrayPtr + 32;
+				var stderrPtr = _iobArrayPtr + 64;
+				
+				if (stream == stdoutPtr || stream == _iobArrayPtr + 32)
+				{
+					_logger.LogDebug("[msvcrt] fputs detected stdout stream, writing to stdout");
+					_env.WriteToStdOutput(s);
+					return 0; // Success
+				}
+				else if (stream == stderrPtr || stream == _iobArrayPtr + 64)
+				{
+					_logger.LogDebug("[msvcrt] fputs detected stderr stream, writing to stderr");
+					_env.WriteToStdError(s);
+					return 0; // Success
+				}
+			}
+			
+			// For unknown streams, just log and return success
+			_logger.LogWarning("[msvcrt] fputs to unknown stream 0x{Stream:X8}, output: {Output}", stream, s);
 			return 0; // Success
 		}
 
