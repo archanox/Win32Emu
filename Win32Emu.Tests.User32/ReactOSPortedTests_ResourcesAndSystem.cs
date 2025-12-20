@@ -176,7 +176,7 @@ public class ReactOSPortedTests_ResourcesAndSystem : IDisposable
 		var hCursor = _testEnv.CallUser32Api("LOADCURSORA", 0u, IDC_ARROW);
 
 		// Act
-		var hPrevCursor = _testEnv.CallUser32Api("SETCURSOR", hCursor);
+		_testEnv.CallUser32Api("SETCURSOR", hCursor);
 
 		// Assert - Returns previous cursor (may be NULL if none set)
 		Assert.True(true); // Just verify it doesn't crash
@@ -186,7 +186,7 @@ public class ReactOSPortedTests_ResourcesAndSystem : IDisposable
 	public void SetCursor_WithNull_ShouldRemoveCursor()
 	{
 		// Act
-		var result = _testEnv.CallUser32Api("SETCURSOR", 0u);
+		_testEnv.CallUser32Api("SETCURSOR", 0u);
 
 		// Assert - Should succeed
 		Assert.True(true);
@@ -503,7 +503,7 @@ public class ReactOSPortedTests_ResourcesAndSystem : IDisposable
 		);
 
 		// Act
-		var hPrevFocus = _testEnv.CallUser32Api("SETFOCUS", hwnd);
+		_testEnv.CallUser32Api("SETFOCUS", hwnd);
 
 		// Assert - May return NULL if no previous focus
 		Assert.True(true);
