@@ -1386,7 +1386,7 @@ public sealed class Emulator : IDisposable
             
             // Validate EIP after execution to catch bad jumps/returns early
             var eipAfterStep = _cpu.GetEip();
-            if (eipAfterStep < 0x00010000)
+            if (eipAfterStep < MemoryRegions.MinValidUserAddress)
             {
                 // EIP in low memory range (0x0-0xFFFF) is highly suspicious
                 // This usually indicates a corrupted return address or bad function pointer
@@ -2185,7 +2185,7 @@ public sealed class Emulator : IDisposable
         var esp = _cpu.GetRegister("ESP");
         
         // Validate ESP is in a reasonable range before attempting to read from stack
-        if (esp < 0x00010000)
+        if (esp < MemoryRegions.MinValidUserAddress)
         {
             _logger.LogError("[Syscall] ESP=0x{Esp:X8} is suspiciously low (< 0x10000). Skipping syscall.", esp);
             _cpu.SetRegister("EAX", 0); // Return 0 as error
@@ -2329,7 +2329,7 @@ public sealed class Emulator : IDisposable
                 
                 // Validate ESP is in a reasonable range (not extremely small)
                 var restoredEsp = _cpu.GetRegister("ESP");
-                if (restoredEsp < 0x00010000)
+                if (restoredEsp < MemoryRegions.MinValidUserAddress)
                 {
                     _logger.LogError("[Syscall] ESP=0x{Esp:X8} after syscall return is suspiciously low. This indicates possible stack corruption.", restoredEsp);
                 }
@@ -2356,14 +2356,14 @@ public sealed class Emulator : IDisposable
                         for (int offset = -8; offset <= 16; offset += 4)
                         {
                             var addr = (uint)(futureEsp + offset);
-                            if (addr >= 0x00010000 && addr < _vm!.Size - 4) // Validate address is in reasonable range
+                            if (addr >= MemoryRegions.MinValidUserAddress && addr < _vm!.Size - 4) // Validate address is in reasonable range
                             {
                                 var val = _vm!.Read32(addr);
                                 var marker = offset == 0 ? " <-- Future ESP" : "";
                                 stackDump.Append($"\n  [ESP+{offset:+0;-#}] = 0x{addr:X8}: 0x{val:X8}{marker}");
                                 
                                 // Warn about suspicious values (very low addresses that might be used as return addresses or function pointers)
-                                if (offset >= 0 && val > 0 && val < 0x00010000)
+                                if (offset >= 0 && val > 0 && val < MemoryRegions.MinValidUserAddress)
                                 {
                                     _logger.LogWarning("[Syscall] SUSPICIOUS: Stack location 0x{Addr:X8} contains suspiciously low value 0x{Val:X8} which could cause corruption if used as return address or function pointer", 
                                         addr, val);

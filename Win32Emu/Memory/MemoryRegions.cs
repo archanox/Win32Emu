@@ -51,6 +51,11 @@ public static class MemoryRegions
 	// Overall special range limit (end of all emulator infrastructure ranges)
 	public const uint SpecialRangeLimit = 0x10000000;
 	
+	// Minimum valid user address (64 KB) - addresses below this are considered invalid
+	// This represents the boundary between invalid low memory and valid user memory addresses
+	// Used for validation and corruption detection
+	public const uint MinValidUserAddress = 0x00010000;
+	
 	// Import stub alignment (16 bytes per stub)
 	public const uint ImportStubAlignmentMask = 0xFFFFFFF0u;
 	public const uint ImportStubSize = 0x10;
