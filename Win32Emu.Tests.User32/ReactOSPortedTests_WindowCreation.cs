@@ -280,7 +280,7 @@ public class ReactOSPortedTests_WindowCreation : IDisposable
 		var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
 
 		// Assert
-		Assert.Equal(0u, result1); // First call should succeed
+		Assert.NotEqual(0u, result1); // First call should succeed
 		Assert.Equal(0u, result2); // Second call should fail
 		Assert.Equal(ERROR_INVALID_WINDOW_HANDLE, lastError);
 	}
