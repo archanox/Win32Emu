@@ -397,7 +397,7 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 		Assert.Equal(6u, result); // "Hello" + null terminator
 
 		// Verify the converted string
-		var converted = _testEnv.ReadString(wideStrPtr);
+		var converted = _testEnv.ReadWideString(wideStrPtr);
 		Assert.Equal("Hello", converted);
 	}
 

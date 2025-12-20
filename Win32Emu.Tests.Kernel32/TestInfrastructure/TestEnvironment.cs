@@ -178,6 +178,31 @@ public class TestEnvironment : IDisposable
         return Encoding.ASCII.GetString(result.ToArray());
     }
 
+    public string ReadWideString(uint addr)
+    {
+        if (addr == 0)
+        {
+	        return string.Empty;
+        }
+
+        var result = new List<char>();
+        var currentAddr = addr;
+        
+        while (true)
+        {
+            var wideChar = Memory.Read16(currentAddr);
+            if (wideChar == 0)
+            {
+	            break;
+            }
+
+            result.Add((char)wideChar);
+            currentAddr += 2;
+        }
+
+        return new string(result.ToArray());
+    }
+
     /// <summary>
     /// Allocate memory and return its address
     /// </summary>
