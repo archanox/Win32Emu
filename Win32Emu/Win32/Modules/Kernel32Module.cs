@@ -2133,6 +2133,25 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// but the actual implementation will be handled by the dispatcher
 		_logger.LogInformation("[Kernel32] Loading system DLL via thunking: {LibraryName}", libraryName);
 
+		// Check if this is a known system DLL
+		var knownSystemDlls = new[]
+		{
+			"KERNEL32.DLL", "USER32.DLL", "GDI32.DLL", "ADVAPI32.DLL", "COMCTL32.DLL",
+			"COMDLG32.DLL", "SHELL32.DLL", "OLE32.DLL", "OLEAUT32.DLL", "WINMM.DLL",
+			"DDRAW.DLL", "DSOUND.DLL", "DINPUT.DLL", "DINPUT8.DLL", "MSVCRT.DLL",
+			"NTDLL.DLL", "VERSION.DLL", "WSOCK32.DLL", "WS2_32.DLL", "SHLWAPI.DLL",
+			"RPCRT4.DLL", "IMM32.DLL", "WININET.DLL", "WINSPOOL.DRV", "MSACM32.DLL"
+		};
+
+		var normalizedName = libraryName.ToUpperInvariant();
+		if (!knownSystemDlls.Contains(normalizedName))
+		{
+			// Not a known system DLL - it doesn't exist
+			_logger.LogWarning("[Kernel32] DLL not found: {LibraryName}", libraryName);
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_MOD_NOT_FOUND;
+			return 0;
+		}
+
 		// Register with dispatcher for function call tracking
 		_dispatcher?.RegisterDynamicallyLoadedDll(libraryName);
 
@@ -4562,6 +4581,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			{
 				_logger.LogDebug("[Kernel32] WideCharToMultiByte: Writing {BytesLength} bytes to 0x{LpMultiByteStr:X8}", multiByteBytes.Length, lpMultiByteStr);
 				_env.MemWriteBytes(lpMultiByteStr, multiByteBytes);
+				
+				// If input was null-terminated, add null terminator to output
+				if (cchWideChar == unchecked((uint)-1))
+				{
+					_env.MemWrite8(lpMultiByteStr + (uint)multiByteBytes.Length, 0);
+				}
 			}
 
 			// Clear the "used default char" flag if provided
@@ -4570,8 +4595,15 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWrite32(lpUsedDefaultChar, 0); // FALSE - no default char used (simplified)
 			}
 
-			_logger.LogDebug("[Kernel32] WideCharToMultiByte: Success, returning {BytesLength} bytes", (uint)multiByteBytes.Length);
-			return (uint)multiByteBytes.Length;
+			// Return the number of bytes written, including null terminator if input was null-terminated
+			uint bytesWritten = (uint)multiByteBytes.Length;
+			if (cchWideChar == unchecked((uint)-1))
+			{
+				bytesWritten++; // Include null terminator in count
+			}
+			
+			_logger.LogDebug("[Kernel32] WideCharToMultiByte: Success, returning {BytesLength} bytes", bytesWritten);
+			return bytesWritten;
 		}
 		catch (Exception ex)
 		{
@@ -4657,7 +4689,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// If lpWideCharStr is 0, just return required buffer size
 			if (lpWideCharStr == 0 || cchWideChar == 0)
 			{
-				return (uint)str.Length; // Not including null terminator
+				// If input was null-terminated, include space for null terminator
+				if (cbMultiByte == -1)
+				{
+					return (uint)(str.Length + 1);
+				}
+				return (uint)str.Length;
 			}
 
 			// Check if output buffer is large enough
@@ -4673,10 +4710,11 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_env.MemWrite16(lpWideCharStr + (uint)(i * 2), str[i]);
 			}
 
-			// Add null terminator if there's room and input was null-terminated
-			if (cbMultiByte == -1 && str.Length < cchWideChar)
+			// Add null terminator if input was null-terminated
+			if (cbMultiByte == -1)
 			{
 				_env.MemWrite16(lpWideCharStr + (uint)(str.Length * 2), 0);
+				return (uint)(str.Length + 1); // Include null terminator in count
 			}
 
 			return (uint)str.Length;
