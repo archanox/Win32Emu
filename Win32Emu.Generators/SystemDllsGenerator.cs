@@ -68,7 +68,10 @@ public sealed class SystemDllsGenerator : IIncrementalGenerator
 				var syntax = syntaxRef.GetSyntax();
 				var syntaxText = syntax.ToString();
 				
-				// Look for => "DLL_NAME"
+				// Look for => "DLL_NAME" pattern
+				// Note: This simple string parsing works for expression-bodied properties.
+				// For more complex property implementations, this will fall back to class name derivation.
+				// This approach is consistent with ApiStatusGenerator and handles the common case.
 				var arrowIndex = syntaxText.IndexOf("=>", StringComparison.Ordinal);
 				if (arrowIndex >= 0)
 				{
@@ -87,9 +90,10 @@ public sealed class SystemDllsGenerator : IIncrementalGenerator
 
 		// Fallback: derive from class name (e.g., Kernel32Module -> KERNEL32.DLL)
 		var className = typeSymbol.Name;
-		if (className.EndsWith("Module", StringComparison.OrdinalIgnoreCase))
+		const string moduleSuffix = "Module";
+		if (className.EndsWith(moduleSuffix, StringComparison.OrdinalIgnoreCase))
 		{
-			var baseName = className.Substring(0, className.Length - 6);
+			var baseName = className.Substring(0, className.Length - moduleSuffix.Length);
 			return baseName.ToUpperInvariant() + ".DLL";
 		}
 
