@@ -158,6 +158,24 @@ namespace Win32Emu.Win32.Modules
 					);
 					return true;
 
+				case "CREATEWINDOWA":
+					// CreateWindowA is like CreateWindowExA but with dwExStyle = 0
+					returnValue = CreateWindowExA(
+						0, // dwExStyle (always 0 for CreateWindowA)
+						a.Lpstr(0), // lpClassName
+						a.Lpstr(1), // lpWindowName
+						a.UInt32(2), // dwStyle
+						a.Int32(3), // x
+						a.Int32(4), // y
+						a.Int32(5), // nWidth
+						a.Int32(6), // nHeight
+						a.UInt32(7), // hWndParent
+						a.UInt32(8), // hMenu
+						a.UInt32(9), // hInstance
+						a.UInt32(10) // lpParam
+					);
+					return true;
+
 				case "SHOWWINDOW":
 					returnValue = ShowWindow(a.UInt32(0), a.Int32(1));
 					return true;
@@ -1775,6 +1793,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpWndClass == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL WNDCLASS pointer");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -1784,10 +1803,20 @@ namespace Win32Emu.Win32.Modules
 			if (wndClass.lpszClassName == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL class name");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
 			var className = _env.ReadAnsiString(wndClass.lpszClassName);
+			
+			// Check if class already exists
+			if (_env.IsWindowClassRegistered(className))
+			{
+				_logger.LogInformation("[User32] RegisterClassA: Class '{ClassName}' already registered", className);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_CLASS_ALREADY_EXISTS;
+				return 0;
+			}
+			
 			var menuName = wndClass.lpszMenuName != 0 ? _env.ReadAnsiString(wndClass.lpszMenuName) : null;
 
 			var classInfo = new ProcessEnvironment.WindowClassInfo(
@@ -1891,6 +1920,7 @@ namespace Win32Emu.Win32.Modules
 				if (atomClassName == null)
 				{
 					_logger.LogInformation("[User32] CreateWindowExA: Unknown atom 0x{ClassNamePtr:X4}", classNamePtr);
+					_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 					return 0;
 				}
 
@@ -1899,6 +1929,7 @@ namespace Win32Emu.Win32.Modules
 			else if (classNamePtr == 0)
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: NULL class name");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 			else
@@ -1913,6 +1944,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_env.IsWindowClassRegistered(className))
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: Window class '{ClassName}' not registered", className);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_CLASS_ALREADY_EXISTS; // Windows sets this error for unregistered class
 				return 0;
 			}
 
@@ -3039,6 +3071,7 @@ namespace Win32Emu.Win32.Modules
 			if (!windowInfo.HasValue)
 			{
 				_logger.LogWarning("[User32] UpdateWindow: Window 0x{Hwnd:X8} not found", hwnd);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
 				return 0; // FALSE
 			}
 
@@ -3059,6 +3092,7 @@ namespace Win32Emu.Win32.Modules
 			if (!window.HasValue)
 			{
 				_logger.LogWarning("[User32] DestroyWindow: Window 0x{Hwnd:X8} not found", hwnd);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
 				return 0; // FALSE - window doesn't exist
 			}
 
@@ -3082,6 +3116,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogWarning("[User32] DestroyWindow: Failed to destroy window 0x{Hwnd:X8}", hwnd);
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
 			return 0; // FALSE
 		}
 
@@ -3107,12 +3142,18 @@ namespace Win32Emu.Win32.Modules
 				case SystemMetric.SM_CYSCREEN://1:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYSCREEN (1): {Height}", _env.DisplayHeight);
 					return _env.DisplayHeight; // SM_CYSCREEN - Screen height (use display mode height)
+				case (SystemMetric)2: // SM_CXVSCROLL
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXVSCROLL (2): 17");
+					return 17; // SM_CXVSCROLL - Width of vertical scrollbar
+				case (SystemMetric)3: // SM_CYHSCROLL
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYHSCROLL (3): 17");
+					return 17; // SM_CYHSCROLL - Height of horizontal scrollbar
 				case SystemMetric.SM_CXMIN://4:
-					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (4): 640");
-					return 640; // SM_CXMIN - Minimum window width
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYCAPTION (4): 19");
+					return 19; // SM_CYCAPTION - Caption bar height (Windows 95/98 standard)
 				case SystemMetric.SM_CYMIN://5:
-					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (5): 480");
-					return 480; // SM_CYMIN - Minimum window height
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXMIN (5): 640");
+					return 640; // SM_CXMIN - Minimum window width
 				default:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning {SystemMetric} ({SystemMetricValue}): 0", nIndex.ToString(), (int)nIndex);
 					return 0;

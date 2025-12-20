@@ -106,6 +106,12 @@ public class ProcessEnvironment
 	/// </summary>
 	public int DisplayBitsPerPixel { get; set; } = 16;
 
+	/// <summary>
+	/// Gets or sets the last Win32 error code for the current thread.
+	/// This is used by GetLastError/SetLastError in Kernel32 and can be set by any Win32 module.
+	/// </summary>
+	public uint LastError { get; set; }
+
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null, IBackendFactory? backendFactory = null)
 	{
 		Memory = vm;
