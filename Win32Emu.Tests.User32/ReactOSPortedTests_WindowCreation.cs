@@ -29,6 +29,7 @@ public class ReactOSPortedTests_WindowCreation : IDisposable
 	private const uint CS_VREDRAW = 0x0001;
 	private const uint ERROR_CLASS_ALREADY_EXISTS = 1410;
 	private const uint ERROR_INVALID_PARAMETER = 87;
+	private const uint ERROR_INVALID_WINDOW_HANDLE = 1400;
 
 	public ReactOSPortedTests_WindowCreation()
 	{
@@ -256,7 +257,6 @@ public class ReactOSPortedTests_WindowCreation : IDisposable
 
 		// Assert
 		Assert.Equal(0u, result); // FALSE
-		const uint ERROR_INVALID_WINDOW_HANDLE = 1400;
 		Assert.Equal(ERROR_INVALID_WINDOW_HANDLE, lastError);
 	}
 
@@ -280,9 +280,8 @@ public class ReactOSPortedTests_WindowCreation : IDisposable
 		var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
 
 		// Assert
-		Assert.NotEqual(0u, result1); // First call should succeed
+		Assert.Equal(0u, result1); // First call should succeed
 		Assert.Equal(0u, result2); // Second call should fail
-		const uint ERROR_INVALID_WINDOW_HANDLE = 1400;
 		Assert.Equal(ERROR_INVALID_WINDOW_HANDLE, lastError);
 	}
 
@@ -368,7 +367,6 @@ public class ReactOSPortedTests_WindowCreation : IDisposable
 
 		// Assert
 		Assert.Equal(0u, result); // FALSE
-		const uint ERROR_INVALID_WINDOW_HANDLE = 1400;
 		Assert.Equal(ERROR_INVALID_WINDOW_HANDLE, lastError);
 	}
 

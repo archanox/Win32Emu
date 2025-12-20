@@ -22,6 +22,9 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 	private const uint ERROR_PATH_NOT_FOUND = 3;
 	private const uint ERROR_ACCESS_DENIED = 5;
 	
+	// Special value for null-terminated strings
+	private const uint NULL_TERMINATED = unchecked((uint)-1);
+	
 	// Memory protection constants
 	private const uint PAGE_NOACCESS = 0x01;
 	private const uint PAGE_READONLY = 0x02;
@@ -323,14 +326,14 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 
 		// Act - CP_ACP = 0
 		var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE",
-			0u,           // CodePage (CP_ACP)
-			0u,           // dwFlags
-			wideStrPtr,   // lpWideCharStr
-			unchecked((uint)-1), // cchWideChar (-1 = null-terminated)
-			multiBytePtr, // lpMultiByteStr
-			10u,          // cbMultiByte
-			0u,           // lpDefaultChar
-			0u            // lpUsedDefaultChar
+			0u,              // CodePage (CP_ACP)
+			0u,              // dwFlags
+			wideStrPtr,      // lpWideCharStr
+			NULL_TERMINATED, // cchWideChar (-1 = null-terminated)
+			multiBytePtr,    // lpMultiByteStr
+			10u,             // cbMultiByte
+			0u,              // lpDefaultChar
+			0u               // lpUsedDefaultChar
 		);
 
 		// Assert
@@ -351,9 +354,16 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 		_testEnv.Memory.Write16(wideStrPtr + 2, (ushort)'i');
 		_testEnv.Memory.Write16(wideStrPtr + 4, 0);
 
-		// Act - Query required size
+		// Act - Query required size with null buffer
 		var result = _testEnv.CallKernel32Api("WIDECHARTOMULTIBYTE",
-			0u, 0u, wideStrPtr, unchecked((uint)-1), 0u, 0u, 0u, 0u
+			0u,              // CP_ACP
+			0u,              // dwFlags
+			wideStrPtr,      // lpWideCharStr
+			NULL_TERMINATED, // cchWideChar
+			0u,              // lpMultiByteStr (NULL)
+			0u,              // cbMultiByte (0)
+			0u,              // lpDefaultChar
+			0u               // lpUsedDefaultChar
 		);
 
 		// Assert
@@ -374,12 +384,12 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 
 		// Act - CP_ACP = 0
 		var result = _testEnv.CallKernel32Api("MULTIBYTETOWIDECHAR",
-			0u,           // CodePage (CP_ACP)
-			0u,           // dwFlags
-			multiBytePtr, // lpMultiByteStr
-			unchecked((uint)-1), // cbMultiByte (-1 = null-terminated)
-			wideStrPtr,   // lpWideCharStr
-			10u           // cchWideChar
+			0u,              // CodePage (CP_ACP)
+			0u,              // dwFlags
+			multiBytePtr,    // lpMultiByteStr
+			NULL_TERMINATED, // cbMultiByte (-1 = null-terminated)
+			wideStrPtr,      // lpWideCharStr
+			10u              // cchWideChar
 		);
 
 		// Assert
@@ -397,9 +407,14 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 		// Arrange
 		var multiBytePtr = _testEnv.WriteString("Test");
 
-		// Act - Query required size
+		// Act - Query required size with null buffer
 		var result = _testEnv.CallKernel32Api("MULTIBYTETOWIDECHAR",
-			0u, 0u, multiBytePtr, unchecked((uint)-1), 0u, 0u
+			0u,              // CP_ACP
+			0u,              // dwFlags
+			multiBytePtr,    // lpMultiByteStr
+			NULL_TERMINATED, // cbMultiByte
+			0u,              // lpWideCharStr (NULL)
+			0u               // cchWideChar (0)
 		);
 
 		// Assert
@@ -421,12 +436,12 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 
 		// Act - LOCALE_USER_DEFAULT = 0x0400
 		var result = _testEnv.CallKernel32Api("LCMAPSTRINGA",
-			0x0400u,      // Locale
-			LCMAP_UPPERCASE,
-			sourcePtr,
-			unchecked((uint)-1), // cchSrc (-1 = null-terminated)
-			destPtr,
-			10u           // cchDest
+			0x0400u,         // Locale
+			LCMAP_UPPERCASE, // dwMapFlags
+			sourcePtr,       // lpSrcStr
+			NULL_TERMINATED, // cchSrc (-1 = null-terminated)
+			destPtr,         // lpDestStr
+			10u              // cchDest
 		);
 
 		// Assert
@@ -446,7 +461,12 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 
 		// Act
 		var result = _testEnv.CallKernel32Api("LCMAPSTRINGA",
-			0x0400u, LCMAP_LOWERCASE, sourcePtr, unchecked((uint)-1), destPtr, 10u
+			0x0400u,         // Locale
+			LCMAP_LOWERCASE, // dwMapFlags
+			sourcePtr,       // lpSrcStr
+			NULL_TERMINATED, // cchSrc
+			destPtr,         // lpDestStr
+			10u              // cchDest
 		);
 
 		// Assert
