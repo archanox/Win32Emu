@@ -83,6 +83,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private const uint FILE_MAPPING_HANDLE_BASE = 0x50000000; // Base value for file mapping handles
 	private const uint PROCESS_HANDLE_BASE = 0x80000000;      // Base value for process handles
 
+	// Known system DLLs for LoadLibraryA validation
+	private static readonly string[] KnownSystemDlls =
+	[
+		"KERNEL32.DLL", "USER32.DLL", "GDI32.DLL", "ADVAPI32.DLL", "COMCTL32.DLL",
+		"COMDLG32.DLL", "SHELL32.DLL", "OLE32.DLL", "OLEAUT32.DLL", "WINMM.DLL",
+		"DDRAW.DLL", "DSOUND.DLL", "DINPUT.DLL", "DINPUT8.DLL", "MSVCRT.DLL",
+		"NTDLL.DLL", "VERSION.DLL", "WSOCK32.DLL", "WS2_32.DLL", "SHLWAPI.DLL",
+		"RPCRT4.DLL", "IMM32.DLL", "WININET.DLL", "WINSPOOL.DRV", "MSACM32.DLL"
+	];
+
 	private Win32Dispatcher? _dispatcher;
 	private ICpu? _cpu;
 	private readonly object _interlockedLock = new();
@@ -2134,17 +2144,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] Loading system DLL via thunking: {LibraryName}", libraryName);
 
 		// Check if this is a known system DLL
-		var knownSystemDlls = new[]
-		{
-			"KERNEL32.DLL", "USER32.DLL", "GDI32.DLL", "ADVAPI32.DLL", "COMCTL32.DLL",
-			"COMDLG32.DLL", "SHELL32.DLL", "OLE32.DLL", "OLEAUT32.DLL", "WINMM.DLL",
-			"DDRAW.DLL", "DSOUND.DLL", "DINPUT.DLL", "DINPUT8.DLL", "MSVCRT.DLL",
-			"NTDLL.DLL", "VERSION.DLL", "WSOCK32.DLL", "WS2_32.DLL", "SHLWAPI.DLL",
-			"RPCRT4.DLL", "IMM32.DLL", "WININET.DLL", "WINSPOOL.DRV", "MSACM32.DLL"
-		};
-
 		var normalizedName = libraryName.ToUpperInvariant();
-		if (!knownSystemDlls.Contains(normalizedName))
+		if (!KnownSystemDlls.Contains(normalizedName))
 		{
 			// Not a known system DLL - it doesn't exist
 			_logger.LogWarning("[Kernel32] DLL not found: {LibraryName}", libraryName);

@@ -160,6 +160,8 @@ namespace Win32Emu.Win32.Modules
 
 				case "CREATEWINDOWA":
 					// CreateWindowA is like CreateWindowExA but with dwExStyle = 0
+					// Note: This is implemented inline in TryInvokeUnsafe rather than as a separate
+					// method, so it doesn't require [DllModuleExport] attribute
 					returnValue = CreateWindowExA(
 						0, // dwExStyle (always 0 for CreateWindowA)
 						a.Lpstr(0), // lpClassName
@@ -3148,10 +3150,10 @@ namespace Win32Emu.Win32.Modules
 				case (SystemMetric)3: // SM_CYHSCROLL
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYHSCROLL (3): 17");
 					return 17; // SM_CYHSCROLL - Height of horizontal scrollbar
-				case SystemMetric.SM_CXMIN://4:
+				case (SystemMetric)4: // SM_CYCAPTION
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYCAPTION (4): 19");
 					return 19; // SM_CYCAPTION - Caption bar height (Windows 95/98 standard)
-				case SystemMetric.SM_CYMIN://5:
+				case (SystemMetric)5: // SM_CXMIN
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXMIN (5): 640");
 					return 640; // SM_CXMIN - Minimum window width
 				default:

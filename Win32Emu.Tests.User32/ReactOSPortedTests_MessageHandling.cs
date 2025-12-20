@@ -274,7 +274,7 @@ public class ReactOSPortedTests_MessageHandling : IDisposable
 		_testEnv.Memory.Write32(msgPtr + 24, 0);
 
 		// Act - Dispatch should call the window procedure
-		var result = _testEnv.CallUser32Api("DISPATCHMESSAGEA", msgPtr);
+		_testEnv.CallUser32Api("DISPATCHMESSAGEA", msgPtr);
 
 		// Assert - Result depends on window procedure implementation
 		// Just verify it doesn't crash

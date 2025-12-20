@@ -132,7 +132,6 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 
 		// Assert
 		var major = (version >> 24) & 0xFF;
-		var minor = (version >> 16) & 0xFF;
 		var build = version & 0xFFFF;
 
 		Assert.True(major >= 4, $"Major version should be >= 4 (Win95/NT4), got {major}");
