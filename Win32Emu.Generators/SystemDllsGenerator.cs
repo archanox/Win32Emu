@@ -7,7 +7,7 @@ namespace Win32Emu.Generators;
 
 /// <summary>
 /// Source generator that discovers all Win32 module DLL names by scanning for types
-/// implementing IWin32ModuleUnsafe interface and extracts their Name property values.
+/// implementing the IWin32ModuleUnsafe or IWin32ModuleAsync interfaces and extracts their Name property values.
 /// Generates a static class containing a collection of system DLL names.
 /// </summary>
 [Generator(LanguageNames.CSharp)]
@@ -78,10 +78,58 @@ public sealed class SystemDllsGenerator : IIncrementalGenerator
 					var firstQuote = syntaxText.IndexOf('"', arrowIndex);
 					if (firstQuote >= 0)
 					{
-						var secondQuote = syntaxText.IndexOf('"', firstQuote + 1);
-						if (secondQuote > firstQuote)
+						var builder = new StringBuilder();
+						var index = firstQuote + 1;
+						while (index < syntaxText.Length)
 						{
-							return syntaxText.Substring(firstQuote + 1, secondQuote - firstQuote - 1);
+							var ch = syntaxText[index];
+							if (ch == '\\' && index + 1 < syntaxText.Length)
+							{
+								var next = syntaxText[index + 1];
+								switch (next)
+								{
+									case '"':
+										builder.Append('"');
+										break;
+									case '\\':
+										builder.Append('\\');
+										break;
+									case 'n':
+										builder.Append('\n');
+										break;
+									case 'r':
+										builder.Append('\r');
+										break;
+									case 't':
+										builder.Append('\t');
+										break;
+									case '0':
+										builder.Append('\0');
+										break;
+									case 'b':
+										builder.Append('\b');
+										break;
+									case 'f':
+										builder.Append('\f');
+										break;
+									case 'v':
+										builder.Append('\v');
+										break;
+									default:
+										// Preserve unknown escape sequences as-is
+										builder.Append('\\');
+										builder.Append(next);
+										break;
+								}
+								index += 2;
+								continue;
+							}
+							if (ch == '"')
+							{
+								return builder.ToString();
+							}
+							builder.Append(ch);
+							index++;
 						}
 					}
 				}
@@ -111,7 +159,7 @@ public sealed class SystemDllsGenerator : IIncrementalGenerator
 		source.AppendLine("namespace Win32Emu.Win32.Modules;");
 		source.AppendLine();
 		source.AppendLine("/// <summary>");
-		source.AppendLine("/// Auto-generated list of system DLL names discovered from IWin32ModuleUnsafe implementations.");
+		source.AppendLine("/// Auto-generated list of system DLL names discovered from IWin32ModuleUnsafe or IWin32ModuleAsync implementations.");
 		source.AppendLine($"/// Found {dllNames.Length} DLL modules.");
 		source.AppendLine("/// </summary>");
 		source.AppendLine("internal static class KnownSystemDlls");
