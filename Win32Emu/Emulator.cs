@@ -2337,6 +2337,47 @@ public sealed class Emulator : IDisposable
                 // Log CPU state after syscall for debugging
                 var eax = _cpu.GetRegister("EAX");
                 _logger.LogDebug("[Syscall] CPU state after {Dll}!{Name}: EAX=0x{Eax:X8} ESP=0x{Esp:X8}", dll, name, eax, restoredEsp);
+                
+                // Enhanced diagnostics: Validate stack contents after syscall to catch potential corruption early
+                // This helps diagnose issues where a function returns successfully but leaves corrupted data on the stack
+                // that will cause problems later when the caller tries to use it
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    try
+                    {
+                        // Check the stack region that will be used after RET cleanup
+                        // After the import stub executes RET with cleanup, ESP will advance past the arguments
+                        var futureEsp = restoredEsp + 4 + (uint)argBytes; // After dispatcher RET + import stub RET cleanup
+                        
+                        // Read a few DWORDs from the future stack position to check for suspicious values
+                        var stackDump = new System.Text.StringBuilder();
+                        stackDump.Append($"\n[Syscall] Stack validation after {dll}!{name}:");
+                        
+                        for (int offset = -8; offset <= 16; offset += 4)
+                        {
+                            var addr = (uint)(futureEsp + offset);
+                            if (addr >= 0x00010000 && addr < _vm!.Size - 4) // Validate address is in reasonable range
+                            {
+                                var val = _vm!.Read32(addr);
+                                var marker = offset == 0 ? " <-- Future ESP" : "";
+                                stackDump.Append($"\n  [ESP+{offset:+0;-#}] = 0x{addr:X8}: 0x{val:X8}{marker}");
+                                
+                                // Warn about suspicious values (very low addresses that might be used as return addresses or function pointers)
+                                if (offset >= 0 && val > 0 && val < 0x00010000)
+                                {
+                                    _logger.LogWarning("[Syscall] SUSPICIOUS: Stack location 0x{Addr:X8} contains suspiciously low value 0x{Val:X8} which could cause corruption if used as return address or function pointer", 
+                                        addr, val);
+                                }
+                            }
+                        }
+                        
+                        _logger.LogDebug(stackDump.ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "[Syscall] Failed to perform stack validation");
+                    }
+                }
             }
             else
             {
