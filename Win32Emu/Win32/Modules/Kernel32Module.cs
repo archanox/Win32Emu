@@ -5611,7 +5611,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (thread == null)
 		{
 			_logger.LogWarning("[Kernel32] OpenThread: Thread ID {ThreadId} not found", dwThreadId);
-			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_HANDLE;
 			return 0; // NULL handle
 		}
 
