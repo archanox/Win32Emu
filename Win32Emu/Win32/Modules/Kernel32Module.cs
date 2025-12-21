@@ -621,6 +621,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			case "GETCURRENTTHREAD":
 				returnValue = GetCurrentThread();
 				return true;
+			case "OPENTHREAD":
+				returnValue = OpenThread(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+				return true;
 			case "ISWOW64PROCESS":
 				returnValue = IsWow64Process(a.UInt32(0), a.UInt32(1));
 				return true;
@@ -5559,6 +5562,66 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		_logger.LogInformation("[Kernel32] GetCurrentThread() = 0xFFFFFFFE (pseudo-handle)");
 		return CURRENT_THREAD_PSEUDO_HANDLE;
+	}
+
+	/// <summary>
+	/// Opens an existing thread object.
+	/// HANDLE OpenThread(
+	///   [in] DWORD dwDesiredAccess,
+	///   [in] BOOL  bInheritHandle,
+	///   [in] DWORD dwThreadId
+	/// );
+	/// </summary>
+	/// <param name="dwDesiredAccess">
+	/// The access to the thread object. This access right is checked against the security descriptor for the thread.
+	/// Common access rights include THREAD_ALL_ACCESS, THREAD_QUERY_INFORMATION, THREAD_SUSPEND_RESUME, etc.
+	/// For this emulator, all access rights are granted.
+	/// </param>
+	/// <param name="bInheritHandle">
+	/// If this value is TRUE, processes created by this process will inherit the handle. Otherwise, the processes do not inherit this handle.
+	/// In the emulator context, this parameter is noted but not enforced as handle inheritance is simplified.
+	/// </param>
+	/// <param name="dwThreadId">
+	/// The identifier of the thread to be opened.
+	/// </param>
+	/// <returns>
+	/// If the function succeeds, the return value is an open handle to the specified thread.
+	/// If the function fails, the return value is NULL. To get extended error information, call GetLastError.
+	/// </returns>
+	/// <remarks>
+	/// The handle returned by OpenThread can be used in any function that requires a thread handle.
+	/// When you are finished with the handle, be sure to close it using the CloseHandle function.
+	/// </remarks>
+	[DllModuleExport(621)]
+	private uint OpenThread(uint dwDesiredAccess, uint bInheritHandle, uint dwThreadId)
+	{
+		_logger.LogInformation("[Kernel32] OpenThread(dwDesiredAccess=0x{DwDesiredAccess:X8}, bInheritHandle={BInheritHandle}, dwThreadId={DwThreadId})",
+			dwDesiredAccess, bInheritHandle, dwThreadId);
+
+		// If ThreadScheduler is not available, fail
+		if (_env.ThreadScheduler == null)
+		{
+			_logger.LogWarning("[Kernel32] OpenThread: ThreadScheduler not available");
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // NULL handle
+		}
+
+		// Find the thread by ID
+		var thread = _env.ThreadScheduler.GetThread(dwThreadId);
+		if (thread == null)
+		{
+			_logger.LogWarning("[Kernel32] OpenThread: Thread ID {ThreadId} not found", dwThreadId);
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // NULL handle
+		}
+
+		// Return the thread's handle
+		// In a real system, this would create a new handle with the specified access rights
+		// For the emulator, we simply return the existing handle
+		_logger.LogInformation("[Kernel32] OpenThread: Opened thread {ThreadId}, returning handle 0x{Handle:X8}",
+			dwThreadId, thread.Handle);
+		
+		return thread.Handle;
 	}
 
 	/// <summary>
