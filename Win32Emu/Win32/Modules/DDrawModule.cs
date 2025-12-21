@@ -1085,59 +1085,35 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogInformation("[DDraw] Set display mode dimensions from primary surface: {Width}x{Height}", surfaceWidth, surfaceHeight);
 					}
 					
-					// Initialize the rendering backend
-					var title = "Win32Emu DirectDraw";
+					// Initialize frame buffering queue for WASM mode before backend initialization
 					if (PlatformHelpers.IsWasm)
 					{
-						// In WASM mode, we need to properly await initialization
-						// Initialize frame buffering queue for WASM mode
 						ddrawObj.PendingFrames = new Queue<PendingFrameData>();
 						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode (auto-init)");
-						
-						try
+					}
+					
+					// Initialize the rendering backend
+					var title = "Win32Emu DirectDraw";
+					var platformSuffix = PlatformHelpers.IsWasm ? " (WASM mode)" : "";
+					try
+					{
+						var success = ddrawObj.RenderingBackend.InitializeAsync((int)surfaceWidth, (int)surfaceHeight, title).GetAwaiter().GetResult();
+						if (success)
 						{
-							var success = ddrawObj.RenderingBackend.InitializeAsync((int)surfaceWidth, (int)surfaceHeight, title).GetAwaiter().GetResult();
-							if (success)
-							{
-								_logger.LogInformation("[DDraw] Rendering backend auto-initialized successfully with {Width}x{Height} (WASM mode)", surfaceWidth, surfaceHeight);
-								
-								// Subscribe to UI events from the rendering backend
-								_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
-								_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend (auto-init)");
-							}
-							else
-							{
-								_logger.LogWarning("[DDraw] Rendering backend auto-initialization returned false (WASM mode)");
-							}
+							_logger.LogInformation("[DDraw] Rendering backend auto-initialized successfully with {Width}x{Height}{Platform}", surfaceWidth, surfaceHeight, platformSuffix);
+							
+							// Subscribe to UI events from the rendering backend
+							_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
+							_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend (auto-init)");
 						}
-						catch (Exception ex)
+						else
 						{
-							_logger.LogError(ex, "[DDraw] Rendering backend auto-initialization failed (WASM mode)");
+							_logger.LogWarning("[DDraw] Rendering backend auto-initialization returned false{Platform}", platformSuffix);
 						}
 					}
-					else
+					catch (Exception ex)
 					{
-						// Non-WASM platforms
-						try
-						{
-							var success = ddrawObj.RenderingBackend.InitializeAsync((int)surfaceWidth, (int)surfaceHeight, title).GetAwaiter().GetResult();
-							if (success)
-							{
-								_logger.LogInformation("[DDraw] Rendering backend auto-initialized successfully with {Width}x{Height}", surfaceWidth, surfaceHeight);
-								
-								// Subscribe to UI events from the rendering backend
-								_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
-								_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend (auto-init)");
-							}
-							else
-							{
-								_logger.LogWarning("[DDraw] Rendering backend auto-initialization failed");
-							}
-						}
-						catch (Exception ex)
-						{
-							_logger.LogError(ex, "[DDraw] Rendering backend auto-initialization failed");
-						}
+						_logger.LogError(ex, "[DDraw] Rendering backend auto-initialization failed{Platform}", platformSuffix);
 					}
 				}
 				else
