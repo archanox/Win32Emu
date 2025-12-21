@@ -271,6 +271,9 @@ namespace Win32Emu.Win32.Modules
 				case "TOUPPER":
 					returnValue = (uint)toupper(a.Int32(0));
 					return true;
+				case "_ISMBBLEAD":
+					returnValue = (uint)_ismbblead(a.UInt32(0));
+					return true;
 				case "_FPRESET":
 					_fpreset();
 					returnValue = 0;
@@ -1195,6 +1198,36 @@ namespace Win32Emu.Win32.Modules
 			return c - ('a' - 'A');
 		}
 		return c;
+	}
+
+	/// <summary>
+	/// _ismbblead - Determines if a byte is a lead byte of a multibyte character
+	/// For Japanese Shift-JIS (CP 932): lead bytes are 0x81-0x9F and 0xE0-0xFC
+	/// For most Western code pages (like CP 1252): no lead bytes (returns 0)
+	/// Returns non-zero if the byte is a lead byte, 0 otherwise
+	/// </summary>
+	[DllModuleExport(4)]
+	private int _ismbblead(uint c)
+	{
+		_logger.LogInformation("[msvcrt] _ismbblead(0x{C:X2})", c);
+		
+		// Get the current code page from the environment
+		// For now, we'll use a simplified implementation that assumes CP 932 (Japanese Shift-JIS)
+		// as the most common MBCS code page that uses lead bytes
+		
+		// Extract the byte value (only care about lower 8 bits)
+		var byteVal = (byte)(c & 0xFF);
+		
+		// Check if byte is a lead byte for Shift-JIS (CP 932)
+		// Lead byte ranges: 0x81-0x9F and 0xE0-0xFC
+		if ((byteVal >= 0x81 && byteVal <= 0x9F) || (byteVal >= 0xE0 && byteVal <= 0xFC))
+		{
+			_logger.LogDebug("[msvcrt] _ismbblead: 0x{ByteVal:X2} is a lead byte", byteVal);
+			return 1; // Non-zero indicates it's a lead byte
+		}
+		
+		_logger.LogDebug("[msvcrt] _ismbblead: 0x{ByteVal:X2} is not a lead byte", byteVal);
+		return 0; // Zero indicates it's not a lead byte
 	}
 
 	/// <summary>
