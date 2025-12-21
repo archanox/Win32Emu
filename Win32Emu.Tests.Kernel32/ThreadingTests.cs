@@ -512,6 +512,106 @@ public sealed class ThreadingTests : IDisposable
     }
 
     [Fact]
+    public void OpenThread_WithCurrentThreadId_ShouldReturnValidHandle()
+    {
+        // Arrange
+        var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
+        const uint THREAD_ALL_ACCESS = 0x1F03FF;
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            0u,                  // bInheritHandle = FALSE
+            currentThreadId);    // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, threadHandle); // Should return a valid handle
+    }
+
+    [Fact]
+    public void OpenThread_WithInvalidThreadId_ShouldReturnNull()
+    {
+        // Arrange
+        const uint invalidThreadId = 9999u;
+        const uint THREAD_ALL_ACCESS = 0x1F03FF;
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            0u,                  // bInheritHandle = FALSE
+            invalidThreadId);    // dwThreadId
+
+        // Assert
+        Assert.Equal(0u, threadHandle); // Should return NULL for invalid thread ID
+    }
+
+    [Fact]
+    public void OpenThread_WithValidThreadId_ReturnsSameHandleAsOriginal()
+    {
+        // Arrange - Create a thread
+        var stackSize = 0x8000u;
+        var startAddress = 0x00401000u;
+        var parameter = 0u;
+        var creationFlags = 0x4u; // CREATE_SUSPENDED
+        var threadIdPtr = _testEnv.AllocateMemory(4);
+        
+        var originalHandle = _testEnv.CallKernel32Api("CREATETHREAD", 
+            0u,              // lpThreadAttributes
+            stackSize,
+            startAddress,
+            parameter,
+            creationFlags,
+            threadIdPtr);
+        
+        var threadId = _testEnv.Memory.Read32(threadIdPtr);
+        const uint THREAD_ALL_ACCESS = 0x1F03FF;
+        
+        // Act - Open the same thread
+        var openedHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            0u,                  // bInheritHandle = FALSE
+            threadId);           // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, openedHandle);
+        Assert.Equal(originalHandle, openedHandle); // In the emulator, we return the same handle
+    }
+
+    [Fact]
+    public void OpenThread_WithDifferentAccessRights_ShouldSucceed()
+    {
+        // Arrange
+        var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
+        const uint THREAD_QUERY_INFORMATION = 0x0040;
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_QUERY_INFORMATION,  // dwDesiredAccess (limited access)
+            0u,                         // bInheritHandle = FALSE
+            currentThreadId);           // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, threadHandle); // Should succeed even with limited access
+    }
+
+    [Fact]
+    public void OpenThread_WithInheritHandleTrue_ShouldSucceed()
+    {
+        // Arrange
+        var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
+        const uint THREAD_ALL_ACCESS = 0x1F03FF;
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            1u,                  // bInheritHandle = TRUE
+            currentThreadId);    // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, threadHandle); // Should succeed regardless of inherit flag
+    }
+
+    [Fact]
     public void WaitForMultipleObjects_WithNoObjects_ShouldFail()
     {
         // Arrange
