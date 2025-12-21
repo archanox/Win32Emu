@@ -130,28 +130,34 @@ Features:
 
 Features:
 - ✅ Device enumeration (keyboard, mouse)
-- ✅ State tracking structure
-- ❌ **MISSING**: Event forwarding from JavaScript to emulator
+- ✅ State tracking structure  
+- ✅ **JSInvokable methods defined** (`OnKeyDown`, `OnKeyUp`, `OnMouseMove`, `OnMouseDown`, `OnMouseUp`)
+- ✅ **UIEvent emission to emulator** - events are properly raised
+- ❌ **MISSING**: JavaScript event listeners in `index.html`
+- ❌ **MISSING**: JavaScript → C# bridge code to call JSInvokable methods
 - ❌ **MISSING**: Key code mapping (browser key codes → Win32 virtual key codes)
-- ❌ **MISSING**: Mouse position and button state updates
 
-**Critical Gap**: Input events are not yet forwarded to the emulated application
+**Critical Gap**: JavaScript event listeners are not registered, so events never reach the C# backend
 
 **Code Evidence**:
 ```csharp
-public Task<bool> InitializeAsync()
-{
-    // Input events will be handled via JavaScript event listeners
-    // registered in index.html and forwarded to this backend
-    // ⚠️ TODO: This forwarding is not yet implemented
-    _initialized = true;
-    return Task.FromResult(true);
-}
+// WasmInputBackend.cs - JSInvokable methods ARE implemented:
+[JSInvokable]
+public void OnKeyDown(int keyCode) { ... }  // ✅ Exists
+
+[JSInvokable]
+public void OnKeyUp(int keyCode) { ... }    // ✅ Exists
+
+[JSInvokable]
+public void OnMouseMove(int x, int y) { ... }  // ✅ Exists
 ```
+
+But in `index.html`: ❌ **NO** `addEventListener` code for keyboard/mouse events found
 
 **Impact**: 🔴 **CRITICAL BLOCKER**
 - ign_teas requires keyboard input for gameplay
-- Without input forwarding, the game will load but won't be interactive
+- Without JavaScript event listeners, no input reaches the C# code
+- The game will load but won't be interactive
 
 ### 2. DirectDraw Integration in WASM
 
@@ -228,12 +234,14 @@ Implemented functions:
 - ✅ `getFilesFromInput(inputId)` - File/folder upload
 
 **Missing functions**:
-- ❌ `attachKeyboardListeners(canvasId)` - Keyboard event capture
-- ❌ `attachMouseListeners(canvasId)` - Mouse event capture
-- ❌ `sendKeyEvent(keyCode, isDown)` - Key event forwarding
-- ❌ `sendMouseEvent(x, y, buttons)` - Mouse event forwarding
+- ❌ JavaScript event listeners (`addEventListener` for `keydown`, `keyup`, `mousemove`, etc.)
+- ❌ JavaScript → C# bridge code to invoke `WasmInputBackend.OnKeyDown`, etc.
+- ❌ Canvas focus management for keyboard capture
+- ❌ Key code translation (DOM KeyboardEvent.code → Win32 VK codes)
 
 **Impact**: 🔴 **CRITICAL BLOCKER** - Without these, ign_teas won't receive input
+
+**Note**: The C# side (`WasmInputBackend.cs`) has all required `[JSInvokable]` methods already implemented. Only the JavaScript glue code is missing.
 
 ### 5. Virtual File System
 
@@ -251,14 +259,14 @@ Features from `Win32Emu.Wasm/VirtualFileSystem/BrowserVirtualFileSystem.cs`:
 
 ### 🔴 Critical (Blocks Execution)
 
-1. **Input Event Forwarding Not Implemented**
-   - **Description**: JavaScript → C# input event forwarding missing
+1. **JavaScript Input Event Listeners Missing**
+   - **Description**: No `addEventListener` code in `index.html` to capture keyboard/mouse events
    - **Impact**: Game loads but is not interactive
    - **Files Affected**: 
-     - `Win32Emu.Wasm/wwwroot/index.html` (needs JS event listeners)
-     - `Win32Emu.Wasm/Backend/WasmInputBackend.cs` (needs event handler)
-     - `Win32Emu.Wasm/Services/EmulatorService.cs` (needs JS interop bridge)
-   - **Estimated Effort**: Medium (4-6 hours)
+     - `Win32Emu.Wasm/wwwroot/index.html` (**needs JS event listeners + DotNet.invokeMethodAsync calls**)
+     - `Win32Emu.Wasm/Backend/WasmInputBackend.cs` (✅ **already has JSInvokable methods**)
+     - `Win32Emu.Wasm/Services/EmulatorService.cs` (may need reference storage for DotNet invocation)
+   - **Estimated Effort**: Small-Medium (2-4 hours) - C# side is already done, just need JavaScript glue code
    
 2. **Key Code Mapping**
    - **Description**: Browser key codes need mapping to Win32 virtual key codes
@@ -412,15 +420,15 @@ Features from `Win32Emu.Wasm/VirtualFileSystem/BrowserVirtualFileSystem.cs`:
 
 ### Estimated Time to Playability
 
-**With focused effort**: 1-2 days of development work
+**With focused effort**: **4-6 hours** of development work (revised down from 1-2 days)
 
 **Breakdown**:
-- Input event forwarding: 4-6 hours
-- Key code mapping: 1-2 hours  
-- Testing and debugging: 2-4 hours
-- Documentation: 1-2 hours
+- JavaScript event listeners + DotNet.invokeMethodAsync bridge: 2-3 hours (C# side already done!)
+- Key code mapping table: 1 hour  
+- Testing and debugging: 1-2 hours
+- **Total**: 4-6 hours of development time
 
-**Total**: 8-14 hours of development time
+**Note**: The C# backend (`WasmInputBackend.cs`) already has all `[JSInvokable]` methods implemented. We only need to add ~50 lines of JavaScript code to `index.html` to wire up the events.
 
 ## References
 
