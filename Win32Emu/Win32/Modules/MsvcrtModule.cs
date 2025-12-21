@@ -35,6 +35,12 @@ namespace Win32Emu.Win32.Modules
 		private readonly ConcurrentDictionary<int, object> _locks = new();
 		private static readonly object _sharedLockObject = new();
 		
+		// Shift-JIS (CP 932) multibyte character lead byte ranges
+		private const byte SHIFTJIS_LEAD_BYTE_RANGE1_START = 0x81;
+		private const byte SHIFTJIS_LEAD_BYTE_RANGE1_END = 0x9F;
+		private const byte SHIFTJIS_LEAD_BYTE_RANGE2_START = 0xE0;
+		private const byte SHIFTJIS_LEAD_BYTE_RANGE2_END = 0xFC;
+		
 		/// <summary>
 		/// Stream buffering mode
 		/// </summary>
@@ -1209,7 +1215,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(4)]
 	private int _ismbblead(int c)
 	{
-		_logger.LogInformation("[msvcrt] _ismbblead(0x{C:X2})", c);
+		_logger.LogDebug("[msvcrt] _ismbblead(0x{C:X2})", c);
 		
 		// Get the current code page from the environment
 		// For now, we'll use a simplified implementation that assumes CP 932 (Japanese Shift-JIS)
@@ -1220,7 +1226,8 @@ namespace Win32Emu.Win32.Modules
 		
 		// Check if byte is a lead byte for Shift-JIS (CP 932)
 		// Lead byte ranges: 0x81-0x9F and 0xE0-0xFC
-		if ((byteVal >= 0x81 && byteVal <= 0x9F) || (byteVal >= 0xE0 && byteVal <= 0xFC))
+		if ((byteVal >= SHIFTJIS_LEAD_BYTE_RANGE1_START && byteVal <= SHIFTJIS_LEAD_BYTE_RANGE1_END) || 
+		    (byteVal >= SHIFTJIS_LEAD_BYTE_RANGE2_START && byteVal <= SHIFTJIS_LEAD_BYTE_RANGE2_END))
 		{
 			_logger.LogDebug("[msvcrt] _ismbblead: 0x{ByteVal:X2} is a lead byte", byteVal);
 			return 1; // Non-zero indicates it's a lead byte
