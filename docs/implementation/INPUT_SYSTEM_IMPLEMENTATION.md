@@ -6,7 +6,6 @@ This document describes the implementation of keyboard and mouse input for the W
 
 **Date**: December 21, 2024
 **Status**: ✅ Complete
-**Commit**: 5ac53e5
 
 ## Problem Statement
 
