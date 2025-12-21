@@ -1072,54 +1072,8 @@ namespace Win32Emu.Win32.Modules
 			// This ensures the backend is initialized and ready to render
 			if (isPrimary && ddrawObj.RenderingBackend != null && !ddrawObj.RenderingBackend.IsInitialized)
 			{
-				// Check if we have valid dimensions for initialization
-				if (surfaceWidth > 0 && surfaceHeight > 0)
-				{
-					_logger.LogInformation("[DDraw] Auto-initializing rendering backend for primary surface ({Width}x{Height})", surfaceWidth, surfaceHeight);
-					
-					// Ensure display mode dimensions are set
-					if (ddrawObj.Width <= 0 || ddrawObj.Height <= 0)
-					{
-						ddrawObj.Width = (int)surfaceWidth;
-						ddrawObj.Height = (int)surfaceHeight;
-						_logger.LogInformation("[DDraw] Set display mode dimensions from primary surface: {Width}x{Height}", surfaceWidth, surfaceHeight);
-					}
-					
-					// Initialize frame buffering queue for WASM mode before backend initialization
-					if (PlatformHelpers.IsWasm)
-					{
-						ddrawObj.PendingFrames = new Queue<PendingFrameData>();
-						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode (auto-init)");
-					}
-					
-					// Initialize the rendering backend
-					var title = "Win32Emu DirectDraw";
-					var platformSuffix = PlatformHelpers.IsWasm ? " (WASM mode)" : "";
-					try
-					{
-						var success = ddrawObj.RenderingBackend.InitializeAsync((int)surfaceWidth, (int)surfaceHeight, title).GetAwaiter().GetResult();
-						if (success)
-						{
-							_logger.LogInformation("[DDraw] Rendering backend auto-initialized successfully with {Width}x{Height}{Platform}", surfaceWidth, surfaceHeight, platformSuffix);
-							
-							// Subscribe to UI events from the rendering backend
-							_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
-							_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend (auto-init)");
-						}
-						else
-						{
-							_logger.LogWarning("[DDraw] Rendering backend auto-initialization returned false{Platform}", platformSuffix);
-						}
-					}
-					catch (Exception ex)
-					{
-						_logger.LogError(ex, "[DDraw] Rendering backend auto-initialization failed{Platform}", platformSuffix);
-					}
-				}
-				else
-				{
-					_logger.LogWarning("[DDraw] Cannot auto-initialize rendering backend: invalid surface dimensions ({Width}x{Height})", surfaceWidth, surfaceHeight);
-				}
+				_logger.LogInformation("[DDraw] Auto-initializing rendering backend for primary surface ({Width}x{Height})", surfaceWidth, surfaceHeight);
+				InitializeRenderingBackendWithDimensions(ddrawObj, surfaceWidth, surfaceHeight, updateEnvironment: true);
 			}
 			
 			return (uint)DDResult.DD_OK;
@@ -3965,6 +3919,77 @@ namespace Win32Emu.Win32.Modules
 			
 			// Clear the queue to free memory
 			ddrawObj.PendingFrames = null;
+		}
+
+		/// <summary>
+		/// Initializes the rendering backend with the specified dimensions.
+		/// This method handles backend initialization, frame buffering setup for WASM,
+		/// UI event subscription, and proper error handling.
+		/// </summary>
+		/// <param name="ddrawObj">The DirectDraw object containing the rendering backend</param>
+		/// <param name="width">Width for backend initialization</param>
+		/// <param name="height">Height for backend initialization</param>
+		/// <param name="updateEnvironment">Whether to update environment display variables (for auto-init from CreateSurface)</param>
+		private void InitializeRenderingBackendWithDimensions(DirectDrawObject ddrawObj, uint width, uint height, bool updateEnvironment = true)
+		{
+			// Validate dimensions
+			if (width <= 0 || height <= 0)
+			{
+				_logger.LogWarning("[DDraw] Cannot initialize rendering backend: invalid dimensions ({Width}x{Height})", width, height);
+				return;
+			}
+
+			// Ensure display mode dimensions are set
+			if (ddrawObj.Width <= 0 || ddrawObj.Height <= 0)
+			{
+				ddrawObj.Width = (int)width;
+				ddrawObj.Height = (int)height;
+				_logger.LogInformation("[DDraw] Set display mode dimensions: {Width}x{Height}", width, height);
+			}
+
+			// Keep emulator environment display metrics in sync for GetSystemMetrics and related APIs
+			if (updateEnvironment)
+			{
+				_env.DisplayWidth = ddrawObj.Width;
+				_env.DisplayHeight = ddrawObj.Height;
+				if (_env.DisplayBitsPerPixel <= 0)
+				{
+					// Default to 32bpp if no display format has been established yet
+					_env.DisplayBitsPerPixel = 32;
+				}
+			}
+
+			// Initialize frame buffering queue for WASM mode before backend initialization
+			if (PlatformHelpers.IsWasm)
+			{
+				ddrawObj.PendingFrames = new Queue<PendingFrameData>();
+				_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
+			}
+
+			// Initialize the rendering backend
+			var title = "Win32Emu DirectDraw";
+			try
+			{
+				var platformSuffix = PlatformHelpers.IsWasm ? " (WASM mode)" : "";
+				var success = ddrawObj.RenderingBackend.InitializeAsync((int)width, (int)height, title).GetAwaiter().GetResult();
+				if (success)
+				{
+					_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}{Platform}", width, height, platformSuffix);
+					
+					// Subscribe to UI events from the rendering backend
+					_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
+					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
+				}
+				else
+				{
+					_logger.LogWarning("[DDraw] Rendering backend initialization returned false{Platform}", platformSuffix);
+				}
+			}
+			catch (Exception ex)
+			{
+				var platformSuffix = PlatformHelpers.IsWasm ? " (WASM mode)" : "";
+				_logger.LogError(ex, "[DDraw] Rendering backend initialization failed{Platform}", platformSuffix);
+			}
 		}
 
 		// IDirectDrawClipper interface methods

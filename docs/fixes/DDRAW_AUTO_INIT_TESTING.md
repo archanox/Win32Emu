@@ -179,9 +179,9 @@ Scroll down on the home page to find "DirectDraw Diagnostics" panel
 ## Success Confirmation
 
 Once testing is complete, confirm:
-- [x] Code compiles successfully
-- [x] Auto-initialization logic verified in code
-- [x] Documentation complete
+- [ ] Code compiles successfully
+- [ ] Auto-initialization logic verified in code
+- [ ] Documentation complete
 - [ ] Manual test with ign_teas PASSED
 - [ ] Regression test PASSED
 - [ ] No new issues discovered
