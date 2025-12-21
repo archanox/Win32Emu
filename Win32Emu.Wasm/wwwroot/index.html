@@ -233,6 +233,83 @@
 		window.lastError = null;
 		window.errorLog = [];
 		
+		// DirectDraw diagnostics tracking
+		window.ddrawDiagnostics = {
+			canvasUpdateCount: 0,
+			lastUpdateTime: null,
+			backendInitialized: false,
+			renderingError: false,
+			frameBufferSize: 0
+		};
+		
+		// Refresh DirectDraw diagnostics display
+		window.refreshDDrawDiagnostics = function() {
+			try {
+				const canvas = document.getElementById('emulatorCanvas');
+				
+				// Update canvas dimensions
+				const dimEl = document.getElementById('canvasDimensions');
+				if (dimEl && canvas) {
+					dimEl.textContent = `${canvas.width}x${canvas.height}`;
+				}
+				
+				// Update last update time
+				const lastUpdateEl = document.getElementById('lastCanvasUpdate');
+				if (lastUpdateEl) {
+					if (window.ddrawDiagnostics.lastUpdateTime) {
+						const elapsed = Date.now() - window.ddrawDiagnostics.lastUpdateTime;
+						lastUpdateEl.textContent = `${(elapsed / 1000).toFixed(1)}s ago`;
+					} else {
+						lastUpdateEl.textContent = 'Never';
+					}
+				}
+				
+				// Update count
+				const countEl = document.getElementById('canvasUpdateCount');
+				if (countEl) {
+					countEl.textContent = window.ddrawDiagnostics.canvasUpdateCount.toString();
+				}
+				
+				// Update canvas visibility
+				const visibleEl = document.getElementById('canvasVisible');
+				if (visibleEl && canvas) {
+					const rect = canvas.getBoundingClientRect();
+					const isVisible = rect.width > 0 && rect.height > 0;
+					visibleEl.textContent = isVisible ? 'Yes' : 'No';
+					visibleEl.style.color = isVisible ? 'green' : 'red';
+				}
+				
+				// Update backend status
+				const backendEl = document.getElementById('backendInitialized');
+				if (backendEl) {
+					backendEl.textContent = window.ddrawDiagnostics.backendInitialized ? 'Yes' : 'No';
+					backendEl.style.color = window.ddrawDiagnostics.backendInitialized ? 'green' : 'orange';
+				}
+				
+				// Update frame buffer size
+				const fbSizeEl = document.getElementById('frameBufferSize');
+				if (fbSizeEl) {
+					if (window.ddrawDiagnostics.frameBufferSize > 0) {
+						const kb = (window.ddrawDiagnostics.frameBufferSize / 1024).toFixed(1);
+						fbSizeEl.textContent = `${kb} KB`;
+					} else {
+						fbSizeEl.textContent = 'Not allocated';
+					}
+				}
+				
+				// Update error status
+				const errorEl = document.getElementById('renderingError');
+				if (errorEl) {
+					errorEl.textContent = window.ddrawDiagnostics.renderingError ? 'Yes' : 'No';
+					errorEl.style.color = window.ddrawDiagnostics.renderingError ? 'red' : 'green';
+				}
+				
+				console.log('[Diagnostics] DirectDraw stats refreshed:', window.ddrawDiagnostics);
+			} catch (e) {
+				console.error('[Diagnostics] Error refreshing DirectDraw diagnostics:', e);
+			}
+		};
+		
 		// Enhanced error display function
 		function displayErrorDetails(error) {
 			const detailsEl = document.getElementById('blazor-error-details');
@@ -429,7 +506,14 @@
 			// Create ImageData and draw to canvas
 			const imageData = new ImageData(bytes, width, height);
 			ctx.putImageData(imageData, 0, 0);
-			console.log(`Canvas updated successfully: ${width}x${height}`);
+			
+			// Update diagnostics
+			window.ddrawDiagnostics.canvasUpdateCount++;
+			window.ddrawDiagnostics.lastUpdateTime = Date.now();
+			window.ddrawDiagnostics.backendInitialized = true;
+			window.ddrawDiagnostics.frameBufferSize = len;
+			
+			console.log(`Canvas updated successfully: ${width}x${height} (${len} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
 		};
 		
 		// Wrapper function that stops emulator on error
@@ -459,6 +543,9 @@
 				
 				console.log(`[updateCanvas] SUCCESS`);
 			} catch (error) {
+				// Mark error state in diagnostics
+				window.ddrawDiagnostics.renderingError = true;
+				
 				// Stop the emulator on any error
 				const errorMsg = `Canvas update failed: ${error.message}\n\nStack: ${error.stack}`;
 				console.error("🛑 CRITICAL ERROR in updateCanvas:");

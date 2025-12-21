@@ -278,6 +278,93 @@
 			</div>
 		</div>
 	</div>
+	
+	<!-- DirectDraw Diagnostics Panel -->
+	<div class="row mt-3">
+		<div class="col-12">
+			<div class="card">
+				<div class="card-header">
+					<strong>🎨 DirectDraw Diagnostics</strong>
+					<button class="btn btn-sm btn-outline-primary float-end" @onclick="RefreshDDrawStats">
+						<i class="bi bi-arrow-clockwise"></i> Refresh
+					</button>
+				</div>
+				<div class="card-body">
+					<div class="row">
+						<div class="col-md-6">
+							<h6>Canvas Status</h6>
+							<table class="table table-sm">
+								<tbody>
+									<tr>
+										<td>Canvas ID:</td>
+										<td><code>emulatorCanvas</code></td>
+									</tr>
+									<tr>
+										<td>Dimensions:</td>
+										<td><strong id="canvasDimensions">640x480</strong></td>
+									</tr>
+									<tr>
+										<td>Last Update:</td>
+										<td><strong id="lastCanvasUpdate">Never</strong></td>
+									</tr>
+									<tr>
+										<td>Update Count:</td>
+										<td><strong id="canvasUpdateCount">0</strong></td>
+									</tr>
+									<tr>
+										<td>Canvas Visible:</td>
+										<td><strong id="canvasVisible">Unknown</strong></td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<div class="col-md-6">
+							<h6>Rendering Backend</h6>
+							<table class="table table-sm">
+								<tbody>
+									<tr>
+										<td>Initialized:</td>
+										<td><strong id="backendInitialized">Unknown</strong></td>
+									</tr>
+									<tr>
+										<td>Frame Buffer Size:</td>
+										<td><strong id="frameBufferSize">Unknown</strong></td>
+									</tr>
+									<tr>
+										<td>Pixel Format:</td>
+										<td><strong id="pixelFormat">RGBA32</strong></td>
+									</tr>
+									<tr>
+										<td>Error Occurred:</td>
+										<td><strong id="renderingError">No</strong></td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6>DirectDraw Calls Log</h6>
+							<div class="alert alert-info">
+								<small>
+									Recent DirectDraw API calls will appear here. Look for:
+									<ul class="mb-0">
+										<li><code>DirectDrawCreate</code> - DirectDraw initialization</li>
+										<li><code>SetCooperativeLevel</code> - Window mode setup</li>
+										<li><code>SetDisplayMode</code> - Resolution and color depth</li>
+										<li><code>CreateSurface</code> - Surface creation</li>
+										<li><code>Lock/Unlock</code> - Drawing operations</li>
+										<li><code>UpdateFrameBuffer</code> - Canvas updates</li>
+									</ul>
+								</small>
+							</div>
+							<pre id="ddrawCallsLog" class="log-panel" style="height: 150px; overflow-y: auto; background-color: #f8f9fa; padding: 10px;">@_ddrawCallsLog</pre>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 
 @code {
@@ -309,6 +396,10 @@
 	private const int LogRotationBufferMargin = 1000;
 	private const string LogTruncationPrefix = "... (older logs truncated) ...\n";
 	
+	// DirectDraw diagnostics
+	private string _ddrawCallsLog = "Waiting for DirectDraw calls...\n";
+	private const int MAX_DDRAW_LOG_LINES = 50;
+	
 	// Windows and dialogs state
 	private readonly Dictionary<uint, WindowCreateInfo> _activeWindows = new();
 	private DialogCreateInfo? _activeDialog = null;
@@ -339,6 +430,20 @@
 	{
 		try
 		{
+			// Filter for DirectDraw-related messages for diagnostics panel
+			if (e.Message.Contains("DDraw", StringComparison.OrdinalIgnoreCase) || 
+				e.Message.Contains("DirectDraw", StringComparison.OrdinalIgnoreCase) || 
+				e.Message.Contains("SetDisplayMode", StringComparison.OrdinalIgnoreCase) || 
+				e.Message.Contains("CreateSurface", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("updateCanvas", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("Canvas updated", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("Lock", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("Unlock", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("UpdateFrameBuffer", StringComparison.OrdinalIgnoreCase))
+			{
+				AddDDrawLog(e.Message);
+			}
+			
 			await InvokeAsync(() =>
 			{
 				var formattedMessage = e.ToFormattedString() + "\n";
@@ -939,5 +1044,37 @@
 		
 		// Unsubscribe from host events using the helper method
 		UnsubscribeFromEmulatorHost();
+	}
+	
+	private void AddDDrawLog(string message)
+	{
+		if (_ddrawCallsLog.StartsWith("Waiting for DirectDraw"))
+		{
+			_ddrawCallsLog = "";
+		}
+		
+		var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+		_ddrawCallsLog += $"[{timestamp}] {message}\n";
+		
+		// Keep only last N lines
+		var lines = _ddrawCallsLog.Split('\n').ToList();
+		if (lines.Count > MAX_DDRAW_LOG_LINES)
+		{
+			lines.RemoveRange(0, lines.Count - MAX_DDRAW_LOG_LINES);
+			_ddrawCallsLog = string.Join('\n', lines);
+		}
+	}
+	
+	private async Task RefreshDDrawStats()
+	{
+		try
+		{
+			// Call JavaScript to update diagnostics
+			await JS.InvokeVoidAsync("refreshDDrawDiagnostics");
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Failed to refresh DirectDraw diagnostics");
+		}
 	}
 }
