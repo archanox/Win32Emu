@@ -163,6 +163,7 @@ Interactive web-based frontend for Win32Emu, built with Blazor WebAssembly.
 - **Dual Output Panels**: Separate panels for standard output and debug messages
 - **Status Monitoring**: Real-time display of instructions executed, FPS, and audio status
 - **File Upload**: Upload Windows PE executables directly from your device
+- **Sample Executables**: Built-in DirectDraw test examples (simple_ddraw.exe, hugi.exe) for quick testing
 - **Mobile-Friendly**: Test and interact with emulated applications on mobile devices
 
 **Current Status:**
@@ -178,6 +179,13 @@ This is a **proof-of-concept** implementation. The Win32Emu core library current
 - Share emulated applications via URL
 - Automated testing with Playwright browser automation
 - Quick PE file compatibility checks without installing the native application
+
+**Sample Executables:**
+The WASM frontend includes built-in DirectDraw test executables:
+- **simple_ddraw.exe**: Basic DirectDraw test with animated pattern (no threading)
+- **hugi.exe**: Advanced DirectDraw example from the classic [Hugi 16 article](https://hugi.scene.org/online/coding/hugi%2016%20-%20coddraw.htm) (with double buffering and threading)
+
+These samples can be loaded with one click from the "📦 Sample Executables" section in the WASM interface. Source code and build instructions are available in [retrowin32/exe/cpp/](retrowin32/exe/cpp/).
 
 See [Win32Emu.Wasm/README.md](Win32Emu.Wasm/README.md) for more details.
 
