@@ -720,6 +720,210 @@
 				return false;
 			}
 		};
+		
+		// ===========================================
+		// Input System - Keyboard and Mouse Event Handling
+		// ===========================================
+		
+		// Win32 Virtual Key Code mapping (DOM KeyboardEvent.code → VK_*)
+		// Reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+		const VK_MAP = {
+			// Function keys
+			'F1': 0x70, 'F2': 0x71, 'F3': 0x72, 'F4': 0x73, 'F5': 0x74, 'F6': 0x75,
+			'F7': 0x76, 'F8': 0x77, 'F9': 0x78, 'F10': 0x79, 'F11': 0x7A, 'F12': 0x7B,
+			
+			// Number keys (top row)
+			'Digit0': 0x30, 'Digit1': 0x31, 'Digit2': 0x32, 'Digit3': 0x33, 'Digit4': 0x34,
+			'Digit5': 0x35, 'Digit6': 0x36, 'Digit7': 0x37, 'Digit8': 0x38, 'Digit9': 0x39,
+			
+			// Letter keys
+			'KeyA': 0x41, 'KeyB': 0x42, 'KeyC': 0x43, 'KeyD': 0x44, 'KeyE': 0x45, 'KeyF': 0x46,
+			'KeyG': 0x47, 'KeyH': 0x48, 'KeyI': 0x49, 'KeyJ': 0x4A, 'KeyK': 0x4B, 'KeyL': 0x4C,
+			'KeyM': 0x4D, 'KeyN': 0x4E, 'KeyO': 0x4F, 'KeyP': 0x50, 'KeyQ': 0x51, 'KeyR': 0x52,
+			'KeyS': 0x53, 'KeyT': 0x54, 'KeyU': 0x55, 'KeyV': 0x56, 'KeyW': 0x57, 'KeyX': 0x58,
+			'KeyY': 0x59, 'KeyZ': 0x5A,
+			
+			// Special keys
+			'Escape': 0x1B, 'Space': 0x20, 'Enter': 0x0D, 'Tab': 0x09, 'Backspace': 0x08,
+			'ShiftLeft': 0x10, 'ShiftRight': 0x10, 'ControlLeft': 0x11, 'ControlRight': 0x11,
+			'AltLeft': 0x12, 'AltRight': 0x12, 'CapsLock': 0x14,
+			
+			// Arrow keys
+			'ArrowLeft': 0x25, 'ArrowUp': 0x26, 'ArrowRight': 0x27, 'ArrowDown': 0x28,
+			
+			// Editing keys
+			'Insert': 0x2D, 'Delete': 0x2E, 'Home': 0x24, 'End': 0x23,
+			'PageUp': 0x21, 'PageDown': 0x22,
+			
+			// Numpad keys
+			'Numpad0': 0x60, 'Numpad1': 0x61, 'Numpad2': 0x62, 'Numpad3': 0x63, 'Numpad4': 0x64,
+			'Numpad5': 0x65, 'Numpad6': 0x66, 'Numpad7': 0x67, 'Numpad8': 0x68, 'Numpad9': 0x69,
+			'NumpadMultiply': 0x6A, 'NumpadAdd': 0x6B, 'NumpadSubtract': 0x6D,
+			'NumpadDecimal': 0x6E, 'NumpadDivide': 0x6F, 'NumpadEnter': 0x0D,
+			
+			// Punctuation and symbols
+			'Minus': 0xBD, 'Equal': 0xBB, 'BracketLeft': 0xDB, 'BracketRight': 0xDD,
+			'Backslash': 0xDC, 'Semicolon': 0xBA, 'Quote': 0xDE, 'Comma': 0xBC,
+			'Period': 0xBE, 'Slash': 0xBF, 'Backquote': 0xC0
+		};
+		
+		// Map DOM KeyboardEvent.code to Win32 VK code
+		function mapKeyCode(code) {
+			return VK_MAP[code] || 0;
+		}
+		
+		// Reference to the WasmInputBackend instance for DotNet invocation
+		let inputBackendRef = null;
+		
+		// Initialize input system
+		window.initializeInput = function(canvasId, dotNetRef) {
+			console.log(`Initializing input system for canvas: ${canvasId}`);
+			
+			// Store DotNet reference for later use
+			inputBackendRef = dotNetRef;
+			
+			const canvas = document.getElementById(canvasId);
+			if (!canvas) {
+				console.error(`Canvas not found: ${canvasId}`);
+				return false;
+			}
+			
+			// Make canvas focusable
+			canvas.tabIndex = 1;
+			canvas.style.outline = 'none';
+			
+			// Keyboard event handlers
+			canvas.addEventListener('keydown', (e) => {
+				e.preventDefault();
+				const vkCode = mapKeyCode(e.code);
+				if (vkCode > 0 && inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
+						.catch(err => console.error('OnKeyDown error:', err));
+				}
+			});
+			
+			canvas.addEventListener('keyup', (e) => {
+				e.preventDefault();
+				const vkCode = mapKeyCode(e.code);
+				if (vkCode > 0 && inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
+						.catch(err => console.error('OnKeyUp error:', err));
+				}
+			});
+			
+			// Mouse event handlers
+			canvas.addEventListener('mousemove', (e) => {
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseMove', x, y)
+						.catch(err => console.error('OnMouseMove error:', err));
+				}
+			});
+			
+			canvas.addEventListener('mousedown', (e) => {
+				e.preventDefault();
+				canvas.focus(); // Ensure canvas has focus for keyboard input
+				
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseDown', e.button, x, y)
+						.catch(err => console.error('OnMouseDown error:', err));
+				}
+			});
+			
+			canvas.addEventListener('mouseup', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseUp', e.button, x, y)
+						.catch(err => console.error('OnMouseUp error:', err));
+				}
+			});
+			
+			// Touch event handlers for mobile (simulating mouse events)
+			canvas.addEventListener('touchstart', (e) => {
+				e.preventDefault();
+				canvas.focus();
+				
+				const rect = canvas.getBoundingClientRect();
+				const touch = e.touches[0];
+				const x = Math.floor((touch.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((touch.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseDown', 0, x, y)
+						.catch(err => console.error('OnMouseDown (touch) error:', err));
+				}
+			});
+			
+			canvas.addEventListener('touchmove', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const touch = e.touches[0];
+				const x = Math.floor((touch.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((touch.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseMove', x, y)
+						.catch(err => console.error('OnMouseMove (touch) error:', err));
+				}
+			});
+			
+			canvas.addEventListener('touchend', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				// Use last known position or center if no touches
+				const x = canvas.width / 2;
+				const y = canvas.height / 2;
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseUp', 0, x, y)
+						.catch(err => console.error('OnMouseUp (touch) error:', err));
+				}
+			});
+			
+			// Auto-focus canvas when page loads
+			canvas.focus();
+			
+			console.log('Input system initialized successfully');
+			return true;
+		};
+		
+		// Send virtual key press (for on-screen keyboard buttons)
+		window.sendVirtualKey = function(vkCode, isDown) {
+			if (inputBackendRef) {
+				if (isDown) {
+					inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
+						.catch(err => console.error('Virtual key down error:', err));
+				} else {
+					inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
+						.catch(err => console.error('Virtual key up error:', err));
+				}
+			}
+		};
+		
+		// Virtual key tap (down then up)
+		window.tapVirtualKey = function(vkCode) {
+			if (inputBackendRef) {
+				inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
+					.then(() => {
+						setTimeout(() => {
+							inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
+								.catch(err => console.error('Virtual key up error:', err));
+						}, 50);
+					})
+					.catch(err => console.error('Virtual key down error:', err));
+			}
+		};
 	</script>
 	
 	<script src="_framework/blazor.webassembly.js"></script>

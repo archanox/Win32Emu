@@ -2,11 +2,13 @@ using Microsoft.JSInterop;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Rendering;
 using static Win32Emu.Rendering.IInputBackend;
+using System.Runtime.InteropServices.JavaScript;
 
 namespace Win32Emu.Wasm.Backend;
 
 /// <summary>
-/// WASM-compatible input backend using JavaScript interop for keyboard/mouse events
+/// WASM-compatible input backend using JavaScript interop for keyboard/mouse events.
+/// This class is exposed to JavaScript via DotNetObjectReference for event callbacks.
 /// </summary>
 public class WasmInputBackend : IInputBackend
 {
@@ -15,6 +17,7 @@ public class WasmInputBackend : IInputBackend
 	private bool _initialized;
 	private readonly Dictionary<uint, InputState> _deviceStates = new();
 	private uint _nextDeviceId = 1;
+	private DotNetObjectReference<WasmInputBackend>? _dotNetRef;
 
 	// Current input state (updated via JS interop)
 	private readonly InputState _keyboardState = new();
@@ -31,28 +34,42 @@ public class WasmInputBackend : IInputBackend
 		_logger = logger;
 	}
 
-	public Task<bool> InitializeAsync()
+	/// <summary>
+	/// Initialize the input backend and register event listeners in JavaScript.
+	/// </summary>
+	public async Task<bool> InitializeAsync()
 	{
 		if (_initialized)
 		{
-			return Task.FromResult(true);
+			return true;
 		}
 
 		try
 		{
 			_logger.LogInformation("[WASM] Initializing input backend");
 			
-			// Input events will be handled via JavaScript event listeners
-			// registered in index.html and forwarded to this backend
+			// Create a DotNetObjectReference to pass to JavaScript
+			_dotNetRef = DotNetObjectReference.Create(this);
 			
-			_initialized = true;
-			_logger.LogInformation("[WASM] Input backend initialized successfully");
-			return Task.FromResult(true);
+			// Initialize input system in JavaScript
+			var success = await _jsRuntime.InvokeAsync<bool>("initializeInput", "emulatorCanvas", _dotNetRef);
+			
+			if (success)
+			{
+				_initialized = true;
+				_logger.LogInformation("[WASM] Input backend initialized successfully");
+			}
+			else
+			{
+				_logger.LogWarning("[WASM] Failed to initialize input backend");
+			}
+			
+			return success;
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[WASM] Failed to initialize input backend");
-			return Task.FromResult(false);
+			return false;
 		}
 	}
 
@@ -213,6 +230,8 @@ public class WasmInputBackend : IInputBackend
 		{
 			_logger.LogInformation("[WASM] Disposing input backend");
 			_deviceStates.Clear();
+			_dotNetRef?.Dispose();
+			_dotNetRef = null;
 			_initialized = false;
 		}
 	}
