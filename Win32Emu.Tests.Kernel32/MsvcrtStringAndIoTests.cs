@@ -293,6 +293,102 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		Assert.True(result < 0, "Shorter string should be less than longer string when they match up to shorter length");
 	}
 
+	[Fact]
+	public void Ismbblead_WithShiftJisLeadByte_ShouldReturnNonZero()
+	{
+		// Arrange - test with a Shift-JIS lead byte in range 0x81-0x9F
+		var leadByte = 0x81u;
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, leadByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.NotEqual(0u, returnValue); // Non-zero indicates it's a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithShiftJisLeadByteUpperRange_ShouldReturnNonZero()
+	{
+		// Arrange - test with a Shift-JIS lead byte in range 0xE0-0xFC
+		var leadByte = 0xE0u;
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, leadByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.NotEqual(0u, returnValue); // Non-zero indicates it's a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithAsciiCharacter_ShouldReturnZero()
+	{
+		// Arrange - test with a standard ASCII character
+		var asciiByte = 0x41u; // 'A'
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, asciiByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.Equal(0u, returnValue); // Zero indicates it's not a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithNonLeadByte_ShouldReturnZero()
+	{
+		// Arrange - test with a byte that's not a lead byte (0x7F, 0xA0)
+		var nonLeadByte = 0x7Fu;
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, nonLeadByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.Equal(0u, returnValue); // Zero indicates it's not a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithBoundaryValues_ShouldReturnCorrectly()
+	{
+		// Test boundary values: 0x80, 0x9F, 0xDF, 0xFC, 0xFD
+		
+		// 0x80 - Not a lead byte (just before 0x81)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0x80u);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+		Assert.True(success);
+		Assert.Equal(0u, returnValue);
+
+		// 0x9F - Lead byte (end of first range)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0x9Fu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.NotEqual(0u, returnValue);
+
+		// 0xDF - Not a lead byte (just before 0xE0)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0xDFu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.Equal(0u, returnValue);
+
+		// 0xFC - Lead byte (end of second range)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0xFCu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.NotEqual(0u, returnValue);
+
+		// 0xFD - Not a lead byte (after 0xFC)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0xFDu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.Equal(0u, returnValue);
+	}
+
 	public void Dispose()
 	{
 		_testEnv.Dispose();
