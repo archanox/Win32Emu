@@ -75,8 +75,30 @@ long CALLBACK WindowProc( HWND hWnd, UINT message,
 		case WM_PAINT:
 		  if (!dd)
 		  {
-			  InitDirectDraw (hWnd, 320, 240, 8);
-			  CreateThread (0, 0, mymain, 0, 0, &ThreadId);
+			  if (!InitDirectDraw (hWnd, 320, 240, 8))
+			  {
+				  MessageBox (hWnd,
+					  "Failed to initialize DirectDraw.",
+					  "Error",
+					  MB_OK | MB_ICONERROR);
+				  PostQuitMessage (1);
+				  break;
+			  }
+
+			  HANDLE threadHandle = CreateThread (0, 0, mymain, 0, 0, &ThreadId);
+			  if (threadHandle == NULL)
+			  {
+				  MessageBox (hWnd,
+					  "Failed to create render thread.",
+					  "Error",
+					  MB_OK | MB_ICONERROR);
+				  CloseDirectDraw ();
+				  PostQuitMessage (1);
+			  }
+			  else
+			  {
+				  CloseHandle (threadHandle);
+			  }
 		  }
 		break;
 
@@ -129,7 +151,14 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst,
 	}
 
 	if (ThreadId)
-	  TerminateThread ((HANDLE) ThreadId, 0);
+	{
+		HANDLE threadHandle = OpenThread(SYNCHRONIZE, FALSE, ThreadId);
+		if (threadHandle)
+		{
+			WaitForSingleObject(threadHandle, INFINITE);
+			CloseHandle(threadHandle);
+		}
+	}
 
 	CloseDirectDraw();
 	UnregisterClass("HugiExample", hInstance);
@@ -139,6 +168,12 @@ int PASCAL WinMain(HINSTANCE hInstance, HINSTANCE hPrevInst,
 DWORD WINAPI mymain (void * argument)
 {
 	char * temp = (char*)malloc(320*240);
+	if (temp == NULL)
+	{
+		/* Allocation failed; close window and exit thread gracefully */
+		SendMessage (WindowHandle, WM_CLOSE, 0, 0);
+		return 0;
+	}
 
 	for (int frames=0; frames<3200; frames++)
 	{
@@ -157,8 +192,13 @@ DWORD WINAPI mymain (void * argument)
 
 		DDSCAPS caps;
 		caps.dwCaps = DDSCAPS_BACKBUFFER;
-		IDirectDrawSurface * backbuffer;
-		ddSurface->lpVtbl->GetAttachedSurface(ddSurface, &caps, &backbuffer);
+		IDirectDrawSurface * backbuffer = 0;
+		HRESULT hr = ddSurface->lpVtbl->GetAttachedSurface(ddSurface, &caps, &backbuffer);
+		if (hr != DD_OK || backbuffer == 0)
+		{
+			LeaveCriticalSection (&cr);
+			continue;
+		}
 
 		if (backbuffer->lpVtbl->IsLost(backbuffer)!=DD_OK)
 		   backbuffer->lpVtbl->Restore(backbuffer);
@@ -166,21 +206,26 @@ DWORD WINAPI mymain (void * argument)
 		DDSURFACEDESC sd;
 		memset (&sd, 0, sizeof (DDSURFACEDESC));
 		sd.dwSize = sizeof (sd);
-		backbuffer->lpVtbl->Lock (backbuffer, 0, &sd, DDLOCK_SURFACEMEMORYPTR
+		hr = backbuffer->lpVtbl->Lock (backbuffer, 0, &sd, DDLOCK_SURFACEMEMORYPTR
 			| DDLOCK_WAIT ,0);
 
-		char  *source = temp;
-		char  *dest   = (char *) sd.lpSurface;
-
-		for (int y=0; y<240; y++)
+		if (hr == DD_OK && sd.lpSurface)
 		{
-			memcpy (dest, source, 320);
-			dest   += sd.lPitch;
-			source += 320;
-		}
+			char  *source = temp;
+			char  *dest   = (char *) sd.lpSurface;
 
-		backbuffer->lpVtbl->Unlock (backbuffer, sd.lpSurface);
-		ddSurface->lpVtbl->Flip (ddSurface, 0, DDFLIP_WAIT );
+			for (int y=0; y<240; y++)
+			{
+				memcpy (dest, source, 320);
+				dest   += sd.lPitch;
+				source += 320;
+			}
+
+			backbuffer->lpVtbl->Unlock (backbuffer, sd.lpSurface);
+			ddSurface->lpVtbl->Flip (ddSurface, 0, DDFLIP_WAIT );
+		}
+		
+		backbuffer->lpVtbl->Release (backbuffer);
 		LeaveCriticalSection (&cr);
 	}
 	
