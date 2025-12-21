@@ -180,14 +180,14 @@
 					</p>
 					<div class="d-grid gap-2">
 						<button class="btn btn-outline-primary btn-sm" 
-								@onclick="() => LoadSampleExecutable(\"simple_ddraw.exe\")"
+								@onclick="@(() => LoadSampleExecutable("simple_ddraw.exe"))"
 								disabled="@_isRunning">
 							<i class="bi bi-file-earmark-code"></i> Simple DirectDraw
 							<br />
 							<small class="text-muted">Basic DirectDraw test with animated pattern</small>
 						</button>
 						<button class="btn btn-outline-primary btn-sm" 
-								@onclick="() => LoadSampleExecutable(\"hugi.exe\")"
+								@onclick="@(() => LoadSampleExecutable("hugi.exe"))"
 								disabled="@_isRunning">
 							<i class="bi bi-file-earmark-code"></i> Hugi DirectDraw Example
 							<br />

@@ -22,11 +22,4 @@
     <ProjectReference Include="..\Win32Emu\Win32Emu.csproj" />
   </ItemGroup>
 
-  <!-- Include sample executables in wwwroot/samples -->
-  <ItemGroup>
-    <Content Include="wwwroot\samples\*.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>
