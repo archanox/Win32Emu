@@ -2,7 +2,6 @@ using Microsoft.JSInterop;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Rendering;
 using static Win32Emu.Rendering.IInputBackend;
-using System.Runtime.InteropServices.JavaScript;
 
 namespace Win32Emu.Wasm.Backend;
 

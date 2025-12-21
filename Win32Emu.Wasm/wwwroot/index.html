@@ -304,7 +304,10 @@
 					errorEl.style.color = window.ddrawDiagnostics.renderingError ? 'red' : 'green';
 				}
 				
-				console.log('[Diagnostics] DirectDraw stats refreshed:', window.ddrawDiagnostics);
+				// Optional: Enable console logging for diagnostics debugging
+				if (window.ddrawDiagnostics?.enableConsoleLogging) {
+					console.debug('[Diagnostics] DirectDraw stats refreshed:', window.ddrawDiagnostics);
+				}
 			} catch (e) {
 				console.error('[Diagnostics] Error refreshing DirectDraw diagnostics:', e);
 			}
@@ -491,16 +494,16 @@
 			
 			// Decode base64 data
 			const binaryString = atob(base64Data);
-			const len = binaryString.length;
-			const bytes = new Uint8ClampedArray(len);
-			for (let i = 0; i < len; i++) {
+			const frameBufferLength = binaryString.length;
+			const bytes = new Uint8ClampedArray(frameBufferLength);
+			for (let i = 0; i < frameBufferLength; i++) {
 				bytes[i] = binaryString.charCodeAt(i);
 			}
 			
 			// Validate data length matches expected size
 			const expectedLength = width * height * BYTES_PER_PIXEL;
-			if (len !== expectedLength) {
-				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${len} bytes`);
+			if (frameBufferLength !== expectedLength) {
+				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${frameBufferLength} bytes`);
 			}
 			
 			// Create ImageData and draw to canvas
@@ -511,9 +514,9 @@
 			window.ddrawDiagnostics.canvasUpdateCount++;
 			window.ddrawDiagnostics.lastUpdateTime = Date.now();
 			window.ddrawDiagnostics.backendInitialized = true;
-			window.ddrawDiagnostics.frameBufferSize = len;
+			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
 			
-			console.log(`Canvas updated successfully: ${width}x${height} (${len} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
+			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
 		};
 		
 		// Wrapper function that stops emulator on error
@@ -989,29 +992,42 @@
 		
 		// Send virtual key press (for on-screen keyboard buttons)
 		window.sendVirtualKey = function(vkCode, isDown) {
-			if (inputBackendRef) {
-				if (isDown) {
-					inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
-						.catch(err => console.error('Virtual key down error:', err));
-				} else {
-					inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
-						.catch(err => console.error('Virtual key up error:', err));
-				}
+			const backend = inputBackendRef;
+			if (!backend) {
+				return;
+			}
+			
+			if (isDown) {
+				backend.invokeMethodAsync('OnKeyDown', vkCode)
+					.catch(err => console.error('Virtual key down error:', err));
+			} else {
+				backend.invokeMethodAsync('OnKeyUp', vkCode)
+					.catch(err => console.error('Virtual key up error:', err));
 			}
 		};
 		
 		// Virtual key tap (down then up)
+		// Delay in milliseconds between key down and key up to simulate a realistic key press
+		const VIRTUAL_KEY_PRESS_DELAY_MS = 50;
+		
 		window.tapVirtualKey = function(vkCode) {
-			if (inputBackendRef) {
-				inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
-					.then(() => {
-						setTimeout(() => {
-							inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
-								.catch(err => console.error('Virtual key up error:', err));
-						}, 50);
-					})
-					.catch(err => console.error('Virtual key down error:', err));
+			const backend = inputBackendRef;
+			if (!backend) {
+				return;
 			}
+			
+			backend.invokeMethodAsync('OnKeyDown', vkCode)
+				.then(() => {
+					setTimeout(() => {
+						// Capture backend reference again in case it changed
+						const currentBackend = inputBackendRef;
+						if (currentBackend) {
+							currentBackend.invokeMethodAsync('OnKeyUp', vkCode)
+								.catch(err => console.error('Virtual key up error:', err));
+						}
+					}, VIRTUAL_KEY_PRESS_DELAY_MS);
+				})
+				.catch(err => console.error('Virtual key down error:', err));
 		};
 	</script>
 	

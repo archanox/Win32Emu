@@ -1,4 +1,5 @@
 @inject IJSRuntime JS
+@inject ILogger<VirtualKeyboard> Logger
 
 <!-- Virtual Keyboard for Mobile Devices -->
 <div class="virtual-keyboard @(_isVisible ? "visible" : "")">
@@ -21,82 +22,151 @@
 		<div class="virtual-keyboard-body">
 			<!-- Row 1: Function keys -->
 			<div class="keyboard-row">
-				<button class="key key-small" @onclick="() => TapKey(0x1B)">ESC</button>
-				<button class="key key-small" @onclick="() => TapKey(0x70)">F1</button>
-				<button class="key key-small" @onclick="() => TapKey(0x71)">F2</button>
-				<button class="key key-small" @onclick="() => TapKey(0x72)">F3</button>
-				<button class="key key-small" @onclick="() => TapKey(0x73)">F4</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.Escape)">ESC</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.F1)">F1</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.F2)">F2</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.F3)">F3</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.F4)">F4</button>
 			</div>
 			
 			<!-- Row 2: Numbers -->
 			<div class="keyboard-row">
-				<button class="key" @onclick="() => TapKey(0x31)">1</button>
-				<button class="key" @onclick="() => TapKey(0x32)">2</button>
-				<button class="key" @onclick="() => TapKey(0x33)">3</button>
-				<button class="key" @onclick="() => TapKey(0x34)">4</button>
-				<button class="key" @onclick="() => TapKey(0x35)">5</button>
-				<button class="key" @onclick="() => TapKey(0x36)">6</button>
-				<button class="key" @onclick="() => TapKey(0x37)">7</button>
-				<button class="key" @onclick="() => TapKey(0x38)">8</button>
-				<button class="key" @onclick="() => TapKey(0x39)">9</button>
-				<button class="key" @onclick="() => TapKey(0x30)">0</button>
+				<button class="key" @onclick="() => TapKey(VK.Number1)">1</button>
+				<button class="key" @onclick="() => TapKey(VK.Number2)">2</button>
+				<button class="key" @onclick="() => TapKey(VK.Number3)">3</button>
+				<button class="key" @onclick="() => TapKey(VK.Number4)">4</button>
+				<button class="key" @onclick="() => TapKey(VK.Number5)">5</button>
+				<button class="key" @onclick="() => TapKey(VK.Number6)">6</button>
+				<button class="key" @onclick="() => TapKey(VK.Number7)">7</button>
+				<button class="key" @onclick="() => TapKey(VK.Number8)">8</button>
+				<button class="key" @onclick="() => TapKey(VK.Number9)">9</button>
+				<button class="key" @onclick="() => TapKey(VK.Number0)">0</button>
 			</div>
 			
 			<!-- Row 3: QWERTY -->
 			<div class="keyboard-row">
-				<button class="key" @onclick="() => TapKey(0x51)">Q</button>
-				<button class="key" @onclick="() => TapKey(0x57)">W</button>
-				<button class="key" @onclick="() => TapKey(0x45)">E</button>
-				<button class="key" @onclick="() => TapKey(0x52)">R</button>
-				<button class="key" @onclick="() => TapKey(0x54)">T</button>
-				<button class="key" @onclick="() => TapKey(0x59)">Y</button>
-				<button class="key" @onclick="() => TapKey(0x55)">U</button>
-				<button class="key" @onclick="() => TapKey(0x49)">I</button>
-				<button class="key" @onclick="() => TapKey(0x4F)">O</button>
-				<button class="key" @onclick="() => TapKey(0x50)">P</button>
+				<button class="key" @onclick="() => TapKey(VK.Q)">Q</button>
+				<button class="key" @onclick="() => TapKey(VK.W)">W</button>
+				<button class="key" @onclick="() => TapKey(VK.E)">E</button>
+				<button class="key" @onclick="() => TapKey(VK.R)">R</button>
+				<button class="key" @onclick="() => TapKey(VK.T)">T</button>
+				<button class="key" @onclick="() => TapKey(VK.Y)">Y</button>
+				<button class="key" @onclick="() => TapKey(VK.U)">U</button>
+				<button class="key" @onclick="() => TapKey(VK.I)">I</button>
+				<button class="key" @onclick="() => TapKey(VK.O)">O</button>
+				<button class="key" @onclick="() => TapKey(VK.P)">P</button>
 			</div>
 			
 			<!-- Row 4: ASDF -->
 			<div class="keyboard-row">
-				<button class="key" @onclick="() => TapKey(0x41)">A</button>
-				<button class="key" @onclick="() => TapKey(0x53)">S</button>
-				<button class="key" @onclick="() => TapKey(0x44)">D</button>
-				<button class="key" @onclick="() => TapKey(0x46)">F</button>
-				<button class="key" @onclick="() => TapKey(0x47)">G</button>
-				<button class="key" @onclick="() => TapKey(0x48)">H</button>
-				<button class="key" @onclick="() => TapKey(0x4A)">J</button>
-				<button class="key" @onclick="() => TapKey(0x4B)">K</button>
-				<button class="key" @onclick="() => TapKey(0x4C)">L</button>
-				<button class="key key-medium" @onclick="() => TapKey(0x0D)">ENTER</button>
+				<button class="key" @onclick="() => TapKey(VK.A)">A</button>
+				<button class="key" @onclick="() => TapKey(VK.S)">S</button>
+				<button class="key" @onclick="() => TapKey(VK.D)">D</button>
+				<button class="key" @onclick="() => TapKey(VK.F)">F</button>
+				<button class="key" @onclick="() => TapKey(VK.G)">G</button>
+				<button class="key" @onclick="() => TapKey(VK.H)">H</button>
+				<button class="key" @onclick="() => TapKey(VK.J)">J</button>
+				<button class="key" @onclick="() => TapKey(VK.K)">K</button>
+				<button class="key" @onclick="() => TapKey(VK.L)">L</button>
+				<button class="key key-medium" @onclick="() => TapKey(VK.Enter)">ENTER</button>
 			</div>
 			
 			<!-- Row 5: ZXCV -->
 			<div class="keyboard-row">
-				<button class="key" @onclick="() => TapKey(0x5A)">Z</button>
-				<button class="key" @onclick="() => TapKey(0x58)">X</button>
-				<button class="key" @onclick="() => TapKey(0x43)">C</button>
-				<button class="key" @onclick="() => TapKey(0x56)">V</button>
-				<button class="key" @onclick="() => TapKey(0x42)">B</button>
-				<button class="key" @onclick="() => TapKey(0x4E)">N</button>
-				<button class="key" @onclick="() => TapKey(0x4D)">M</button>
-				<button class="key key-medium" @onclick="() => TapKey(0x20)">SPACE</button>
+				<button class="key" @onclick="() => TapKey(VK.Z)">Z</button>
+				<button class="key" @onclick="() => TapKey(VK.X)">X</button>
+				<button class="key" @onclick="() => TapKey(VK.C)">C</button>
+				<button class="key" @onclick="() => TapKey(VK.V)">V</button>
+				<button class="key" @onclick="() => TapKey(VK.B)">B</button>
+				<button class="key" @onclick="() => TapKey(VK.N)">N</button>
+				<button class="key" @onclick="() => TapKey(VK.M)">M</button>
+				<button class="key key-medium" @onclick="() => TapKey(VK.Space)">SPACE</button>
 			</div>
 			
 			<!-- Row 6: Arrows and special -->
 			<div class="keyboard-row">
-				<button class="key key-small" @onclick="() => TapKey(0x10)">SHIFT</button>
-				<button class="key key-small" @onclick="() => TapKey(0x11)">CTRL</button>
-				<button class="key key-small" @onclick="() => TapKey(0x12)">ALT</button>
-				<button class="key" @onclick="() => TapKey(0x25)">←</button>
-				<button class="key" @onclick="() => TapKey(0x26)">↑</button>
-				<button class="key" @onclick="() => TapKey(0x28)">↓</button>
-				<button class="key" @onclick="() => TapKey(0x27)">→</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.Shift)">SHIFT</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.Control)">CTRL</button>
+				<button class="key key-small" @onclick="() => TapKey(VK.Alt)">ALT</button>
+				<button class="key" @onclick="() => TapKey(VK.Left)">←</button>
+				<button class="key" @onclick="() => TapKey(VK.Up)">↑</button>
+				<button class="key" @onclick="() => TapKey(VK.Down)">↓</button>
+				<button class="key" @onclick="() => TapKey(VK.Right)">→</button>
 			</div>
 		</div>
 	}
 </div>
 
 @code {
+	/// <summary>
+	/// Win32 Virtual Key Codes
+	/// Reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+	/// </summary>
+	private static class VK
+	{
+		// Special keys
+		public const int Escape = 0x1B;
+		public const int Space = 0x20;
+		public const int Enter = 0x0D;
+		
+		// Function keys
+		public const int F1 = 0x70;
+		public const int F2 = 0x71;
+		public const int F3 = 0x72;
+		public const int F4 = 0x73;
+		
+		// Numbers
+		public const int Number0 = 0x30;
+		public const int Number1 = 0x31;
+		public const int Number2 = 0x32;
+		public const int Number3 = 0x33;
+		public const int Number4 = 0x34;
+		public const int Number5 = 0x35;
+		public const int Number6 = 0x36;
+		public const int Number7 = 0x37;
+		public const int Number8 = 0x38;
+		public const int Number9 = 0x39;
+		
+		// Letters
+		public const int A = 0x41;
+		public const int B = 0x42;
+		public const int C = 0x43;
+		public const int D = 0x44;
+		public const int E = 0x45;
+		public const int F = 0x46;
+		public const int G = 0x47;
+		public const int H = 0x48;
+		public const int I = 0x49;
+		public const int J = 0x4A;
+		public const int K = 0x4B;
+		public const int L = 0x4C;
+		public const int M = 0x4D;
+		public const int N = 0x4E;
+		public const int O = 0x4F;
+		public const int P = 0x50;
+		public const int Q = 0x51;
+		public const int R = 0x52;
+		public const int S = 0x53;
+		public const int T = 0x54;
+		public const int U = 0x55;
+		public const int V = 0x56;
+		public const int W = 0x57;
+		public const int X = 0x58;
+		public const int Y = 0x59;
+		public const int Z = 0x5A;
+		
+		// Modifier keys
+		public const int Shift = 0x10;
+		public const int Control = 0x11;
+		public const int Alt = 0x12;
+		
+		// Arrow keys
+		public const int Left = 0x25;
+		public const int Up = 0x26;
+		public const int Right = 0x27;
+		public const int Down = 0x28;
+	}
+
 	private bool _isVisible = false;
 
 	private async Task TapKey(int vkCode)
@@ -107,7 +177,7 @@
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Error tapping key {vkCode}: {ex.Message}");
+			Logger.LogError(ex, "Error tapping virtual key {VkCode}", vkCode);
 		}
 	}
 
