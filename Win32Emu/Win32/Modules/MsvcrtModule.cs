@@ -272,7 +272,7 @@ namespace Win32Emu.Win32.Modules
 					returnValue = (uint)toupper(a.Int32(0));
 					return true;
 				case "_ISMBBLEAD":
-					returnValue = (uint)_ismbblead(a.UInt32(0));
+					returnValue = (uint)_ismbblead(a.Int32(0));
 					return true;
 				case "_FPRESET":
 					_fpreset();
@@ -1207,7 +1207,7 @@ namespace Win32Emu.Win32.Modules
 	/// Returns non-zero if the byte is a lead byte, 0 otherwise
 	/// </summary>
 	[DllModuleExport(4)]
-	private int _ismbblead(uint c)
+	private int _ismbblead(int c)
 	{
 		_logger.LogInformation("[msvcrt] _ismbblead(0x{C:X2})", c);
 		
