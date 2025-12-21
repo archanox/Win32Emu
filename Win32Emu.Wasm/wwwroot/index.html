@@ -811,6 +811,23 @@
 			}
 		};
 		
+		// Fetch binary data from URL (for loading sample executables)
+		window.fetchBinary = async (url) => {
+			try {
+				const response = await fetch(url);
+				if (!response.ok) {
+					console.error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+					return null;
+				}
+				const arrayBuffer = await response.arrayBuffer();
+				const uint8Array = new Uint8Array(arrayBuffer);
+				return uint8Array;
+			} catch (err) {
+				console.error(`Error fetching binary from ${url}:`, err);
+				return null;
+			}
+		};
+		
 		// ===========================================
 		// Input System - Keyboard and Mouse Event Handling
 		// ===========================================

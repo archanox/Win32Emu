@@ -169,6 +169,34 @@
 				</div>
 			</div>
 
+			<!-- Sample Executables -->
+			<div class="card mb-3">
+				<div class="card-header">
+					<strong>📦 Sample Executables</strong>
+				</div>
+				<div class="card-body">
+					<p class="small text-muted">
+						Try these DirectDraw examples to test the emulator:
+					</p>
+					<div class="d-grid gap-2">
+						<button class="btn btn-outline-primary btn-sm" 
+								@onclick="() => LoadSampleExecutable(\"simple_ddraw.exe\")"
+								disabled="@_isRunning">
+							<i class="bi bi-file-earmark-code"></i> Simple DirectDraw
+							<br />
+							<small class="text-muted">Basic DirectDraw test with animated pattern</small>
+						</button>
+						<button class="btn btn-outline-primary btn-sm" 
+								@onclick="() => LoadSampleExecutable(\"hugi.exe\")"
+								disabled="@_isRunning">
+							<i class="bi bi-file-earmark-code"></i> Hugi DirectDraw Example
+							<br />
+							<small class="text-muted">Advanced example from Hugi 16 article</small>
+						</button>
+					</div>
+				</div>
+			</div>
+
 			<!-- Status Info -->
 			<div class="card mb-3">
 				<div class="card-header">
@@ -846,6 +874,51 @@
 			len = len / 1024;
 		}
 		return $"{len:0.##} {sizes[order]}";
+	}
+
+	/// <summary>
+	/// Load a sample executable from the wwwroot/samples directory
+	/// </summary>
+	private async Task LoadSampleExecutable(string fileName)
+	{
+		try
+		{
+			AddDebugOutput($"Loading sample: {fileName}");
+			
+			// Fetch the sample executable from wwwroot/samples
+			var response = await JS.InvokeAsync<string>("fetch", $"samples/{fileName}");
+			if (string.IsNullOrEmpty(response))
+			{
+				AddDebugOutput($"Failed to load sample: {fileName}");
+				return;
+			}
+			
+			// Convert response to byte array
+			var bytes = await JS.InvokeAsync<byte[]>("fetchBinary", $"samples/{fileName}");
+			if (bytes == null || bytes.Length == 0)
+			{
+				AddDebugOutput($"Failed to download sample: {fileName}");
+				return;
+			}
+			
+			_executableData = bytes;
+			_loadedFileName = fileName;
+			_loadedFileSize = bytes.Length;
+			_executableLoaded = true;
+			_folderMode = false;
+			_loadedFiles.Clear();
+			_discoveredExecutables.Clear();
+			
+			AddDebugOutput($"Sample loaded: {fileName} ({FormatFileSize(_loadedFileSize)})");
+			Logger.LogInformation("Sample executable loaded: {FileName} ({Size} bytes)", fileName, _loadedFileSize);
+			
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			AddDebugOutput($"Error loading sample: {ex.Message}");
+			Logger.LogError(ex, "Error loading sample executable");
+		}
 	}
 
 	// Helper class for folder file data from JavaScript
