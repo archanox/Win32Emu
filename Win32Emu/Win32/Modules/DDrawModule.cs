@@ -1066,6 +1066,86 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Created IDirectDrawSurface COM object at 0x{ComObjectAddr:X8} for surface 0x{SurfaceHandle:X8}", comObjectAddr, surfaceHandle);
+			
+			// Auto-initialize rendering backend when primary surface is created
+			// Some applications create primary surfaces without calling SetDisplayMode first
+			// This ensures the backend is initialized and ready to render
+			if (isPrimary && ddrawObj.RenderingBackend != null && !ddrawObj.RenderingBackend.IsInitialized)
+			{
+				// Check if we have valid dimensions for initialization
+				if (surfaceWidth > 0 && surfaceHeight > 0)
+				{
+					_logger.LogInformation("[DDraw] Auto-initializing rendering backend for primary surface ({Width}x{Height})", surfaceWidth, surfaceHeight);
+					
+					// Ensure display mode dimensions are set
+					if (ddrawObj.Width <= 0 || ddrawObj.Height <= 0)
+					{
+						ddrawObj.Width = (int)surfaceWidth;
+						ddrawObj.Height = (int)surfaceHeight;
+						_logger.LogInformation("[DDraw] Set display mode dimensions from primary surface: {Width}x{Height}", surfaceWidth, surfaceHeight);
+					}
+					
+					// Initialize the rendering backend
+					var title = "Win32Emu DirectDraw";
+					if (PlatformHelpers.IsWasm)
+					{
+						// In WASM mode, we need to properly await initialization
+						// Initialize frame buffering queue for WASM mode
+						ddrawObj.PendingFrames = new Queue<PendingFrameData>();
+						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode (auto-init)");
+						
+						try
+						{
+							var success = ddrawObj.RenderingBackend.InitializeAsync((int)surfaceWidth, (int)surfaceHeight, title).GetAwaiter().GetResult();
+							if (success)
+							{
+								_logger.LogInformation("[DDraw] Rendering backend auto-initialized successfully with {Width}x{Height} (WASM mode)", surfaceWidth, surfaceHeight);
+								
+								// Subscribe to UI events from the rendering backend
+								_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
+								_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend (auto-init)");
+							}
+							else
+							{
+								_logger.LogWarning("[DDraw] Rendering backend auto-initialization returned false (WASM mode)");
+							}
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "[DDraw] Rendering backend auto-initialization failed (WASM mode)");
+						}
+					}
+					else
+					{
+						// Non-WASM platforms
+						try
+						{
+							var success = ddrawObj.RenderingBackend.InitializeAsync((int)surfaceWidth, (int)surfaceHeight, title).GetAwaiter().GetResult();
+							if (success)
+							{
+								_logger.LogInformation("[DDraw] Rendering backend auto-initialized successfully with {Width}x{Height}", surfaceWidth, surfaceHeight);
+								
+								// Subscribe to UI events from the rendering backend
+								_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
+								_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend (auto-init)");
+							}
+							else
+							{
+								_logger.LogWarning("[DDraw] Rendering backend auto-initialization failed");
+							}
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "[DDraw] Rendering backend auto-initialization failed");
+						}
+					}
+				}
+				else
+				{
+					_logger.LogWarning("[DDraw] Cannot auto-initialize rendering backend: invalid surface dimensions ({Width}x{Height})", surfaceWidth, surfaceHeight);
+				}
+			}
+			
 			return (uint)DDResult.DD_OK;
 		}
 
