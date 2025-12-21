@@ -1856,7 +1856,26 @@ namespace Win32Emu.Win32.Modules
 			{
 				try
 				{
-					// If the surface is dirty (e.g., modified by BltFast), update the rendering backend
+					// For flipping chains, copy the backbuffer to the primary surface before displaying
+					// This is the standard DirectDraw page-flipping mechanism
+					if (surface.AttachedSurfaces.Count > 0)
+					{
+						// Get the first attached surface (backbuffer)
+						var backBufferHandle = surface.AttachedSurfaces[0];
+						if (_surfaces.TryGetValue(backBufferHandle, out var backBuffer) && backBuffer.Bits != null && surface.Bits != null)
+						{
+							_logger.LogDebug("[DDraw] Copying backbuffer (0x{BackBufferHandle:X8}) to primary surface (0x{PrimaryHandle:X8}) for flip", 
+								backBufferHandle, surface.Handle);
+							
+							// Copy backbuffer contents to primary surface
+							Array.Copy(backBuffer.Bits, surface.Bits, Math.Min(backBuffer.Bits.Length, surface.Bits.Length));
+							
+							// Mark primary surface as dirty so it gets updated
+							surface.IsTextureDirty = true;
+						}
+					}
+
+					// If the surface is dirty (e.g., modified by BltFast or copied from backbuffer), update the rendering backend
 					if (surface.IsTextureDirty)
 					{
 						_logger.LogDebug("[DDraw] Surface is dirty, updating rendering backend before flip");
