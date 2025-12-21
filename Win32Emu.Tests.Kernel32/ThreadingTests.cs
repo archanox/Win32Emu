@@ -14,6 +14,17 @@ public sealed class ThreadingTests : IDisposable
     // Constants for CRITICAL_SECTION structure
     private const uint CRITICAL_SECTION_SIZE = 24;
     private const uint CRITICAL_SECTION_UNLOCKED = unchecked((uint)-1);
+    
+    // Thread access rights constants
+    private const uint THREAD_ALL_ACCESS = 0x1F03FF;
+    private const uint THREAD_QUERY_INFORMATION = 0x0040;
+    
+    // Thread creation flags
+    private const uint CREATE_SUSPENDED = 0x4;
+    
+    // Test constants
+    private const uint TEST_STACK_SIZE = 0x8000;
+    private const uint TEST_START_ADDRESS = 0x00401000;
 
     public ThreadingTests()
     {
@@ -516,7 +527,6 @@ public sealed class ThreadingTests : IDisposable
     {
         // Arrange
         var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
-        const uint THREAD_ALL_ACCESS = 0x1F03FF;
         
         // Act
         var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
@@ -533,7 +543,6 @@ public sealed class ThreadingTests : IDisposable
     {
         // Arrange
         const uint invalidThreadId = 9999u;
-        const uint THREAD_ALL_ACCESS = 0x1F03FF;
         
         // Act
         var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
@@ -549,22 +558,17 @@ public sealed class ThreadingTests : IDisposable
     public void OpenThread_WithValidThreadId_ReturnsSameHandleAsOriginal()
     {
         // Arrange - Create a thread
-        var stackSize = 0x8000u;
-        var startAddress = 0x00401000u;
-        var parameter = 0u;
-        var creationFlags = 0x4u; // CREATE_SUSPENDED
         var threadIdPtr = _testEnv.AllocateMemory(4);
         
         var originalHandle = _testEnv.CallKernel32Api("CREATETHREAD", 
-            0u,              // lpThreadAttributes
-            stackSize,
-            startAddress,
-            parameter,
-            creationFlags,
+            0u,                  // lpThreadAttributes
+            TEST_STACK_SIZE,
+            TEST_START_ADDRESS,
+            0u,                  // parameter
+            CREATE_SUSPENDED,
             threadIdPtr);
         
         var threadId = _testEnv.Memory.Read32(threadIdPtr);
-        const uint THREAD_ALL_ACCESS = 0x1F03FF;
         
         // Act - Open the same thread
         var openedHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
@@ -582,7 +586,6 @@ public sealed class ThreadingTests : IDisposable
     {
         // Arrange
         var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
-        const uint THREAD_QUERY_INFORMATION = 0x0040;
         
         // Act
         var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
@@ -599,7 +602,6 @@ public sealed class ThreadingTests : IDisposable
     {
         // Arrange
         var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
-        const uint THREAD_ALL_ACCESS = 0x1F03FF;
         
         // Act
         var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
