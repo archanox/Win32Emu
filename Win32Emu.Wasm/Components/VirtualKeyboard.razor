@@ -1,0 +1,133 @@
+@inject IJSRuntime JS
+
+<!-- Virtual Keyboard for Mobile Devices -->
+<div class="virtual-keyboard @(_isVisible ? "visible" : "")">
+	<div class="virtual-keyboard-header">
+		<span>Virtual Keyboard</span>
+		<button class="btn-close" @onclick="ToggleVisibility" aria-label="Toggle keyboard">
+			@if (_isVisible)
+			{
+				<text>▼</text>
+			}
+			else
+			{
+				<text>⌨️</text>
+			}
+		</button>
+	</div>
+	
+	@if (_isVisible)
+	{
+		<div class="virtual-keyboard-body">
+			<!-- Row 1: Function keys -->
+			<div class="keyboard-row">
+				<button class="key key-small" @onclick="() => TapKey(0x1B)">ESC</button>
+				<button class="key key-small" @onclick="() => TapKey(0x70)">F1</button>
+				<button class="key key-small" @onclick="() => TapKey(0x71)">F2</button>
+				<button class="key key-small" @onclick="() => TapKey(0x72)">F3</button>
+				<button class="key key-small" @onclick="() => TapKey(0x73)">F4</button>
+			</div>
+			
+			<!-- Row 2: Numbers -->
+			<div class="keyboard-row">
+				<button class="key" @onclick="() => TapKey(0x31)">1</button>
+				<button class="key" @onclick="() => TapKey(0x32)">2</button>
+				<button class="key" @onclick="() => TapKey(0x33)">3</button>
+				<button class="key" @onclick="() => TapKey(0x34)">4</button>
+				<button class="key" @onclick="() => TapKey(0x35)">5</button>
+				<button class="key" @onclick="() => TapKey(0x36)">6</button>
+				<button class="key" @onclick="() => TapKey(0x37)">7</button>
+				<button class="key" @onclick="() => TapKey(0x38)">8</button>
+				<button class="key" @onclick="() => TapKey(0x39)">9</button>
+				<button class="key" @onclick="() => TapKey(0x30)">0</button>
+			</div>
+			
+			<!-- Row 3: QWERTY -->
+			<div class="keyboard-row">
+				<button class="key" @onclick="() => TapKey(0x51)">Q</button>
+				<button class="key" @onclick="() => TapKey(0x57)">W</button>
+				<button class="key" @onclick="() => TapKey(0x45)">E</button>
+				<button class="key" @onclick="() => TapKey(0x52)">R</button>
+				<button class="key" @onclick="() => TapKey(0x54)">T</button>
+				<button class="key" @onclick="() => TapKey(0x59)">Y</button>
+				<button class="key" @onclick="() => TapKey(0x55)">U</button>
+				<button class="key" @onclick="() => TapKey(0x49)">I</button>
+				<button class="key" @onclick="() => TapKey(0x4F)">O</button>
+				<button class="key" @onclick="() => TapKey(0x50)">P</button>
+			</div>
+			
+			<!-- Row 4: ASDF -->
+			<div class="keyboard-row">
+				<button class="key" @onclick="() => TapKey(0x41)">A</button>
+				<button class="key" @onclick="() => TapKey(0x53)">S</button>
+				<button class="key" @onclick="() => TapKey(0x44)">D</button>
+				<button class="key" @onclick="() => TapKey(0x46)">F</button>
+				<button class="key" @onclick="() => TapKey(0x47)">G</button>
+				<button class="key" @onclick="() => TapKey(0x48)">H</button>
+				<button class="key" @onclick="() => TapKey(0x4A)">J</button>
+				<button class="key" @onclick="() => TapKey(0x4B)">K</button>
+				<button class="key" @onclick="() => TapKey(0x4C)">L</button>
+				<button class="key key-medium" @onclick="() => TapKey(0x0D)">ENTER</button>
+			</div>
+			
+			<!-- Row 5: ZXCV -->
+			<div class="keyboard-row">
+				<button class="key" @onclick="() => TapKey(0x5A)">Z</button>
+				<button class="key" @onclick="() => TapKey(0x58)">X</button>
+				<button class="key" @onclick="() => TapKey(0x43)">C</button>
+				<button class="key" @onclick="() => TapKey(0x56)">V</button>
+				<button class="key" @onclick="() => TapKey(0x42)">B</button>
+				<button class="key" @onclick="() => TapKey(0x4E)">N</button>
+				<button class="key" @onclick="() => TapKey(0x4D)">M</button>
+				<button class="key key-medium" @onclick="() => TapKey(0x20)">SPACE</button>
+			</div>
+			
+			<!-- Row 6: Arrows and special -->
+			<div class="keyboard-row">
+				<button class="key key-small" @onclick="() => TapKey(0x10)">SHIFT</button>
+				<button class="key key-small" @onclick="() => TapKey(0x11)">CTRL</button>
+				<button class="key key-small" @onclick="() => TapKey(0x12)">ALT</button>
+				<button class="key" @onclick="() => TapKey(0x25)">←</button>
+				<button class="key" @onclick="() => TapKey(0x26)">↑</button>
+				<button class="key" @onclick="() => TapKey(0x28)">↓</button>
+				<button class="key" @onclick="() => TapKey(0x27)">→</button>
+			</div>
+		</div>
+	}
+</div>
+
+@code {
+	private bool _isVisible = false;
+
+	private async Task TapKey(int vkCode)
+	{
+		try
+		{
+			await JS.InvokeVoidAsync("tapVirtualKey", vkCode);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Error tapping key {vkCode}: {ex.Message}");
+		}
+	}
+
+	private void ToggleVisibility()
+	{
+		_isVisible = !_isVisible;
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public void Show()
+	{
+		_isVisible = true;
+		StateHasChanged();
+	}
+
+	[JSInvokable]
+	public void Hide()
+	{
+		_isVisible = false;
+		StateHasChanged();
+	}
+}
