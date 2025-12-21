@@ -885,15 +885,7 @@
 		{
 			AddDebugOutput($"Loading sample: {fileName}");
 			
-			// Fetch the sample executable from wwwroot/samples
-			var response = await JS.InvokeAsync<string>("fetch", $"samples/{fileName}");
-			if (string.IsNullOrEmpty(response))
-			{
-				AddDebugOutput($"Failed to load sample: {fileName}");
-				return;
-			}
-			
-			// Convert response to byte array
+			// Fetch the sample executable from wwwroot/samples as a byte array
 			var bytes = await JS.InvokeAsync<byte[]>("fetchBinary", $"samples/{fileName}");
 			if (bytes == null || bytes.Length == 0)
 			{
