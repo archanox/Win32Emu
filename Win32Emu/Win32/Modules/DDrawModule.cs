@@ -4018,6 +4018,10 @@ namespace Win32Emu.Win32.Modules
 					// Subscribe to UI events from the rendering backend
 					_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
+					
+					// Process any frames that were buffered before initialization completed
+					// This is critical for WASM where async initialization may take time
+					ProcessPendingFrames(ddrawObj);
 				}
 				else
 				{
