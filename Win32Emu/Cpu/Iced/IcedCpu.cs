@@ -6063,64 +6063,101 @@ public class IcedCpu : IAsyncCpu
 	}
 
 	/// <summary>
-	/// Safe memory read that handles segment wrapping in 16-bit real mode.
-	/// In real mode, when a 16-bit access starts at offset 0xFFFF, it wraps to offset 0x0000.
+	/// Safe memory read that handles segment boundary checking in 16-bit real mode.
+	/// In real mode on 80386, when a 16-bit access would cross the 64KB segment boundary,
+	/// a General Protection Fault (#GP, vector 13) is triggered if the IVT is initialized.
 	/// </summary>
 	private ushort SafeRead16(Instruction insn, uint addr)
 	{
-		// In 16-bit real mode, handle segment wrapping
+		// In 16-bit real mode, check for segment boundary violations
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
 			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
-			// Check if the 16-bit read would wrap at the segment boundary
+			// Check if the 16-bit read would cross the segment boundary
+			// A 16-bit (2-byte) read starting at offset 0xFFFF would extend to 0x10000
 			if (offset16 == 0xFFFF)
 			{
-				// Read crosses segment boundary: read byte at 0xFFFF and byte at 0x0000 (wrapped)
+				// Check if IVT entry for #GP (vector 13) is initialized
+				// IVT entry is at address 52 (13 * 4)
+				var ivtAddr = 13u * 4;
+				if (ivtAddr + 3 < _mem.Size)
+				{
+					var ivtIp = _mem.Read16(ivtAddr);
+					var ivtCs = _mem.Read16(ivtAddr + 2);
+					
+					// Only trigger exception if IVT entry is non-zero (initialized)
+					if (ivtIp != 0 || ivtCs != 0)
+					{
+						// Trigger General Protection Fault (#GP, vector 13)
+						// This matches real 80386 hardware behavior in real mode
+						GenerateException(13, _eip, _mem);
+						
+						// Return 0 as a dummy value - the exception will change EIP
+						// so this instruction won't actually complete
+						return 0;
+					}
+				}
+				
+				// IVT not initialized - fall through to wraparound behavior
+				// Read byte at 0xFFFF and byte at 0x0000 (wrapped)
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
-
-				// Read low byte from offset 0xFFFF
+				
 				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
 				var lowByte = _mem.Read8(addrHigh);
 				
-				// Read high byte from offset 0x0000 (wrapped)
 				var addrLow = (uint)((segmentValue << 4) + 0x0000);
 				var highByte = _mem.Read8(addrLow);
 				
-				// Combine bytes (little-endian)
 				return (ushort)(lowByte | (highByte << 8));
 			}
 		}
 
-		// Normal read (no segment wrap)
+		// Normal read (no segment boundary violation)
 		return _mem.Read16(addr);
 	}
 
 	/// <summary>
-	/// Safe memory read that handles segment wrapping in 16-bit real mode.
-	/// In real mode, 32-bit accesses that cross segment boundaries wrap around.
+	/// Safe memory read that handles segment boundary checking in 16-bit real mode.
+	/// In real mode on 80386, when a 32-bit access would cross the 64KB segment boundary,
+	/// a General Protection Fault (#GP, vector 13) is triggered if the IVT is initialized.
 	/// </summary>
 	private uint SafeRead32(Instruction insn, uint addr)
 	{
-		// In 16-bit real mode, handle segment wrapping for 32-bit reads
+		// In 16-bit real mode, check for segment boundary violations
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
 			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
-			// Check if the 32-bit read would wrap at the segment boundary
-			if (offset16 >= 0xFFFD) // 0xFFFD, 0xFFFE, or 0xFFFF would cause wrap
+			// Check if the 32-bit read would cross the segment boundary
+			// A 32-bit (4-byte) read starting at 0xFFFD, 0xFFFE, or 0xFFFF would extend past 0xFFFF
+			if (offset16 >= 0xFFFD)
 			{
-				// Read crosses segment boundary - read byte by byte with wrapping
+				// Check if IVT entry for #GP (vector 13) is initialized
+				var ivtAddr = 13u * 4;
+				if (ivtAddr + 3 < _mem.Size)
+				{
+					var ivtIp = _mem.Read16(ivtAddr);
+					var ivtCs = _mem.Read16(ivtAddr + 2);
+					
+					if (ivtIp != 0 || ivtCs != 0)
+					{
+						GenerateException(13, _eip, _mem);
+						return 0;
+					}
+				}
+				
+				// IVT not initialized - fall through to wraparound behavior
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
-
+				
 				uint result = 0;
 				for (int i = 0; i < 4; i++)
 				{
-					var byteOffset = (ushort)((offset16 + i) & 0xFFFF); // Wrap at 64KB
+					var byteOffset = (ushort)((offset16 + i) & 0xFFFF);
 					var physAddr = (uint)((segmentValue << 4) + byteOffset);
 					var b = _mem.Read8(physAddr);
 					result |= ((uint)b << (i * 8));
@@ -6129,34 +6166,47 @@ public class IcedCpu : IAsyncCpu
 			}
 		}
 
-		// Normal read (no segment wrap)
+		// Normal read (no segment boundary violation)
 		return _mem.Read32(addr);
 	}
 
 	/// <summary>
-	/// Safe memory write that handles segment wrapping in 16-bit real mode.
-	/// In real mode, when a 16-bit write starts at offset 0xFFFF, it wraps to offset 0x0000.
+	/// Safe memory write that handles segment boundary checking in 16-bit real mode.
+	/// In real mode on 80386, when a 16-bit write would cross the 64KB segment boundary,
+	/// a General Protection Fault (#GP, vector 13) is triggered if the IVT is initialized.
 	/// </summary>
 	private void SafeWrite16(Instruction insn, uint addr, ushort value)
 	{
-		// In 16-bit real mode, handle segment wrapping
+		// In 16-bit real mode, check for segment boundary violations
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
 			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
-			// Check if the 16-bit write would wrap at the segment boundary
+			// Check if the 16-bit write would cross the segment boundary
 			if (offset16 == 0xFFFF)
 			{
-				// Write crosses segment boundary: write byte at 0xFFFF and byte at 0x0000 (wrapped)
+				// Check if IVT entry for #GP (vector 13) is initialized
+				var ivtAddr = 13u * 4;
+				if (ivtAddr + 3 < _mem.Size)
+				{
+					var ivtIp = _mem.Read16(ivtAddr);
+					var ivtCs = _mem.Read16(ivtAddr + 2);
+					
+					if (ivtIp != 0 || ivtCs != 0)
+					{
+						GenerateException(13, _eip, _mem);
+						return;
+					}
+				}
+				
+				// IVT not initialized - fall through to wraparound behavior
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
-
-				// Write low byte to offset 0xFFFF
+				
 				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
 				_mem.Write8(addrHigh, (byte)(value & 0xFF));
 				
-				// Write high byte to offset 0x0000 (wrapped)
 				var addrLow = (uint)((segmentValue << 4) + 0x0000);
 				_mem.Write8(addrLow, (byte)((value >> 8) & 0xFF));
 				
@@ -6164,32 +6214,47 @@ public class IcedCpu : IAsyncCpu
 			}
 		}
 
-		// Normal write (no segment wrap)
+		// Normal write (no segment boundary violation)
 		_mem.Write16(addr, value);
 	}
 
 	/// <summary>
-	/// Safe memory write that handles segment wrapping in 16-bit real mode.
-	/// In real mode, 32-bit writes that cross segment boundaries wrap around.
+	/// Safe memory write that handles segment boundary checking in 16-bit real mode.
+	/// In real mode on 80386, when a 32-bit write would cross the 64KB segment boundary,
+	/// a General Protection Fault (#GP, vector 13) is triggered if the IVT is initialized.
 	/// </summary>
 	private void SafeWrite32(Instruction insn, uint addr, uint value)
 	{
-		// In 16-bit real mode, handle segment wrapping for 32-bit writes
+		// In 16-bit real mode, check for segment boundary violations
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
 			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
 			
-			// Check if the 32-bit write would wrap at the segment boundary
-			if (offset16 >= 0xFFFD) // 0xFFFD, 0xFFFE, or 0xFFFF would cause wrap
+			// Check if the 32-bit write would cross the segment boundary
+			if (offset16 >= 0xFFFD)
 			{
-				// Write crosses segment boundary - write byte by byte with wrapping
+				// Check if IVT entry for #GP (vector 13) is initialized
+				var ivtAddr = 13u * 4;
+				if (ivtAddr + 3 < _mem.Size)
+				{
+					var ivtIp = _mem.Read16(ivtAddr);
+					var ivtCs = _mem.Read16(ivtAddr + 2);
+					
+					if (ivtIp != 0 || ivtCs != 0)
+					{
+						GenerateException(13, _eip, _mem);
+						return;
+					}
+				}
+				
+				// IVT not initialized - fall through to wraparound behavior
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
-
+				
 				for (int i = 0; i < 4; i++)
 				{
-					var byteOffset = (ushort)((offset16 + i) & 0xFFFF); // Wrap at 64KB
+					var byteOffset = (ushort)((offset16 + i) & 0xFFFF);
 					var physAddr = (uint)((segmentValue << 4) + byteOffset);
 					var b = (byte)((value >> (i * 8)) & 0xFF);
 					_mem.Write8(physAddr, b);
@@ -6198,7 +6263,7 @@ public class IcedCpu : IAsyncCpu
 			}
 		}
 
-		// Normal write (no segment wrap)
+		// Normal write (no segment boundary violation)
 		_mem.Write32(addr, value);
 	}
 
