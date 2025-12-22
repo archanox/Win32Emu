@@ -184,7 +184,7 @@ namespace Win32Emu.Win32.Modules
 				new("Compact", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Compact>(async (cpu, mem) => await Task.FromResult(DDraw_Compact(cpu, mem)))),
 				new("CreateClipper", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateClipper>(async (cpu, mem) => await Task.FromResult(DDraw_CreateClipper(cpu, mem)))),
 				new("CreatePalette", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreatePalette>(async (cpu, mem) => await Task.FromResult(DDraw_CreatePalette(cpu, mem)))),
-				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_CreateSurface(cpu, mem)))),
+				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await DDraw_CreateSurfaceAsync(cpu, mem))),
 				new("DuplicateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.DuplicateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_DuplicateSurface(cpu, mem)))),
 				new("EnumDisplayModes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumDisplayModes>(async (cpu, mem) => await Task.FromResult(DDraw_EnumDisplayModes(cpu, mem)))),
 				new("EnumSurfaces", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumSurfaces>(async (cpu, mem) => await Task.FromResult(DDraw_EnumSurfaces(cpu, mem)))),
@@ -273,7 +273,7 @@ namespace Win32Emu.Win32.Modules
 				new("Compact", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Compact>(async (cpu, mem) => await Task.FromResult(DDraw_Compact(cpu, mem)))),
 				new("CreateClipper", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateClipper>(async (cpu, mem) => await Task.FromResult(DDraw_CreateClipper(cpu, mem)))),
 				new("CreatePalette", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreatePalette>(async (cpu, mem) => await Task.FromResult(DDraw_CreatePalette(cpu, mem)))),
-				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_CreateSurface(cpu, mem)))),
+				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await DDraw_CreateSurfaceAsync(cpu, mem))),
 				new("DuplicateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.DuplicateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_DuplicateSurface(cpu, mem)))),
 				new("EnumDisplayModes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumDisplayModes>(async (cpu, mem) => await Task.FromResult(DDraw_EnumDisplayModes(cpu, mem)))),
 				new("EnumSurfaces", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumSurfaces>(async (cpu, mem) => await Task.FromResult(DDraw_EnumSurfaces(cpu, mem)))),
@@ -826,7 +826,28 @@ namespace Win32Emu.Win32.Modules
 			return (uint)DDResult.DD_OK;
 		}
 
+		/// <summary>
+		/// Synchronous wrapper for DDraw_CreateSurfaceAsync.
+		/// This is kept for compatibility with non-WASM platforms.
+		/// On WASM, this should not be called - use DDraw_CreateSurfaceAsync instead.
+		/// </summary>
 		private uint DDraw_CreateSurface(ICpu cpu, VirtualMemory memory)
+		{
+			// For non-WASM platforms, we can use GetAwaiter().GetResult()
+			// For WASM, the async version should be called directly from the vtable
+			if (PlatformHelpers.IsWasm)
+			{
+				_logger.LogError("[DDraw] DDraw_CreateSurface called on WASM - this should use async path");
+				return (uint)DDResult.DDERR_GENERIC;
+			}
+			
+			return DDraw_CreateSurfaceAsync(cpu, memory).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of CreateSurface that supports WASM.
+		/// </summary>
+		private async Task<uint> DDraw_CreateSurfaceAsync(ICpu cpu, VirtualMemory memory)
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
@@ -1073,7 +1094,7 @@ namespace Win32Emu.Win32.Modules
 			if (isPrimary && ddrawObj.RenderingBackend != null && !ddrawObj.RenderingBackend.IsInitialized)
 			{
 				_logger.LogInformation("[DDraw] Auto-initializing rendering backend for primary surface ({Width}x{Height})", surfaceWidth, surfaceHeight);
-				InitializeRenderingBackendWithDimensions(ddrawObj, surfaceWidth, surfaceHeight, updateEnvironment: true);
+				await InitializeRenderingBackendWithDimensionsAsync(ddrawObj, surfaceWidth, surfaceHeight, updateEnvironment: true);
 			}
 			
 			return (uint)DDResult.DD_OK;
@@ -3922,7 +3943,25 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Initializes the rendering backend with the specified dimensions.
+		/// Synchronous wrapper for InitializeRenderingBackendWithDimensionsAsync.
+		/// This is kept for compatibility with non-WASM platforms.
+		/// On WASM, this should not be called - use InitializeRenderingBackendWithDimensionsAsync instead.
+		/// </summary>
+		private void InitializeRenderingBackendWithDimensions(DirectDrawObject ddrawObj, uint width, uint height, bool updateEnvironment = true)
+		{
+			// For non-WASM platforms, we can use GetAwaiter().GetResult()
+			// For WASM, the async version should be called directly
+			if (PlatformHelpers.IsWasm)
+			{
+				_logger.LogError("[DDraw] InitializeRenderingBackendWithDimensions called on WASM - this should use async path");
+				return;
+			}
+			
+			InitializeRenderingBackendWithDimensionsAsync(ddrawObj, width, height, updateEnvironment).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Initializes the rendering backend with the specified dimensions (async version).
 		/// This method handles backend initialization, frame buffering setup for WASM,
 		/// UI event subscription, and proper error handling.
 		/// </summary>
@@ -3930,7 +3969,7 @@ namespace Win32Emu.Win32.Modules
 		/// <param name="width">Width for backend initialization</param>
 		/// <param name="height">Height for backend initialization</param>
 		/// <param name="updateEnvironment">Whether to update environment display variables (for auto-init from CreateSurface)</param>
-		private void InitializeRenderingBackendWithDimensions(DirectDrawObject ddrawObj, uint width, uint height, bool updateEnvironment = true)
+		private async Task InitializeRenderingBackendWithDimensionsAsync(DirectDrawObject ddrawObj, uint width, uint height, bool updateEnvironment = true)
 		{
 			// Validate dimensions
 			if (width <= 0 || height <= 0)
@@ -3971,7 +4010,7 @@ namespace Win32Emu.Win32.Modules
 			try
 			{
 				var platformSuffix = PlatformHelpers.IsWasm ? " (WASM mode)" : "";
-				var success = ddrawObj.RenderingBackend.InitializeAsync((int)width, (int)height, title).GetAwaiter().GetResult();
+				var success = await ddrawObj.RenderingBackend.InitializeAsync((int)width, (int)height, title);
 				if (success)
 				{
 					_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}{Platform}", width, height, platformSuffix);
