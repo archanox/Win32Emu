@@ -50,6 +50,7 @@ public class WasmRenderingBackend : IRenderingBackend
 	{
 		if (_initialized)
 		{
+			_logger.LogInformation("[WASM] InitializeAsync called but already initialized");
 			return true;
 		}
 
@@ -59,12 +60,15 @@ public class WasmRenderingBackend : IRenderingBackend
 			_height = height;
 			_frameBuffer = new byte[width * height * BytesPerPixelRgba]; // RGBA format
 			
-			_logger.LogInformation("[WASM] Initializing rendering backend ({Width}x{Height})", width, height);
+			_logger.LogInformation("[WASM] InitializeAsync starting: ({Width}x{Height})", width, height);
+			_logger.LogInformation("[WASM] Calling JavaScript initializeEmulator with canvasId: {CanvasId}", _canvasId);
 			
 			await _jsRuntime.InvokeVoidAsync("initializeEmulator", _canvasId);
 			
 			_initialized = true;
-			_logger.LogInformation("[WASM] Rendering backend initialized successfully");
+			_logger.LogInformation("[WASM] Rendering backend initialized successfully - canvas ready for updates");
+			_logger.LogInformation("[WASM] Frame buffer allocated: {Size} bytes ({Width}x{Height}x{BytesPerPixel})", 
+				_frameBuffer.Length, width, height, BytesPerPixelRgba);
 			return true;
 		}
 		catch (Exception ex)
@@ -171,7 +175,7 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
-			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
+			_logger.LogDebug("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
 				_width, _height, pitch, data.Length);
 			
 			// Copy data to internal frame buffer
@@ -200,7 +204,7 @@ public class WasmRenderingBackend : IRenderingBackend
 			var base64Data = Convert.ToBase64String(_frameBuffer);
 			
 			// Log the call for debugging
-			_logger.LogDebug("[WASM] Calling updateCanvas: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
+			_logger.LogInformation("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
 				_canvasId, _width, _height, base64Data.Length);
 			
 			// Use fire-and-forget pattern but with proper error tracking
@@ -228,7 +232,7 @@ public class WasmRenderingBackend : IRenderingBackend
 					}
 					else
 					{
-						_logger.LogTrace("[WASM] Canvas update completed successfully");
+						_logger.LogInformation("[WASM] Canvas update completed successfully");
 					}
 				});
 			
