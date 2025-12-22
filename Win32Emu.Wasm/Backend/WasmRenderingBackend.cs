@@ -204,7 +204,7 @@ public class WasmRenderingBackend : IRenderingBackend
 			var base64Data = Convert.ToBase64String(_frameBuffer);
 			
 			// Log the call for debugging
-			_logger.LogInformation("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
+			_logger.LogDebug("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
 				_canvasId, _width, _height, base64Data.Length);
 			
 			// Use fire-and-forget pattern but with proper error tracking
@@ -232,7 +232,7 @@ public class WasmRenderingBackend : IRenderingBackend
 					}
 					else
 					{
-						_logger.LogInformation("[WASM] Canvas update completed successfully");
+						_logger.LogDebug("[WASM] Canvas update completed successfully");
 					}
 				});
 			
