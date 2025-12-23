@@ -104,6 +104,14 @@ namespace Win32Emu.Win32.Modules
 			// which throws PlatformNotSupportedException on WASM
 			switch (export.ToUpperInvariant())
 			{
+				case "DIRECTDRAWCREATE":
+					// Route through sync version - no special async handling needed
+					return (true, DirectDrawCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2)));
+				
+				case "DIRECTDRAWCREATEEX":
+					// Route through sync version - no special async handling needed
+					return (true, DirectDrawCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3)));
+				
 				case "DIRECTDRAWENUMERATEA":
 					return (true, await DirectDrawEnumerateAAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
 				case "DIRECTDRAWENUMERATEEXA":
