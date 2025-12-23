@@ -216,12 +216,12 @@ async function runTest() {
 
         console.log('✅ Emulator is running');
 
-        // Monitor canvas updates for 10 seconds
-        console.log('🎨 Monitoring canvas updates for 10 seconds...');
+        // Monitor canvas updates for 30 seconds
+        console.log('🎨 Monitoring canvas updates for 30 seconds...');
         let canvasUpdates = 0;
         const startTime = Date.now();
         
-        while (Date.now() - startTime < 10000) {
+        while (Date.now() - startTime < 30000) {
             const updateCount = await page.evaluate(() => {
                 return window.ddrawDiagnostics?.canvasUpdateCount || 0;
             });

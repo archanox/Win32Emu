@@ -1141,10 +1141,24 @@ public sealed class Emulator : IDisposable
             scheduler?.ProcessWaitTimeouts();
 
             // Check if we have any runnable threads
+            // However, if threads are blocked waiting for messages and we have timers or the event processing
+            // loop running, we should continue execution to allow timers to fire and wake up blocked threads
             if (scheduler != null && !scheduler.HasRunningThreads())
             {
-                LogDebug("[Emulator] No more runnable threads, stopping execution");
-                break;
+                // Check if there are any waiting threads that might be woken up by events/timers
+                var hasWaitingThreads = scheduler.GetAllThreads().Any(t => t.State == Threading.ThreadState.Waiting);
+                
+                if (!hasWaitingThreads)
+                {
+                    // No threads at all - stop execution
+                    LogDebug("[Emulator] No more runnable threads, stopping execution");
+                    break;
+                }
+                
+                // We have waiting threads - give the event processing loop a chance to post messages/fire timers
+                // by yielding briefly. This prevents busy-waiting when all threads are blocked.
+                await Task.Delay(1).ConfigureAwait(false);
+                continue;
             }
 
             // Check if we should context switch
