@@ -1961,7 +1961,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_env.IsWindowClassRegistered(className))
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: Window class '{ClassName}' not registered", className);
-				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_CLASS_ALREADY_EXISTS; // Windows sets this error for unregistered class
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -2060,7 +2060,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_env.IsWindowClassRegistered(className))
 			{
 				_logger.LogInformation("[User32] CreateWindowExAsync: Window class '{ClassName}' not registered", className);
-				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_CLASS_ALREADY_EXISTS; // Windows sets this error for unregistered class
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
