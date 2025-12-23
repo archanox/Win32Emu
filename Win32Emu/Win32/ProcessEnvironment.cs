@@ -23,6 +23,9 @@ public class ProcessEnvironment
 	private readonly ILogger _logger;
 	private uint _allocPtr;
 	private string _currentDirectory = @"C:\"; // Default to C:\ root
+	
+	// Delegate for sending messages synchronously (set by User32Module)
+	private Func<uint, uint, uint, uint, Task<uint>>? _sendMessageAsyncDelegate;
 
 	// Constants for memory allocation flags
 	private const uint MEM_COMMIT = 0x00001000;
@@ -145,6 +148,15 @@ public class ProcessEnvironment
 	/// Gets the backend factory for creating rendering, audio, and input backends
 	/// </summary>
 	public IBackendFactory? BackendFactory { get; }
+	
+	/// <summary>
+	/// Sets the delegate for sending messages synchronously to window procedures.
+	/// This should be called by User32Module during initialization.
+	/// </summary>
+	public void SetSendMessageDelegate(Func<uint, uint, uint, uint, Task<uint>> sendMessageAsync)
+	{
+		_sendMessageAsyncDelegate = sendMessageAsync;
+	}
 
 	// Virtual File System access
 	/// <summary>
@@ -2074,13 +2086,50 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
-	/// Send a message directly to a window (synchronous) by posting it to the queue.
-	/// For system messages during window creation/lifecycle, we post them so they can be processed
-	/// in the normal message loop.
+	/// Send a message directly to a window (synchronous) by invoking its window procedure.
+	/// For system messages during window creation/lifecycle, this ensures the message is
+	/// processed immediately before control returns to the caller.
+	/// On WASM where blocking is not supported, falls back to posting the message.
 	/// </summary>
 	public void SendMessageToWindow(uint hwnd, uint message, uint wParam, uint lParam)
 	{
-		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: posting MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		
+		// If we have a delegate for synchronous message sending, try to use it
+		if (_sendMessageAsyncDelegate != null)
+		{
+			try
+			{
+				// Check if we can use blocking synchronous call
+				// On WASM, GetAwaiter().GetResult() throws PlatformNotSupportedException
+				// so we need to detect this and fall back to posting
+				if (OperatingSystem.IsBrowser())
+				{
+					// On WASM, we cannot block - post the message instead
+					// Note: This means WM_CREATE will be delivered asynchronously
+					_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Browser/WASM detected, posting message asynchronously");
+					PostMessage(hwnd, message, wParam, lParam);
+					return;
+				}
+				
+				// On non-WASM platforms, use synchronous delivery
+				var result = _sendMessageAsyncDelegate(hwnd, message, wParam, lParam).GetAwaiter().GetResult();
+				_logger.LogDebug("[ProcessEnv] SendMessageToWindow: WndProc returned 0x{Result:X8}", result);
+				return;
+			}
+			catch (PlatformNotSupportedException ex)
+			{
+				// WASM doesn't support blocking - fall back to posting
+				_logger.LogWarning(ex, "[ProcessEnv] SendMessageToWindow: Platform doesn't support blocking, falling back to PostMessage");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] SendMessageToWindow: Error calling WndProc, falling back to PostMessage");
+			}
+		}
+		
+		// Fallback to posting message if delegate not set or error occurred
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Posting to queue");
 		PostMessage(hwnd, message, wParam, lParam);
 	}
 

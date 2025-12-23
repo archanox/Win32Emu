@@ -1,20 +1,46 @@
-[03:11:54.977] Sample executable loaded: simple_ddraw.exe (324431 bytes)
-[03:11:57.112] Loading executable: simple_ddraw.exe (324431 bytes)
-[03:11:57.134] [BrowserVFS] Added file: \WASM\simple_ddraw.exe (324431 bytes)
-[03:11:57.136] Added executable to VFS: \WASM\simple_ddraw.exe
-[03:11:57.153] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
-[03:11:57.154] [EmulatorHost] Debug (Debug): [Loader] Loading executable: C:\WASM\simple_ddraw.exe
-[03:11:57.155] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
-[03:11:57.659] [ProcessEnv] Registered main executable: C:\WASM\simple_ddraw.exe at 0x00400000
-[03:11:57.734] [Emulator] Env ExecutablePath: C:\WASM\simple_ddraw.exe
-[03:11:57.735] [Emulator] Extracted names: <MEMORY> / C:\WASM\SIMPLE_DDRAW.EXE
-[03:11:57.737] Successfully loaded: simple_ddraw.exe
-[03:11:59.195] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
-[03:11:59.197] [ProcessEnv] Registered window class: SimpleDirectDraw
-[03:11:59.199] [User32] RegisterClassA: 'SimpleDirectDraw' -> atom 0xC000
-[03:11:59.237] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
-[03:11:59.238] [ProcessEnv] ReadAnsiString addr=0x004040CE result='Simple DirectDraw Test'
-[03:11:59.240] [ProcessEnv] Created window: HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
-[03:11:59.241] [EmulatorHost] Window created: Simple DirectDraw Test
-[03:11:59.257] [User32] CreateWindowExA: Created HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
-[03:11:59.793] [User32] GetMessageA: No messages available, blocking thread 1
+[04:23:58.313] Sample executable loaded: simple_ddraw.exe (324431 bytes)
+[04:24:00.458] Loading executable: simple_ddraw.exe (324431 bytes)
+[04:24:00.474] [BrowserVFS] Added file: \WASM\simple_ddraw.exe (324431 bytes)
+[04:24:00.475] Added executable to VFS: \WASM\simple_ddraw.exe
+[04:24:00.490] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
+[04:24:00.491] [EmulatorHost] Debug (Debug): [Loader] Loading executable: C:\WASM\simple_ddraw.exe
+[04:24:00.493] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
+[04:24:00.962] [ProcessEnv] Registered main executable: C:\WASM\simple_ddraw.exe at 0x00400000
+[04:24:01.026] [Emulator] Env ExecutablePath: C:\WASM\simple_ddraw.exe
+[04:24:01.026] [Emulator] Extracted names: <MEMORY> / C:\WASM\SIMPLE_DDRAW.EXE
+[04:24:01.028] Successfully loaded: simple_ddraw.exe
+[04:24:02.406] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
+[04:24:02.407] [ProcessEnv] Registered window class: SimpleDirectDraw
+[04:24:02.409] [User32] RegisterClassA: 'SimpleDirectDraw' -> atom 0xC000
+[04:24:02.442] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
+[04:24:02.443] [ProcessEnv] ReadAnsiString addr=0x004040CE result='Simple DirectDraw Test'
+[04:24:02.444] [ProcessEnv] Created window: HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
+[04:24:02.445] [EmulatorHost] Window created: Simple DirectDraw Test
+[04:24:02.460] [ProcessEnv] SendMessageToWindow: Error calling WndProc, falling back to PostMessage
+System.PlatformNotSupportedException: Cannot wait on monitors on this runtime.
+   at System.Threading.Monitor.ObjWait(Int32 , Object )
+   at System.Threading.Monitor.Wait(Object , Int32 )
+   at System.Threading.ManualResetEventSlim.Wait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.SpinThenBlockingWait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWaitCore(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWait(Int32 , CancellationToken )
+   at Win32Emu.Win32.ProcessEnvironment.SendMessageToWindow(UInt32 hwnd, UInt32 message, UInt32 wParam, UInt32 lParam)
+[04:24:02.469] [ProcessEnv] SendMessageToWindow: Error calling WndProc, falling back to PostMessage
+System.PlatformNotSupportedException: Cannot wait on monitors on this runtime.
+   at System.Threading.Monitor.ObjWait(Int32 , Object )
+   at System.Threading.Monitor.Wait(Object , Int32 )
+   at System.Threading.ManualResetEventSlim.Wait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.SpinThenBlockingWait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWaitCore(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWait(Int32 , CancellationToken )
+   at Win32Emu.Win32.ProcessEnvironment.SendMessageToWindow(UInt32 hwnd, UInt32 message, UInt32 wParam, UInt32 lParam)
+[04:24:02.482] [ProcessEnv] SendMessageToWindow: Error calling WndProc, falling back to PostMessage
+System.PlatformNotSupportedException: Cannot wait on monitors on this runtime.
+   at System.Threading.Monitor.ObjWait(Int32 , Object )
+   at System.Threading.Monitor.Wait(Object , Int32 )
+   at System.Threading.ManualResetEventSlim.Wait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.SpinThenBlockingWait(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWaitCore(Int32 , CancellationToken )
+   at System.Threading.Tasks.Task.InternalWait(Int32 , CancellationToken )
+   at Win32Emu.Win32.ProcessEnvironment.SendMessageToWindow(UInt32 hwnd, UInt32 message, UInt32 wParam, UInt32 lParam)
+[04:24:02.486] [User32] CreateWindowExA: Created HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
