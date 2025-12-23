@@ -1,20 +1,20 @@
-[06:02:01.161] Sample executable loaded: simple_ddraw.exe (324431 bytes)
-[06:02:03.306] Loading executable: simple_ddraw.exe (324431 bytes)
-[06:02:03.325] [BrowserVFS] Added file: \WASM\simple_ddraw.exe (324431 bytes)
-[06:02:03.326] Added executable to VFS: \WASM\simple_ddraw.exe
-[06:02:03.342] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
-[06:02:03.343] [EmulatorHost] Debug (Debug): [Loader] Loading executable: C:\WASM\simple_ddraw.exe
-[06:02:03.344] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
-[06:02:03.809] [ProcessEnv] Registered main executable: C:\WASM\simple_ddraw.exe at 0x00400000
-[06:02:03.868] [Emulator] Env ExecutablePath: C:\WASM\simple_ddraw.exe
-[06:02:03.869] [Emulator] Extracted names: <MEMORY> / C:\WASM\SIMPLE_DDRAW.EXE
-[06:02:03.871] Successfully loaded: simple_ddraw.exe
-[06:02:05.226] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
-[06:02:05.227] [ProcessEnv] Registered window class: SimpleDirectDraw
-[06:02:05.229] [User32] RegisterClassA: 'SimpleDirectDraw' -> atom 0xC000
-[06:02:05.259] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
-[06:02:05.260] [ProcessEnv] ReadAnsiString addr=0x004040CE result='Simple DirectDraw Test'
-[06:02:05.262] [ProcessEnv] Created window (async): HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
-[06:02:05.263] [EmulatorHost] Window created: Simple DirectDraw Test
-[06:02:05.329] [User32] CreateWindowExAsync: Created HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
-[06:02:05.544] [User32] GetMessageA: No messages available, blocking thread 1
+[09:49:55.282] Sample executable loaded: simple_ddraw.exe (324431 bytes)
+[09:49:57.420] Loading executable: simple_ddraw.exe (324431 bytes)
+[09:49:57.438] [BrowserVFS] Added file: \WASM\simple_ddraw.exe (324431 bytes)
+[09:49:57.440] Added executable to VFS: \WASM\simple_ddraw.exe
+[09:49:57.456] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
+[09:49:57.458] [EmulatorHost] Debug (Debug): [Loader] Loading executable: C:\WASM\simple_ddraw.exe
+[09:49:57.459] [Loader] Loading executable: C:\WASM\simple_ddraw.exe
+[09:49:57.982] [ProcessEnv] Registered main executable: C:\WASM\simple_ddraw.exe at 0x00400000
+[09:49:58.059] [Emulator] Env ExecutablePath: C:\WASM\simple_ddraw.exe
+[09:49:58.060] [Emulator] Extracted names: <MEMORY> / C:\WASM\SIMPLE_DDRAW.EXE
+[09:49:58.061] Successfully loaded: simple_ddraw.exe
+[09:49:59.515] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
+[09:49:59.516] [ProcessEnv] Registered window class: SimpleDirectDraw
+[09:49:59.518] [User32] RegisterClassA: 'SimpleDirectDraw' -> atom 0xC000
+[09:49:59.549] [ProcessEnv] ReadAnsiString addr=0x004040A8 result='SimpleDirectDraw'
+[09:49:59.550] [ProcessEnv] ReadAnsiString addr=0x004040CE result='Simple DirectDraw Test'
+[09:49:59.552] [ProcessEnv] Created window (async): HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
+[09:49:59.553] [EmulatorHost] Window created: Simple DirectDraw Test
+[09:49:59.627] [User32] CreateWindowExAsync: Created HWND=0x00010000 Class='SimpleDirectDraw' Title='Simple DirectDraw Test'
+[09:49:59.864] [User32] GetMessageA: No messages available, blocking thread 1
