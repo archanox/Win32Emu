@@ -175,7 +175,7 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
-			_logger.LogDebug("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
+			_logger.LogInformation("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
 				_width, _height, pitch, data.Length);
 			
 			// Copy data to internal frame buffer
@@ -204,7 +204,7 @@ public class WasmRenderingBackend : IRenderingBackend
 			var base64Data = Convert.ToBase64String(_frameBuffer);
 			
 			// Log the call for debugging
-			_logger.LogDebug("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
+			_logger.LogInformation("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
 				_canvasId, _width, _height, base64Data.Length);
 			
 			// Use fire-and-forget pattern but with proper error tracking
@@ -232,7 +232,7 @@ public class WasmRenderingBackend : IRenderingBackend
 					}
 					else
 					{
-						_logger.LogDebug("[WASM] Canvas update completed successfully");
+						_logger.LogInformation("[WASM] Canvas update completed successfully");
 					}
 				});
 			
