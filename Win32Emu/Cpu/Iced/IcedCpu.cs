@@ -25,6 +25,16 @@ public class IcedCpu : IAsyncCpu
 
 	// EFLAGS bit positions
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Tf = 8, If = 9, Df = 10, Of = 11;
+	
+	// Segment boundary constants for real mode (64KB segments)
+	private const ushort SEGMENT_BOUNDARY_16BIT = 0xFFFF;
+	private const ushort SEGMENT_BOUNDARY_32BIT_START = 0xFFFD;
+	
+	// Exception vector constants
+	private const int GP_EXCEPTION_VECTOR = 13; // General Protection Fault
+	
+	// IVT (Interrupt Vector Table) constants
+	private const int IVT_ENTRY_SIZE = 4; // Each IVT entry is 4 bytes (2 bytes IP + 2 bytes CS)
 
 	// Interrupt numbers
 	private const byte DOS_INTERRUPT = 0x21;
@@ -6161,6 +6171,42 @@ public class IcedCpu : IAsyncCpu
 			_ => 0
 		};
 	}
+	
+	/// <summary>
+	/// Checks if a segment boundary exception should be triggered for a memory access.
+	/// In 16-bit real mode, checks if the IVT entry for General Protection Fault (vector 13) is initialized.
+	/// </summary>
+	/// <param name="offset16">The 16-bit offset within the segment</param>
+	/// <param name="accessSize">The size of the memory access in bytes (2 for 16-bit, 4 for 32-bit)</param>
+	/// <returns>True if exception should be triggered, false otherwise</returns>
+	private bool ShouldTriggerSegmentBoundaryException(ushort offset16, int accessSize)
+	{
+		// Check if access would cross segment boundary
+		bool crossesBoundary = accessSize switch
+		{
+			2 => offset16 == SEGMENT_BOUNDARY_16BIT,
+			4 => offset16 >= SEGMENT_BOUNDARY_32BIT_START,
+			_ => false
+		};
+		
+		if (!crossesBoundary)
+		{
+			return false;
+		}
+		
+		// Check if IVT entry for #GP (vector 13) is initialized
+		var ivtAddr = (uint)(GP_EXCEPTION_VECTOR * IVT_ENTRY_SIZE);
+		if (ivtAddr + 3 >= _mem.Size)
+		{
+			return false;
+		}
+		
+		var ivtIp = _mem.Read16(ivtAddr);
+		var ivtCs = _mem.Read16(ivtAddr + 2);
+		
+		// Only trigger exception if IVT entry is non-zero (initialized)
+		return ivtIp != 0 || ivtCs != 0;
+	}
 
 	/// <summary>
 	/// Safe memory read that handles segment boundary checking in 16-bit real mode.
@@ -6173,39 +6219,29 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
+			var offset16 = (ushort)(CalculateSegmentOffset(insn) & 0xFFFF);
 			
-			// Check if the 16-bit read would cross the segment boundary
-			// A 16-bit (2-byte) read starting at offset 0xFFFF would extend to 0x10000
-			if (offset16 == 0xFFFF)
+			// Check if we should trigger a segment boundary exception
+			if (ShouldTriggerSegmentBoundaryException(offset16, 2))
 			{
-				// Check if IVT entry for #GP (vector 13) is initialized
-				// IVT entry is at address 52 (13 * 4)
-				var ivtAddr = 13u * 4;
-				if (ivtAddr + 3 < _mem.Size)
-				{
-					var ivtIp = _mem.Read16(ivtAddr);
-					var ivtCs = _mem.Read16(ivtAddr + 2);
-					
-					// Only trigger exception if IVT entry is non-zero (initialized)
-					if (ivtIp != 0 || ivtCs != 0)
-					{
-						// Trigger General Protection Fault (#GP, vector 13)
-						// This matches real 80386 hardware behavior in real mode
-						GenerateException(13, _eip, _mem);
-						
-						// Return 0 as a dummy value - the exception will change EIP
-						// so this instruction won't actually complete
-						return 0;
-					}
-				}
+				// Trigger General Protection Fault (#GP, vector 13)
+				// This matches real 80386 hardware behavior in real mode
+				GenerateException(GP_EXCEPTION_VECTOR, _eip, _mem);
 				
+				// Return 0 as a dummy value - the exception will change EIP
+				// so this instruction won't actually complete
+				return 0;
+			}
+			
+			// Check if we need to handle wraparound (IVT not initialized)
+			if (offset16 == SEGMENT_BOUNDARY_16BIT)
+			{
 				// IVT not initialized - fall through to wraparound behavior
 				// Read byte at 0xFFFF and byte at 0x0000 (wrapped)
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
 				
-				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
+				var addrHigh = (uint)((segmentValue << 4) + SEGMENT_BOUNDARY_16BIT);
 				var lowByte = _mem.Read8(addrHigh);
 				
 				var addrLow = (uint)((segmentValue << 4) + 0x0000);
@@ -6230,26 +6266,18 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
+			var offset16 = (ushort)(CalculateSegmentOffset(insn) & 0xFFFF);
 			
-			// Check if the 32-bit read would cross the segment boundary
-			// A 32-bit (4-byte) read starting at 0xFFFD, 0xFFFE, or 0xFFFF would extend past 0xFFFF
-			if (offset16 >= 0xFFFD)
+			// Check if we should trigger a segment boundary exception
+			if (ShouldTriggerSegmentBoundaryException(offset16, 4))
 			{
-				// Check if IVT entry for #GP (vector 13) is initialized
-				var ivtAddr = 13u * 4;
-				if (ivtAddr + 3 < _mem.Size)
-				{
-					var ivtIp = _mem.Read16(ivtAddr);
-					var ivtCs = _mem.Read16(ivtAddr + 2);
-					
-					if (ivtIp != 0 || ivtCs != 0)
-					{
-						GenerateException(13, _eip, _mem);
-						return 0;
-					}
-				}
-				
+				GenerateException(GP_EXCEPTION_VECTOR, _eip, _mem);
+				return 0;
+			}
+			
+			// Check if we need to handle wraparound (IVT not initialized)
+			if (offset16 >= SEGMENT_BOUNDARY_32BIT_START)
+			{
 				// IVT not initialized - fall through to wraparound behavior
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
@@ -6281,30 +6309,23 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
+			var offset16 = (ushort)(CalculateSegmentOffset(insn) & 0xFFFF);
 			
-			// Check if the 16-bit write would cross the segment boundary
-			if (offset16 == 0xFFFF)
+			// Check if we should trigger a segment boundary exception
+			if (ShouldTriggerSegmentBoundaryException(offset16, 2))
 			{
-				// Check if IVT entry for #GP (vector 13) is initialized
-				var ivtAddr = 13u * 4;
-				if (ivtAddr + 3 < _mem.Size)
-				{
-					var ivtIp = _mem.Read16(ivtAddr);
-					var ivtCs = _mem.Read16(ivtAddr + 2);
-					
-					if (ivtIp != 0 || ivtCs != 0)
-					{
-						GenerateException(13, _eip, _mem);
-						return;
-					}
-				}
-				
+				GenerateException(GP_EXCEPTION_VECTOR, _eip, _mem);
+				return;
+			}
+			
+			// Check if we need to handle wraparound (IVT not initialized)
+			if (offset16 == SEGMENT_BOUNDARY_16BIT)
+			{
 				// IVT not initialized - fall through to wraparound behavior
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
 				
-				var addrHigh = (uint)((segmentValue << 4) + 0xFFFF);
+				var addrHigh = (uint)((segmentValue << 4) + SEGMENT_BOUNDARY_16BIT);
 				_mem.Write8(addrHigh, (byte)(value & 0xFF));
 				
 				var addrLow = (uint)((segmentValue << 4) + 0x0000);
@@ -6329,25 +6350,18 @@ public class IcedCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			// Calculate the offset within the segment
-			var offset16 = CalculateSegmentOffset(insn) & 0xFFFF;
+			var offset16 = (ushort)(CalculateSegmentOffset(insn) & 0xFFFF);
 			
-			// Check if the 32-bit write would cross the segment boundary
-			if (offset16 >= 0xFFFD)
+			// Check if we should trigger a segment boundary exception
+			if (ShouldTriggerSegmentBoundaryException(offset16, 4))
 			{
-				// Check if IVT entry for #GP (vector 13) is initialized
-				var ivtAddr = 13u * 4;
-				if (ivtAddr + 3 < _mem.Size)
-				{
-					var ivtIp = _mem.Read16(ivtAddr);
-					var ivtCs = _mem.Read16(ivtAddr + 2);
-					
-					if (ivtIp != 0 || ivtCs != 0)
-					{
-						GenerateException(13, _eip, _mem);
-						return;
-					}
-				}
-				
+				GenerateException(GP_EXCEPTION_VECTOR, _eip, _mem);
+				return;
+			}
+			
+			// Check if we need to handle wraparound (IVT not initialized)
+			if (offset16 >= SEGMENT_BOUNDARY_32BIT_START)
+			{
 				// IVT not initialized - fall through to wraparound behavior
 				var segmentReg = GetSegmentRegister(insn);
 				var segmentValue = GetSegmentValue(segmentReg);
