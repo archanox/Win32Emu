@@ -1,0 +1,4 @@
+No output yet.
+Win32Emu Emulator Starting
+Executable loaded and ready
+Win32Emu WASM Starting
