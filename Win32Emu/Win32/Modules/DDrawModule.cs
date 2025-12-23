@@ -3797,10 +3797,10 @@ namespace Win32Emu.Win32.Modules
 				if (displayData != null)
 				{
 					var displayPitch = surface.Width * BytesPerPixelRgba; // RGBA format
-					_logger.LogDebug("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
+					_logger.LogInformation("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
 						surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length);
 					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
-					_logger.LogDebug("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
+					_logger.LogInformation("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
 					
 					// Process any buffered frames after the first successful frame update
 					ProcessPendingFrames(ddrawObj);
