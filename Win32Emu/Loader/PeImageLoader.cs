@@ -436,6 +436,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		foreach (var module in imports)
 		{
 			var dll = module.Name ?? string.Empty;
+			logger?.LogInformation("[Loader] Processing imports from DLL: {DllName} ({SymbolCount} symbols)", dll, module.Symbols.Count());
 			foreach (var sym in module.Symbols)
 			{
 				// Get IAT entry RVA - this is required to write the import stub address
@@ -480,6 +481,11 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				
 				// Store IAT entry mapping for runtime verification
 				iatEntryMap[va] = synthetic;
+				
+				// Log the mapping for debugging
+				var symName = sym.Name ?? $"Ordinal_{sym.Ordinal}";
+				logger?.LogInformation("[Loader] Mapped import: {Dll}!{Name} -> IAT VA 0x{IatVa:X8} = synthetic 0x{Synthetic:X8}", 
+					dll.ToUpperInvariant(), symName, va, synthetic);
 				
 				// Verify the write was successful
 				var verifyValue = vm.Read32(va);
