@@ -229,11 +229,11 @@ async function runTest() {
         }
 
         // Monitor canvas updates for 30 seconds
-        console.log('🎨 Monitoring canvas and game state for 30 seconds...');
+        console.log('🎨 Monitoring canvas and game state for 120 seconds...');
         let canvasUpdates = 0;
         const startTime = Date.now();
         
-        while (Date.now() - startTime < 30000) {
+        while (Date.now() - startTime < 120000) {
             const updateCount = await page.evaluate(() => {
                 return window.ddrawDiagnostics?.canvasUpdateCount || 0;
             });
