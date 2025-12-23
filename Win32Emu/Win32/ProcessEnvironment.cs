@@ -1922,10 +1922,11 @@ public class ProcessEnvironment
 	public uint CreateWindow(string className, string windowName, uint style, uint exStyle,
 		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param)
 	{
-		// On WASM, we cannot use GetAwaiter().GetResult() as it throws PlatformNotSupportedException
-		// Instead, use the sync version which posts messages, and they'll be pumped later
-		// The first CreateWindow (from application code) will use async/pump, but nested
-		// CreateWindow calls (from within message handlers) must use sync/post
+		// This wrapper always uses the synchronous window creation path.
+		// Async/message-pumped creation for the initial CreateWindow call from application
+		// code is handled by CreateWindowExAsync via TryInvokeAsync, not through this method.
+		// Nested CreateWindow calls (e.g. from within message handlers) also come through
+		// this method and must remain synchronous.
 		return CreateWindowSync(className, windowName, style, exStyle, x, y, width, height, parent, menu, instance, param);
 	}
 	
@@ -2057,8 +2058,8 @@ public class ProcessEnvironment
 	}
 	
 	/// <summary>
-	/// Pump messages from the queue to process them immediately.
-	/// Used on WASM to ensure posted messages are processed before continuing execution.
+	/// Processes messages from the queue immediately without blocking.
+	/// Primarily used on WASM for compatibility, ensuring posted messages are handled before execution continues.
 	/// </summary>
 	private async Task PumpMessagesAsync(int maxMessages = 10, CancellationToken cancellationToken = default)
 	{
