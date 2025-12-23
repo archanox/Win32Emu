@@ -41,6 +41,7 @@ namespace Win32Emu.Win32.Modules
 
 		// Timer tracking for SetTimer implementation
 		private readonly ConcurrentDictionary<uint, TimerInfo> _timers = new();
+		private readonly ConcurrentDictionary<uint, long> _timerLastFired = new();
 		private uint _nextTimerId = 1;
 
 		// Hook tracking for SetWindowsHookEx implementation
@@ -5398,13 +5399,10 @@ namespace Win32Emu.Win32.Modules
 			);
 
 			_timers[timerId] = timerInfo;
+			_timerLastFired[timerId] = Environment.TickCount64;
 
 			_logger.LogInformation("[User32] SetTimer: Created timer ID={TimerId}, callback=0x{Callback:X8}",
 				timerId, lpTimerFunc);
-
-			// Note: The timer is now registered but won't fire automatically without a timer scheduler.
-			// Applications can query or manually trigger timers through other mechanisms.
-			// The CallTimerProcAsync method is ready to be invoked when the timer fires.
 
 			return timerId;
 		}
@@ -5441,6 +5439,57 @@ namespace Win32Emu.Win32.Modules
 				dwTime,
 				cancellationToken
 			).ConfigureAwait(false);
+		}
+
+		/// <summary>
+		/// Process all registered timers and fire those that have elapsed.
+		/// This should be called periodically from the event processing loop.
+		/// </summary>
+		public async Task ProcessTimersAsync(CancellationToken cancellationToken = default)
+		{
+			var currentTime = Environment.TickCount64;
+
+			foreach (var (timerId, timerInfo) in _timers)
+			{
+				// Get last fire time or 0 if never fired
+				var lastFired = _timerLastFired.GetOrAdd(timerId, 0);
+
+				// Check if timer should fire
+				var elapsed = currentTime - lastFired;
+				if (elapsed >= timerInfo.Elapse)
+				{
+					// Update last fired time
+					_timerLastFired[timerId] = currentTime;
+
+					// Fire the timer (post WM_TIMER message to the window)
+					if (timerInfo.HWnd != 0)
+					{
+						// Post WM_TIMER message to the window's message queue
+						PostMessageA(timerInfo.HWnd, 0x0113, timerId, 0);
+						_logger.LogDebug("[User32] ProcessTimers: Posted WM_TIMER for timer {TimerId} to window 0x{HWnd:X8}", timerId, timerInfo.HWnd);
+					}
+					else if (timerInfo.TimerProc != 0)
+					{
+						// Call timer callback directly
+						try
+						{
+							var dwTime = (uint)Environment.TickCount;
+							await CallTimerProcAsync(
+								timerInfo.TimerProc,
+								0, // No window
+								0x0113, // WM_TIMER
+								timerId,
+								dwTime,
+								cancellationToken
+							).ConfigureAwait(false);
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "[User32] ProcessTimers: Error calling timer callback for timer {TimerId}", timerId);
+						}
+					}
+				}
+			}
 		}
 
 		[DllModuleExport(0)]
@@ -6459,6 +6508,7 @@ namespace Win32Emu.Win32.Modules
 			// Remove the timer from tracking if it exists
 			if (_timers.TryRemove(uIDEvent, out _))
 			{
+				_timerLastFired.TryRemove(uIDEvent, out _);
 				_logger.LogInformation("[User32] KillTimer: Removed timer {TimerId}", uIDEvent);
 			}
 			else

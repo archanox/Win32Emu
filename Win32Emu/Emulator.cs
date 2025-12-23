@@ -3051,6 +3051,19 @@ public sealed class Emulator : IDisposable
                         _logger.LogError(ex, "[EventProcessing] Error processing backend events");
                     }
 
+                    // Process Win32 timers (SetTimer API)
+                    try
+                    {
+                        if (_dispatcher != null && _dispatcher.TryGetModule("USER32.DLL", out var user32Module) && user32Module is User32Module user32)
+                        {
+                            await user32.ProcessTimersAsync(_eventProcessingCts.Token);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[EventProcessing] Error processing timers");
+                    }
+
                     // Small delay to avoid busy-waiting (60 FPS event processing)
                     await Task.Delay(16, _eventProcessingCts.Token);
                 }
