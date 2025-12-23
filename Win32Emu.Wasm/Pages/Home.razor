@@ -193,6 +193,13 @@
 							<br />
 							<small class="text-muted">Advanced example from Hugi 16 article</small>
 						</button>
+						<button class="btn btn-outline-success btn-sm" 
+								@onclick="@(() => LoadSampleFolder("ign_teas", "IGN_TEAS.EXE"))"
+								disabled="@_isRunning">
+							<i class="bi bi-controller"></i> IGN_TEAS Game
+							<br />
+							<small class="text-muted">Classic Windows game with DirectDraw rendering</small>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -911,6 +918,77 @@
 			AddDebugOutput($"Error loading sample: {ex.Message}");
 			Logger.LogError(ex, "Error loading sample executable");
 		}
+	}
+
+	/// <summary>
+	/// Load a sample folder (executable + data files) from the wwwroot/samples directory
+	/// </summary>
+	private async Task LoadSampleFolder(string folderPath, string executableName)
+	{
+		try
+		{
+			AddDebugOutput($"Loading sample folder: {folderPath}");
+			
+			// Fetch all files from the folder
+			var fileDataList = await JS.InvokeAsync<List<SampleFileData>>("fetchSampleFolder", $"samples/{folderPath}");
+			if (fileDataList == null || fileDataList.Count == 0)
+			{
+				AddDebugOutput($"Failed to download sample folder: {folderPath}");
+				return;
+			}
+			
+			_loadedFiles.Clear();
+			_discoveredExecutables.Clear();
+			long totalSize = 0;
+			
+			foreach (var fileData in fileDataList)
+			{
+				var bytes = fileData.Content.ToArray();
+				_loadedFiles[fileData.RelativePath] = bytes;
+				totalSize += fileData.Size;
+				
+				if (fileData.Name.Equals(executableName, StringComparison.OrdinalIgnoreCase))
+				{
+					_executableData = bytes;
+					_loadedFileName = fileData.Name;
+					_loadedFileSize = fileData.Size;
+				}
+				
+				if (fileData.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+				{
+					_discoveredExecutables.Add(new ExecutableInfo
+					{
+						Name = fileData.Name,
+						RelativePath = fileData.RelativePath,
+						Size = fileData.Size
+					});
+				}
+			}
+			
+			_executableLoaded = true;
+			_folderMode = true;
+			
+			AddDebugOutput($"Sample folder loaded: {fileDataList.Count} files, {FormatFileSize(totalSize)}");
+			Logger.LogInformation("Sample folder loaded: {Folder} with {FileCount} files", folderPath, fileDataList.Count);
+			
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			AddDebugOutput($"Error loading sample folder: {ex.Message}");
+			Logger.LogError(ex, "Error loading sample folder");
+		}
+	}
+	
+	/// <summary>
+	/// Helper class for sample file data from JavaScript
+	/// </summary>
+	private class SampleFileData
+	{
+		public string Name { get; set; } = string.Empty;
+		public string RelativePath { get; set; } = string.Empty;
+		public long Size { get; set; }
+		public List<byte> Content { get; set; } = new();
 	}
 
 	// Helper class for folder file data from JavaScript

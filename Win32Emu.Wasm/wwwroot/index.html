@@ -828,6 +828,58 @@
 			}
 		};
 		
+		// Fetch all files from a sample folder
+		window.fetchSampleFolder = async (folderPath) => {
+			try {
+				// First, fetch the file list (we'll need to generate this)
+				// For now, hardcode the ign_teas file structure
+				const files = [
+					'IGN_TEAS.EXE',
+					'README.TXT',
+					'DATA/IGN.PFM',
+					'DATA/IGN.PSQ',
+					'DATA/IGN0.PIC',
+					'DATA/IGN1.PIC',
+					'DATA/IGN3.PIC',
+					'DATA/IGN3.TEX',
+					'DATA/IGN4.DPS',
+					'DATA/IGN4.PIC',
+					'DATA/IGN5.DPS',
+					'DATA/IGN6.DPS',
+					'DATA/IGN8.TEX'
+				];
+				
+				const result = [];
+				for (const file of files) {
+					const url = `${folderPath}/${file}`;
+					try {
+						const response = await fetch(url);
+						if (!response.ok) {
+							console.warn(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+							continue;
+						}
+						const arrayBuffer = await response.arrayBuffer();
+						const uint8Array = new Uint8Array(arrayBuffer);
+						
+						result.push({
+							name: file.split('/').pop(),
+							relativePath: file,
+							size: uint8Array.length,
+							content: Array.from(uint8Array)
+						});
+					} catch (err) {
+						console.warn(`Error fetching ${url}:`, err);
+					}
+				}
+				
+				console.log(`Fetched ${result.length} files from ${folderPath}`);
+				return result;
+			} catch (err) {
+				console.error(`Error fetching folder ${folderPath}:`, err);
+				return [];
+			}
+		};
+		
 		// ===========================================
 		// Input System - Keyboard and Mouse Event Handling
 		// ===========================================

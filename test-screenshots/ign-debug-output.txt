@@ -1,0 +1,675 @@
+... (older logs truncated) ...
+ [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+[09:47:42] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F5 FF FF FF FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F5 FF FF FF FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
+[09:47:42] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+[09:47:42] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetStdHandle: EBX=0F0004F0 (saved=0F0004F0, preserved=True), ESI=00000001 (saved=00000001, preserved=True), EDI=00480108 (saved=00480108, preserved=True), EBP=00000000 (saved=00000000, preserved=True, valid=False, savedValid=False), ESP=001FEF1C
+[09:47:42] [DBG] [Emulator] [Syscall] Returned 0x00000000, argBytes=4, CPU will execute RET naturally
+[09:47:42] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetStdHandle: EAX=0x00000000 ESP=0x001FEF1C
+[09:47:42] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetStdHandle:
+  [ESP+-8] = 0x001FEF1C: 0x0F0004F5
+  [ESP+-4] = 0x001FEF20: 0x00412C05
+  [ESP++0] = 0x001FEF24: 0xFFFFFFF5 <-- Future ESP
+  [ESP++4] = 0x001FEF28: 0x001FEFFC
+  [ESP++8] = 0x001FEF2C: 0x00000000
+  [ESP++12] = 0x001FEF30: 0x00000000
+  [ESP++16] = 0x001FEF34: 0x00000000
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0004F5 from ESP=0x001FEF1C, cleanup=0 bytes, new ESP=0x001FEF20
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0004F5
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0F0004F5: popped 0x00412C05 from ESP=0x001FEF20, cleanup=4 bytes, new ESP=0x001FEF28
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00412C05
+[09:47:42] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:42] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+[09:47:42] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+[09:47:42] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 00 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 00 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
+[09:47:42] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+[09:47:42] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetFileType: EBX=0F0004F0 (saved=0F0004F0, preserved=True), ESI=00000001 (saved=00000001, preserved=True), EDI=00480108 (saved=00480108, preserved=True), EBP=00000000 (saved=00000000, preserved=True, valid=False, savedValid=False), ESP=001FEF1C
+[09:47:42] [DBG] [Emulator] [Syscall] Returned 0x00000000, argBytes=4, CPU will execute RET naturally
+[09:47:42] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetFileType: EAX=0x00000000 ESP=0x001FEF1C
+[09:47:42] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetFileType:
+  [ESP+-8] = 0x001FEF1C: 0x0F000495
+  [ESP+-4] = 0x001FEF20: 0x00412C13
+  [ESP++0] = 0x001FEF24: 0x00000000 <-- Future ESP
+  [ESP++4] = 0x001FEF28: 0x001FEFFC
+  [ESP++8] = 0x001FEF2C: 0x00000000
+  [ESP++12] = 0x001FEF30: 0x00000000
+  [ESP++16] = 0x001FEF34: 0x00000000
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000495 from ESP=0x001FEF1C, cleanup=0 bytes, new ESP=0x001FEF20
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000495
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0F000495: popped 0x00412C13 from ESP=0x001FEF20, cleanup=4 bytes, new ESP=0x001FEF28
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00412C13
+[09:47:42] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:42] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0004F0
+[09:47:42] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+[09:47:42] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F4 FF FF FF FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F4 FF FF FF FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000000, argBytes=4
+[09:47:42] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+[09:47:42] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetStdHandle: EBX=0F0004F0 (saved=0F0004F0, preserved=True), ESI=00000002 (saved=00000002, preserved=True), EDI=00480110 (saved=00480110, preserved=True), EBP=00000000 (saved=00000000, preserved=True, valid=False, savedValid=False), ESP=001FEF1C
+[09:47:42] [DBG] [Emulator] [Syscall] Returned 0x00000000, argBytes=4, CPU will execute RET naturally
+[09:47:42] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetStdHandle: EAX=0x00000000 ESP=0x001FEF1C
+[09:47:42] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetStdHandle:
+  [ESP+-8] = 0x001FEF1C: 0x0F0004F5
+  [ESP+-4] = 0x001FEF20: 0x00412C05
+  [ESP++0] = 0x001FEF24: 0xFFFFFFF4 <-- Future ESP
+  [ESP++4] = 0x001FEF28: 0x001FEFFC
+  [ESP++8] = 0x001FEF2C: 0x00000000
+  [ESP++12] = 0x001FEF30: 0x00000000
+  [ESP++16] = 0x001FEF34: 0x00000000
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0004F5 from ESP=0x001FEF1C, cleanup=0 bytes, new ESP=0x001FEF20
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0004F5
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0F0004F5: popped 0x00412C05 from ESP=0x001FEF20, cleanup=4 bytes, new ESP=0x001FEF28
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00412C05
+[09:47:42] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:42] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+[09:47:42] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+[09:47:42] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 00 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 00 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000000, argBytes=4
+[09:47:42] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+[09:47:42] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetFileType: EBX=0F0004F0 (saved=0F0004F0, preserved=True), ESI=00000002 (saved=00000002, preserved=True), EDI=00480110 (saved=00480110, preserved=True), EBP=00000000 (saved=00000000, preserved=True, valid=False, savedValid=False), ESP=001FEF1C
+[09:47:42] [DBG] [Emulator] [Syscall] Returned 0x00000000, argBytes=4, CPU will execute RET naturally
+[09:47:42] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetFileType: EAX=0x00000000 ESP=0x001FEF1C
+[09:47:42] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetFileType:
+  [ESP+-8] = 0x001FEF1C: 0x0F000495
+  [ESP+-4] = 0x001FEF20: 0x00412C13
+  [ESP++0] = 0x001FEF24: 0x00000000 <-- Future ESP
+  [ESP++4] = 0x001FEF28: 0x001FEFFC
+  [ESP++8] = 0x001FEF2C: 0x00000000
+  [ESP++12] = 0x001FEF30: 0x00000000
+  [ESP++16] = 0x001FEF34: 0x00000000
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000495 from ESP=0x001FEF1C, cleanup=0 bytes, new ESP=0x001FEF20
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000495
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0F000495: popped 0x00412C13 from ESP=0x001FEF20, cleanup=4 bytes, new ESP=0x001FEF28
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00412C13
+[09:47:42] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:42] [INF] [Emulator] [Syscall] KERNEL32.DLL!SetHandleCount from stub at 0x0F0004E0
+[09:47:42] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C50
+[09:47:42] [INF] [Emulator] Dispatching async KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF20 stack=50 2C 41 00 20 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF20 stack=50 2C 41 00 20 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!SetHandleCount returned 0x00000020, argBytes=4
+[09:47:42] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C50
+[09:47:42] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!SetHandleCount: EBX=0F0004F0 (saved=0F0004F0, preserved=True), ESI=00000003 (saved=00000003, preserved=True), EDI=00480110 (saved=00480110, preserved=True), EBP=00000000 (saved=00000000, preserved=True, valid=False, savedValid=False), ESP=001FEF1C
+[09:47:42] [DBG] [Emulator] [Syscall] Returned 0x00000020, argBytes=4, CPU will execute RET naturally
+[09:47:42] [DBG] [Emulator] [Syscall] Patched RET at 0x0F0004E5 with argBytes=4
+[09:47:42] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!SetHandleCount: EAX=0x00000020 ESP=0x001FEF1C
+[09:47:42] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF24 contains suspiciously low value 0x00000020 which could cause corruption if used as return address or function pointer
+[09:47:42] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!SetHandleCount:
+  [ESP+-8] = 0x001FEF1C: 0x0F0004E5
+  [ESP+-4] = 0x001FEF20: 0x00412C50
+  [ESP++0] = 0x001FEF24: 0x00000020 <-- Future ESP
+  [ESP++4] = 0x001FEF28: 0x001FEFFC
+  [ESP++8] = 0x001FEF2C: 0x00000000
+  [ESP++12] = 0x001FEF30: 0x00000000
+  [ESP++16] = 0x001FEF34: 0x00000000
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0004E5 from ESP=0x001FEF1C, cleanup=0 bytes, new ESP=0x001FEF20
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0004E5
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0F0004E5: popped 0x00412C50 from ESP=0x001FEF20, cleanup=4 bytes, new ESP=0x001FEF28
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00412C50
+[09:47:42] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:42] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetACP from stub at 0x0F000510
+[09:47:42] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004127C1
+[09:47:42] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetACP at EIP=0x0E000002 ESP=0x001FEF44 stack=C1 27 41 00 FD FF FF FF FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] Dispatching KERNEL32.DLL!GetACP at EIP=0x0E000002 ESP=0x001FEF44 stack=C1 27 41 00 FD FF FF FF FC EF 1F 00 00 00 00 00
+[09:47:42] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetACP returned 0x0000FDE9, argBytes=0
+[09:47:42] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004127C1
+[09:47:42] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetACP: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF40
+[09:47:42] [DBG] [Emulator] [Syscall] Returned 0x0000FDE9, argBytes=0, CPU will execute RET naturally
+[09:47:42] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000515 with argBytes=0
+[09:47:42] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetACP: EAX=0x0000FDE9 ESP=0x001FEF40
+[09:47:42] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetACP:
+  [ESP+-8] = 0x001FEF3C: 0x00000000
+  [ESP+-4] = 0x001FEF40: 0x0F000515
+  [ESP++0] = 0x001FEF44: 0x004127C1 <-- Future ESP
+  [ESP++4] = 0x001FEF48: 0xFFFFFFFD
+  [ESP++8] = 0x001FEF4C: 0x001FEFFC
+  [ESP++12] = 0x001FEF50: 0x00000000
+  [ESP++16] = 0x001FEF54: 0x00000000
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000515 from ESP=0x001FEF40, cleanup=0 bytes, new ESP=0x001FEF44
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000515
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0F000515: popped 0x004127C1 from ESP=0x001FEF44, cleanup=0 bytes, new ESP=0x001FEF48
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004127C1
+[09:47:42] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:42] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F000500
+[09:47:42] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF40 = 0x0041281A
+[09:47:42] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF40 stack=1A 28 41 00 E9 FD 00 00 60 EF 1F 00 FC EF 1F 00
+[09:47:42] [INF] [Emulator] Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF40 stack=1A 28 41 00 E9 FD 00 00 60 EF 1F 00 FC EF 1F 00
+[09:47:42] [INF] [Emulator] [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF60
+[09:47:42] [INF] [Emulator] [Kernel32] GetCPInfo: actualCodePage=Utf8
+[09:47:42] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
+[09:47:42] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF40 = 0x0041281A
+[09:47:42] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetCPInfo: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0000FDE9 (saved=0000FDE9, preserved=True, valid=True, savedValid=True), ESP=001FEF3C
+[09:47:42] [DBG] [Emulator] [Syscall] Returned 0x00000001, argBytes=8, CPU will execute RET naturally
+[09:47:42] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000505 with argBytes=8
+[09:47:42] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetCPInfo: EAX=0x00000001 ESP=0x001FEF3C
+[09:47:42] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetCPInfo:
+  [ESP+-8] = 0x001FEF40: 0x0041281A
+  [ESP+-4] = 0x001FEF44: 0x0000FDE9
+  [ESP++0] = 0x001FEF48: 0x001FEF60 <-- Future ESP
+  [ESP++4] = 0x001FEF4C: 0x001FEFFC
+  [ESP++8] = 0x001FEF50: 0x00000000
+  [ESP++12] = 0x001FEF54: 0x00000000
+  [ESP++16] = 0x001FEF58: 0x00000000
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000505 from ESP=0x001FEF3C, cleanup=0 bytes, new ESP=0x001FEF40
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000505
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET at 0x0F000505: popped 0x0041281A from ESP=0x001FEF40, cleanup=8 bytes, new ESP=0x001FEF4C
+[09:47:42] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0041281A
+[09:47:43] [DBG] [Emulator] [Emulator] Progress: 10000 iterations (4868.00ms), EIP=0x00412880, ESP=0x001FEF4C
+[09:47:43] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:43] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetCommandLineA from stub at 0x0F0003F0
+[09:47:43] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF7C = 0x0041105B
+[09:47:43] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF7C stack=5B 10 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+[09:47:43] [INF] [Emulator] Dispatching KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF7C stack=5B 10 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+[09:47:43] [DBG] [Emulator] [ProcessEnv] ReadAnsiString addr=0x00470000 result='"C:\WASM\IGN_TEAS.EXE"'
+[09:47:43] [INF] [Emulator] [Kernel32] GetCommandLineA returning 0x00470000: ""C:\WASM\IGN_TEAS.EXE""
+[09:47:43] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetCommandLineA returned 0x00470000, argBytes=0
+[09:47:43] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF7C = 0x0041105B
+[09:47:43] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetCommandLineA: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF78
+[09:47:43] [DBG] [Emulator] [Syscall] Returned 0x00470000, argBytes=0, CPU will execute RET naturally
+[09:47:43] [DBG] [Emulator] [Syscall] Patched RET at 0x0F0003F5 with argBytes=0
+[09:47:43] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetCommandLineA: EAX=0x00470000 ESP=0x001FEF78
+[09:47:43] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetCommandLineA:
+  [ESP+-8] = 0x001FEF74: 0x00412A77
+  [ESP+-4] = 0x001FEF78: 0x0F0003F5
+  [ESP++0] = 0x001FEF7C: 0x0041105B <-- Future ESP
+  [ESP++4] = 0x001FEF80: 0x00000000
+  [ESP++8] = 0x001FEF84: 0x00000000
+  [ESP++12] = 0x001FEF88: 0x00000000
+  [ESP++16] = 0x001FEF8C: 0x00000000
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0003F5 from ESP=0x001FEF78, cleanup=0 bytes, new ESP=0x001FEF7C
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0003F5
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0F0003F5: popped 0x0041105B from ESP=0x001FEF7C, cleanup=0 bytes, new ESP=0x001FEF80
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0041105B
+[09:47:43] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:43] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetEnvironmentStringsW from stub at 0x0F000280
+[09:47:43] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF64 = 0x0041263B
+[09:47:43] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=3B 26 41 00 FC EF 1F 00 00 00 00 00 00 00 00 00
+[09:47:43] [INF] [Emulator] Dispatching KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=3B 26 41 00 FC EF 1F 00 00 00 00 00 00 00 00 00
+[09:47:43] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetEnvironmentStringsW returned 0x00880000, argBytes=0
+[09:47:43] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF64 = 0x0041263B
+[09:47:43] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetEnvironmentStringsW: EBX=00000000 (saved=00000000, preserved=True), ESI=0F000280 (saved=0F000280, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF60
+[09:47:43] [DBG] [Emulator] [Syscall] Returned 0x00880000, argBytes=0, CPU will execute RET naturally
+[09:47:43] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000285 with argBytes=0
+[09:47:43] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetEnvironmentStringsW: EAX=0x00880000 ESP=0x001FEF60
+[09:47:43] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetEnvironmentStringsW:
+  [ESP+-8] = 0x001FEF5C: 0x00000005
+  [ESP+-4] = 0x001FEF60: 0x0F000285
+  [ESP++0] = 0x001FEF64: 0x0041263B <-- Future ESP
+  [ESP++4] = 0x001FEF68: 0x001FEFFC
+  [ESP++8] = 0x001FEF6C: 0x00000000
+  [ESP++12] = 0x001FEF70: 0x00000000
+  [ESP++16] = 0x001FEF74: 0x00000000
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000285 from ESP=0x001FEF60, cleanup=0 bytes, new ESP=0x001FEF64
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000285
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0F000285: popped 0x0041263B from ESP=0x001FEF64, cleanup=0 bytes, new ESP=0x001FEF68
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0041263B
+[09:47:43] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:43] [INF] [Emulator] [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000290
+[09:47:43] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004126C6
+[09:47:43] [INF] [Emulator] Dispatching async KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=C6 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+[09:47:43] [INF] [Emulator] Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=C6 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+[09:47:43] [INF] [Emulator] [Kernel32] WideCharToMultiByte: CP=Acp cchWide=312 lpWide=0x00880000 cbMulti=0 lpMulti=0x00000000
+[09:47:43] [INF] [Emulator] [Kernel32] WideCharToMultiByte: Read 312 chars (specified count)
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Detected trailing null in wide string
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Converting with code page Utf8
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Conversion complete, got 312 bytes
+[09:47:43] [INF] [Emulator] [Kernel32] WideCharToMultiByte: Returning size 312
+[09:47:43] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000138, argBytes=32
+[09:47:43] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004126C6
+[09:47:43] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!WideCharToMultiByte: EBX=00000000 (saved=00000000, preserved=True), ESI=00000138 (saved=00000138, preserved=True), EDI=00880000 (saved=00880000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF40
+[09:47:43] [DBG] [Emulator] [Syscall] Returned 0x00000138, argBytes=32, CPU will execute RET naturally
+[09:47:43] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000295 with argBytes=32
+[09:47:43] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!WideCharToMultiByte: EAX=0x00000138 ESP=0x001FEF40
+[09:47:43] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!WideCharToMultiByte:
+  [ESP+-8] = 0x001FEF5C: 0x00000000
+  [ESP+-4] = 0x001FEF60: 0x00000000
+  [ESP++0] = 0x001FEF64: 0x00000000 <-- Future ESP
+  [ESP++4] = 0x001FEF68: 0x001FEFFC
+  [ESP++8] = 0x001FEF6C: 0x00000000
+  [ESP++12] = 0x001FEF70: 0x00000000
+  [ESP++16] = 0x001FEF74: 0x00000000
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000295 from ESP=0x001FEF40, cleanup=0 bytes, new ESP=0x001FEF44
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000295
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0F000295: popped 0x004126C6 from ESP=0x001FEF44, cleanup=32 bytes, new ESP=0x001FEF68
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004126C6
+[09:47:43] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:43] [INF] [Emulator] [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000290
+[09:47:43] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004126ED
+[09:47:43] [INF] [Emulator] Dispatching async KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=ED 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+[09:47:43] [INF] [Emulator] Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=ED 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+[09:47:43] [INF] [Emulator] [Kernel32] WideCharToMultiByte: CP=Acp cchWide=312 lpWide=0x00880000 cbMulti=312 lpMulti=0x00480200
+[09:47:43] [INF] [Emulator] [Kernel32] WideCharToMultiByte: Read 312 chars (specified count)
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Detected trailing null in wide string
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Converting with code page Utf8
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Conversion complete, got 312 bytes
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Writing 312 bytes to 0x00480200
+[09:47:43] [DBG] [Emulator] [Kernel32] WideCharToMultiByte: Success, returning 312 bytes
+[09:47:43] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000138, argBytes=32
+[09:47:43] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004126ED
+[09:47:43] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!WideCharToMultiByte: EBX=00480200 (saved=00480200, preserved=True), ESI=00000138 (saved=00000138, preserved=True), EDI=00880000 (saved=00880000, preserved=True), EBP=00000138 (saved=00000138, preserved=True, valid=False, savedValid=False), ESP=001FEF40
+[09:47:43] [DBG] [Emulator] [Syscall] Returned 0x00000138, argBytes=32, CPU will execute RET naturally
+[09:47:43] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!WideCharToMultiByte: EAX=0x00000138 ESP=0x001FEF40
+[09:47:43] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!WideCharToMultiByte:
+  [ESP+-8] = 0x001FEF5C: 0x00000138
+  [ESP+-4] = 0x001FEF60: 0x00000000
+  [ESP++0] = 0x001FEF64: 0x00000000 <-- Future ESP
+  [ESP++4] = 0x001FEF68: 0x001FEFFC
+  [ESP++8] = 0x001FEF6C: 0x00000000
+  [ESP++12] = 0x001FEF70: 0x00000000
+  [ESP++16] = 0x001FEF74: 0x00000000
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000295 from ESP=0x001FEF40, cleanup=0 bytes, new ESP=0x001FEF44
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000295
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0F000295: popped 0x004126ED from ESP=0x001FEF44, cleanup=32 bytes, new ESP=0x001FEF68
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004126ED
+[09:47:43] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:43] [INF] [Emulator] [Syscall] KERNEL32.DLL!FreeEnvironmentStringsW from stub at 0x0F0004D0
+[09:47:43] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF60 = 0x00412703
+[09:47:43] [INF] [Emulator] Dispatching async KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF60 stack=03 27 41 00 00 00 88 00 FC EF 1F 00 00 00 00 00
+[09:47:43] [INF] [Emulator] Dispatching KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF60 stack=03 27 41 00 00 00 88 00 FC EF 1F 00 00 00 00 00
+[09:47:43] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!FreeEnvironmentStringsW returned 0x00000001, argBytes=4
+[09:47:43] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF60 = 0x00412703
+[09:47:43] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!FreeEnvironmentStringsW: EBX=00480200 (saved=00480200, preserved=True), ESI=00000138 (saved=00000138, preserved=True), EDI=00880000 (saved=00880000, preserved=True), EBP=00000138 (saved=00000138, preserved=True, valid=False, savedValid=False), ESP=001FEF5C
+[09:47:43] [DBG] [Emulator] [Syscall] Returned 0x00000001, argBytes=4, CPU will execute RET naturally
+[09:47:43] [DBG] [Emulator] [Syscall] Patched RET at 0x0F0004D5 with argBytes=4
+[09:47:43] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!FreeEnvironmentStringsW: EAX=0x00000001 ESP=0x001FEF5C
+[09:47:43] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!FreeEnvironmentStringsW:
+  [ESP+-8] = 0x001FEF5C: 0x0F0004D5
+  [ESP+-4] = 0x001FEF60: 0x00412703
+  [ESP++0] = 0x001FEF64: 0x00880000 <-- Future ESP
+  [ESP++4] = 0x001FEF68: 0x001FEFFC
+  [ESP++8] = 0x001FEF6C: 0x00000000
+  [ESP++12] = 0x001FEF70: 0x00000000
+  [ESP++16] = 0x001FEF74: 0x00000000
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0004D5 from ESP=0x001FEF5C, cleanup=0 bytes, new ESP=0x001FEF60
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0004D5
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0F0004D5: popped 0x00412703 from ESP=0x001FEF60, cleanup=4 bytes, new ESP=0x001FEF68
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00412703
+[09:47:43] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:43] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetModuleFileNameA from stub at 0x0F000270
+[09:47:43] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF5C = 0x004123B8
+[09:47:43] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=B8 23 41 00 00 00 00 00 60 27 45 00 04 01 00 00
+[09:47:43] [INF] [Emulator] Dispatching KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=B8 23 41 00 00 00 00 00 60 27 45 00 04 01 00 00
+[09:47:43] [INF] [Emulator] [Kernel32] GetModuleFileNameA called: h=0x00000000 lp=0x00452760 n=260
+[09:47:43] [DBG] [Emulator] [Kernel32] GetModuleFileNameA resolved path: C:\WASM\IGN_TEAS.EXE
+[09:47:43] [DBG] [Emulator] [Kernel32] GetModuleFileNameA converted to Windows path: C:\WASM\IGN_TEAS.EXE
+[09:47:43] [DBG] [Emulator] MemWrite addr=0x00452774 len=1 data=00
+[09:47:43] [DBG] [Emulator] MemWrite addr=0x00452760 len=21 data=43 3A 5C 57 41 53 4D 5C 49 47 4E 5F 54 45 41 53 2E 45 58 45
+[09:47:43] [INF] [Emulator] [Kernel32] GetModuleFileNameA returning 20
+[09:47:43] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetModuleFileNameA returned 0x00000014, argBytes=12
+[09:47:43] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF5C = 0x004123B8
+[09:47:43] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetModuleFileNameA: EBX=00000000 (saved=00000000, preserved=True), ESI=00452760 (saved=00452760, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF58
+[09:47:43] [DBG] [Emulator] [Syscall] Returned 0x00000014, argBytes=12, CPU will execute RET naturally
+[09:47:43] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000275 with argBytes=12
+[09:47:43] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetModuleFileNameA: EAX=0x00000014 ESP=0x001FEF58
+[09:47:43] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF68 contains suspiciously low value 0x00000104 which could cause corruption if used as return address or function pointer
+[09:47:43] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetModuleFileNameA:
+  [ESP+-8] = 0x001FEF60: 0x00000000
+  [ESP+-4] = 0x001FEF64: 0x00452760
+  [ESP++0] = 0x001FEF68: 0x00000104 <-- Future ESP
+  [ESP++4] = 0x001FEF6C: 0x00000000
+  [ESP++8] = 0x001FEF70: 0x00000000
+  [ESP++12] = 0x001FEF74: 0x00000000
+  [ESP++16] = 0x001FEF78: 0x0F0003F5
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000275 from ESP=0x001FEF58, cleanup=0 bytes, new ESP=0x001FEF5C
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000275
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET at 0x0F000275: popped 0x004123B8 from ESP=0x001FEF5C, cleanup=12 bytes, new ESP=0x001FEF6C
+[09:47:43] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004123B8
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetModuleHandleA from stub at 0x0F0003D0
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF6C = 0x00411A7B
+[09:47:45] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetModuleHandleA at EIP=0x0E000002 ESP=0x001FEF6C stack=7B 1A 41 00 14 B3 41 00 2A 0E 41 00 9B 0E 41 00
+[09:47:45] [INF] [Emulator] Dispatching KERNEL32.DLL!GetModuleHandleA at EIP=0x0E000002 ESP=0x001FEF6C stack=7B 1A 41 00 14 B3 41 00 2A 0E 41 00 9B 0E 41 00
+[09:47:45] [INF] [Emulator] [Kernel32] GetModuleHandleA called: module='KERNEL32'
+[09:47:45] [DBG] [Emulator] [Kernel32] GetModuleHandleA returning handle for KERNEL32.DLL: 0x10000000
+[09:47:45] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetModuleHandleA returned 0x10000000, argBytes=4
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF6C = 0x00411A7B
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetModuleHandleA: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF68
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x10000000, argBytes=4, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F0003D5 with argBytes=4
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetModuleHandleA: EAX=0x10000000 ESP=0x001FEF68
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetModuleHandleA:
+  [ESP+-8] = 0x001FEF68: 0x0F0003D5
+  [ESP+-4] = 0x001FEF6C: 0x00411A7B
+  [ESP++0] = 0x001FEF70: 0x0041B314 <-- Future ESP
+  [ESP++4] = 0x001FEF74: 0x00410E2A
+  [ESP++8] = 0x001FEF78: 0x00410E9B
+  [ESP++12] = 0x001FEF7C: 0x00411090
+  [ESP++16] = 0x001FEF80: 0x00000000
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0003D5 from ESP=0x001FEF68, cleanup=0 bytes, new ESP=0x001FEF6C
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0003D5
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F0003D5: popped 0x00411A7B from ESP=0x001FEF6C, cleanup=4 bytes, new ESP=0x001FEF74
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00411A7B
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetProcAddress from stub at 0x0F000460
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF68 = 0x00411A8B
+[09:47:45] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetProcAddress at EIP=0x0E000002 ESP=0x001FEF68 stack=8B 1A 41 00 00 00 00 10 F8 B2 41 00 2A 0E 41 00
+[09:47:45] [INF] [Emulator] Dispatching KERNEL32.DLL!GetProcAddress at EIP=0x0E000002 ESP=0x001FEF68 stack=8B 1A 41 00 00 00 00 10 F8 B2 41 00 2A 0E 41 00
+[09:47:45] [INF] [Emulator] [Kernel32] GetProcAddress(0x10000000, 0x0041B2F8)
+[09:47:45] [INF] [Emulator] [Kernel32] GetProcAddress: Looking up 'IsProcessorFeaturePresent'
+[09:47:45] [INF] [Emulator] [ProcessEnv] Registered synthetic export: KERNEL32.DLL!IsProcessorFeaturePresent at 0x0F800000
+[09:47:45] [INF] [Emulator] [Kernel32] GetProcAddress: Registered synthetic export 'KERNEL32.DLL!IsProcessorFeaturePresent' at 0x0F800000
+[09:47:45] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetProcAddress returned 0x0F800000, argBytes=8
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF68 = 0x00411A8B
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetProcAddress: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF64
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x0F800000, argBytes=8, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000465 with argBytes=8
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetProcAddress: EAX=0x0F800000 ESP=0x001FEF64
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetProcAddress:
+  [ESP+-8] = 0x001FEF68: 0x00411A8B
+  [ESP+-4] = 0x001FEF6C: 0x10000000
+  [ESP++0] = 0x001FEF70: 0x0041B2F8 <-- Future ESP
+  [ESP++4] = 0x001FEF74: 0x00410E2A
+  [ESP++8] = 0x001FEF78: 0x00410E9B
+  [ESP++12] = 0x001FEF7C: 0x00411090
+  [ESP++16] = 0x001FEF80: 0x00000000
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000465 from ESP=0x001FEF64, cleanup=0 bytes, new ESP=0x001FEF68
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000465
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F000465: popped 0x00411A8B from ESP=0x001FEF68, cleanup=8 bytes, new ESP=0x001FEF74
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00411A8B
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] KERNEL32.DLL!IsProcessorFeaturePresent from stub at 0x0F800000
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF6C = 0x00411A93
+[09:47:45] [INF] [Emulator] Dispatching async KERNEL32.DLL!IsProcessorFeaturePresent at EIP=0x0E000002 ESP=0x001FEF6C stack=93 1A 41 00 00 00 00 00 2A 0E 41 00 9B 0E 41 00
+[09:47:45] [INF] [Emulator] Dispatching KERNEL32.DLL!IsProcessorFeaturePresent at EIP=0x0E000002 ESP=0x001FEF6C stack=93 1A 41 00 00 00 00 00 2A 0E 41 00 9B 0E 41 00
+[09:47:45] [DBG] [Emulator] [Kernel32] IsProcessorFeaturePresent(0) -> False
+[09:47:45] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!IsProcessorFeaturePresent returned 0x00000000, argBytes=4
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF6C = 0x00411A93
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!IsProcessorFeaturePresent: EBX=00000000 (saved=00000000, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF68
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x00000000, argBytes=4, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F800005 with argBytes=4
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!IsProcessorFeaturePresent: EAX=0x00000000 ESP=0x001FEF68
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!IsProcessorFeaturePresent:
+  [ESP+-8] = 0x001FEF68: 0x0F800005
+  [ESP+-4] = 0x001FEF6C: 0x00411A93
+  [ESP++0] = 0x001FEF70: 0x00000000 <-- Future ESP
+  [ESP++4] = 0x001FEF74: 0x00410E2A
+  [ESP++8] = 0x001FEF78: 0x00410E9B
+  [ESP++12] = 0x001FEF7C: 0x00411090
+  [ESP++16] = 0x001FEF80: 0x00000000
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F800005 from ESP=0x001FEF68, cleanup=0 bytes, new ESP=0x001FEF6C
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F800005
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F800005: popped 0x00411A93 from ESP=0x001FEF6C, cleanup=4 bytes, new ESP=0x001FEF74
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00411A93
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000410
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF38 = 0x0041184C
+[09:47:45] [INF] [Emulator] Dispatching async KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF38 stack=4C 18 41 00 40 20 47 00 08 00 00 00 00 00 04 00
+[09:47:45] [INF] [Emulator] Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEF38 stack=4C 18 41 00 40 20 47 00 08 00 00 00 00 00 04 00
+[09:47:45] [INF] [Emulator] [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00040000, alloc=0x00001000, prot=0x00000004)
+[09:47:45] [INF] [Emulator] [ProcessEnv] VirtualAlloc: allocated at 0x00881000, size=0x00040000, reserve=False, commit=True, topDown=False
+[09:47:45] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x00881000, argBytes=12
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF38 = 0x0041184C
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!HeapAlloc: EBX=0F000410 (saved=0F000410, preserved=True), ESI=00040000 (saved=00040000, preserved=True), EDI=0041C010 (saved=0041C010, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF34
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x00881000, argBytes=12, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000415 with argBytes=12
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!HeapAlloc: EAX=0x00881000 ESP=0x001FEF34
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!HeapAlloc:
+  [ESP+-8] = 0x001FEF3C: 0x00472040
+  [ESP+-4] = 0x001FEF40: 0x00000008
+  [ESP++0] = 0x001FEF44: 0x00040000 <-- Future ESP
+  [ESP++4] = 0x001FEF48: 0x0041C010
+  [ESP++8] = 0x001FEF4C: 0x0041C00C
+  [ESP++12] = 0x001FEF50: 0x00000000
+  [ESP++16] = 0x001FEF54: 0x00414706
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000415 from ESP=0x001FEF34, cleanup=0 bytes, new ESP=0x001FEF38
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000415
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F000415: popped 0x0041184C from ESP=0x001FEF38, cleanup=12 bytes, new ESP=0x001FEF48
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0041184C
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F0003E0
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF78 = 0x004110F6
+[09:47:45] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF78 stack=F6 10 41 00 8C EF 1F 00 00 00 00 00 00 00 00 00
+[09:47:45] [INF] [Emulator] Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF78 stack=F6 10 41 00 8C EF 1F 00 00 00 00 00 00 00 00 00
+[09:47:45] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF78 = 0x004110F6
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetStartupInfoA: EBX=00000045 (saved=00000045, preserved=True), ESI=00470016 (saved=00470016, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF74
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x00000000, argBytes=4, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetStartupInfoA: EAX=0x00000000 ESP=0x001FEF74
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF8C contains suspiciously low value 0x00000044 which could cause corruption if used as return address or function pointer
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetStartupInfoA:
+  [ESP+-8] = 0x001FEF74: 0x0F0003E5
+  [ESP+-4] = 0x001FEF78: 0x004110F6
+  [ESP++0] = 0x001FEF7C: 0x001FEF8C <-- Future ESP
+  [ESP++4] = 0x001FEF80: 0x00000000
+  [ESP++8] = 0x001FEF84: 0x00000000
+  [ESP++12] = 0x001FEF88: 0x00000000
+  [ESP++16] = 0x001FEF8C: 0x00000044
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0003E5 from ESP=0x001FEF74, cleanup=0 bytes, new ESP=0x001FEF78
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0003E5
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F0003E5: popped 0x004110F6 from ESP=0x001FEF78, cleanup=4 bytes, new ESP=0x001FEF80
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004110F6
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] KERNEL32.DLL!GetModuleHandleA from stub at 0x0F0003D0
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF6C = 0x00411115
+[09:47:45] [INF] [Emulator] Dispatching async KERNEL32.DLL!GetModuleHandleA at EIP=0x0E000002 ESP=0x001FEF6C stack=15 11 41 00 00 00 00 00 00 00 00 00 16 00 47 00
+[09:47:45] [INF] [Emulator] Dispatching KERNEL32.DLL!GetModuleHandleA at EIP=0x0E000002 ESP=0x001FEF6C stack=15 11 41 00 00 00 00 00 00 00 00 00 16 00 47 00
+[09:47:45] [INF] [Emulator] [Kernel32] GetModuleHandleA called: module='NULL (current process)'
+[09:47:45] [DBG] [Emulator] [Kernel32] GetModuleHandleA returning current process handle: 0x00400000
+[09:47:45] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!GetModuleHandleA returned 0x00400000, argBytes=4
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF6C = 0x00411115
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!GetModuleHandleA: EBX=00000045 (saved=00000045, preserved=True), ESI=00470016 (saved=00470016, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF68
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x00400000, argBytes=4, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!GetModuleHandleA: EAX=0x00400000 ESP=0x001FEF68
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF7C contains suspiciously low value 0x0000000A which could cause corruption if used as return address or function pointer
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!GetModuleHandleA:
+  [ESP+-8] = 0x001FEF68: 0x0F0003D5
+  [ESP+-4] = 0x001FEF6C: 0x00411115
+  [ESP++0] = 0x001FEF70: 0x00000000 <-- Future ESP
+  [ESP++4] = 0x001FEF74: 0x00000000
+  [ESP++8] = 0x001FEF78: 0x00470016
+  [ESP++12] = 0x001FEF7C: 0x0000000A
+  [ESP++16] = 0x001FEF80: 0x00000000
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0003D5 from ESP=0x001FEF68, cleanup=0 bytes, new ESP=0x001FEF6C
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0003D5
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F0003D5: popped 0x00411115 from ESP=0x001FEF6C, cleanup=4 bytes, new ESP=0x001FEF74
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00411115
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403161: push esi (Bytes: 56 FF 15 FC 52 45 00 A3 90 C7 43 00 89 74 24 34)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403162: call dword ptr ds:[4552FCh] (Bytes: FF 15 FC 52 45 00 A3 90 C7 43 00 89 74 24 34 A1)
+[09:47:45] [WRN] [Emulator] [IcedCpu] CalcMemAddress for IAT: EIP=0x00403162, disp=0x004552FC, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, seg=DS, segVal=0x0000, finalAddr=0x004552FC
+[09:47:45] [WRN] [Emulator] [IcedCpu] Read32 from IAT: addr=0x004552FC, value=0x0F000070, EIP=0x00403162
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] USER32.DLL!LoadCursorA from stub at 0x0F000070
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF0C = 0x00403168
+[09:47:45] [INF] [Emulator] Dispatching async USER32.DLL!LoadCursorA at EIP=0x0E000002 ESP=0x001FEF0C stack=68 31 40 00 00 00 00 00 00 7F 00 00 FC EF 1F 00
+[09:47:45] [INF] [Emulator] [User32] LoadCursorA: hInstance=0x00000000 lpCursorName=0x00007F00
+[09:47:45] [INF] [Emulator] [Dispatcher] Async USER32.DLL!LoadCursorA returned 0x00017F00, argBytes=8
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF0C = 0x00403168
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall USER32.DLL!LoadCursorA: EBX=00000045 (saved=00000045, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=001FEFFC (saved=001FEFFC, preserved=True, valid=True, savedValid=True), ESP=001FEF08
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x00017F00, argBytes=8, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000075 with argBytes=8
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after USER32.DLL!LoadCursorA: EAX=0x00017F00 ESP=0x001FEF08
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF14 contains suspiciously low value 0x00007F00 which could cause corruption if used as return address or function pointer
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF24 contains suspiciously low value 0x00000045 which could cause corruption if used as return address or function pointer
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after USER32.DLL!LoadCursorA:
+  [ESP+-8] = 0x001FEF0C: 0x00403168
+  [ESP+-4] = 0x001FEF10: 0x00000000
+  [ESP++0] = 0x001FEF14: 0x00007F00 <-- Future ESP
+  [ESP++4] = 0x001FEF18: 0x001FEFFC
+  [ESP++8] = 0x001FEF1C: 0x00000000
+  [ESP++12] = 0x001FEF20: 0x00470016
+  [ESP++16] = 0x001FEF24: 0x00000045
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000075 from ESP=0x001FEF08, cleanup=0 bytes, new ESP=0x001FEF0C
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000075
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F000075: popped 0x00403168 from ESP=0x001FEF0C, cleanup=8 bytes, new ESP=0x001FEF18
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00403168
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403168: mov ds:[43C790h],eax (Bytes: A3 90 C7 43 00 89 74 24 34 A1 B8 C7 43 00 68 00)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x0040316D: mov [esp+34h],esi (Bytes: 89 74 24 34 A1 B8 C7 43 00 68 00 7F 00 00 89 74)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403171: mov eax,ds:[43C7B8h] (Bytes: A1 B8 C7 43 00 68 00 7F 00 00 89 74 24 3C 56 8B)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403176: push 7F00h (Bytes: 68 00 7F 00 00 89 74 24 3C 56 8B 2D F8 52 45 00)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x0040317B: mov [esp+3Ch],esi (Bytes: 89 74 24 3C 56 8B 2D F8 52 45 00 89 44 24 44 C7)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x0040317F: push esi (Bytes: 56 8B 2D F8 52 45 00 89 44 24 44 C7 44 24 34 08)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403180: mov ebp,ds:[4552F8h] (Bytes: 8B 2D F8 52 45 00 89 44 24 44 C7 44 24 34 08 00)
+[09:47:45] [WRN] [Emulator] [IcedCpu] CalcMemAddress for IAT: EIP=0x00403180, disp=0x004552F8, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, seg=DS, segVal=0x0000, finalAddr=0x004552F8
+[09:47:45] [WRN] [Emulator] [IcedCpu] Read32 from IAT: addr=0x004552F8, value=0x0F000060, EIP=0x00403180
+[09:47:45] [WRN] [Emulator] [IcedCpu] SetReg32: EBP=0x0F000060, EIP=0x00403180, ESP=0x001FEF10
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403186: mov [esp+44h],eax (Bytes: 89 44 24 44 C7 44 24 34 08 00 00 00 C7 44 24 38)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x0040318A: mov dword ptr [esp+34h],8 (Bytes: C7 44 24 34 08 00 00 00 C7 44 24 38 40 33 40 00)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x00403192: mov dword ptr [esp+38h],403340h (Bytes: C7 44 24 38 40 33 40 00 FF D5 8B 0D 90 C7 43 00)
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x0040319A: call ebp (Bytes: FF D5 8B 0D 90 C7 43 00 6A 04 89 44 24 44 89 4C)
+[09:47:45] [WRN] [Emulator] [IcedCpu] CALL EBP at EIP=0x0040319A: reg=EBP, value=0x0F000060, EBP=0x0F000060, ESP=0x001FEF0C
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] USER32.DLL!LoadIconA from stub at 0x0F000060
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF0C = 0x0040319C
+[09:47:45] [INF] [Emulator] Dispatching async USER32.DLL!LoadIconA at EIP=0x0E000002 ESP=0x001FEF0C stack=9C 31 40 00 00 00 00 00 00 7F 00 00 FC EF 1F 00
+[09:47:45] [INF] [Emulator] [User32] LoadIconA: hInstance=0x00000000 lpIconName=0x00007F00
+[09:47:45] [INF] [Emulator] [Dispatcher] Async USER32.DLL!LoadIconA returned 0x00017F00, argBytes=8
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF0C = 0x0040319C
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall USER32.DLL!LoadIconA: EBX=00000045 (saved=00000045, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F000060 (saved=0F000060, preserved=True, valid=False, savedValid=False), ESP=001FEF08
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x00017F00, argBytes=8, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000065 with argBytes=8
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after USER32.DLL!LoadIconA: EAX=0x00017F00 ESP=0x001FEF08
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF14 contains suspiciously low value 0x00007F00 which could cause corruption if used as return address or function pointer
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF24 contains suspiciously low value 0x00000045 which could cause corruption if used as return address or function pointer
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after USER32.DLL!LoadIconA:
+  [ESP+-8] = 0x001FEF0C: 0x0040319C
+  [ESP+-4] = 0x001FEF10: 0x00000000
+  [ESP++0] = 0x001FEF14: 0x00007F00 <-- Future ESP
+  [ESP++4] = 0x001FEF18: 0x001FEFFC
+  [ESP++8] = 0x001FEF1C: 0x00000000
+  [ESP++12] = 0x001FEF20: 0x00470016
+  [ESP++16] = 0x001FEF24: 0x00000045
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000065 from ESP=0x001FEF08, cleanup=0 bytes, new ESP=0x001FEF0C
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000065
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F000065: popped 0x0040319C from ESP=0x001FEF0C, cleanup=8 bytes, new ESP=0x001FEF18
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0040319C
+[09:47:45] [INF] [Emulator] [IcedCpu] Executing at 0x0040319C: mov ecx,ds:[43C790h] (Bytes: 8B 0D 90 C7 43 00 6A 04 89 44 24 44 89 4C 24 48)
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] GDI32.DLL!GetStockObject from stub at 0x0F0001F0
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x004031B2
+[09:47:45] [INF] [Emulator] Dispatching async GDI32.DLL!GetStockObject at EIP=0x0E000002 ESP=0x001FEF10 stack=B2 31 40 00 04 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:45] [INF] [Emulator] Dispatching GDI32.DLL!GetStockObject at EIP=0x0E000002 ESP=0x001FEF10 stack=B2 31 40 00 04 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:45] [INF] [Emulator] [Gdi32] GetStockObject(4) -> 0x80000000
+[09:47:45] [INF] [Emulator] [Dispatcher] GDI32.DLL!GetStockObject returned 0x80000000, argBytes=4
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF10 = 0x004031B2
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall GDI32.DLL!GetStockObject: EBX=00000045 (saved=00000045, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F000060 (saved=0F000060, preserved=True, valid=False, savedValid=False), ESP=001FEF0C
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x80000000, argBytes=4, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F0001F5 with argBytes=4
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after GDI32.DLL!GetStockObject: EAX=0x80000000 ESP=0x001FEF0C
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF14 contains suspiciously low value 0x00000004 which could cause corruption if used as return address or function pointer
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF24 contains suspiciously low value 0x00000045 which could cause corruption if used as return address or function pointer
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after GDI32.DLL!GetStockObject:
+  [ESP+-8] = 0x001FEF0C: 0x0F0001F5
+  [ESP+-4] = 0x001FEF10: 0x004031B2
+  [ESP++0] = 0x001FEF14: 0x00000004 <-- Future ESP
+  [ESP++4] = 0x001FEF18: 0x001FEFFC
+  [ESP++8] = 0x001FEF1C: 0x00000000
+  [ESP++12] = 0x001FEF20: 0x00470016
+  [ESP++16] = 0x001FEF24: 0x00000045
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F0001F5 from ESP=0x001FEF0C, cleanup=0 bytes, new ESP=0x001FEF10
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F0001F5
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F0001F5: popped 0x004031B2 from ESP=0x001FEF10, cleanup=4 bytes, new ESP=0x001FEF18
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004031B2
+[09:47:45] [WRN] [Emulator] [IcedCpu] CalcMemAddress for IAT: EIP=0x004031C7, disp=0x004552F4, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, seg=DS, segVal=0x0000, finalAddr=0x004552F4
+[09:47:45] [WRN] [Emulator] [IcedCpu] Read32 from IAT: addr=0x004552F4, value=0x0F000050, EIP=0x004031C7
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] USER32.DLL!RegisterClassA from stub at 0x0F000050
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x004031CD
+[09:47:45] [INF] [Emulator] Dispatching async USER32.DLL!RegisterClassA at EIP=0x0E000002 ESP=0x001FEF10 stack=CD 31 40 00 44 EF 1F 00 FC EF 1F 00 00 00 00 00
+[09:47:45] [DBG] [Emulator] [ProcessEnv] ReadAnsiString addr=0x0041C7B8 result='Ignition'
+[09:47:45] [INF] [Emulator] [ProcessEnv] Registered window class: Ignition
+[09:47:45] [INF] [Emulator] [User32] RegisterClassA: 'Ignition' -> atom 0xC000
+[09:47:45] [INF] [Emulator] [Dispatcher] Async USER32.DLL!RegisterClassA returned 0x0000C000, argBytes=4
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF10 = 0x004031CD
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall USER32.DLL!RegisterClassA: EBX=00000045 (saved=00000045, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F000060 (saved=0F000060, preserved=True, valid=False, savedValid=False), ESP=001FEF0C
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x0000C000, argBytes=4, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000055 with argBytes=4
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after USER32.DLL!RegisterClassA: EAX=0x0000C000 ESP=0x001FEF0C
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF24 contains suspiciously low value 0x00000045 which could cause corruption if used as return address or function pointer
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after USER32.DLL!RegisterClassA:
+  [ESP+-8] = 0x001FEF0C: 0x0F000055
+  [ESP+-4] = 0x001FEF10: 0x004031CD
+  [ESP++0] = 0x001FEF14: 0x001FEF44 <-- Future ESP
+  [ESP++4] = 0x001FEF18: 0x001FEFFC
+  [ESP++8] = 0x001FEF1C: 0x00000000
+  [ESP++12] = 0x001FEF20: 0x00470016
+  [ESP++16] = 0x001FEF24: 0x00000045
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000055 from ESP=0x001FEF0C, cleanup=0 bytes, new ESP=0x001FEF10
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000055
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F000055: popped 0x004031CD from ESP=0x001FEF10, cleanup=4 bytes, new ESP=0x001FEF18
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004031CD
+[09:47:45] [WRN] [Emulator] [IcedCpu] CalcMemAddress for IAT: EIP=0x004031E2, disp=0x00455360, base=None, baseVal=0x00000000, index=None, indexVal=0x00000000, scale=1, seg=DS, segVal=0x0000, finalAddr=0x00455360
+[09:47:45] [WRN] [Emulator] [IcedCpu] Read32 from IAT: addr=0x00455360, value=0x0F000240, EIP=0x004031E2
+[09:47:45] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:45] [INF] [Emulator] [Syscall] WINMM.DLL!timeBeginPeriod from stub at 0x0F000240
+[09:47:45] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEF10 = 0x004031E8
+[09:47:45] [INF] [Emulator] Dispatching async WINMM.DLL!timeBeginPeriod at EIP=0x0E000002 ESP=0x001FEF10 stack=E8 31 40 00 01 00 00 00 FC EF 1F 00 00 00 00 00
+[09:47:45] [INF] [Emulator] [WinMM] timeBeginPeriod(1)
+[09:47:45] [INF] [Emulator] [Dispatcher] Async WINMM.DLL!timeBeginPeriod returned 0x00000000, argBytes=4
+[09:47:45] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEF10 = 0x004031E8
+[09:47:45] [DBG] [Emulator] [RegisterValidation] After Syscall WINMM.DLL!timeBeginPeriod: EBX=00000045 (saved=00000045, preserved=True), ESI=00000000 (saved=00000000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=0F000060 (saved=0F000060, preserved=True, valid=False, savedValid=False), ESP=001FEF0C
+[09:47:45] [DBG] [Emulator] [Syscall] Returned 0x00000000, argBytes=4, CPU will execute RET naturally
+[09:47:45] [DBG] [Emulator] [Syscall] Patched RET at 0x0F000245 with argBytes=4
+[09:47:45] [DBG] [Emulator] [Syscall] CPU state after WINMM.DLL!timeBeginPeriod: EAX=0x00000000 ESP=0x001FEF0C
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF14 contains suspiciously low value 0x00000001 which could cause corruption if used as return address or function pointer
+[09:47:45] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEF24 contains suspiciously low value 0x00000045 which could cause corruption if used as return address or function pointer
+[09:47:45] [DBG] [Emulator] 
+[Syscall] Stack validation after WINMM.DLL!timeBeginPeriod:
+  [ESP+-8] = 0x001FEF0C: 0x0F000245
+  [ESP+-4] = 0x001FEF10: 0x004031E8
+  [ESP++0] = 0x001FEF14: 0x00000001 <-- Future ESP
+  [ESP++4] = 0x001FEF18: 0x001FEFFC
+  [ESP++8] = 0x001FEF1C: 0x00000000
+  [ESP++12] = 0x001FEF20: 0x00470016
+  [ESP++16] = 0x001FEF24: 0x00000045
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000245 from ESP=0x001FEF0C, cleanup=0 bytes, new ESP=0x001FEF10
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000245
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET at 0x0F000245: popped 0x004031E8 from ESP=0x001FEF10, cleanup=4 bytes, new ESP=0x001FEF18
+[09:47:45] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x004031E8
+[09:47:46] [DBG] [Emulator] [IcedCpu] INT 0x80 syscall at 0x0E000000
+[09:47:46] [INF] [Emulator] [Syscall] KERNEL32.DLL!HeapAlloc from stub at 0x0F000410
+[09:47:46] [INF] [Emulator] [Syscall] BEFORE API: Return address at 0x001FEC24 = 0x00411244
+[09:47:46] [INF] [Emulator] Dispatching async KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEC24 stack=44 12 41 00 40 20 47 00 00 00 00 00 00 10 00 00
+[09:47:46] [INF] [Emulator] Dispatching KERNEL32.DLL!HeapAlloc at EIP=0x0E000002 ESP=0x001FEC24 stack=44 12 41 00 40 20 47 00 00 00 00 00 00 10 00 00
+[09:47:46] [INF] [Emulator] [Dispatcher] KERNEL32.DLL!HeapAlloc returned 0x00472040, argBytes=12
+[09:47:46] [INF] [Emulator] [Syscall] AFTER API: Return address at 0x001FEC24 = 0x00411244
+[09:47:46] [DBG] [Emulator] [RegisterValidation] After Syscall KERNEL32.DLL!HeapAlloc: EBX=0000000A (saved=0000000A, preserved=True), ESI=00001000 (saved=00001000, preserved=True), EDI=00000000 (saved=00000000, preserved=True), EBP=00000000 (saved=00000000, preserved=True, valid=False, savedValid=False), ESP=001FEC20
+[09:47:46] [DBG] [Emulator] [Syscall] Returned 0x00472040, argBytes=12, CPU will execute RET naturally
+[09:47:46] [DBG] [Emulator] [Syscall] CPU state after KERNEL32.DLL!HeapAlloc: EAX=0x00472040 ESP=0x001FEC20
+[09:47:46] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEC30 contains suspiciously low value 0x00001000 which could cause corruption if used as return address or function pointer
+[09:47:46] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEC34 contains suspiciously low value 0x00001000 which could cause corruption if used as return address or function pointer
+[09:47:46] [WRN] [Emulator] [Syscall] SUSPICIOUS: Stack location 0x001FEC3C contains suspiciously low value 0x00001000 which could cause corruption if used as return address or function pointer
+[09:47:46] [DBG] [Emulator] 
+[Syscall] Stack validation after KERNEL32.DLL!HeapAlloc:
+  [ESP+-8] = 0x001FEC28: 0x00472040
+  [ESP+-4] = 0x001FEC2C: 0x00000000
+  [ESP++0] = 0x001FEC30: 0x00001000 <-- Future ESP
+  [ESP++4] = 0x001FEC34: 0x00001000
+  [ESP++8] = 0x001FEC38: 0x004111ED
+  [ESP++12] = 0x001FEC3C: 0x00001000
+  [ESP++16] = 0x001FEC40: 0xFFFFFFFF
+[09:47:46] [DBG] [Emulator] [IcedCpu] RET at 0x0E000002: popped 0x0F000415 from ESP=0x001FEC20, cleanup=0 bytes, new ESP=0x001FEC24
+[09:47:46] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x0F000415
+[09:47:46] [DBG] [Emulator] [IcedCpu] RET at 0x0F000415: popped 0x00411244 from ESP=0x001FEC24, cleanup=12 bytes, new ESP=0x001FEC34
+[09:47:46] [DBG] [Emulator] [IcedCpu] RET: After setting _eip, current _eip value is 0x00411244
+[09:47:48] [DBG] [Emulator] [Emulator] Progress: 20000 iterations (4986.00ms), EIP=0x00403600, ESP=0x001FEEFC
+[09:47:52] [DBG] [Emulator] [Emulator] Progress: 30000 iterations (4366.00ms), EIP=0x00410E0E, ESP=0x001FEEF0
+[09:47:56] [DBG] [Emulator] [Emulator] Progress: 40000 iterations (4351.00ms), EIP=0x004065F6, ESP=0x001FEF04
+[09:48:01] [DBG] [Emulator] [Emulator] Progress: 50000 iterations (4380.00ms), EIP=0x00410DFB, ESP=0x001FEEFC
+[09:48:05] [DBG] [Emulator] [Emulator] Progress: 60000 iterations (4347.00ms), EIP=0x00410E17, ESP=0x001FEEF0
+[09:48:09] [DBG] [Emulator] [Emulator] Progress: 70000 iterations (4324.00ms), EIP=0x004065FF, ESP=0x001FEF04
