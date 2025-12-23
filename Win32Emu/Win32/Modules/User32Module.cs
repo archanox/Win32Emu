@@ -95,6 +95,11 @@ namespace Win32Emu.Win32.Modules
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
 			_standardControlHandler = new StandardControlHandler(env, null, _logger);
+			
+			// Register our SendMessageAsync method with ProcessEnvironment so it can deliver
+			// WM_CREATE and other creation messages synchronously to window procedures
+			_env.SetSendMessageDelegate((hwnd, msg, wParam, lParam) => 
+				SendMessageAsync(hwnd, msg, wParam, lParam, CancellationToken.None));
 		}
 
 		public void SetDispatcher(Win32Dispatcher dispatcher)
