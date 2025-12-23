@@ -19,8 +19,6 @@ const fs = require('fs');
 const PORT = 8080;
 const WWWROOT = path.join(__dirname, 'Win32Emu.Wasm/bin/Release/net9.0/publish/wwwroot');
 const SCREENSHOT_DIR = path.join(__dirname, 'test-screenshots');
-const TEST_TIMEOUT = 180000; // 3 minutes for game loading
-const IGN_TEAS_FOLDER = path.join(__dirname, 'EXEs/ign_teas');
 
 // Ensure screenshot directory exists
 if (!fs.existsSync(SCREENSHOT_DIR)) {
@@ -89,20 +87,6 @@ function createServer() {
     });
 
     return server;
-}
-
-/**
- * Wait for a condition with timeout
- */
-async function waitFor(conditionFn, timeout = 30000, interval = 1000) {
-    const startTime = Date.now();
-    while (Date.now() - startTime < timeout) {
-        if (await conditionFn()) {
-            return true;
-        }
-        await new Promise(resolve => setTimeout(resolve, interval));
-    }
-    return false;
 }
 
 /**
