@@ -199,7 +199,7 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 		var normalizedPath = NormalizePath(path);
 		var canWrite = access == VfsFileAccess.Write || access == VfsFileAccess.ReadWrite;
 		
-		_logger.LogDebug("[BrowserVFS] OpenFile: {Path}, Mode: {Mode}, Access: {Access}", normalizedPath, mode, access);
+		_logger.LogInformation("[BrowserVFS] OpenFile: {Path}, Mode: {Mode}, Access: {Access}", normalizedPath, mode, access);
 		
 		lock (_lock)
 		{
@@ -212,7 +212,13 @@ public class BrowserVirtualFileSystem : IVirtualFileSystem, IDisposable
 				case VfsFileMode.Open:
 					if (!fileExists)
 					{
-						_logger.LogDebug("[BrowserVFS] File not found: {Path}", normalizedPath);
+						_logger.LogInformation("[BrowserVFS] File not found: {Path} (have {Count} files)", normalizedPath, _files.Count);
+						// Log first few files for debugging
+						var sample = _files.Keys.Take(5);
+						foreach (var key in sample)
+						{
+							_logger.LogInformation("[BrowserVFS]   Sample file: {Key}", key);
+						}
 						return null;
 					}
 					break;

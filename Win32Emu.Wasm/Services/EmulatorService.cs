@@ -137,7 +137,11 @@ public class EmulatorService : IDisposable
 				}
 				
 				// Detect the common folder prefix from the uploaded files
+				// This is used to strip the top-level container folder from browser file uploads
+				// BUT we should only strip if ALL files are in that folder (no top-level files exist)
 				string? commonPrefix = null;
+				bool hasTopLevelFiles = false;
+				
 				foreach (var path in normalizedPaths.Keys)
 				{
 					var firstSlash = path.IndexOf('\\');
@@ -155,6 +159,18 @@ public class EmulatorService : IDisposable
 							break;
 						}
 					}
+					else
+					{
+						// This is a top-level file (no subdirectory)
+						// If we have top-level files, the prefix is NOT a container - it's a real subdirectory
+						hasTopLevelFiles = true;
+					}
+				}
+				
+				// Only use common prefix if there are NO top-level files
+				if (hasTopLevelFiles)
+				{
+					commonPrefix = null;
 				}
 				
 				foreach (var kvp in normalizedPaths)
@@ -167,9 +183,9 @@ public class EmulatorService : IDisposable
 						// Replace the original folder prefix with WASM
 						vfsPath = $"WASM{vfsPath.Substring(commonPrefix.Length)}";
 					}
-					else if (!vfsPath.Contains('\\'))
+					else if (!vfsPath.StartsWith("WASM\\", StringComparison.OrdinalIgnoreCase))
 					{
-						// Single file without folder structure - add to WASM folder
+						// Any file not already prefixed with WASM needs it
 						vfsPath = $"WASM\\{vfsPath}";
 					}
 					
