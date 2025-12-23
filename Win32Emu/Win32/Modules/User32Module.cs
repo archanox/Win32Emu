@@ -1767,6 +1767,15 @@ namespace Win32Emu.Win32.Modules
 
 				case "TRANSLATEMESSAGE":
 					return (true, await TranslateMessageAsync(a.UInt32(0), cancellationToken).ConfigureAwait(false));
+				
+				case "CREATEWINDOWEXA":
+					return (true, await CreateWindowExAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), 
+						a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11), cancellationToken).ConfigureAwait(false));
+				
+				case "CREATEWINDOWA":
+					// CreateWindowA is like CreateWindowExA but with dwExStyle = 0
+					return (true, await CreateWindowExAsync(0, a.UInt32(0), a.UInt32(1), a.UInt32(2), 
+						a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), cancellationToken).ConfigureAwait(false));
 			}
 
 			// For all other APIs, use synchronous implementation
@@ -1990,6 +1999,107 @@ namespace Win32Emu.Win32.Modules
 			else
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: Failed to create window");
+			}
+
+			return hwnd;
+		}
+		
+		/// <summary>
+		/// Async version of CreateWindowExA for WASM platform.
+		/// Uses async message delivery and pumping to ensure WM_CREATE is processed.
+		/// </summary>
+		private async Task<uint> CreateWindowExAsync(
+			uint dwExStyle,
+			uint lpClassName,
+			uint lpWindowName,
+			uint dwStyle,
+			int x,
+			int y,
+			int nWidth,
+			int nHeight,
+			uint hWndParent,
+			uint hMenu,
+			uint hInstance,
+			uint lpParam,
+			CancellationToken cancellationToken = default)
+		{
+			var classNamePtr = lpClassName;
+			var windowNamePtr = lpWindowName;
+
+			string className;
+
+			// Check if lpClassName is an atom (HIWORD is 0) or a string pointer
+			if (classNamePtr != 0 && (classNamePtr & 0xFFFF0000) == 0)
+			{
+				// It's an atom - look up the class name
+				var atomClassName = _env.GetClassNameFromAtom(classNamePtr);
+				if (atomClassName == null)
+				{
+					_logger.LogInformation("[User32] CreateWindowExAsync: Unknown atom 0x{ClassNamePtr:X4}", classNamePtr);
+					_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+					return 0;
+				}
+
+				className = atomClassName;
+			}
+			else if (classNamePtr == 0)
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: NULL class name");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+			else
+			{
+				// It's a string pointer
+				className = _env.ReadAnsiString(classNamePtr);
+			}
+
+			var windowName = windowNamePtr != 0 ? _env.ReadAnsiString(windowNamePtr) : "";
+
+			// Check if window class is registered
+			if (!_env.IsWindowClassRegistered(className))
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: Window class '{ClassName}' not registered", className);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_CLASS_ALREADY_EXISTS; // Windows sets this error for unregistered class
+				return 0;
+			}
+
+			// Handle CW_USEDEFAULT for position and size
+			const int cwUsedefault = unchecked((int)0x80000000);
+			if (x == cwUsedefault)
+			{
+				x = 100;
+			}
+
+			if (y == cwUsedefault)
+			{
+				y = 100;
+			}
+
+			if (nWidth == cwUsedefault)
+			{
+				nWidth = 640;
+			}
+
+			if (nHeight == cwUsedefault)
+			{
+				nHeight = 480;
+			}
+
+			// Use the async version of CreateWindow which properly pumps messages on WASM
+			var hwnd = await _env.CreateWindowAsync(
+				className, windowName, dwStyle, dwExStyle,
+				x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam,
+				cancellationToken
+			).ConfigureAwait(false);
+
+			if (hwnd != 0)
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: Created HWND=0x{Hwnd:X8} Class='{ClassName}' Title='{WindowName}'", hwnd, className, windowName);
+			}
+			else
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: Failed to create window");
 			}
 
 			return hwnd;

@@ -1922,6 +1922,16 @@ public class ProcessEnvironment
 	public uint CreateWindow(string className, string windowName, uint style, uint exStyle,
 		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param)
 	{
+		// On WASM, we cannot use GetAwaiter().GetResult() as it throws PlatformNotSupportedException
+		// Instead, use the sync version which posts messages, and they'll be pumped later
+		// The first CreateWindow (from application code) will use async/pump, but nested
+		// CreateWindow calls (from within message handlers) must use sync/post
+		return CreateWindowSync(className, windowName, style, exStyle, x, y, width, height, parent, menu, instance, param);
+	}
+	
+	private uint CreateWindowSync(string className, string windowName, uint style, uint exStyle,
+		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param)
+	{
 		if (!_windowClasses.ContainsKey(className))
 		{
 			_logger.LogError("[ProcessEnv] CreateWindow failed: Window class '{ClassName}' not registered", className);
@@ -1974,6 +1984,118 @@ public class ProcessEnvironment
 		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
 
 		return handle;
+	}
+	
+	/// <summary>
+	/// Async version of CreateWindow that properly handles message pumping on WASM.
+	/// On WASM, messages are posted and then pumped to ensure WM_CREATE is processed
+	/// before the function returns, allowing SetTimer and other initialization to work.
+	/// </summary>
+	public async Task<uint> CreateWindowAsync(string className, string windowName, uint style, uint exStyle,
+		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param,
+		CancellationToken cancellationToken = default)
+	{
+		if (!_windowClasses.ContainsKey(className))
+		{
+			_logger.LogError("[ProcessEnv] CreateWindowAsync failed: Window class '{ClassName}' not registered", className);
+			return 0;
+		}
+
+		var handle = _nextWindowHandle;
+		_nextWindowHandle += 4;
+
+		var windowInfo = new WindowInfo(
+			handle, className, windowName, style, exStyle,
+			x, y, width, height, parent, menu, instance, param
+		);
+
+		_windows[handle] = windowInfo;
+		_logger.LogInformation("[ProcessEnv] Created window (async): HWND=0x{Handle:X8} Class='{ClassName}' Title='{WindowName}'", handle, className, windowName);
+
+		// Notify host about window creation
+		_host?.OnWindowCreate(new WindowCreateInfo
+		{
+			Handle = handle,
+			Title = windowName,
+			Width = width,
+			Height = height,
+			X = x,
+			Y = y,
+			ClassName = className,
+			Style = style,
+			ExStyle = exStyle,
+			Parent = parent,
+			Menu = menu
+		});
+
+		// Send window creation messages asynchronously
+		// WM_CREATE = 0x0001
+		await SendMessageToWindowAsync(handle, 0x0001, 0, param, cancellationToken).ConfigureAwait(false);
+		_logger.LogDebug("[ProcessEnv] Sent WM_CREATE to window 0x{Handle:X8}", handle);
+
+		// Send WM_SIZE message
+		// WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
+		uint sizeParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
+		await SendMessageToWindowAsync(handle, 0x0005, 0, sizeParam, cancellationToken).ConfigureAwait(false);
+		_logger.LogDebug("[ProcessEnv] Sent WM_SIZE to window 0x{Handle:X8} (width={Width}, height={Height})", handle, width, height);
+
+		// Send WM_MOVE message
+		// WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
+		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
+		await SendMessageToWindowAsync(handle, 0x0003, 0, moveParam, cancellationToken).ConfigureAwait(false);
+		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
+		
+		// On WASM, pump messages to ensure they're processed before returning
+		// This is critical: we post messages above, now we need to process them
+		if (OperatingSystem.IsBrowser())
+		{
+			_logger.LogDebug("[ProcessEnv] WASM: Pumping messages to process WM_CREATE, WM_SIZE, WM_MOVE");
+			await PumpMessagesAsync(maxMessages: 10, cancellationToken).ConfigureAwait(false);
+		}
+
+		return handle;
+	}
+	
+	/// <summary>
+	/// Pump messages from the queue to process them immediately.
+	/// Used on WASM to ensure posted messages are processed before continuing execution.
+	/// </summary>
+	private async Task PumpMessagesAsync(int maxMessages = 10, CancellationToken cancellationToken = default)
+	{
+		int processedCount = 0;
+		
+		while (processedCount < maxMessages && !cancellationToken.IsCancellationRequested)
+		{
+			// Try to get a message without blocking
+			var msg = TryGetMessageNonBlocking(0, 0, 0);
+			
+			if (!msg.HasValue)
+			{
+				// No more messages in queue
+				break;
+			}
+			
+			_logger.LogDebug("[ProcessEnv] PumpMessages: Processing MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", 
+				msg.Value.Message, msg.Value.Hwnd);
+			
+			// Dispatch the message to its window procedure
+			if (_sendMessageAsyncDelegate != null)
+			{
+				try
+				{
+					await _sendMessageAsyncDelegate(msg.Value.Hwnd, msg.Value.Message, 
+						msg.Value.WParam, msg.Value.LParam).ConfigureAwait(false);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[ProcessEnv] PumpMessages: Error dispatching message");
+				}
+			}
+			
+			processedCount++;
+		}
+		
+		_logger.LogDebug("[ProcessEnv] PumpMessages: Processed {Count} messages", processedCount);
 	}
 
 	public WindowInfo? GetWindow(uint hwnd)
@@ -2105,8 +2227,8 @@ public class ProcessEnvironment
 				// so we need to detect this and fall back to posting
 				if (OperatingSystem.IsBrowser())
 				{
-					// On WASM, we cannot block - post the message instead
-					// Note: This means WM_CREATE will be delivered asynchronously
+					// On WASM, we cannot block - post the message and it will be processed asynchronously
+					// The caller should use SendMessageToWindowAsync for proper async handling on WASM
 					_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Browser/WASM detected, posting message asynchronously");
 					PostMessage(hwnd, message, wParam, lParam);
 					return;
@@ -2130,6 +2252,43 @@ public class ProcessEnvironment
 		
 		// Fallback to posting message if delegate not set or error occurred
 		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Posting to queue");
+		PostMessage(hwnd, message, wParam, lParam);
+	}
+	
+	/// <summary>
+	/// Async version of SendMessageToWindow that properly handles message delivery on WASM.
+	/// On WASM, posts messages to be processed by the message pump. On other platforms, calls directly.
+	/// </summary>
+	public async Task SendMessageToWindowAsync(uint hwnd, uint message, uint wParam, uint lParam, CancellationToken cancellationToken = default)
+	{
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		
+		// On WASM, we need to post messages and pump them to ensure proper async processing
+		// Direct calls via delegate would bypass the message queue
+		if (OperatingSystem.IsBrowser())
+		{
+			_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: WASM - posting message for pumping");
+			PostMessage(hwnd, message, wParam, lParam);
+			return;
+		}
+		
+		// On non-WASM platforms, call window procedure directly via delegate
+		if (_sendMessageAsyncDelegate != null)
+		{
+			try
+			{
+				var result = await _sendMessageAsyncDelegate(hwnd, message, wParam, lParam).ConfigureAwait(false);
+				_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: WndProc returned 0x{Result:X8}", result);
+				return;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] SendMessageToWindowAsync: Error calling WndProc");
+			}
+		}
+		
+		// Fallback: post message
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Posting to queue");
 		PostMessage(hwnd, message, wParam, lParam);
 	}
 
