@@ -483,9 +483,8 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				iatEntryMap[va] = synthetic;
 				
 				// Log the mapping for debugging
-				var symName = sym.Name ?? $"Ordinal_{sym.Ordinal}";
 				logger?.LogInformation("[Loader] Mapped import: {Dll}!{Name} -> IAT VA 0x{IatVa:X8} = synthetic 0x{Synthetic:X8}", 
-					dll.ToUpperInvariant(), symName, va, synthetic);
+					dll.ToUpperInvariant(), sym.Name ?? $"Ordinal_{sym.Ordinal}", va, synthetic);
 				
 				// Verify the write was successful
 				var verifyValue = vm.Read32(va);

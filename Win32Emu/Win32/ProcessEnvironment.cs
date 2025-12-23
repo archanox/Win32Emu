@@ -128,6 +128,10 @@ public class ProcessEnvironment
 		ThreadScheduler = new ThreadScheduler(_logger);
 		SynchronizationManager = new SynchronizationManager(_logger);
 		
+		// Initialize console handles by default (most applications expect these to exist)
+		// Applications can call FreeConsole() if they don't want a console
+		AllocateConsole();
+		
 		// Initialize registry (in-memory by default, will be updated if VFS is initialized)
 		InitializeRegistry();
 		
