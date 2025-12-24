@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using SDL3;
 using System.Runtime.InteropServices;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace Win32Emu.Gui.Backends;
 using Win32Emu.Rendering;
@@ -21,6 +23,9 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     private readonly Lock _lock = new();
     private bool _disposed;
     private byte[]? _frameBuffer;
+    private string? _frameDumpPath;
+    private int _frameCounter;
+    private bool _enableFrameDumping;
 
     /// <summary>
     /// Event fired when a UI event occurs (mouse, keyboard, window)
@@ -30,6 +35,31 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     public SoftwareRenderingBackend(ILogger logger)
     {
         _logger = logger;
+        
+        // Check for frame dumping configuration from environment variable
+        _frameDumpPath = Environment.GetEnvironmentVariable("WIN32EMU_FRAME_DUMP_PATH");
+        _enableFrameDumping = !string.IsNullOrEmpty(_frameDumpPath);
+        _frameCounter = 0;
+        
+        if (_enableFrameDumping)
+        {
+            _logger.LogInformation("[Software] Frame dumping enabled. Frames will be saved to: {Path}", _frameDumpPath);
+            
+            // Create directory if it doesn't exist
+            try
+            {
+                if (_frameDumpPath != null && !Directory.Exists(_frameDumpPath))
+                {
+                    Directory.CreateDirectory(_frameDumpPath);
+                    _logger.LogInformation("[Software] Created frame dump directory: {Path}", _frameDumpPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Software] Failed to create frame dump directory: {Path}", _frameDumpPath);
+                _enableFrameDumping = false;
+            }
+        }
     }
 
     public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
@@ -274,6 +304,19 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
                 var copySize = Math.Min(data.Length, _frameBuffer.Length);
                 Array.Copy(data, 0, _frameBuffer, 0, copySize);
 
+                // Save frame to disk if frame dumping is enabled
+                if (_enableFrameDumping && _frameDumpPath != null)
+                {
+                    try
+                    {
+                        SaveFrameToDisk(_frameBuffer, _width, _height);
+                    }
+                    catch (Exception dumpEx)
+                    {
+                        _logger.LogError(dumpEx, "[Software] Failed to dump frame {FrameNumber}", _frameCounter);
+                    }
+                }
+
                 // Update SDL texture with CPU-rendered data (software blit, no GPU)
                 fixed (byte* dataPtr = _frameBuffer)
                 {
@@ -481,6 +524,34 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     public void DeleteTexture(uint textureId)
     {
         _logger.LogWarning("[Software] DeleteTexture not supported in software backend");
+    }
+
+    /// <summary>
+    /// Save current frame buffer to disk as PNG file
+    /// </summary>
+    private void SaveFrameToDisk(byte[] frameBuffer, int width, int height)
+    {
+        if (_frameDumpPath == null)
+        {
+            return;
+        }
+
+        // Save every frame (can be optimized to save every N frames if needed)
+        var fileName = Path.Combine(_frameDumpPath, $"frame_{_frameCounter:D6}.png");
+        
+        // Convert RGBA byte array to ImageSharp Image
+        using (var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(frameBuffer, width, height))
+        {
+            image.SaveAsPng(fileName);
+        }
+        
+        // Log every 100th frame to avoid log spam
+        if (_frameCounter % 100 == 0)
+        {
+            _logger.LogInformation("[Software] Saved frame {FrameNumber} to {FileName}", _frameCounter, fileName);
+        }
+        
+        _frameCounter++;
     }
 
     public void Dispose()
