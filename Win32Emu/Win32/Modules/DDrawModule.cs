@@ -338,6 +338,9 @@ namespace Win32Emu.Win32.Modules
 			
 			// Frame buffering for WASM mode to queue frames drawn before backend initialization completes
 			public Queue<PendingFrameData>? PendingFrames { get; set; }
+			
+			// Track frame updates for throttled logging (avoid spam at high frame rates)
+			public int FrameUpdateCount { get; set; }
 		}
 		
 		/// <summary>
@@ -3797,10 +3800,20 @@ namespace Win32Emu.Win32.Modules
 				if (displayData != null)
 				{
 					var displayPitch = surface.Width * BytesPerPixelRgba; // RGBA format
-					_logger.LogInformation("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
-						surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length);
+					
+					// Throttle logging to avoid spam at high frame rates (log every 100th frame)
+					if (ddrawObj.FrameUpdateCount % 100 == 0 || ddrawObj.FrameUpdateCount < 5)
+					{
+						_logger.LogInformation("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, frameCount={FrameCount}", 
+							surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length, ddrawObj.FrameUpdateCount);
+					}
 					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
-					_logger.LogInformation("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
+					if (ddrawObj.FrameUpdateCount % 100 == 0 || ddrawObj.FrameUpdateCount < 5)
+					{
+						_logger.LogInformation("[DDraw] UpdateFrameBuffer result: {Result}, frameCount={FrameCount}", updateResult, ddrawObj.FrameUpdateCount);
+					}
+					
+					ddrawObj.FrameUpdateCount++;
 					
 					// Process any buffered frames after the first successful frame update
 					ProcessPendingFrames(ddrawObj);

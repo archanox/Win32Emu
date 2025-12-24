@@ -3,6 +3,7 @@
 # Test script for DirectDraw samples in headless mode with frame dumping
 # This script runs all DirectDraw samples and captures frames to disk
 
+# Don't exit on timeout errors (exit code 124) - we expect samples to timeout
 set -e
 
 echo "🧪 DirectDraw Headless Mode Test"
@@ -61,6 +62,12 @@ for SAMPLE in "${SAMPLES[@]}"; do
         "$SAMPLE" \
         2>&1 | grep -E "\[Software\]|\[DDraw\]|DirectDraw|Backend|Frame" || true
     
+    # Explicitly handle timeout exit code (124) - it's expected behavior
+    TIMEOUT_EXIT=$?
+    if [ $TIMEOUT_EXIT -eq 124 ]; then
+        echo "⏱️  Sample timed out (expected)"
+    fi
+    
     # Check if frames were generated
     FRAME_COUNT=$(find "$SAMPLE_FRAMES_DIR" -name "frame_*.png" 2>/dev/null | wc -l)
     
@@ -98,6 +105,12 @@ if [ -f "$IGNTEAS_EXE" ]; then
         --backend Software \
         "$IGNTEAS_EXE" \
         2>&1 | grep -E "\[Software\]|\[DDraw\]|DirectDraw|Backend|Frame" || true
+    
+    # Explicitly handle timeout exit code (124) - it's expected behavior
+    TIMEOUT_EXIT=$?
+    if [ $TIMEOUT_EXIT -eq 124 ]; then
+        echo "⏱️  Sample timed out (expected)"
+    fi
     
     cd "$PROJECT_ROOT"
     
