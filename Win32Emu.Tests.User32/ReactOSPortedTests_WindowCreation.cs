@@ -222,6 +222,41 @@ public class ReactOSPortedTests_WindowCreation : IDisposable
 		Assert.NotEqual(0u, hwnd);
 	}
 
+	[Fact]
+	public void CreateWindowExA_WithNullWndProc_ShouldNotCrash()
+	{
+		// This test verifies the fix for issue #996
+		// When a window class has a NULL WndProc (0x00000000), CreateWindow sends WM_CREATE,
+		// which would previously cause the emulator to crash by attempting to execute code at address 0.
+		// The fix ensures we check EIP before attempting execution, preventing the crash.
+		
+		// Arrange
+		var className = $"NullWndProcTest_{Guid.NewGuid():N}";
+		var wndClassPtr = _testEnv.WriteWndClassA(className: className, wndProc: 0x00000000); // NULL WndProc
+		_testEnv.CallUser32Api("REGISTERCLASSA", wndClassPtr);
+
+		var classNamePtr = _testEnv.WriteString(className);
+		var titlePtr = _testEnv.WriteString("Test Window");
+
+		// Act - CreateWindow will post WM_CREATE which will try to call the NULL WndProc
+		// This should not crash; the window should be created and the message should be handled gracefully
+		var hwnd = _testEnv.CallUser32Api("CREATEWINDOWEXA",
+			0,              // dwExStyle
+			classNamePtr,   // lpClassName
+			titlePtr,       // lpWindowName
+			WS_OVERLAPPEDWINDOW, // dwStyle
+			0, 0, 640, 480, // x, y, width, height
+			0,              // hWndParent
+			0,              // hMenu
+			0x00400000,     // hInstance
+			0               // lpParam
+		);
+
+		// Assert - Window should be created successfully even with NULL WndProc
+		// The NULL WndProc means messages won't be handled, but creation shouldn't crash
+		Assert.NotEqual(0u, hwnd);
+	}
+
 	#endregion
 
 	#region DestroyWindow Tests
