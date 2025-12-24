@@ -225,10 +225,10 @@ public class ReactOSPortedTests_WindowCreation : IDisposable
 	[Fact]
 	public void CreateWindowExA_WithNullWndProc_ShouldNotCrash()
 	{
-		// This test verifies the fix for issue #996
+		// This test verifies the existing protections for the scenario described in issue #996.
 		// When a window class has a NULL WndProc (0x00000000), CreateWindow sends WM_CREATE,
-		// which would previously cause the emulator to crash by attempting to execute code at address 0.
-		// The fix ensures we check EIP before attempting execution, preventing the crash.
+		// which could otherwise cause the emulator to crash by attempting to execute code at address 0.
+		// The emulator's safety checks validate the instruction pointer before execution, preventing such crashes.
 		
 		// Arrange
 		var className = $"NullWndProcTest_{Guid.NewGuid():N}";

@@ -2824,8 +2824,7 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
-					// Check for invalid EIP (NULL pointer execution) BEFORE attempting to execute
-					// This prevents the CPU from trying to fetch and execute code from address 0
+					// Check for invalid EIP (NULL pointer execution)
 					if (eip == 0x00000000)
 					{
 						_logger.LogWarning("[User32] {Context}: Execution jumped to NULL address (0x00000000), likely due to invalid function pointer - aborting", contextName);
@@ -2833,7 +2832,7 @@ namespace Win32Emu.Win32.Modules
 						break;
 					}
 
-					// Check for other invalid low addresses BEFORE attempting to execute
+					// Check for other invalid low addresses
 					if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
 					{
 						_logger.LogError("[User32] {Context}: Execution jumped to invalid low address 0x{Eip:X8}", contextName, eip);
@@ -2864,7 +2863,6 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-					// EIP is validated above to ensure we don't attempt to execute invalid addresses
 					var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
 
 					// Handle COM vtable and import calls
