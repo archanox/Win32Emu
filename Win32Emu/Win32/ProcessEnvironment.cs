@@ -2049,14 +2049,6 @@ public class ProcessEnvironment
 		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
 		await SendMessageToWindowAsync(handle, 0x0003, 0, moveParam, cancellationToken).ConfigureAwait(false);
 		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
-		
-		// On WASM, pump messages to ensure they're processed before returning
-		// This is critical: we post messages above, now we need to process them
-		if (OperatingSystem.IsBrowser())
-		{
-			_logger.LogDebug("[ProcessEnv] WASM: Pumping messages to process WM_CREATE, WM_SIZE, WM_MOVE");
-			await PumpMessagesAsync(maxMessages: 10, cancellationToken).ConfigureAwait(false);
-		}
 
 		return handle;
 	}
@@ -2267,6 +2259,18 @@ public class ProcessEnvironment
 	public async Task SendMessageToWindowAsync(uint hwnd, uint message, uint wParam, uint lParam, CancellationToken cancellationToken = default)
 	{
 		_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		
+		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
+		// so applications can retrieve them via GetMessageA/PeekMessageA
+		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
+		bool isCreationMessage = message == 0x0001 || message == 0x0005 || message == 0x0003;
+		
+		if (isCreationMessage)
+		{
+			_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Posting creation message 0x{Message:X4} to queue", message);
+			PostMessage(hwnd, message, wParam, lParam);
+			return;
+		}
 		
 		// On WASM, we need to post messages and pump them to ensure proper async processing
 		// Direct calls via delegate would bypass the message queue
