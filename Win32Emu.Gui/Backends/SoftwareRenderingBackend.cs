@@ -23,7 +23,7 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
     private readonly Lock _lock = new();
     private bool _disposed;
     private byte[]? _frameBuffer;
-    private string? _frameDumpPath;
+    private readonly string? _frameDumpPath;
     private int _frameCounter;
     private bool _enableFrameDumping;
 
@@ -48,9 +48,9 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
             // Create directory if it doesn't exist
             try
             {
-                if (_frameDumpPath != null && !Directory.Exists(_frameDumpPath))
+                if (!Directory.Exists(_frameDumpPath!))
                 {
-                    Directory.CreateDirectory(_frameDumpPath);
+                    Directory.CreateDirectory(_frameDumpPath!);
                     _logger.LogInformation("[Software] Created frame dump directory: {Path}", _frameDumpPath);
                 }
             }
@@ -536,8 +536,11 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
             return;
         }
 
+        // Increment counter first to ensure unique filenames even if save fails
+        var currentFrame = _frameCounter++;
+        
         // Save every frame (can be optimized to save every N frames if needed)
-        var fileName = Path.Combine(_frameDumpPath, $"frame_{_frameCounter:D6}.png");
+        var fileName = Path.Combine(_frameDumpPath, $"frame_{currentFrame:D6}.png");
         
         // Convert RGBA byte array to ImageSharp Image
         using (var image = SixLabors.ImageSharp.Image.LoadPixelData<Rgba32>(frameBuffer, width, height))
@@ -546,12 +549,10 @@ public unsafe class SoftwareRenderingBackend : IRenderingBackend
         }
         
         // Log every 100th frame to avoid log spam
-        if (_frameCounter % 100 == 0)
+        if (currentFrame % 100 == 0)
         {
-            _logger.LogInformation("[Software] Saved frame {FrameNumber} to {FileName}", _frameCounter, fileName);
+            _logger.LogInformation("[Software] Saved frame {FrameNumber} to {FileName}", currentFrame, fileName);
         }
-        
-        _frameCounter++;
     }
 
     public void Dispose()

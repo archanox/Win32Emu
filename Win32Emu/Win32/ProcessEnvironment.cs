@@ -17,6 +17,16 @@ using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Win32;
 
+/// <summary>
+/// Window message constants for window creation/lifecycle
+/// </summary>
+internal static class WindowMessages
+{
+	public const uint WM_CREATE = 0x0001;
+	public const uint WM_SIZE = 0x0005;
+	public const uint WM_MOVE = 0x0003;
+}
+
 public class ProcessEnvironment
 {
 	private readonly IEmulatorHost? _host;
@@ -1973,19 +1983,19 @@ public class ProcessEnvironment
 
 		// Send WM_CREATE message to the window
 		// WM_CREATE = 0x0001
-		SendMessageToWindow(handle, 0x0001, 0, param);
+		SendMessageToWindow(handle, WindowMessages.WM_CREATE, 0, param);
 		_logger.LogDebug("[ProcessEnv] Sent WM_CREATE to window 0x{Handle:X8}", handle);
 
 		// Send WM_SIZE message to the window
 		// WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
 		uint sizeParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
-		SendMessageToWindow(handle, 0x0005, 0, sizeParam);
+		SendMessageToWindow(handle, WindowMessages.WM_SIZE, 0, sizeParam);
 		_logger.LogDebug("[ProcessEnv] Sent WM_SIZE to window 0x{Handle:X8} (width={Width}, height={Height})", handle, width, height);
 
 		// Send WM_MOVE message to the window
 		// WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
 		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
-		SendMessageToWindow(handle, 0x0003, 0, moveParam);
+		SendMessageToWindow(handle, WindowMessages.WM_MOVE, 0, moveParam);
 		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
 
 		return handle;
@@ -2035,19 +2045,19 @@ public class ProcessEnvironment
 
 		// Send window creation messages asynchronously
 		// WM_CREATE = 0x0001
-		await SendMessageToWindowAsync(handle, 0x0001, 0, param, cancellationToken).ConfigureAwait(false);
+		await SendMessageToWindowAsync(handle, WindowMessages.WM_CREATE, 0, param, cancellationToken).ConfigureAwait(false);
 		_logger.LogDebug("[ProcessEnv] Sent WM_CREATE to window 0x{Handle:X8}", handle);
 
 		// Send WM_SIZE message
 		// WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
 		uint sizeParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
-		await SendMessageToWindowAsync(handle, 0x0005, 0, sizeParam, cancellationToken).ConfigureAwait(false);
+		await SendMessageToWindowAsync(handle, WindowMessages.WM_SIZE, 0, sizeParam, cancellationToken).ConfigureAwait(false);
 		_logger.LogDebug("[ProcessEnv] Sent WM_SIZE to window 0x{Handle:X8} (width={Width}, height={Height})", handle, width, height);
 
 		// Send WM_MOVE message
 		// WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
 		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
-		await SendMessageToWindowAsync(handle, 0x0003, 0, moveParam, cancellationToken).ConfigureAwait(false);
+		await SendMessageToWindowAsync(handle, WindowMessages.WM_MOVE, 0, moveParam, cancellationToken).ConfigureAwait(false);
 		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
 
 		return handle;
@@ -2217,7 +2227,7 @@ public class ProcessEnvironment
 		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
 		// so applications can retrieve them via GetMessageA/PeekMessageA
 		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
-		bool isCreationMessage = message == 0x0001 || message == 0x0005 || message == 0x0003;
+		bool isCreationMessage = message == WindowMessages.WM_CREATE || message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
 		
 		if (isCreationMessage)
 		{
@@ -2275,7 +2285,7 @@ public class ProcessEnvironment
 		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
 		// so applications can retrieve them via GetMessageA/PeekMessageA
 		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
-		bool isCreationMessage = message == 0x0001 || message == 0x0005 || message == 0x0003;
+		bool isCreationMessage = message == WindowMessages.WM_CREATE || message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
 		
 		if (isCreationMessage)
 		{
