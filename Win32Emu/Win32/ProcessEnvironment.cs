@@ -2214,6 +2214,18 @@ public class ProcessEnvironment
 	{
 		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
 		
+		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
+		// so applications can retrieve them via GetMessageA/PeekMessageA
+		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
+		bool isCreationMessage = message == 0x0001 || message == 0x0005 || message == 0x0003;
+		
+		if (isCreationMessage)
+		{
+			_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Posting creation message 0x{Message:X4} to queue", message);
+			PostMessage(hwnd, message, wParam, lParam);
+			return;
+		}
+		
 		// If we have a delegate for synchronous message sending, try to use it
 		if (_sendMessageAsyncDelegate != null)
 		{
