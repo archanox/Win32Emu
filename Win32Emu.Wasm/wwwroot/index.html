@@ -1115,6 +1115,37 @@
 				})
 				.catch(err => console.error('Virtual key down error:', err));
 		};
+		
+		// Download file from VFS
+		window.downloadFile = function(fileName, base64Data) {
+			try {
+				// Convert base64 to blob
+				const byteString = atob(base64Data);
+				const byteArray = new Uint8Array(byteString.length);
+				for (let i = 0; i < byteString.length; i++) {
+					byteArray[i] = byteString.charCodeAt(i);
+				}
+				const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+				
+				// Create download link
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = fileName;
+				document.body.appendChild(a);
+				a.click();
+				
+				// Cleanup
+				setTimeout(() => {
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+				}, 100);
+				
+				console.log(`Downloaded file: ${fileName}`);
+			} catch (err) {
+				console.error(`Error downloading file ${fileName}:`, err);
+			}
+		};
 	</script>
 	
 	<script src="_framework/blazor.webassembly.js"></script>
