@@ -317,6 +317,26 @@ namespace Win32Emu.Win32.Modules
 			public uint CooperativeHwnd { get; set; } // Window handle for cooperative level
 			public uint CooperativeFlags { get; set; } // Cooperative level flags
 			public Dictionary<uint, uint> Properties { get; set; } = new(); // Device properties (GUID -> value)
+			
+			// Previous state for detecting changes (needed for buffered events)
+			public Dictionary<int, bool> PreviousKeyStates { get; set; } = new();
+			public Dictionary<int, bool> PreviousMouseButtons { get; set; } = new();
+			public int PreviousMouseX { get; set; }
+			public int PreviousMouseY { get; set; }
+			public int PreviousMouseZ { get; set; }
+			
+			// Buffered input events queue
+			public Queue<DeviceObjectData> EventQueue { get; set; } = new();
+			public uint EventSequence { get; set; } // Sequence counter for events
+		}
+		
+		// Structure representing a buffered input event (DIDEVICEOBJECTDATA)
+		private struct DeviceObjectData
+		{
+			public uint dwOfs;       // +0: Offset in data format
+			public uint dwData;      // +4: Value (key code, button state, etc.)
+			public uint dwTimeStamp; // +8: Timestamp
+			public uint dwSequence;  // +12: Sequence number
 		}
 
 		// COM interface methods for IDirectInput
@@ -753,22 +773,138 @@ namespace Win32Emu.Win32.Modules
 				return 0x80070057; // E_INVALIDARG
 			}
 
-			// For now, return 0 elements (no buffered events)
-			// In a full implementation, we would:
-			// 1. Check if there are buffered input events in the device's event queue
-			// 2. Validate that rgdod buffer size (requestedElementCount * DIDEVICEOBJECTDATA_SIZE) is valid
-			// 3. Fill the rgdod buffer with DIDEVICEOBJECTDATA structures:
-			//    - DWORD dwOfs       // +0: Offset in data format
-			//    - DWORD dwData      // +4: Value (key code, button state, etc.)
-			//    - DWORD dwTimeStamp // +8: Timestamp
-			//    - DWORD dwSequence  // +12: Sequence number
-			// 4. Update pdwInOut with the actual number of elements returned
+			// Poll input from backend and generate buffered events
+			if (_env.InputBackend != null && device.BackendDeviceId != 0)
+			{
+				if (_env.InputBackend.PollDevice(device.BackendDeviceId, out var state) && state != null)
+				{
+					var timestamp = (uint)Environment.TickCount;
+					
+					// Generate events based on device type
+					switch (device.DeviceType)
+					{
+						case IInputBackend.DeviceType.Keyboard:
+							// Check for key state changes
+							for (var i = 0; i < 256; i++)
+							{
+								var isPressed = state.KeyStates.TryGetValue(i, out var pressed) && pressed;
+								var wasPressed = device.PreviousKeyStates.TryGetValue(i, out var prevPressed) && prevPressed;
+								
+								if (isPressed != wasPressed)
+								{
+									// Key state changed, add event
+									device.EventQueue.Enqueue(new DeviceObjectData
+									{
+										dwOfs = (uint)i,  // Key offset
+										dwData = isPressed ? 0x80u : 0x00u,  // 0x80 = pressed, 0x00 = released
+										dwTimeStamp = timestamp,
+										dwSequence = device.EventSequence++
+									});
+									
+									// Update previous state
+									device.PreviousKeyStates[i] = isPressed;
+								}
+							}
+							break;
 
-			// Return 0 elements for now
+						case IInputBackend.DeviceType.Mouse:
+							// Check for mouse button changes
+							for (var i = 0; i < 4; i++)
+							{
+								var isPressed = state.MouseButtons.TryGetValue(i, out var pressed) && pressed;
+								var wasPressed = device.PreviousMouseButtons.TryGetValue(i, out var prevPressed) && prevPressed;
+								
+								if (isPressed != wasPressed)
+								{
+									device.EventQueue.Enqueue(new DeviceObjectData
+									{
+										dwOfs = (uint)(12 + i),  // Mouse button offsets: 12, 13, 14, 15
+										dwData = isPressed ? 0x80u : 0x00u,
+										dwTimeStamp = timestamp,
+										dwSequence = device.EventSequence++
+									});
+									
+									device.PreviousMouseButtons[i] = isPressed;
+								}
+							}
+							
+							// Check for mouse movement (X axis)
+							if (state.MouseX != device.PreviousMouseX)
+							{
+								device.EventQueue.Enqueue(new DeviceObjectData
+								{
+									dwOfs = 0,  // X axis offset
+									dwData = (uint)state.MouseX,
+									dwTimeStamp = timestamp,
+									dwSequence = device.EventSequence++
+								});
+								device.PreviousMouseX = state.MouseX;
+							}
+							
+							// Check for mouse movement (Y axis)
+							if (state.MouseY != device.PreviousMouseY)
+							{
+								device.EventQueue.Enqueue(new DeviceObjectData
+								{
+									dwOfs = 4,  // Y axis offset
+									dwData = (uint)state.MouseY,
+									dwTimeStamp = timestamp,
+									dwSequence = device.EventSequence++
+								});
+								device.PreviousMouseY = state.MouseY;
+							}
+							
+							// Check for mouse wheel (Z axis)
+							if (state.MouseZ != device.PreviousMouseZ)
+							{
+								device.EventQueue.Enqueue(new DeviceObjectData
+								{
+									dwOfs = 8,  // Z axis offset
+									dwData = (uint)state.MouseZ,
+									dwTimeStamp = timestamp,
+									dwSequence = device.EventSequence++
+								});
+								device.PreviousMouseZ = state.MouseZ;
+							}
+							break;
+					}
+				}
+			}
+
+			// Determine how many events to return
+			var eventsToReturn = Math.Min(requestedElementCount, (uint)device.EventQueue.Count);
+			
+			// If rgdod is NULL, just return the count
+			if (rgdod == 0)
+			{
+				if (pdwInOut != 0)
+				{
+					_env.MemWrite32(pdwInOut, (uint)device.EventQueue.Count);
+				}
+				_logger.LogInformation("[DInput COM]   Returning event count: {Count}", device.EventQueue.Count);
+				return 0; // DI_OK
+			}
+			
+			// Write events to output buffer
+			for (var i = 0u; i < eventsToReturn; i++)
+			{
+				var evt = device.EventQueue.Dequeue();
+				var offset = rgdod + (i * DIDEVICEOBJECTDATA_SIZE);
+				
+				// Write DIDEVICEOBJECTDATA structure
+				_env.MemWrite32(offset + 0, evt.dwOfs);
+				_env.MemWrite32(offset + 4, evt.dwData);
+				_env.MemWrite32(offset + 8, evt.dwTimeStamp);
+				_env.MemWrite32(offset + 12, evt.dwSequence);
+			}
+
+			// Update output count
 			if (pdwInOut != 0)
 			{
-				_env.MemWrite32(pdwInOut, 0);
+				_env.MemWrite32(pdwInOut, eventsToReturn);
 			}
+			
+			_logger.LogInformation("[DInput COM]   Returned {EventsReturned} events, {EventsRemaining} remaining", eventsToReturn, device.EventQueue.Count);
 
 			return 0; // DI_OK
 		}
