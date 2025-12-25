@@ -1893,8 +1893,15 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
-			// If this is a primary surface, present the frame to the rendering backend
-			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
+			// Treat any surface with attached surfaces (backbuffers) as a primary surface for rendering purposes
+			// Some applications don't set DDSCAPS_PRIMARYSURFACE flag but still use the surface as primary
+			var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
+			
+			_logger.LogDebug("[DDraw] Flip: surface IsPrimary={IsPrimary}, AttachedSurfaces.Count={Count}, treating as primary={EffectivelyPrimary}", 
+				surface.IsPrimary, surface.AttachedSurfaces.Count, isEffectivelyPrimary);
+
+			// If this is a primary surface (or effectively acts as one), present the frame to the rendering backend
+			if (isEffectivelyPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
 			{
 				try
 				{
@@ -1904,8 +1911,15 @@ namespace Win32Emu.Win32.Modules
 					{
 						// Get the first attached surface (backbuffer)
 						var backBufferHandle = surface.AttachedSurfaces[0];
-						if (_surfaces.TryGetValue(backBufferHandle, out var backBuffer) && backBuffer.Bits != null && surface.Bits != null)
+						if (_surfaces.TryGetValue(backBufferHandle, out var backBuffer) && backBuffer.Bits != null)
 						{
+							// Ensure primary surface has Bits allocated
+							if (surface.Bits == null)
+							{
+								_logger.LogInformation("[DDraw] Allocating Bits for primary surface 0x{SurfaceHandle:X8} (was null)", surface.Handle);
+								surface.Bits = new byte[surface.Pitch * surface.Height];
+							}
+							
 							_logger.LogDebug("[DDraw] Copying backbuffer (0x{BackBufferHandle:X8}) to primary surface (0x{PrimaryHandle:X8}) for flip", 
 								backBufferHandle, surface.Handle);
 							
@@ -1914,6 +1928,14 @@ namespace Win32Emu.Win32.Modules
 							
 							// Mark primary surface as dirty so it gets updated
 							surface.IsTextureDirty = true;
+						}
+						else if (backBuffer == null)
+						{
+							_logger.LogWarning("[DDraw] Flip: backbuffer handle 0x{Handle:X8} not found in surfaces", backBufferHandle);
+						}
+						else if (backBuffer.Bits == null)
+						{
+							_logger.LogWarning("[DDraw] Flip: backbuffer 0x{Handle:X8} has null Bits", backBufferHandle);
 						}
 					}
 
@@ -3722,7 +3744,7 @@ namespace Win32Emu.Win32.Modules
 		/// Updates the rendering backend with the current surface pixels.
 		/// This should be called when a surface has been modified and needs to be displayed.
 		/// <para>
-		/// <b>Note:</b> This method should only be called for primary surfaces.
+		/// <b>Note:</b> This method should be called for primary surfaces or surfaces that act as primary (have backbuffers attached).
 		/// </para>
 		/// <para>
 		/// In WASM mode, if the backend is not yet initialized, the frame will be buffered
@@ -3731,9 +3753,12 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		private void UpdateRenderingBackend(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
-			if (!surface.IsPrimary)
+			// Allow updates for primary surfaces or surfaces with attached backbuffers (acting as primary)
+			var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
+			if (!isEffectivelyPrimary)
 			{
-				_logger.LogError("[DDraw] UpdateRenderingBackend called for non-primary surface 0x{SurfaceHandle:X8}", surface.Handle);
+				_logger.LogError("[DDraw] UpdateRenderingBackend called for non-primary surface 0x{SurfaceHandle:X8} (IsPrimary={IsPrimary}, AttachedCount={Count})", 
+					surface.Handle, surface.IsPrimary, surface.AttachedSurfaces.Count);
 				return;
 			}
 
