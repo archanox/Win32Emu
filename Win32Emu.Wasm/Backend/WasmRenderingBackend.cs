@@ -175,7 +175,8 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
-			_logger.LogInformation("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
+			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
+			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
 				_width, _height, pitch, data.Length);
 			
 			// Copy data to internal frame buffer
@@ -203,8 +204,8 @@ public class WasmRenderingBackend : IRenderingBackend
 			// Update canvas through JavaScript with better error handling
 			var base64Data = Convert.ToBase64String(_frameBuffer);
 			
-			// Log the call for debugging
-			_logger.LogInformation("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
+			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
+			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
 				_canvasId, _width, _height, base64Data.Length);
 			
 			// Use fire-and-forget pattern but with proper error tracking
@@ -232,7 +233,8 @@ public class WasmRenderingBackend : IRenderingBackend
 					}
 					else
 					{
-						_logger.LogInformation("[WASM] Canvas update completed successfully");
+						// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
+						_logger.LogTrace("[WASM] Canvas update completed successfully");
 					}
 				});
 			
