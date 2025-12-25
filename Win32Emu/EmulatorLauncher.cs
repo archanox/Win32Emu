@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Win32Emu.Logging;
+using Win32Emu.Rendering;
 
 namespace Win32Emu;
 
@@ -16,8 +17,9 @@ public static class EmulatorLauncher
 	/// </summary>
 	/// <param name="args">Command-line arguments (first argument should be the path to the PE executable)</param>
 	/// <param name="loggerFactory">Optional logger factory. If null, a default console logger will be created.</param>
+	/// <param name="backendFactory">Optional backend factory for rendering support in headless/CLI mode.</param>
 	/// <returns>Exit code (0 for success, non-zero for error)</returns>
-	public static int Launch(string[] args, ILoggerFactory? loggerFactory = null)
+	public static int Launch(string[] args, ILoggerFactory? loggerFactory = null, IBackendFactory? backendFactory = null)
 	{
 		if (args.Length == 0)
 		{
@@ -253,7 +255,7 @@ public static class EmulatorLauncher
 				}
 				// Let critical exceptions propagate
 				
-				using var emulator = new Emulator(null, logger, telemetryService);
+				using var emulator = new Emulator(null, logger, telemetryService, backendFactory);
 				emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, preloadedBytes: null, customVirtualFileSystem: null, force32BitStackOps: force32BitStackOps);
 				
 				// Enable API tracing if requested
