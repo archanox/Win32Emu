@@ -67,8 +67,12 @@ sealed class Program
                 }
             });
             
-            // Run the emulator directly on the main thread with the logger factory (no GUI)
-            return EmulatorLauncher.Launch(emuArgs, loggerFactory);
+            // Create a backend factory for rendering support in headless/CLI mode
+            // This enables DirectDraw and other graphics APIs to work even without a GUI
+            var backendFactory = new Backends.BackendFactory();
+            
+            // Run the emulator directly on the main thread with the logger factory and backend factory (no GUI)
+            return EmulatorLauncher.Launch(emuArgs, loggerFactory, backendFactory);
         }
         
         // Otherwise, start the Avalonia GUI application
