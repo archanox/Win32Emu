@@ -21,7 +21,7 @@
 			<div class="mb-2">
 				<small class="text-muted">
 					<strong>Total files:</strong> @Files.Count | 
-					<strong>Total size:</strong> @FormatFileSize(Files.Values.Sum(f => f.Length))
+					<strong>Total size:</strong> @FormatFileSize(GetTotalFileSize())
 				</small>
 			</div>
 			
@@ -131,10 +131,28 @@
 	private string _viewingFileEncoding = string.Empty;
 	private bool _isTextFile = false;
 	private string _hexPreview = string.Empty;
+	private long _cachedTotalSize = 0;
 	
 	private async Task RefreshFiles()
 	{
 		await OnRefresh.InvokeAsync();
+		UpdateCachedTotalSize();
+	}
+	
+	private long GetTotalFileSize()
+	{
+		return _cachedTotalSize;
+	}
+	
+	private void UpdateCachedTotalSize()
+	{
+		_cachedTotalSize = Files?.Values.Sum(f => (long)f.Length) ?? 0;
+	}
+	
+	protected override void OnParametersSet()
+	{
+		base.OnParametersSet();
+		UpdateCachedTotalSize();
 	}
 	
 	private void ViewFile(string path)
@@ -153,6 +171,9 @@
 		
 		if (_isTextFile)
 		{
+			// Clear hex preview when viewing text files
+			_hexPreview = string.Empty;
+			
 			// Try different encodings
 			if (TryDecodeText(content, System.Text.Encoding.UTF8, out var utf8Text))
 			{
@@ -173,11 +194,14 @@
 			{
 				// Fall back to binary view
 				_isTextFile = false;
+				_viewingFileText = string.Empty;
 				_viewingFileEncoding = "Binary";
 			}
 		}
 		else
 		{
+			// Clear text content when viewing binary files
+			_viewingFileText = string.Empty;
 			_viewingFileEncoding = "Binary";
 		}
 		
@@ -265,8 +289,21 @@
 			text = encoding.GetString(content);
 			return true;
 		}
-		catch
+		catch (System.Text.DecoderFallbackException ex)
 		{
+			Logger.LogDebug(ex, "Decoder fallback while decoding content using encoding {Encoding}", encoding.WebName);
+			text = string.Empty;
+			return false;
+		}
+		catch (ArgumentException ex)
+		{
+			Logger.LogWarning(ex, "Argument exception while decoding content using encoding {Encoding}", encoding.WebName);
+			text = string.Empty;
+			return false;
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Unexpected error while decoding content using encoding {Encoding}", encoding.WebName);
 			text = string.Empty;
 			return false;
 		}
