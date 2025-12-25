@@ -391,6 +391,15 @@ public class EmulatorService : IDisposable
 		return Win32Emu.Win32.DirectDraw.OptimizedBlitter.GetSimdCapabilities();
 	}
 	
+	/// <summary>
+	/// Gets all files in the virtual file system.
+	/// Returns a read-only dictionary of file paths to file contents.
+	/// </summary>
+	public IReadOnlyDictionary<string, byte[]>? GetVfsFiles()
+	{
+		return _browserVfs?.Files;
+	}
+	
 	private void EmitStdOutput(string message)
 	{
 		OnStdOutput?.Invoke(this, message);

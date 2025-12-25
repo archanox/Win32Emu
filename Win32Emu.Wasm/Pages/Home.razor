@@ -274,6 +274,13 @@
 			</div>
 		</div>
 	</div>
+	
+	<!-- Virtual File System Browser -->
+	<div class="row mt-3">
+		<div class="col-12">
+			<VirtualFileSystemBrowser Files="@_vfsFiles" OnRefresh="@RefreshVfsFiles" />
+		</div>
+	</div>
 
 	<!-- Note about current implementation -->
 	<div class="row mt-3">
@@ -441,6 +448,9 @@
 	private Win32Emu.Wasm.Services.WasmEmulatorHost.DialogCreateEventArgs? _activeDialogEventArgs = null;
 	private MessageBoxInfo? _activeMessageBox = null;
 	private Win32Emu.Wasm.Services.WasmEmulatorHost.MessageBoxEventArgs? _activeMessageBoxEventArgs = null;
+	
+	// Virtual File System state
+	private IReadOnlyDictionary<string, byte[]>? _vfsFiles = null;
 	
 	// Track the currently subscribed host to avoid double subscriptions and enable proper cleanup
 	private Win32Emu.Wasm.Services.WasmEmulatorHost? _subscribedHost = null;
@@ -744,6 +754,9 @@
 				{
 					_instructionsExecuted = (long)EmulatorService.InstructionsExecuted;
 					_fps = 60; // TODO: Get actual FPS from emulator
+					
+					// Refresh VFS files to show any new files created by the emulator
+					_vfsFiles = EmulatorService.GetVfsFiles();
 					
 					await InvokeAsync(StateHasChanged);
 					await Task.Delay(100); // Update UI at 10 FPS
@@ -1219,5 +1232,11 @@
 		{
 			Logger.LogError(ex, "Failed to refresh DirectDraw diagnostics");
 		}
+	}
+	
+	private void RefreshVfsFiles()
+	{
+		_vfsFiles = EmulatorService.GetVfsFiles();
+		StateHasChanged();
 	}
 }
