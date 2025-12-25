@@ -37,6 +37,27 @@ namespace Win32Emu.Win32.Modules
 
 		// DirectInput constants
 		private const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
+		private const uint DI_OK = 0; // Success return value
+		
+		// DirectInput keyboard constants
+		private const int DIKEYBOARD_MAX_KEYS = 256; // Number of keys in DirectInput keyboard
+		
+		// DirectInput mouse constants
+		private const int DIMOUSE_MAX_BUTTONS = 4; // Number of mouse buttons supported
+		private const uint DIMOUSE_X_OFFSET = 0; // X axis offset in DIMOUSESTATE
+		private const uint DIMOUSE_Y_OFFSET = 4; // Y axis offset in DIMOUSESTATE
+		private const uint DIMOUSE_Z_OFFSET = 8; // Z axis (wheel) offset in DIMOUSESTATE
+		private const uint DIMOUSE_BUTTON_OFFSET = 12; // First button offset in DIMOUSESTATE
+		
+		// DirectInput key/button state constants
+		private const uint DIKEY_PRESSED = 0x80; // Key/button is pressed
+		private const uint DIKEY_RELEASED = 0x00; // Key/button is released
+		
+		// DIDEVICEOBJECTDATA structure field offsets
+		private const uint DIDEVICEOBJECTDATA_DWOFS_OFFSET = 0;
+		private const uint DIDEVICEOBJECTDATA_DWDATA_OFFSET = 4;
+		private const uint DIDEVICEOBJECTDATA_DWTIMESTAMP_OFFSET = 8;
+		private const uint DIDEVICEOBJECTDATA_DWSEQUENCE_OFFSET = 12;
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -774,100 +795,101 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Poll input from backend and generate buffered events
-			if (_env.InputBackend != null && device.BackendDeviceId != 0)
+			if (_env.InputBackend != null && device.BackendDeviceId != 0 &&
+			    _env.InputBackend.PollDevice(device.BackendDeviceId, out var state) && state != null)
 			{
-				if (_env.InputBackend.PollDevice(device.BackendDeviceId, out var state) && state != null)
+				var timestamp = (uint)Environment.TickCount;
+				
+				// Generate events based on device type
+				switch (device.DeviceType)
 				{
-					var timestamp = (uint)Environment.TickCount;
-					
-					// Generate events based on device type
-					switch (device.DeviceType)
-					{
-						case IInputBackend.DeviceType.Keyboard:
-							// Check for key state changes
-							for (var i = 0; i < 256; i++)
+					case IInputBackend.DeviceType.Keyboard:
+						// Check for key state changes
+						for (var i = 0; i < DIKEYBOARD_MAX_KEYS; i++)
+						{
+							var isPressed = state.KeyStates.TryGetValue(i, out var pressed) && pressed;
+							var wasPressed = device.PreviousKeyStates.TryGetValue(i, out var prevPressed) && prevPressed;
+							
+							if (isPressed != wasPressed)
 							{
-								var isPressed = state.KeyStates.TryGetValue(i, out var pressed) && pressed;
-								var wasPressed = device.PreviousKeyStates.TryGetValue(i, out var prevPressed) && prevPressed;
-								
-								if (isPressed != wasPressed)
+								// Key state changed, add event
+								device.EventQueue.Enqueue(new DeviceObjectData
 								{
-									// Key state changed, add event
-									device.EventQueue.Enqueue(new DeviceObjectData
-									{
-										dwOfs = (uint)i,  // Key offset
-										dwData = isPressed ? 0x80u : 0x00u,  // 0x80 = pressed, 0x00 = released
-										dwTimeStamp = timestamp,
-										dwSequence = device.EventSequence++
-									});
-									
-									// Update previous state
-									device.PreviousKeyStates[i] = isPressed;
-								}
+									dwOfs = (uint)i,  // Key offset
+									dwData = isPressed ? DIKEY_PRESSED : DIKEY_RELEASED,
+									dwTimeStamp = timestamp,
+									dwSequence = device.EventSequence++
+								});
+								
+								// Update previous state
+								device.PreviousKeyStates[i] = isPressed;
 							}
-							break;
+						}
+						break;
 
-						case IInputBackend.DeviceType.Mouse:
-							// Check for mouse button changes
-							for (var i = 0; i < 4; i++)
+					case IInputBackend.DeviceType.Mouse:
+						// Check for mouse button changes
+						for (var i = 0; i < DIMOUSE_MAX_BUTTONS; i++)
+						{
+							var isPressed = state.MouseButtons.TryGetValue(i, out var pressed) && pressed;
+							var wasPressed = device.PreviousMouseButtons.TryGetValue(i, out var prevPressed) && prevPressed;
+							
+							if (isPressed != wasPressed)
 							{
-								var isPressed = state.MouseButtons.TryGetValue(i, out var pressed) && pressed;
-								var wasPressed = device.PreviousMouseButtons.TryGetValue(i, out var prevPressed) && prevPressed;
+								device.EventQueue.Enqueue(new DeviceObjectData
+								{
+									dwOfs = DIMOUSE_BUTTON_OFFSET + (uint)i,
+									dwData = isPressed ? DIKEY_PRESSED : DIKEY_RELEASED,
+									dwTimeStamp = timestamp,
+									dwSequence = device.EventSequence++
+								});
 								
-								if (isPressed != wasPressed)
-								{
-									device.EventQueue.Enqueue(new DeviceObjectData
-									{
-										dwOfs = (uint)(12 + i),  // Mouse button offsets: 12, 13, 14, 15
-										dwData = isPressed ? 0x80u : 0x00u,
-										dwTimeStamp = timestamp,
-										dwSequence = device.EventSequence++
-									});
-									
-									device.PreviousMouseButtons[i] = isPressed;
-								}
+								device.PreviousMouseButtons[i] = isPressed;
 							}
-							
-							// Check for mouse movement (X axis)
-							if (state.MouseX != device.PreviousMouseX)
+						}
+						
+						// Check for mouse movement (X axis) - use relative delta
+						var deltaX = state.MouseX - device.PreviousMouseX;
+						if (deltaX != 0)
+						{
+							device.EventQueue.Enqueue(new DeviceObjectData
 							{
-								device.EventQueue.Enqueue(new DeviceObjectData
-								{
-									dwOfs = 0,  // X axis offset
-									dwData = (uint)state.MouseX,
-									dwTimeStamp = timestamp,
-									dwSequence = device.EventSequence++
-								});
-								device.PreviousMouseX = state.MouseX;
-							}
-							
-							// Check for mouse movement (Y axis)
-							if (state.MouseY != device.PreviousMouseY)
+								dwOfs = DIMOUSE_X_OFFSET,
+								dwData = (uint)deltaX,
+								dwTimeStamp = timestamp,
+								dwSequence = device.EventSequence++
+							});
+							device.PreviousMouseX = state.MouseX;
+						}
+						
+						// Check for mouse movement (Y axis) - use relative delta
+						var deltaY = state.MouseY - device.PreviousMouseY;
+						if (deltaY != 0)
+						{
+							device.EventQueue.Enqueue(new DeviceObjectData
 							{
-								device.EventQueue.Enqueue(new DeviceObjectData
-								{
-									dwOfs = 4,  // Y axis offset
-									dwData = (uint)state.MouseY,
-									dwTimeStamp = timestamp,
-									dwSequence = device.EventSequence++
-								});
-								device.PreviousMouseY = state.MouseY;
-							}
-							
-							// Check for mouse wheel (Z axis)
-							if (state.MouseZ != device.PreviousMouseZ)
+								dwOfs = DIMOUSE_Y_OFFSET,
+								dwData = (uint)deltaY,
+								dwTimeStamp = timestamp,
+								dwSequence = device.EventSequence++
+							});
+							device.PreviousMouseY = state.MouseY;
+						}
+						
+						// Check for mouse wheel (Z axis) - use relative delta
+						var deltaZ = state.MouseZ - device.PreviousMouseZ;
+						if (deltaZ != 0)
+						{
+							device.EventQueue.Enqueue(new DeviceObjectData
 							{
-								device.EventQueue.Enqueue(new DeviceObjectData
-								{
-									dwOfs = 8,  // Z axis offset
-									dwData = (uint)state.MouseZ,
-									dwTimeStamp = timestamp,
-									dwSequence = device.EventSequence++
-								});
-								device.PreviousMouseZ = state.MouseZ;
-							}
-							break;
-					}
+								dwOfs = DIMOUSE_Z_OFFSET,
+								dwData = (uint)deltaZ,
+								dwTimeStamp = timestamp,
+								dwSequence = device.EventSequence++
+							});
+							device.PreviousMouseZ = state.MouseZ;
+						}
+						break;
 				}
 			}
 
@@ -882,7 +904,7 @@ namespace Win32Emu.Win32.Modules
 					_env.MemWrite32(pdwInOut, (uint)device.EventQueue.Count);
 				}
 				_logger.LogInformation("[DInput COM]   Returning event count: {Count}", device.EventQueue.Count);
-				return 0; // DI_OK
+				return DI_OK;
 			}
 			
 			// Write events to output buffer
@@ -892,10 +914,10 @@ namespace Win32Emu.Win32.Modules
 				var offset = rgdod + (i * DIDEVICEOBJECTDATA_SIZE);
 				
 				// Write DIDEVICEOBJECTDATA structure
-				_env.MemWrite32(offset + 0, evt.dwOfs);
-				_env.MemWrite32(offset + 4, evt.dwData);
-				_env.MemWrite32(offset + 8, evt.dwTimeStamp);
-				_env.MemWrite32(offset + 12, evt.dwSequence);
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWOFS_OFFSET, evt.dwOfs);
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWDATA_OFFSET, evt.dwData);
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWTIMESTAMP_OFFSET, evt.dwTimeStamp);
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWSEQUENCE_OFFSET, evt.dwSequence);
 			}
 
 			// Update output count
@@ -906,7 +928,7 @@ namespace Win32Emu.Win32.Modules
 			
 			_logger.LogInformation("[DInput COM]   Returned {EventsReturned} events, {EventsRemaining} remaining", eventsToReturn, device.EventQueue.Count);
 
-			return 0; // DI_OK
+			return DI_OK;
 		}
 
 		private uint DInputDevice_SetDataFormat(ICpu cpu, VirtualMemory memory)
