@@ -171,10 +171,11 @@ public static class EmulatorLauncher
 		}
 
 		// Set up logging - use provided factory or create default
-		var shouldDisposeLoggerFactory = false;
+		// Use local variable to own the created factory if we need to create one
+		ILoggerFactory? ownedLoggerFactory = null;
 		if (loggerFactory == null)
 		{
-			loggerFactory = LoggerFactory.Create(builder =>
+			ownedLoggerFactory = LoggerFactory.Create(builder =>
 			{
 				builder
 					.AddConsole()
@@ -186,10 +187,11 @@ public static class EmulatorLauncher
 					builder.AddFileLogging(logFilePath);
 				}
 			});
-			shouldDisposeLoggerFactory = true;
+			loggerFactory = ownedLoggerFactory;
 		}
 
-		try
+		// Use using statement for automatic disposal of owned logger factory
+		using (ownedLoggerFactory)
 		{
 			var logger = loggerFactory.CreateLogger<Emulator>();
 
@@ -200,12 +202,11 @@ public static class EmulatorLauncher
 			}
 
 			// Initialize OpenTelemetry if enabled
-			Telemetry.TelemetryService? telemetryService = null;
-			
 			// First check for environment variables
 			var envConfig = Telemetry.TelemetryConfig.FromEnvironment();
 			
 			// Command-line arguments override environment variables
+			Telemetry.TelemetryService? telemetryService = null;
 			if (telemetryConsoleMode || telemetryOtlpMode || envConfig.UseOtlpExporter)
 			{
 				var telemetryConfig = new Telemetry.TelemetryConfig
@@ -222,104 +223,97 @@ public static class EmulatorLauncher
 					telemetryConfig.UseConsoleExporter, telemetryConfig.UseOtlpExporter, telemetryConfig.OtlpEndpoint);
 			}
 
-			try
+			// Use using statement for automatic disposal of telemetry service
+			using (telemetryService)
 			{
-				// Create or get virtual disk for the executable
-				string virtualDiskPath;
-				string vfsExecutablePath;
-				
 				try
 				{
-					(virtualDiskPath, vfsExecutablePath) = CreateOrGetVirtualDisk(path, logger);
-					logger.LogInformation("Using virtual disk: {VirtualDiskPath}", virtualDiskPath);
-					logger.LogInformation("Executable VFS path: {VfsPath}", vfsExecutablePath);
-				}
-				catch (System.IO.IOException ex)
-				{
-					logger.LogError(ex, "IO error while creating or accessing virtual disk for {Path}", path);
-					return 1;
-				}
-				catch (System.UnauthorizedAccessException ex)
-				{
-					logger.LogError(ex, "Access denied while creating or accessing virtual disk for {Path}", path);
-					return 1;
-				}
-				catch (Exception ex) when (
-					ex.GetType() != typeof(System.StackOverflowException) &&
-					ex.GetType() != typeof(System.OutOfMemoryException) &&
-					ex.GetType() != typeof(System.Threading.ThreadAbortException)
-				)
-				{
-					logger.LogError(ex, "Unexpected error while creating or accessing virtual disk for {Path}", path);
-					return 1;
-				}
-				// Let critical exceptions propagate
-				
-				using var emulator = new Emulator(null, logger, telemetryService, backendFactory);
-				emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, preloadedBytes: null, customVirtualFileSystem: null, force32BitStackOps: force32BitStackOps);
-				
-				// Enable API tracing if requested
-				if (enableApiTrace && emulator.Environment != null)
-				{
-					emulator.Environment.EnableApiTracing(apiTraceOutputPath, enableDetailedParameters: true);
-					logger.LogInformation("API call tracing enabled - output: {Output}", apiTraceOutputPath ?? "console");
+					// Create or get virtual disk for the executable
+					string virtualDiskPath;
+					string vfsExecutablePath;
 					
-					// Set the tracer on the dispatcher if available
-					if (emulator.Win32Dispatcher != null && emulator.Environment.ApiCallTracer != null)
+					try
 					{
-						emulator.Win32Dispatcher.SetApiCallTracer(emulator.Environment.ApiCallTracer);
+						(virtualDiskPath, vfsExecutablePath) = CreateOrGetVirtualDisk(path, logger);
+						logger.LogInformation("Using virtual disk: {VirtualDiskPath}", virtualDiskPath);
+						logger.LogInformation("Executable VFS path: {VfsPath}", vfsExecutablePath);
+					}
+					catch (System.IO.IOException ex)
+					{
+						logger.LogError(ex, "IO error while creating or accessing virtual disk for {Path}", path);
+						return 1;
+					}
+					catch (System.UnauthorizedAccessException ex)
+					{
+						logger.LogError(ex, "Access denied while creating or accessing virtual disk for {Path}", path);
+						return 1;
+					}
+					catch (Exception ex) when (
+						ex.GetType() != typeof(System.StackOverflowException) &&
+						ex.GetType() != typeof(System.OutOfMemoryException) &&
+						ex.GetType() != typeof(System.Threading.ThreadAbortException)
+					)
+					{
+						logger.LogError(ex, "Unexpected error while creating or accessing virtual disk for {Path}", path);
+						return 1;
+					}
+					// Let critical exceptions propagate
+					
+					using var emulator = new Emulator(null, logger, telemetryService, backendFactory);
+					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, preloadedBytes: null, customVirtualFileSystem: null, force32BitStackOps: force32BitStackOps);
+					
+					// Enable API tracing if requested
+					if (enableApiTrace && emulator.Environment != null)
+					{
+						emulator.Environment.EnableApiTracing(apiTraceOutputPath, enableDetailedParameters: true);
+						logger.LogInformation("API call tracing enabled - output: {Output}", apiTraceOutputPath ?? "console");
+						
+						// Set the tracer on the dispatcher if available
+						if (emulator.Win32Dispatcher != null && emulator.Environment.ApiCallTracer != null)
+						{
+							emulator.Win32Dispatcher.SetApiCallTracer(emulator.Environment.ApiCallTracer);
+						}
+						
+						// Load API Monitor comparison data if requested
+						// TODO(enhancement): Implement real-time comparison during execution
+						// Currently comparison is manual via ApiMonComparator.GenerateComparisonReport()
+						// Could be enhanced to show divergence in real-time during emulation.
+						// See issue: (create issue to track this enhancement)
+						if (compareApiMonLog && !string.IsNullOrEmpty(apiMonLogPath))
+						{
+							logger.LogInformation("API Monitor comparison enabled - log: {ApiMonLog}", apiMonLogPath);
+							logger.LogInformation("Note: Comparison report can be generated manually using ApiMonComparator");
+						}
 					}
 					
-					// Load API Monitor comparison data if requested
-					// TODO(enhancement): Implement real-time comparison during execution
-					// Currently comparison is manual via ApiMonComparator.GenerateComparisonReport()
-					// Could be enhanced to show divergence in real-time during emulation.
-					// See issue: (create issue to track this enhancement)
-					if (compareApiMonLog && !string.IsNullOrEmpty(apiMonLogPath))
+					emulator.Run();
+					
+					// Generate diagnostic report if tracing was enabled
+					if (enableApiTrace && emulator.Environment != null)
 					{
-						logger.LogInformation("API Monitor comparison enabled - log: {ApiMonLog}", apiMonLogPath);
-						logger.LogInformation("Note: Comparison report can be generated manually using ApiMonComparator");
+						var report = emulator.Environment.DisableApiTracing();
+						if (!string.IsNullOrEmpty(report))
+						{
+							logger.LogInformation("API Call Diagnostic Report:\n{Report}", report);
+						}
 					}
+					
+					return 0;
 				}
-				
-				emulator.Run();
-				
-				// Generate diagnostic report if tracing was enabled
-				if (enableApiTrace && emulator.Environment != null)
+				catch (FileNotFoundException ex)
 				{
-					var report = emulator.Environment.DisableApiTracing();
-					if (!string.IsNullOrEmpty(report))
+					logger.LogError("Error: {Message}", ex.Message);
+					return 2;
+				}
+				catch (Exception ex)
+				{
+					logger.LogError(ex, "Emulator error: {Message}", ex.Message);
+					if (debugMode)
 					{
-						logger.LogInformation("API Call Diagnostic Report:\n{Report}", report);
+						logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
 					}
+					return 1;
 				}
-				
-				return 0;
-			}
-			catch (FileNotFoundException ex)
-			{
-				logger.LogError("Error: {Message}", ex.Message);
-				return 2;
-			}
-			catch (Exception ex)
-			{
-				logger.LogError(ex, "Emulator error: {Message}", ex.Message);
-				if (debugMode)
-				{
-					logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
-				}
-				return 1;
-			}
-			finally
-			{
-				telemetryService?.Dispose();
-			}
-		}
-		finally
-		{
-			if (shouldDisposeLoggerFactory)
-			{
-				loggerFactory.Dispose();
 			}
 		}
 	}
