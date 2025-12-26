@@ -18,7 +18,6 @@ const fs = require('fs');
 const PORT = 8080;
 const WWWROOT = path.join(__dirname, 'Win32Emu.Wasm/bin/Release/net10.0/publish/wwwroot');
 const SCREENSHOT_DIR = path.join(__dirname, 'test-screenshots');
-const TEST_TIMEOUT = 60000; // 1 minute
 
 // Ensure screenshot directory exists
 if (!fs.existsSync(SCREENSHOT_DIR)) {
@@ -74,7 +73,7 @@ function createServer() {
         
         fs.readFile(filePath, (error, content) => {
             if (error) {
-                if (error.code == 'ENOENT') {
+                if (error.code === 'ENOENT') {
                     console.log(`404: ${url}`);
                     res.writeHead(404);
                     res.end('File not found');
