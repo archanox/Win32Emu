@@ -193,6 +193,13 @@
 							<br />
 							<small class="text-muted">Advanced example from Hugi 16 article</small>
 						</button>
+						<button class="btn btn-outline-primary btn-sm" 
+								@onclick="@(() => LoadSampleExecutable("dd_image.exe"))"
+								disabled="@_isRunning">
+							<i class="bi bi-file-earmark-code"></i> DD Image Example
+							<br />
+							<small class="text-muted">DirectDraw image blitting test from uwin</small>
+						</button>
 						<button class="btn btn-outline-success btn-sm" 
 								@onclick="@(() => LoadSampleFolder("ign_teas", "IGN_TEAS.EXE"))"
 								disabled="@_isRunning">
