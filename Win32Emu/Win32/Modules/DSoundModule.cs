@@ -1082,9 +1082,17 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Initialize(this=0x{ThisPtr:X8}, pDirectSound=0x{PDirectSound:X8}, pcDSBufferDesc=0x{PcDSBufferDesc:X8})", 
 				thisPtr, pDirectSound, pcDSBufferDesc);
 
+			// Validate parameters
+			if (pDirectSound == 0 || pcDSBufferDesc == 0)
+			{
+				_logger.LogError("[DSound COM] IDirectSoundBuffer::Initialize: NULL parameter");
+				return (uint)DSResult.DSERR_INVALIDPARAM;
+			}
+
 			// This method is only for use with CoCreateInstance
-			// Since we create buffers through CreateSoundBuffer, this should return already initialized
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Initialize: Buffer already initialized");
+			// Since we create buffers through CreateSoundBuffer, they are always pre-initialized
+			// Returning DSERR_ALREADYINITIALIZED is the correct and expected behavior per DirectSound spec
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Initialize: Buffer was created via CreateSoundBuffer (already initialized)");
 
 			return (uint)DSResult.DSERR_ALREADYINITIALIZED;
 		}
