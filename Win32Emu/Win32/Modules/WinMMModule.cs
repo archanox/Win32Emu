@@ -1016,14 +1016,14 @@ namespace Win32Emu.Win32.Modules
 				if (PlatformHelpers.IsWasm)
 				{
 					_logger.LogError("[WinMM] mixerOpen called on WASM before backend initialized - backend should be initialized before calling");
-					return 11; // MMSYSERR_INVALPARAM
+					return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
 				}
 				
 				var success = _env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
 				if (!success)
 				{
 					_logger.LogError("[WinMM] Failed to initialize audio backend");
-					return 11; // MMSYSERR_INVALPARAM
+					return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
 				}
 				_logger.LogInformation("[WinMM] Audio backend initialized successfully");
 			}

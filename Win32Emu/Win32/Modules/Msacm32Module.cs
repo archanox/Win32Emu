@@ -145,14 +145,14 @@ public class Msacm32Module : IWin32ModuleUnsafe
 			if (PlatformHelpers.IsWasm)
 			{
 				_logger.LogError("[MSACM32] acmStreamOpen called on WASM before backend initialized - backend should be initialized before calling");
-				return 11; // MMSYSERR_INVALPARAM
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
 			}
 			
 			var success = _env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
 			if (!success)
 			{
 				_logger.LogError("[MSACM32] Failed to initialize audio backend");
-				return 11; // MMSYSERR_INVALPARAM
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
 			}
 			_logger.LogInformation("[MSACM32] Audio backend initialized successfully");
 		}
