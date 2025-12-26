@@ -997,7 +997,7 @@ public static class NativeTypes
 		public uint lpwfxFormat;      // Offset 16 - Pointer to WAVEFORMATEX structure
 
 		[System.Runtime.InteropServices.FieldOffset(20)]
-		public uint guid3DAlgorithm;  // Offset 20 - GUID for 3D algorithm (optional)
+		public uint guid3DAlgorithm;  // Offset 20 - Pointer to GUID for 3D algorithm (optional, LPGUID)
 	}
 
 	/// <summary>

@@ -1477,18 +1477,27 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(4, entryPoint: 0x0002BE61, Version = "5.1.2600.6532", IsStub = true)]
 		public uint DllCanUnloadNow()
 		{
-			_logger.LogWarning("[dsound] DllCanUnloadNow called (stub)");
-			// TODO: Implement DllCanUnloadNow
-			return (uint)DSResult.DS_OK;
+			_logger.LogWarning("[dsound] DllCanUnloadNow called");
+			
+			// Check if there are any active DirectSound objects or buffers
+			if (_dsoundObjects.Count > 0 || _buffers.Count > 0)
+			{
+				_logger.LogInformation("[dsound] DllCanUnloadNow: Cannot unload - {DsCount} DirectSound objects and {BufferCount} buffers active", 
+					_dsoundObjects.Count, _buffers.Count);
+				return 1; // S_FALSE - cannot unload
+			}
+			
+			_logger.LogInformation("[dsound] DllCanUnloadNow: Can unload - no active objects");
+			return 0; // S_OK - can unload
 		}
 
 		[DllModuleExport(5, entryPoint: 0x00036A41, Version = "4.90.0.3000", IsStub = true)]
 		[DllModuleExport(5, entryPoint: 0x000109C5, Version = "5.1.2600.6532", IsStub = true)]
 		public uint DllGetClassObject()
 		{
-			_logger.LogWarning("[dsound] DllGetClassObject called (stub)");
-			// TODO: Implement DllGetClassObject
-			return (uint)DSResult.DS_OK;
+			_logger.LogWarning("[dsound] DllGetClassObject called (not implemented)");
+			// Class factory not implemented - DirectSound objects are created directly via DirectSoundCreate
+			return (uint)DDResult.CLASS_E_NOAGGREGATION; // 0x80040110
 		}
 
 		[DllModuleExport(6, entryPoint: 0x0002C95C, Version = "4.90.0.3000", IsStub = true)]
