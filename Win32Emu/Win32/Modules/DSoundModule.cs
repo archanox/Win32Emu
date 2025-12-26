@@ -655,7 +655,56 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSound_GetCaps(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSound::GetCaps() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pDSCaps = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSound::GetCaps(this=0x{ThisPtr:X8}, pDSCaps=0x{PDSCaps:X8})", thisPtr, pDSCaps);
+
+			if (pDSCaps == 0)
+			{
+				_logger.LogError("[DSound COM] IDirectSound::GetCaps: pDSCaps is NULL");
+				return (uint)DSResult.DSERR_INVALIDPARAM;
+			}
+
+			// Use the generated DSCAPS ref struct
+			var caps = new DSCAPSRef(memory, pDSCaps);
+
+			// Validate structure size (must be exactly 96 bytes)
+			if (caps.dwSize != 96)
+			{
+				_logger.LogError("[DSound COM] IDirectSound::GetCaps: Invalid structure size {DwSize}, expected 96", caps.dwSize);
+				return (uint)DSResult.DSERR_INVALIDPARAM;
+			}
+
+			// Fill in device capabilities
+			// We report software mixing capabilities
+			caps.dwFlags = 0; // No special hardware capabilities
+			caps.dwMinSecondarySampleRate = 100;        // Minimum sample rate
+			caps.dwMaxSecondarySampleRate = 200000;     // Maximum sample rate
+			caps.dwPrimaryBuffers = 1;                  // Always 1 primary buffer
+			caps.dwMaxHwMixingAllBuffers = 0;           // No hardware mixing
+			caps.dwMaxHwMixingStaticBuffers = 0;
+			caps.dwMaxHwMixingStreamingBuffers = 0;
+			caps.dwFreeHwMixingAllBuffers = 0;
+			caps.dwFreeHwMixingStaticBuffers = 0;
+			caps.dwFreeHwMixingStreamingBuffers = 0;
+			caps.dwMaxHw3DAllBuffers = 0;               // No hardware 3D
+			caps.dwMaxHw3DStaticBuffers = 0;
+			caps.dwMaxHw3DStreamingBuffers = 0;
+			caps.dwFreeHw3DAllBuffers = 0;
+			caps.dwFreeHw3DStaticBuffers = 0;
+			caps.dwFreeHw3DStreamingBuffers = 0;
+			caps.dwTotalHwMemBytes = 0;                 // No hardware memory
+			caps.dwFreeHwMemBytes = 0;
+			caps.dwMaxContigFreeHwMemBytes = 0;
+			caps.dwUnlockTransferRateHwBuffers = 0;     // Obsolete
+			caps.dwPlayCpuOverheadSwBuffers = 0;        // Obsolete
+			caps.dwReserved1 = 0;
+			caps.dwReserved2 = 0;
+
+			_logger.LogInformation("[DSound COM] IDirectSound::GetCaps: Returned software mixing capabilities");
+
 			return (uint)DSResult.DS_OK;
 		}
 
@@ -717,13 +766,39 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSound_GetSpeakerConfig(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSound::GetSpeakerConfig() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pdwSpeakerConfig = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSound::GetSpeakerConfig(this=0x{ThisPtr:X8}, pdwSpeakerConfig=0x{PdwSpeakerConfig:X8})", thisPtr, pdwSpeakerConfig);
+
+			if (pdwSpeakerConfig == 0)
+			{
+				_logger.LogError("[DSound COM] IDirectSound::GetSpeakerConfig: pdwSpeakerConfig is NULL");
+				return (uint)DSResult.DSERR_INVALIDPARAM;
+			}
+
+			// Return stereo speaker configuration as default
+			memory.Write32(pdwSpeakerConfig, (uint)DSSpeakerConfig.DSSPEAKER_STEREO);
+
+			_logger.LogInformation("[DSound COM] IDirectSound::GetSpeakerConfig: Returned STEREO configuration");
+
 			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_SetSpeakerConfig(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSound::SetSpeakerConfig() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwSpeakerConfig = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSound::SetSpeakerConfig(this=0x{ThisPtr:X8}, speakerConfig={SpeakerConfig})", 
+				thisPtr, (DSSpeakerConfig)dwSpeakerConfig);
+
+			// Accept the speaker configuration but don't actually change anything
+			// Our implementation always uses stereo output
+			_logger.LogInformation("[DSound COM] IDirectSound::SetSpeakerConfig: Accepted configuration (no-op)");
+
 			return (uint)DSResult.DS_OK;
 		}
 
@@ -999,8 +1074,19 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSoundBuffer_Initialize(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Initialize() - stub");
-			return (uint)DSResult.DS_OK;
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var pDirectSound = args.UInt32(1);
+			var pcDSBufferDesc = args.UInt32(2);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Initialize(this=0x{ThisPtr:X8}, pDirectSound=0x{PDirectSound:X8}, pcDSBufferDesc=0x{PcDSBufferDesc:X8})", 
+				thisPtr, pDirectSound, pcDSBufferDesc);
+
+			// This method is only for use with CoCreateInstance
+			// Since we create buffers through CreateSoundBuffer, this should return already initialized
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Initialize: Buffer already initialized");
+
+			return (uint)DSResult.DSERR_ALREADYINITIALIZED;
 		}
 
 		private uint DSoundBuffer_Lock(ICpu cpu, VirtualMemory memory)
@@ -1128,7 +1214,38 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSoundBuffer_SetCurrentPosition(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetCurrentPosition() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+			var dwNewPosition = args.UInt32(1);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetCurrentPosition(this=0x{ThisPtr:X8}, position={DwNewPosition})", thisPtr, dwNewPosition);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetCurrentPosition: Invalid buffer");
+				return (uint)DSResult.DSERR_GENERIC;
+			}
+
+			// Don't allow setting position on playing buffers
+			if (buffer.IsPlaying)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetCurrentPosition: Cannot set position while playing");
+				return (uint)DSResult.DSERR_INVALIDCALL;
+			}
+
+			// Ensure position is within buffer bounds
+			if (dwNewPosition >= buffer.Size)
+			{
+				_logger.LogError("[DSound COM] IDirectSoundBuffer::SetCurrentPosition: Position {DwNewPosition} exceeds buffer size {Size}", dwNewPosition, buffer.Size);
+				return (uint)DSResult.DSERR_INVALIDPARAM;
+			}
+
+			buffer.PlayCursor = dwNewPosition;
+			buffer.WriteCursor = dwNewPosition;
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetCurrentPosition: Set position to {DwNewPosition}", dwNewPosition);
+
 			return (uint)DSResult.DS_OK;
 		}
 
@@ -1319,7 +1436,23 @@ namespace Win32Emu.Win32.Modules
 
 		private uint DSoundBuffer_Restore(ICpu cpu, VirtualMemory memory)
 		{
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Restore() - stub");
+			var args = new StackArgs(cpu, memory);
+			var thisPtr = args.UInt32(0);
+
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Restore(this=0x{ThisPtr:X8})", thisPtr);
+
+			var buffer = GetBufferFromThisPtr(thisPtr);
+			if (buffer == null)
+			{
+				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Restore: Invalid buffer");
+				return (uint)DSResult.DSERR_GENERIC;
+			}
+
+			// In a real implementation, this would restore a lost hardware buffer
+			// Since we use software buffers, they never get lost
+			// Just return success
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Restore: Software buffer, nothing to restore");
+
 			return (uint)DSResult.DS_OK;
 		}
 
@@ -1329,7 +1462,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DirectSoundEnumerateW: lpDSEnumCallback={lpDSEnumCallback}, lpContext={lpContext}", lpDSEnumCallback, lpContext);
 			// TODO: Implement DirectSoundEnumerateW
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(4, entryPoint: 0x00035E9D, Version = "4.90.0.3000", IsStub = true)]
@@ -1338,7 +1471,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DllCanUnloadNow called (stub)");
 			// TODO: Implement DllCanUnloadNow
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(5, entryPoint: 0x00036A41, Version = "4.90.0.3000", IsStub = true)]
@@ -1347,7 +1480,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DllGetClassObject called (stub)");
 			// TODO: Implement DllGetClassObject
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(6, entryPoint: 0x0002C95C, Version = "4.90.0.3000", IsStub = true)]
@@ -1356,7 +1489,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DirectSoundCaptureCreate: pcGuidDevice={pcGuidDevice}, ppDSC=0x{ppDSC:X8}, pUnkOuter={pUnkOuter}", pcGuidDevice, ppDSC, pUnkOuter);
 			// TODO: Implement DirectSoundCaptureCreate
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(7, entryPoint: 0x0002D58E, Version = "4.90.0.3000", IsStub = true)]
@@ -1365,7 +1498,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DirectSoundCaptureEnumerateA: lpDSEnumCallback={lpDSEnumCallback}, lpContext={lpContext}", lpDSEnumCallback, lpContext);
 			// TODO: Implement DirectSoundCaptureEnumerateA
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(8, entryPoint: 0x0002D5AB, Version = "4.90.0.3000", IsStub = true)]
@@ -1374,7 +1507,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DirectSoundCaptureEnumerateW: lpDSEnumCallback={lpDSEnumCallback}, lpContext={lpContext}", lpDSEnumCallback, lpContext);
 			// TODO: Implement DirectSoundCaptureEnumerateW
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(9, entryPoint: 0x0002CDE2, Version = "4.90.0.3000", IsStub = true)]
@@ -1383,7 +1516,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] GetDeviceID: pGuidSrc={pGuidSrc}, pGuidDest={pGuidDest}", pGuidSrc, pGuidDest);
 			// TODO: Implement GetDeviceID
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(10, entryPoint: 0x0002CAD3, Version = "4.90.0.3000", IsStub = true)]
@@ -1392,7 +1525,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DirectSoundFullDuplexCreate: pcGuidCaptureDevice={pcGuidCaptureDevice}, pcGuidRenderDevice={pcGuidRenderDevice}, pcDSCBufferDesc={pcDSCBufferDesc}, pcDSBufferDesc={pcDSBufferDesc}, hWnd=0x{hWnd:X8}, dwLevel=0x{dwLevel:X8}, ppDSFD=0x{ppDSFD:X8}, ppDSCBuffer8=0x{ppDSCBuffer8:X8}, ppDSBuffer8=0x{ppDSBuffer8:X8}, pUnkOuter={pUnkOuter}", pcGuidCaptureDevice, pcGuidRenderDevice, pcDSCBufferDesc, pcDSBufferDesc, hWnd, dwLevel, ppDSFD, ppDSCBuffer8, ppDSBuffer8, pUnkOuter);
 			// TODO: Implement DirectSoundFullDuplexCreate
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(11, entryPoint: 0x0002C896, Version = "4.90.0.3000", IsStub = true)]
@@ -1401,7 +1534,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DirectSoundCreate8: lpcGuidDevice={lpcGuidDevice}, ppDS8=0x{ppDS8:X8}, pUnkOuter={pUnkOuter}", lpcGuidDevice, ppDS8, pUnkOuter);
 			// TODO: Implement DirectSoundCreate8
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(12, entryPoint: 0x0002CA10, Version = "4.90.0.3000", IsStub = true)]
@@ -1410,7 +1543,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[dsound] DirectSoundCaptureCreate8: lpcGUID={lpcGUID}, lplpDSC=0x{lplpDSC:X8}, pUnkOuter={pUnkOuter}", lpcGUID, lplpDSC, pUnkOuter);
 			// TODO: Implement DirectSoundCaptureCreate8
-			return 0; // DWORD default
+			return (uint)DSResult.DS_OK;
 		}
 	}
 }
