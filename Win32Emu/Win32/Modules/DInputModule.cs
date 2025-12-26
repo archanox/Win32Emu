@@ -96,12 +96,18 @@ namespace Win32Emu.Win32.Modules
 		{
 			_currentCpu = cpu;
 			_currentMemory = memory;
+			var a = new StackArgs(cpu, memory);
 
-			// For DInput, the current APIs don't require callbacks that need async execution.
-			// The EnumDevices callbacks are handled via COM vtable dispatch.
-			// If future APIs require async callbacks, they would be added here.
+			// Route APIs through async paths to avoid .GetAwaiter().GetResult()
+			// which throws PlatformNotSupportedException on WASM
+			switch (export.ToUpperInvariant())
+			{
+				case "DIRECTINPUTCREATEA":
+				case "DIRECTINPUTCREATE":
+					return (true, await DirectInputCreateAAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3)).ConfigureAwait(false));
+			}
 			
-			// For all APIs, use synchronous implementation
+			// For all other APIs, use synchronous implementation
 			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
 			{
 				return (true, syncReturnValue);
