@@ -1013,33 +1013,19 @@ namespace Win32Emu.Win32.Modules
 			if (_env.AudioBackend == null && _env.BackendFactory != null)
 			{
 				_env.AudioBackend = _env.BackendFactory.CreateAudioBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
 				if (PlatformHelpers.IsWasm)
 				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.AudioBackend.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[WinMM] Audio backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[WinMM] Audio backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[WinMM] Audio backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[WinMM] Audio backend initialization started asynchronously (WASM mode)");
+					_logger.LogError("[WinMM] mixerOpen called on WASM before backend initialized - backend should be initialized before calling");
+					return 11; // MMSYSERR_INVALPARAM
 				}
-				else
+				
+				var success = _env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
+				if (!success)
 				{
-					_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
+					_logger.LogError("[WinMM] Failed to initialize audio backend");
+					return 11; // MMSYSERR_INVALPARAM
 				}
+				_logger.LogInformation("[WinMM] Audio backend initialized successfully");
 			}
 
 			// Create a handle for this mixer device
