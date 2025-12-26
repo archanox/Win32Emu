@@ -842,18 +842,6 @@ namespace Win32Emu.Win32.Modules
 		/// This is kept for compatibility with non-WASM platforms.
 		/// On WASM, this should not be called - use DDraw_CreateSurfaceAsync instead.
 		/// </summary>
-		private uint DDraw_CreateSurface(ICpu cpu, VirtualMemory memory)
-		{
-			// For non-WASM platforms, we can use GetAwaiter().GetResult()
-			// For WASM, the async version should be called directly from the vtable
-			if (PlatformHelpers.IsWasm)
-			{
-				_logger.LogError("[DDraw] DDraw_CreateSurface called on WASM - this should use async path");
-				return (uint)DDResult.DDERR_GENERIC;
-			}
-			
-			return DDraw_CreateSurfaceAsync(cpu, memory).GetAwaiter().GetResult();
-		}
 
 		/// <summary>
 		/// Async implementation of CreateSurface that supports WASM.
@@ -3266,154 +3254,6 @@ namespace Win32Emu.Win32.Modules
 			return (uint)DDResult.DD_OK;
 		}
 
-		private uint DDraw_SetDisplayMode(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
-		{
-			var args = new StackArgs(cpu, memory);
-			var thisPtr = args.UInt32(0);
-			var dwWidth = args.UInt32(1);
-			var dwHeight = args.UInt32(2);
-			var dwBPP = args.UInt32(3);
-
-			_logger.LogInformation("[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{ThisPtr:X8}, width={DwWidth}, height={DwHeight}, bpp={DwBpp})", thisPtr, dwWidth, dwHeight, dwBPP);
-
-			// Validate parameters
-			if (dwWidth == 0 || dwHeight == 0)
-			{
-				_logger.LogError("[DDraw COM] SetDisplayMode: Invalid dimensions ({Width}x{Height})", dwWidth, dwHeight);
-				return (uint)DDResult.DDERR_INVALIDPARAMS;
-			}
-
-			if (dwBPP != 8 && dwBPP != 16 && dwBPP != 24 && dwBPP != 32)
-			{
-				_logger.LogWarning("[DDraw COM] SetDisplayMode: Unusual BPP value {Bpp}, accepting anyway", dwBPP);
-			}
-
-			// Look up the actual handle from the COM object address
-			if (!_comObjectToHandle.TryGetValue(thisPtr, out var actualHandle))
-			{
-				_logger.LogWarning("[DDraw] SetDisplayMode: Could not find DirectDraw handle for COM object 0x{ThisPtr:X8}, using captured handle 0x{Handle:X8}", thisPtr, ddrawHandle);
-				actualHandle = ddrawHandle;
-			}
-
-			// Store display mode settings
-			if (_ddrawObjects.TryGetValue(actualHandle, out var obj))
-			{
-				obj.Width = (int)dwWidth;
-				obj.Height = (int)dwHeight;
-				obj.BitsPerPixel = (int)dwBPP;
-
-				// Update ProcessEnvironment with display mode for GetSystemMetrics
-				_env.DisplayWidth = (int)dwWidth;
-				_env.DisplayHeight = (int)dwHeight;
-				_env.DisplayBitsPerPixel = (int)dwBPP;
-				_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
-
-				// Initialize rendering backend with the specified dimensions
-				if (obj.RenderingBackend == null)
-				{
-					if (_env.BackendFactory != null)
-					{
-						obj.RenderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
-						if (_env.Host != null)
-						{
-							_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
-						}
-					}
-					else
-					{
-						_logger.LogWarning("[DDraw] BackendFactory not available, rendering backend not created");
-					}
-				}
-
-				// Initialize the window with the specified dimensions
-				var title = "Win32Emu DirectDraw";
-				if (obj.RenderingBackend?.IsInitialized == true)
-				{
-					// If already initialized, we would need to recreate with new dimensions
-					// For now, we'll just log this situation
-					_logger.LogInformation("[DDraw] Display mode changed to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
-				}
-				else if (obj.RenderingBackend != null)
-				{
-					// In WASM mode, we need to properly await initialization to prevent race conditions.
-					// Previous implementation used fire-and-forget, which caused frames to be lost
-					// if the application tried to draw before the backend was initialized.
-					// Using GetAwaiter().GetResult() is safe in WASM because the Task properly yields
-					// to the browser event loop through JavaScript interop (via JSRuntime.InvokeVoidAsync).
-					if (PlatformHelpers.IsWasm)
-					{
-						// Initialize frame buffering queue for WASM mode as an additional safety mechanism
-						// This ensures frames drawn during initialization (edge cases) are not lost
-						obj.PendingFrames = new Queue<PendingFrameData>();
-						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
-						
-						_logger.LogInformation("[DDraw] Initializing rendering backend with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
-						try
-						{
-							var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
-							if (success)
-							{
-								_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
-							}
-							else
-							{
-								_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
-								return (uint)DDResult.DDERR_GENERIC;
-							}
-						}
-						catch (Exception ex)
-						{
-							_logger.LogError(ex, "[DDraw] Rendering backend initialization failed (WASM mode)");
-							return (uint)DDResult.DDERR_GENERIC;
-						}
-					}
-					else
-					{
-						var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
-						if (!success)
-						{
-							// In headless/nogui mode (Host == null), rendering backend initialization may fail
-							// due to lack of video device. This is expected and should not cause the application to crash.
-							// We log the failure but still return success to allow headless testing.
-							if (_env.Host == null)
-							{
-								_logger.LogWarning("[DDraw] Failed to initialize rendering backend in headless mode (expected - no video device)");
-								_logger.LogInformation("[DDraw] SetDisplayMode succeeded in headless mode (rendering disabled)");
-							}
-							else
-							{
-								// In GUI mode, initialization failure is an actual error
-								_logger.LogError("[DDraw] Failed to initialize rendering backend");
-								_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-								return (uint)DDResult.DDERR_GENERIC;
-							}
-						}
-						else
-						{
-							_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
-						}
-					}
-				}
-
-				// Subscribe to UI events from the rendering backend
-				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
-				if (obj.RenderingBackend != null)
-				{
-					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
-					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
-				}
-
-				_logger.LogInformation("[DDraw COM] SetDisplayMode succeeded, returning DD_OK (0)");
-			}
-			else
-			{
-				_logger.LogError("[DDraw] SetDisplayMode: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
-				_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-				return (uint)DDResult.DDERR_GENERIC;
-			}
-
-			return (uint)DDResult.DD_OK;
-		}
 
 		/// <summary>
 		/// Async version of SetDisplayMode that uses proper async/await for backend initialization.
@@ -3993,18 +3833,6 @@ namespace Win32Emu.Win32.Modules
 		/// This is kept for compatibility with non-WASM platforms.
 		/// On WASM, this should not be called - use InitializeRenderingBackendWithDimensionsAsync instead.
 		/// </summary>
-		private void InitializeRenderingBackendWithDimensions(DirectDrawObject ddrawObj, uint width, uint height, bool updateEnvironment = true)
-		{
-			// For non-WASM platforms, we can use GetAwaiter().GetResult()
-			// For WASM, the async version should be called directly
-			if (PlatformHelpers.IsWasm)
-			{
-				_logger.LogError("[DDraw] InitializeRenderingBackendWithDimensions called on WASM - this should use async path");
-				return;
-			}
-			
-			InitializeRenderingBackendWithDimensionsAsync(ddrawObj, width, height, updateEnvironment).GetAwaiter().GetResult();
-		}
 
 		/// <summary>
 		/// Initializes the rendering backend with the specified dimensions (async version).
