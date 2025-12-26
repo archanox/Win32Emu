@@ -81,6 +81,8 @@ namespace Win32Emu.Win32.Modules
 			// which throws PlatformNotSupportedException on WASM
 			switch (export.ToUpperInvariant())
 			{
+				case "DIRECTSOUNDCREATE":
+					return (true, await DirectSoundCreateAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2)).ConfigureAwait(false));
 				case "DIRECTSOUNDENUMERATEA":
 					return (true, await DirectSoundEnumerateAAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
 			}
@@ -99,6 +101,22 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1, entryPoint: 0x0000473B, Version = "5.1.2600.6532")]
 		private uint DirectSoundCreate(uint lpGuid, uint lplpDs, uint pUnkOuter)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DirectSoundCreateAsync, bypassing this method
+			if (PlatformHelpers.IsWasm)
+			{
+				_logger.LogError("[DSound] DirectSoundCreate called on WASM - should use async path");
+				return 0x80004005; // E_FAIL
+			}
+			
+			return DirectSoundCreateAsync(lpGuid, lplpDs, pUnkOuter).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of DirectSoundCreate.
+		/// </summary>
+		private async Task<uint> DirectSoundCreateAsync(uint lpGuid, uint lplpDs, uint pUnkOuter)
+		{
 			_logger.LogInformation("[DSound] DirectSoundCreate(lpGuid=0x{LpGuid:X8}, lplpDS=0x{LplpDs:X8}, pUnkOuter=0x{PUnkOuter:X8})", lpGuid, lplpDs, pUnkOuter);
 
 // Create DirectSound object with COM vtable
@@ -116,33 +134,13 @@ namespace Win32Emu.Win32.Modules
 			if (_env.AudioBackend == null && _env.BackendFactory != null)
 			{
 				_env.AudioBackend = _env.BackendFactory.CreateAudioBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
-				if (PlatformHelpers.IsWasm)
+				var success = await _env.AudioBackend.InitializeAsync();
+				if (!success)
 				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.AudioBackend.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[DSound] Audio backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[DSound] Audio backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[DSound] Audio backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[DSound] Audio backend initialization started asynchronously (WASM mode)");
+					_logger.LogError("[DSound] Failed to initialize audio backend");
+					return 0x80004005; // E_FAIL
 				}
-				else
-				{
-					_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
-				}
+				_logger.LogInformation("[DSound] Audio backend initialized successfully");
 			}
 
 // Create COM vtable for IDirectSound interface
@@ -694,36 +692,16 @@ namespace Win32Emu.Win32.Modules
 			{
 				_logger.LogWarning("[DSound] SetCooperativeLevel: Audio backend not initialized, initializing now");
 				_env.AudioBackend = _env.BackendFactory?.CreateAudioBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
 				if (PlatformHelpers.IsWasm)
 				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.AudioBackend!.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[DSound] Audio backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[DSound] Audio backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[DSound] Audio backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[DSound] Audio backend initialization started asynchronously (WASM mode)");
+					_logger.LogError("[DSound] SetCooperativeLevel called on WASM before backend initialized - should use async path");
+					return 0x80004005; // E_FAIL
 				}
-				else
+				
+				if (!_env.AudioBackend!.InitializeAsync().GetAwaiter().GetResult())
 				{
-					if (!_env.AudioBackend!.InitializeAsync().GetAwaiter().GetResult())
-					{
-						_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
-						return 0x80004005; // E_FAIL
-					}
+					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
+					return 0x80004005; // E_FAIL
 				}
 			}
 			

@@ -115,6 +115,22 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1, entryPoint: 0x0000B126, Version = "5.1.2600.6532")]
 		private uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DirectInputCreateAAsync, bypassing this method
+			if (PlatformHelpers.IsWasm)
+			{
+				_logger.LogError("[DInput] DirectInputCreateA called on WASM - should use async path");
+				return 0x80004003; // DIERR_INVALIDPARAM
+			}
+			
+			return DirectInputCreateAAsync(hinst, dwVersion, lplpDirectInput, pUnkOuter).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of DirectInputCreateA.
+		/// </summary>
+		private async Task<uint> DirectInputCreateAAsync(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+		{
 			// Fixed: Parameter order now matches MSDN documentation
 			// Win32 API: DirectInputCreate(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUT *lplpDirectInput, LPUNKNOWN punkOuter)
 			_logger.LogInformation("[DInput] DirectInputCreateA(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
@@ -147,33 +163,13 @@ namespace Win32Emu.Win32.Modules
 			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
 				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
-				if (PlatformHelpers.IsWasm)
+				var success = await _env.InputBackend.InitializeAsync();
+				if (!success)
 				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.InputBackend.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[DInput] Input backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[DInput] Input backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[DInput] Input backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[DInput] Input backend initialization started asynchronously (WASM mode)");
+					_logger.LogError("[DInput] Failed to initialize input backend");
+					return 1; // DIERR_GENERIC
 				}
-				else
-				{
-					_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
-				}
+				_logger.LogInformation("[DInput] Input backend initialized successfully");
 			}
 
 // Create COM vtable for IDirectInput interface
@@ -213,99 +209,16 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
-			// Fixed: Parameter order now matches MSDN documentation
-			// Win32 API: DirectInputCreate(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUT *lplpDirectInput, LPUNKNOWN punkOuter)
-			_logger.LogInformation("[DInput] DirectInputCreate(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
-
-			// Validate output pointer parameter
-			if (lplpDirectInput == 0)
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DirectInputCreateAAsync, bypassing this method
+			if (PlatformHelpers.IsWasm)
 			{
-				_logger.LogError("[DInput] DirectInputCreate: lplpDirectInput is NULL");
+				_logger.LogError("[DInput] DirectInputCreate called on WASM - should use async path");
 				return 0x80004003; // DIERR_INVALIDPARAM
 			}
-
-			// Detect if lplpDirectInput looks like a stack pointer (potential parameter handling bug)
-			// Check against actual stack range from PE headers
-			if (lplpDirectInput >= _env.StackLimit && lplpDirectInput < _env.StackBase)
-			{
-				_logger.LogWarning("[DInput] DirectInputCreate: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack address (stack range: 0x{StackLimit:X8}-0x{StackBase:X8}) - this might indicate a parameter handling issue", 
-					lplpDirectInput, _env.StackLimit, _env.StackBase);
-			}
-
-			// Create DirectInput object with COM vtable (same as DirectInputCreateA)
-			var dinputHandle = _nextDInputHandle++;
-			var dinputObj = new DirectInputObject
-			{
-				Handle = dinputHandle,
-				Version = dwVersion
-			};
-			_dinputObjects[dinputHandle] = dinputObj;
-
-			// Initialize input backend if not already done
-			if (_env.InputBackend == null && _env.BackendFactory != null)
-			{
-				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
-				if (PlatformHelpers.IsWasm)
-				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.InputBackend.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[DInput] Input backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[DInput] Input backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[DInput] Input backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[DInput] Input backend initialization started asynchronously (WASM mode)");
-				}
-				else
-				{
-					_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
-				}
-			}
-
-			// Create COM vtable for IDirectInput interface
-			var vtableMethods = new List<KeyValuePair<string, Win32.COM.ComMethodInfo>>
-			{
-				new("QueryInterface", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
-				new("AddRef", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
-				new("Release", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Release>((cpu, mem) => ComRelease(cpu, mem))),
-				new("CreateDevice", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.CreateDevice>((cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle))),
-				new("EnumDevices", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.EnumDevices>((cpu, mem) => DInput_EnumDevices(cpu, mem))),
-				new("GetDeviceStatus", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.GetDeviceStatus>((cpu, mem) => DInput_GetDeviceStatus(cpu, mem))),
-				new("RunControlPanel", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.RunControlPanel>((cpu, mem) => DInput_RunControlPanel(cpu, mem))),
-				new("Initialize", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Initialize>((cpu, mem) => DInput_Initialize(cpu, mem)))
-			};
-
-			// Create the COM object with vtable
-			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectInput", vtableMethods);
-
-			// Write COM object pointer to output parameter with verification
-			_logger.LogInformation("[DInput] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDirectInput);
-			_env.MemWrite32(lplpDirectInput, comObjectAddr);
 			
-			// Verify the write succeeded by reading back
-			var verification = _env.MemRead32(lplpDirectInput);
-			if (verification != comObjectAddr)
-			{
-				_logger.LogError("[DInput] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
-					comObjectAddr, verification, lplpDirectInput);
-				return 1; // DIERR_GENERIC
-			}
-			_logger.LogInformation("[DInput] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDirectInput);
-
-			_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
-			return 0; // DI_OK
+			// DirectInputCreate and DirectInputCreateA are identical, so reuse the async implementation
+			return DirectInputCreateAAsync(hinst, dwVersion, lplpDirectInput, pUnkOuter).GetAwaiter().GetResult();
 		}
 
 		[DllModuleExport(2, entryPoint: 0x0000B060, Version = "4.90.0.3000")]
