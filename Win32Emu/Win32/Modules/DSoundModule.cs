@@ -1110,8 +1110,8 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DSResult.DSERR_GENERIC;
 			}
 
-			// DSBLOCK_ENTIREBUFFER = 0x00000002
-			if ((dwFlags & 0x00000002) != 0)
+			// Check if entire buffer should be locked
+			if ((dwFlags & (uint)DSBLock.ENTIREBUFFER) != 0)
 			{
 				dwOffset = 0;
 				dwBytes = (uint)buffer.Size;
@@ -1186,8 +1186,8 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DSResult.DS_OK;
 			}
 
-			// DSBPLAY_LOOPING = 0x00000001
-			buffer.IsLooping = (dwFlags & 0x00000001) != 0;
+			// Check if buffer should loop
+			buffer.IsLooping = (dwFlags & (uint)DSBPlay.LOOPING) != 0;
 			buffer.IsPlaying = true;
 
 			// Create audio stream if not already created
