@@ -3045,6 +3045,9 @@ public sealed class Emulator : IDisposable
         // Create cancellation token source for event processing
         _eventProcessingCts = new CancellationTokenSource();
 
+        // Capture the cancellation token to avoid race conditions when StopEventProcessing() sets _eventProcessingCts to null
+        var cancellationToken = _eventProcessingCts.Token;
+
         // Start the event processing task
         _eventProcessingTask = Task.Run(async () =>
         {
@@ -3052,7 +3055,7 @@ public sealed class Emulator : IDisposable
 
             try
             {
-                while (!_eventProcessingCts.Token.IsCancellationRequested && !_stopRequested)
+                while (!cancellationToken.IsCancellationRequested && !_stopRequested)
                 {
                     // Process events from all subscribed rendering and input backends
                     // This includes GLFW window events which are critical for window responsiveness
@@ -3070,7 +3073,7 @@ public sealed class Emulator : IDisposable
                     {
                         if (_dispatcher != null && _dispatcher.TryGetModule("USER32.DLL", out var user32Module) && user32Module is User32Module user32)
                         {
-                            await user32.ProcessTimersAsync(_eventProcessingCts.Token);
+                            await user32.ProcessTimersAsync(cancellationToken);
                         }
                     }
                     catch (Exception ex)
@@ -3079,7 +3082,7 @@ public sealed class Emulator : IDisposable
                     }
 
                     // Small delay to avoid busy-waiting (60 FPS event processing)
-                    await Task.Delay(16, _eventProcessingCts.Token);
+                    await Task.Delay(16, cancellationToken);
                 }
             }
             catch (OperationCanceledException)
@@ -3093,7 +3096,7 @@ public sealed class Emulator : IDisposable
             }
 
             LogDebug("[EventProcessing] UI event processing loop stopped");
-        }, _eventProcessingCts.Token);
+        }, cancellationToken);
     }
 
     /// <summary>
