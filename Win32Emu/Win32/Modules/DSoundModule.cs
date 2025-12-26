@@ -106,7 +106,7 @@ namespace Win32Emu.Win32.Modules
 			if (PlatformHelpers.IsWasm)
 			{
 				_logger.LogError("[DSound] DirectSoundCreate called on WASM - should use async path");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 			
 			return DirectSoundCreateAsync(lpGuid, lplpDs, pUnkOuter).GetAwaiter().GetResult();
@@ -138,7 +138,7 @@ namespace Win32Emu.Win32.Modules
 				if (!success)
 				{
 					_logger.LogError("[DSound] Failed to initialize audio backend");
-					return 0x80004005; // E_FAIL
+					return (uint)DSResult.DSERR_GENERIC;
 				}
 				_logger.LogInformation("[DSound] Audio backend initialized successfully");
 			}
@@ -169,7 +169,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound] Created IDirectSound COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(2, entryPoint: 0x0002D554, Version = "4.90.0.3000")]
@@ -184,7 +184,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpDsEnumCallback == 0)
 			{
 				_logger.LogInformation("[DSound] DirectSoundEnumerateA: No callback provided");
-				return 0; // DS_OK
+				return (uint)DSResult.DS_OK;
 			}
 
 			return DirectSoundEnumerateAAsync(lpDsEnumCallback, lpContext).GetAwaiter().GetResult();
@@ -214,7 +214,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[DSound] DirectSoundEnumerateAAsync: Callback returned FALSE, stopping enumeration");
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		/// <summary>
@@ -518,8 +518,7 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DSound COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid=0x{Riid:X8}, ppvObject=0x{PpvObject:X8})", thisPtr, riid, ppvObject);
 
-			// E_NOINTERFACE = 0x80004002
-			return 0x80004002;
+			return (uint)DSResult.DSERR_NOINTERFACE;
 		}
 
 		private uint ComAddRef(ICpu cpu, VirtualMemory memory)
@@ -651,19 +650,19 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound COM] Created IDirectSoundBuffer COM object at 0x{BufferComAddr:X8} (handle=0x{BufferHandle:X8})", bufferComAddr, bufferHandle);
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_GetCaps(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSound::GetCaps() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_DuplicateSoundBuffer(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSound::DuplicateSoundBuffer() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_SetCooperativeLevel(ICpu cpu, VirtualMemory memory, uint dsHandle)
@@ -680,7 +679,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_dsoundObjects.TryGetValue(dsHandle, out var dsObj))
 			{
 			    _logger.LogError("[DSound] SetCooperativeLevel: Invalid DirectSound handle 0x{DsHandle:X8}", dsHandle);
-			    return 0x80070057; // DSERR_INVALIDPARAM
+			    return (uint)DSResult.DSERR_INVALIDPARAM;
 			}
 
 			// Store the cooperative level and window handle
@@ -695,43 +694,43 @@ namespace Win32Emu.Win32.Modules
 				if (PlatformHelpers.IsWasm)
 				{
 					_logger.LogError("[DSound] SetCooperativeLevel called on WASM before backend initialized - should use async path");
-					return 0x80004005; // E_FAIL
+					return (uint)DSResult.DSERR_GENERIC;
 				}
 				
 				if (!_env.AudioBackend!.InitializeAsync().GetAwaiter().GetResult())
 				{
 					_logger.LogError("[DSound] SetCooperativeLevel: Failed to initialize audio backend");
-					return 0x80004005; // E_FAIL
+					return (uint)DSResult.DSERR_GENERIC;
 				}
 			}
 			
 			_logger.LogInformation("[DSound] Cooperative level set to {Level} for window 0x{Hwnd:X8}", (DSSCL)dwLevel, hwnd);
 			
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_Compact(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSound::Compact() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_GetSpeakerConfig(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSound::GetSpeakerConfig() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_SetSpeakerConfig(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSound::SetSpeakerConfig() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSound_Initialize(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSound::Initialize() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		// Helper method to get buffer from COM object address
@@ -760,13 +759,13 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			if (pDSBufferCaps == 0)
 			{
 				_logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: pDSBufferCaps is NULL");
-				return 0x80070057; // E_INVALIDARG
+				return (uint)DSResult.DSERR_INVALIDPARAM;
 			}
 
 			// Use the generated DSBCAPS ref struct
@@ -776,7 +775,7 @@ namespace Win32Emu.Win32.Modules
 			if (caps.dwSize != 20)
 			{
 			    _logger.LogError("[DSound COM] IDirectSoundBuffer::GetCaps: Invalid structure size {DwSize}, expected 20", caps.dwSize);
-			    return 0x80070057; // E_INVALIDARG
+			    return (uint)DSResult.DSERR_INVALIDPARAM;
 			}
 
 			// Set flags based on buffer properties
@@ -806,7 +805,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[DSound] Buffer caps: flags={Flags}, size={Size}, isPrimary={IsPrimary}", 
 				dwFlags, buffer.Size, buffer.IsPrimary);
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_GetCurrentPosition(ICpu cpu, VirtualMemory memory)
@@ -822,7 +821,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			// Return current positions
@@ -835,7 +834,7 @@ namespace Win32Emu.Win32.Modules
 				memory.Write32(pdwCurrentWriteCursor, buffer.WriteCursor);
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_GetFormat(ICpu cpu, VirtualMemory memory)
@@ -852,7 +851,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetFormat: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			// WAVEFORMATEX structure size
@@ -888,7 +887,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[DSound COM] GetFormat: Returned format {Channels}ch, {Frequency}Hz, {BitsPerSample}bit", buffer.Channels, buffer.Frequency, buffer.BitsPerSample);
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_GetVolume(ICpu cpu, VirtualMemory memory)
@@ -903,7 +902,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetVolume: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			if (plVolume != 0)
@@ -911,7 +910,7 @@ namespace Win32Emu.Win32.Modules
 				memory.Write32(plVolume, (uint)buffer.Volume);
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_GetPan(ICpu cpu, VirtualMemory memory)
@@ -926,7 +925,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetPan: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			if (plPan != 0)
@@ -934,7 +933,7 @@ namespace Win32Emu.Win32.Modules
 				memory.Write32(plPan, (uint)buffer.Pan);
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_GetFrequency(ICpu cpu, VirtualMemory memory)
@@ -949,7 +948,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetFrequency: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			if (pdwFrequency != 0)
@@ -957,7 +956,7 @@ namespace Win32Emu.Win32.Modules
 				memory.Write32(pdwFrequency, (uint)buffer.Frequency);
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_GetStatus(ICpu cpu, VirtualMemory memory)
@@ -972,7 +971,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetStatus: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			// DirectSound buffer status flags:
@@ -982,11 +981,11 @@ namespace Win32Emu.Win32.Modules
 			uint status = 0;
 			if (buffer.IsPlaying)
 			{
-				status |= 0x00000001; // DSBSTATUS_PLAYING
+				status |= (uint)DSBStatus.PLAYING;
 			}
 			if (buffer.IsLooping)
 			{
-				status |= 0x00000004; // DSBSTATUS_LOOPING
+				status |= (uint)DSBStatus.LOOPING;
 			}
 
 			if (pdwStatus != 0)
@@ -995,13 +994,13 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound COM] GetStatus: status=0x{Status:X8} (playing={IsPlaying}, looping={IsLooping})", status, buffer.IsPlaying, buffer.IsLooping);
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_Initialize(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Initialize() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_Lock(ICpu cpu, VirtualMemory memory)
@@ -1022,7 +1021,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null || buffer.Data == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Lock: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			// DSBLOCK_ENTIREBUFFER = 0x00000002
@@ -1074,7 +1073,7 @@ namespace Win32Emu.Win32.Modules
 			buffer.WriteCursor = dwOffset;
 
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Lock: Locked buffer at 0x{AudioPtr:X8}, size={DwBytes}", audioPtr, dwBytes);
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_Play(ICpu cpu, VirtualMemory memory)
@@ -1091,14 +1090,14 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Play: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			// Don't play primary buffers
 			if (buffer.IsPrimary)
 			{
 				_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Primary buffer, nothing to do");
-				return 0; // DS_OK
+				return (uint)DSResult.DS_OK;
 			}
 
 			// DSBPLAY_LOOPING = 0x00000001
@@ -1124,13 +1123,13 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Started playback (looping={IsLooping})", buffer.IsLooping);
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_SetCurrentPosition(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetCurrentPosition() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_SetFormat(ICpu cpu, VirtualMemory memory)
@@ -1145,14 +1144,14 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetFormat: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			// Only primary buffers can have their format set
 			if (!buffer.IsPrimary)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetFormat: Can only set format on primary buffer");
-				return 0x88780096; // DSERR_BADFORMAT
+				return (uint)DSResult.DSERR_BADFORMAT;
 			}
 
 			// Parse WAVEFORMATEX if provided
@@ -1170,7 +1169,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[DSound COM] SetFormat: Set format to {Channels}ch, {Frequency}Hz, {BitsPerSample}bit", buffer.Channels, buffer.Frequency, buffer.BitsPerSample);
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_SetVolume(ICpu cpu, VirtualMemory memory)
@@ -1185,7 +1184,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetVolume: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			buffer.Volume = lVolume;
@@ -1199,7 +1198,7 @@ namespace Win32Emu.Win32.Modules
 				_env.AudioBackend.SetStreamVolume(buffer.AudioStreamId, normalizedVolume);
 			}
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_SetPan(ICpu cpu, VirtualMemory memory)
@@ -1214,14 +1213,14 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetPan: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			buffer.Pan = lPan;
 			// Pan is typically -10000 (full left) to +10000 (full right), with 0 being center
 			// For now we just store it, full implementation would require stereo positioning in OpenAL
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_SetFrequency(ICpu cpu, VirtualMemory memory)
@@ -1236,14 +1235,14 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::SetFrequency: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			buffer.Frequency = (int)dwFrequency;
 			// Changing frequency would require recreating the audio stream in OpenAL
 			// For now we just store it
 
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_Stop(ICpu cpu, VirtualMemory memory)
@@ -1257,7 +1256,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Stop: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			buffer.IsPlaying = false;
@@ -1270,7 +1269,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Stop: Stopped playback");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_Unlock(ICpu cpu, VirtualMemory memory)
@@ -1288,7 +1287,7 @@ namespace Win32Emu.Win32.Modules
 			if (buffer == null || buffer.Data == null)
 			{
 				_logger.LogWarning("[DSound COM] IDirectSoundBuffer::Unlock: Invalid buffer");
-				return 0x80004005; // E_FAIL
+				return (uint)DSResult.DSERR_GENERIC;
 			}
 
 			// Copy data from the locked memory region back to the buffer
@@ -1315,13 +1314,13 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Unlock: Unlocked buffer");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		private uint DSoundBuffer_Restore(ICpu cpu, VirtualMemory memory)
 		{
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Restore() - stub");
-			return 0; // DS_OK
+			return (uint)DSResult.DS_OK;
 		}
 
 		[DllModuleExport(3, entryPoint: 0x0002D571, Version = "4.90.0.3000", IsStub = true)]
