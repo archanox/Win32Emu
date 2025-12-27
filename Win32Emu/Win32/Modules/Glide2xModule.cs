@@ -870,8 +870,7 @@ namespace Win32Emu.Win32.Modules
 			if (windows.Count > 0)
 			{
 				var firstWindow = windows[0];
-				const uint WM_PAINT = 0x000F;
-				_env.PostMessage(firstWindow, WM_PAINT, 0, 0);
+				_env.PostMessage(firstWindow, (uint)Messaging.WM.PAINT, 0, 0);
 				_logger.LogTrace("[GLIDE2x] Posted WM_PAINT to window 0x{Hwnd:X8} to keep message loop active", firstWindow);
 			}
 			

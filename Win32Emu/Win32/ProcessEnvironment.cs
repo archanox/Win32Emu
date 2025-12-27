@@ -3049,6 +3049,7 @@ public class ProcessEnvironment
 	/// <summary>
 	/// Process events from all subscribed rendering and input backends.
 	/// This should be called regularly to keep windows responsive and process input.
+	/// Backend modules may post Win32 messages (for example WM_PAINT) while processing events.
 	/// </summary>
 	public void ProcessAllBackendEvents()
 	{

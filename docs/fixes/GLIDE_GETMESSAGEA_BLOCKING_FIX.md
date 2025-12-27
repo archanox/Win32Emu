@@ -51,7 +51,7 @@ if (_useHardwareAcceleration)
 
 ### Why WM_PAINT?
 
-1. **Standard Pattern**: DirectDraw's `Flip` operation uses the same pattern
+1. **Keeps Message Loop Alive**: Prevents `GetMessageA` from blocking indefinitely
 2. **Harmless**: `WM_PAINT` is designed to be posted frequently - DefWindowProc handles it gracefully
 3. **Appropriate**: Posting a paint message after swapping buffers makes semantic sense
 4. **Non-Intrusive**: Doesn't require changes to the core event processing loop
@@ -62,8 +62,7 @@ We considered adding a `WM_NULL` heartbeat in `ProcessAllBackendEvents()` to pos
 
 1. **Too Aggressive**: Would post 60 messages per second
 2. **Unnecessary**: The `grBufferSwap` fix is sufficient
-3. **Pattern Break**: Would deviate from the DirectDraw pattern
-4. **Complexity**: Adds state tracking to avoid flooding the message queue
+3. **Complexity**: Adds state tracking to avoid flooding the message queue
 
 ## Implementation Details
 
@@ -129,7 +128,7 @@ After the fix:
 ### Positive
 
 - ✅ Fixes infinite blocking in `GetMessageA` for Glide applications
-- ✅ Follows established DirectDraw pattern
+- ✅ Provides a consistent way to keep Glide windows responsive during rendering
 - ✅ Minimal, surgical change
 - ✅ No performance impact (one message per frame)
 
@@ -142,7 +141,7 @@ After the fix:
 
 ## Related
 
-- **DirectDraw Fix**: See `docs/fixes/DDRAW_UNRESPONSIVE_WINDOW_FIX.md` for similar pattern
+- **DirectDraw Fix**: See `docs/fixes/DDRAW_UNRESPONSIVE_WINDOW_FIX.md` for a related issue solved via backend `ProcessEvents()` calls (different approach than the WM_PAINT posting used here)
 - **Message Queue**: See `docs/implementation/MESSAGE_QUEUE_IMPLEMENTATION.md`
 - **Event Processing**: See `docs/implementation/EVENT_DRIVEN_UI_IMPLEMENTATION.md`
 
