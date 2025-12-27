@@ -94,11 +94,14 @@ public class WasmRenderingBackend : IRenderingBackend
 					var paletteIndex = indexedData[srcOffset];
 					if (paletteIndex < palette.Length)
 					{
+						// PALETTEENTRY structure on little-endian systems stores colors as:
+						// Byte 0: peRed, Byte 1: peGreen, Byte 2: peBlue, Byte 3: peFlags
+						// As a uint32: 0xFFBBGGRR (flags in high byte, blue, green, red in low byte)
 						var color = palette[paletteIndex];
-						rgbaData[dstOffset + 0] = (byte)((color >> 16) & 0xFF); // R
-						rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G
-						rgbaData[dstOffset + 2] = (byte)(color & 0xFF);         // B
-						rgbaData[dstOffset + 3] = (byte)((color >> 24) & 0xFF); // A
+						rgbaData[dstOffset + 0] = (byte)(color & 0xFF);         // R (bits 0-7)
+						rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G (bits 8-15)
+						rgbaData[dstOffset + 2] = (byte)((color >> 16) & 0xFF); // B (bits 16-23)
+						rgbaData[dstOffset + 3] = 255;                           // A (always opaque)
 					}
 				}
 			}
