@@ -3049,7 +3049,6 @@ public class ProcessEnvironment
 	/// <summary>
 	/// Process events from all subscribed rendering and input backends.
 	/// This should be called regularly to keep windows responsive and process input.
-	/// Also posts periodic WM_NULL messages to keep message loops active when there are no events.
 	/// </summary>
 	public void ProcessAllBackendEvents()
 	{
