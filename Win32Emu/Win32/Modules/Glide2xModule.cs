@@ -156,7 +156,7 @@ namespace Win32Emu.Win32.Modules
 			_currentMemory = memory; // Store for use in drawing functions
 			var a = new StackArgs(cpu, memory);
 
-			// Route APIs that need async initialization on WASM
+			// Route APIs that need async initialization on all platforms
 			switch (export.ToUpperInvariant())
 			{
 				case "_GRSSTWINOPEN@28":
@@ -1545,7 +1545,7 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			// Initialize the rendering backend
-			if (!_renderingBackend.IsInitialized)
+			if (_renderingBackend != null && !_renderingBackend.IsInitialized)
 			{
 				var title = "Win32Emu - 3Dfx Glide";
 				
