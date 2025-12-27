@@ -45,7 +45,7 @@ namespace Win32Emu.Win32.Modules
 		public bool HasTexture;
 	}
 	
-	public class Glide2XModule : IWin32ModuleUnsafe
+	public class Glide2XModule : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -146,6 +146,42 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		public string Name => "GLIDE2X.DLL";
+
+		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+			string export,
+			ICpu cpu,
+			VirtualMemory memory,
+			CancellationToken cancellationToken = default)
+		{
+			_currentMemory = memory; // Store for use in drawing functions
+			var a = new StackArgs(cpu, memory);
+
+			// Route APIs that need async initialization on WASM
+			switch (export.ToUpperInvariant())
+			{
+				case "_GRSSTWINOPEN@28":
+					{
+						uint hwnd = a.UInt32(0);
+						uint resolution = a.UInt32(1);
+						uint refresh = a.UInt32(2);
+						uint colorFormat = a.UInt32(3);
+						uint origin = a.UInt32(4);
+						uint nColBuffers = a.UInt32(5);
+						uint nAuxBuffers = a.UInt32(6);
+						var result = await grSstWinOpenAsync(hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers, cancellationToken);
+						return (true, result);
+					}
+			}
+
+			// For all other APIs, use synchronous implementation
+			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+			{
+				return (true, syncReturnValue);
+			}
+
+			// No async work performed; return failure immediately
+			return (false, 0);
+		}
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -1549,6 +1585,79 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			_logger.LogInformation("[GLIDE2x] Window opened successfully (HW Accel: {HwAccel})", _useHardwareAcceleration);
+			return 1; // TRUE - success
+		}
+
+		/// <summary>
+		/// Async version of grSstWinOpen for WASM compatibility
+		/// </summary>
+		private async Task<uint> grSstWinOpenAsync(uint hwnd, uint resolution, uint refresh, uint colorFormat, uint origin, uint nColBuffers, uint nAuxBuffers, CancellationToken cancellationToken = default)
+		{
+			_logger.LogInformation("[GLIDE2x] grSstWinOpenAsync(hwnd=0x{Hwnd:X8}, resolution={Resolution}, refresh={Refresh}, colorFormat={ColorFormat}, origin={Origin}, nColBuffers={NColBuffers}, nAuxBuffers={NAuxBuffers})", 
+				hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers);
+			
+			if (_windowOpen)
+			{
+				_logger.LogWarning("[GLIDE2x] grSstWinOpenAsync: Window already open");
+				return 1; // TRUE - already open
+			}
+			
+			// Create rendering backend (prioritize GLFW as requested)
+			if (_renderingBackend == null && _env.BackendFactory != null)
+			{
+				_logger.LogInformation("[GLIDE2x] Creating rendering backend for Glide emulation");
+				
+				_renderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
+				if (_env.Host != null)
+				{
+					_logger.LogInformation("[GLIDE2x] Using Avalonia rendering backend for GUI integration");
+				}
+				
+				if (_renderingBackend == null)
+				{
+					_logger.LogError("[GLIDE2x] Failed to create rendering backend");
+					return 0; // FALSE - failed
+				}
+			}
+			
+			// Initialize the rendering backend
+			if (!_renderingBackend.IsInitialized)
+			{
+				var title = "Win32Emu - 3Dfx Glide";
+				
+				_logger.LogInformation("[GLIDE2x] Initializing rendering backend with {Width}x{Height} (async)", _width, _height);
+				try
+				{
+					var success = await _renderingBackend.InitializeAsync(_width, _height, title).ConfigureAwait(false);
+					if (!success)
+					{
+						_logger.LogError("[GLIDE2x] Failed to initialize rendering backend (async)");
+						return 0; // FALSE - failed
+					}
+					
+					_logger.LogInformation("[GLIDE2x] Rendering backend initialized: {Width}x{Height} (async)", _width, _height);
+					
+					// Subscribe to UI events
+					_env.SubscribeToUIEvents(_renderingBackend, null);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[GLIDE2x] Rendering backend initialization failed (async)");
+					return 0; // FALSE - failed
+				}
+			}
+			
+			// Allocate frame buffer (still needed for software rasterization fallback and LFB access)
+			_frameBuffer = new byte[_width * _height * 4]; // RGBA format
+			_windowOpen = true;
+			
+			// Begin first frame if using hardware acceleration
+			if (_useHardwareAcceleration)
+			{
+				_renderingBackend.BeginFrame();
+			}
+			
+			_logger.LogInformation("[GLIDE2x] Window opened successfully (HW Accel: {HwAccel}) (async)", _useHardwareAcceleration);
 			return 1; // TRUE - success
 		}
 
