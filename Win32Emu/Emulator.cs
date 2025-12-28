@@ -1473,6 +1473,11 @@ public sealed class Emulator : IDisposable
                     "COM vtable",
                     _image).ConfigureAwait(false);
                 
+                // Reset syscall counter - COM vtable calls (DirectDraw, DirectInput, DirectSound) are
+                // equivalent to Win32 API calls and should prevent false infinite loop detection.
+                // Without this, games that heavily use COM APIs would be falsely detected as stuck.
+                iterationsSinceLastSyscall = 0;
+                
                 var espAfter = _cpu.GetRegister("ESP");
                 var eipAfter = _cpu.GetEip();
                 _logger.LogInformation("[COM] After async vtable call: ESP changed from 0x{EspBefore:X8} to 0x{EspAfter:X8} (delta={Delta}), Call site EIP=0x{EipBefore:X8}, Return EIP=0x{EipAfter:X8}", 
