@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Win32Emu.Logging;
 using Xunit;
 using Xunit.Abstractions;
 
