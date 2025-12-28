@@ -1329,6 +1329,24 @@ public sealed class Emulator : IDisposable
                 throw; // Re-throw to stop emulation
             }
             
+            // Diagnostic logging for ign_teas texture loading loop investigation
+            // Log register state when EIP is in the problem range to understand loop behavior
+            var nextEip = step.NextEip;
+            if (nextEip >= 0x00402790 && nextEip <= 0x004027C0)
+            {
+                if (iterationCount % 1000 == 0) // Log every 1000th iteration to avoid spam
+                {
+                    var eax = _cpu.GetRegister("EAX");
+                    var ecx = _cpu.GetRegister("ECX");
+                    var edx = _cpu.GetRegister("EDX");
+                    var ebx = _cpu.GetRegister("EBX");
+                    var esi = _cpu.GetRegister("ESI");
+                    var edi = _cpu.GetRegister("EDI");
+                    _logger.LogWarning("[IGN_TEAS_DEBUG] Iter={Iter} EIP=0x{Eip:X8} EAX=0x{Eax:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} EBX=0x{Ebx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8}",
+                        iterationCount, nextEip, eax, ecx, edx, ebx, esi, edi);
+                }
+            }
+            
             // Instruction-level tracing for debugging
             if (_instructionTraceCount > 0)
             {
