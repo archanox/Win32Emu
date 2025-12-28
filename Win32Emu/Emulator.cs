@@ -834,6 +834,15 @@ public sealed class Emulator : IDisposable
         _logger.LogDebug("[Emulator] Env ExecutablePath: {EnvPath}", _env.ExecutablePath);
         _logger.LogDebug("[Emulator] Extracted names: {ImageName} / {EnvName}", exeNameFromImage, exeNameFromEnv);
         
+        // ign_teas.exe: Enable debug environment variable by default
+        // This prevents log spam from GetEnvironmentVariable when the debug code checks for IGN_TEAS_DEBUG
+        if (exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromEnv == "IGN_TEAS.EXE" || 
+            exeNameFromImage.Contains("IGN_TEAS") || exeNameFromEnv.Contains("IGN_TEAS"))
+        {
+            _env.SetEnvironmentVariable("IGN_TEAS_DEBUG", "1");
+            _logger.LogInformation("[Emulator] IGN_TEAS.EXE detected - enabled IGN_TEAS_DEBUG environment variable");
+        }
+        
         // BasicDD.exe: Fix stack misalignment in FUN_00401310
         // The function's epilogue does ADD ESP,0x8C but should do ADD ESP,0x94 due to
         // CRT stack management bug where 5 parameters are pushed to WinMain but only
