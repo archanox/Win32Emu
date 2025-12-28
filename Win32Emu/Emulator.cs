@@ -300,7 +300,7 @@ public sealed class Emulator : IDisposable
     /// <param name="reservedMemoryMb">Memory to reserve for emulation (default: 256 MB)</param>
     public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs = null, bool debugMode = false, int reservedMemoryMb = 256, bool force32BitStackOps = true)
     {
-        LoadExecutableFromBytes(executableBytes, executableName, programArgs, debugMode, reservedMemoryMb, virtualFileSystem: null, force32BitStackOps: force32BitStackOps);
+        LoadExecutableFromBytes(executableBytes, executableName, programArgs, debugMode, reservedMemoryMb, virtualFileSystem: null, force32BitStackOps: force32BitStackOps, useJitCpu: false);
     }
 
     /// <summary>
@@ -314,7 +314,7 @@ public sealed class Emulator : IDisposable
     /// <param name="reservedMemoryMb">Reserved memory in megabytes</param>
     /// <param name="virtualFileSystem">Optional custom virtual file system for file operations</param>
     /// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
-    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true)
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true, bool useJitCpu = false)
     {
         // Use a synthetic path for internal tracking
         var syntheticPath = $"C:\\WASM\\{executableName}";
@@ -330,7 +330,7 @@ public sealed class Emulator : IDisposable
             gdbServerPort: 1234, 
             enableInstructionAnalyzer: false, 
             enableLegacyInstructionDecoding: false, 
-            useJitCpu: false, 
+            useJitCpu: useJitCpu, 
             virtualDiskPath: null,
             preloadedBytes: executableBytes,
             customVirtualFileSystem: virtualFileSystem,

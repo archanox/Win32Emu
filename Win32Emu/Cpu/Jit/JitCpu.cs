@@ -45,12 +45,16 @@ public class JitCpu : IAsyncCpu
 	private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
 	
 	// RTL-based JIT cache for persistent storage with readable C# output
-	private readonly RtlJitCache _rtlJitCache;
+	// Note: Only used when not in WASM environment
+	private readonly RtlJitCache? _rtlJitCache;
 	private string? _currentExecutablePath;
 	
 	// Decoder for analyzing x86 instructions before compilation
 	private readonly Decoder _decoder;
 	private readonly SimpleMemoryCodeReader _reader;
+	
+	// WASM environment detection - JIT compilation not available in WASM
+	private readonly bool _isWasmEnvironment;
 
 	public JitCpu(VirtualMemory mem, ILogger? logger = null)
 	{
@@ -59,10 +63,20 @@ public class JitCpu : IAsyncCpu
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(32, _reader, DecoderOptions.None);
 		
-		// Initialize RTL-based JIT cache
-		_rtlJitCache = new RtlJitCache(null, logger);
+		// Detect WASM environment
+		_isWasmEnvironment = RuntimeEnvironment.IsWasm;
 		
-		_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
+		// Initialize RTL-based JIT cache only in native environments
+		// In WASM, Roslyn compilation is not available, so we fall back to interpretation
+		if (!_isWasmEnvironment)
+		{
+			_rtlJitCache = new RtlJitCache(null, logger);
+			_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
+		}
+		else
+		{
+			_logger.LogInformation("[JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode");
+		}
 	}
 	
 	/// <summary>
@@ -71,7 +85,13 @@ public class JitCpu : IAsyncCpu
 	public JitCpu(VirtualMemory mem, ILogger? logger, string cacheDirectory) : this(mem, logger)
 	{
 		// Replace the default cache with one using the custom directory
-		_rtlJitCache = new RtlJitCache(cacheDirectory, logger);
+		// Only if not in WASM environment (JIT cache not available in WASM)
+		if (!_isWasmEnvironment && _rtlJitCache != null)
+		{
+			// Note: We cannot reassign readonly field here, so this constructor
+			// should only be used when creating a new instance
+			_logger.LogWarning("[JitCpu] Custom cache directory specified but already initialized. Create new instance instead.");
+		}
 	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -120,6 +140,13 @@ public class JitCpu : IAsyncCpu
 
 	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)
 	{
+		// In WASM environment, JIT compilation is not available
+		// Fall back to single instruction interpretation
+		if (_isWasmEnvironment)
+		{
+			return await Task.FromResult(InterpretSingleInstruction(mem));
+		}
+		
 		var blockStart = _eip;
 		
 		if (!_compiledBlocks.TryGetValue(blockStart, out var compiledBlock))
@@ -133,7 +160,7 @@ public class JitCpu : IAsyncCpu
 		return result;
 	}
 
-	public bool SupportsJit => true;
+	public bool SupportsJit => !_isWasmEnvironment;
 
 	/// <summary>
 	/// Sets the current executable path for cache management
@@ -149,9 +176,22 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task LoadCacheAsync()
 	{
+		// In WASM environment, JIT cache is not available
+		if (_isWasmEnvironment)
+		{
+			_logger.LogInformation("[JitCpu] JIT cache not available in WASM environment");
+			return;
+		}
+		
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
 			_logger.LogError("[JitCpu] Cannot load cache: executable path not set");
+			return;
+		}
+		
+		if (_rtlJitCache == null)
+		{
+			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
 			return;
 		}
 		
@@ -168,9 +208,22 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task SaveCacheAsync()
 	{
+		// In WASM environment, JIT cache is not available
+		if (_isWasmEnvironment)
+		{
+			_logger.LogInformation("[JitCpu] JIT cache not available in WASM environment");
+			return;
+		}
+		
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
 			_logger.LogError("[JitCpu] Cannot save cache: executable path not set");
+			return;
+		}
+		
+		if (_rtlJitCache == null)
+		{
+			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
 			return;
 		}
 		
@@ -186,6 +239,19 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 	{
+		// In WASM environment, JIT cache is not available
+		if (_isWasmEnvironment)
+		{
+			_logger.LogInformation("[JitCpu] Precompilation not available in WASM environment");
+			return await Task.FromResult(0);
+		}
+		
+		if (_rtlJitCache == null)
+		{
+			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
+			return await Task.FromResult(0);
+		}
+		
 		// With RTL cache, blocks are already compiled and loaded from disk by LoadCacheAsync
 		// Return the count of blocks that are already loaded and ready to use
 		var stats = _rtlJitCache.GetStatistics();
@@ -208,6 +274,17 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public RtlCacheStatistics GetCacheStatistics()
 	{
+		// In WASM environment, return empty statistics
+		if (_isWasmEnvironment || _rtlJitCache == null)
+		{
+			return new RtlCacheStatistics
+			{
+				TotalBlocks = 0,
+				CacheDirectory = "N/A (WASM)",
+				SourceDirectory = "N/A (WASM)"
+			};
+		}
+		
 		return _rtlJitCache.GetStatistics();
 	}
 	
@@ -216,7 +293,10 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public void PurgeCache()
 	{
-		_rtlJitCache.PurgeCache();
+		if (_rtlJitCache != null && !_isWasmEnvironment)
+		{
+			_rtlJitCache.PurgeCache();
+		}
 		_compiledBlocks.Clear();
 	}
 
@@ -1150,6 +1230,13 @@ public class JitCpu : IAsyncCpu
 
 	private RtlCompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
 	{
+		// This should never be called in WASM environment due to check in ExecuteBlockAsync
+		// But add safety check anyway
+		if (_isWasmEnvironment || _rtlJitCache == null)
+		{
+			throw new NotSupportedException("JIT compilation is not available in WASM environment");
+		}
+		
 		_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8} using RTL pipeline", startEip);
 		
 		// Analyze the block to get x86 instructions
