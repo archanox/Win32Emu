@@ -45,7 +45,13 @@ public class ExecutableWorkaroundsTests
 		// Arrange
 		var repoRoot = FindRepositoryRoot();
 		
-		var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
+		if (repoRoot == null)
+		{
+			_output.WriteLine("Could not find repository root - skipping test");
+			return;
+		}
+		
+		var exePath = Path.Combine(repoRoot, "EXEs", "ign_teas", "IGN_TEAS.EXE");
 		
 		if (!File.Exists(exePath))
 		{
@@ -91,7 +97,13 @@ public class ExecutableWorkaroundsTests
 		// Arrange
 		var repoRoot = FindRepositoryRoot();
 		
-		var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
+		if (repoRoot == null)
+		{
+			_output.WriteLine("Could not find repository root - skipping test");
+			return;
+		}
+		
+		var exePath = Path.Combine(repoRoot, "EXEs", "ign_teas", "IGN_TEAS.EXE");
 		
 		if (!File.Exists(exePath))
 		{
