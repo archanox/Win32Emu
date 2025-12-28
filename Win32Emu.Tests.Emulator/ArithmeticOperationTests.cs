@@ -31,16 +31,28 @@ public class ArithmeticOperationTests
     [Fact]
     public void TestBlockCountCalculation_WithCpuEmulation()
     {
+        // Constants for x86 instruction opcodes and operands
+        const uint TEST_FILE_SIZE = 0x100000; // 1MB test file
+        const uint BLOCK_SIZE_MASK = 0xFFFF; // 64KB - 1
+        const byte BLOCK_SHIFT = 0x10; // Shift right by 16 bits
+        const byte OPCODE_ADD_EAX_IMM32 = 0x05; // ADD EAX, imm32
+        const byte OPCODE_SHR_RM32_IMM8 = 0xC1; // SHR r/m32, imm8
+        const byte MODRM_SHR_EAX = 0xE8; // ModR/M byte for SHR EAX
+        const uint CODE_BASE_ADDRESS = 0x400000;
+        const uint MEMORY_SIZE = 0x1000000; // 16MB
+        const uint STACK_LIMIT = 0;
+        const uint STACK_BASE = 0x100000;
+        
         // Test with actual CPU emulation to see if instructions execute correctly
-        var vm = new VirtualMemory(0x1000000);
-        var cpu = new IcedCpu(vm, NullLogger<IcedCpu>.Instance, Iced.Intel.DecoderOptions.None, false, 0x400000, 0, 0x100000);
+        var vm = new VirtualMemory(MEMORY_SIZE);
+        var cpu = new IcedCpu(vm, NullLogger<IcedCpu>.Instance, Iced.Intel.DecoderOptions.None, false, CODE_BASE_ADDRESS, STACK_LIMIT, STACK_BASE);
         
         // Set up: EAX = file size (1MB = 0x100000)
-        cpu.SetRegister("EAX", 0x100000);
+        cpu.SetRegister("EAX", TEST_FILE_SIZE);
         
         // Emulate: ADD EAX, 0xFFFF
-        vm.Write8(0x400000, 0x05);  // ADD EAX, imm32
-        vm.Write32(0x400001, 0xFFFF);
+        vm.Write8(CODE_BASE_ADDRESS, OPCODE_ADD_EAX_IMM32);
+        vm.Write32(CODE_BASE_ADDRESS + 1, BLOCK_SIZE_MASK);
         
         // Execute ADD
         cpu.SingleStep(vm);
@@ -50,9 +62,9 @@ public class ArithmeticOperationTests
         Assert.Equal(0x10FFFFu, afterAdd);
         
         // Emulate: SHR EAX, 0x10
-        vm.Write8(0x400005, 0xC1);  // SHR EAX, imm8
-        vm.Write8(0x400006, 0xE8);  // ModRM: EAX
-        vm.Write8(0x400007, 0x10);  // shift count = 16
+        vm.Write8(CODE_BASE_ADDRESS + 5, OPCODE_SHR_RM32_IMM8);
+        vm.Write8(CODE_BASE_ADDRESS + 6, MODRM_SHR_EAX);
+        vm.Write8(CODE_BASE_ADDRESS + 7, BLOCK_SHIFT);
         
         // Execute SHR
         cpu.SingleStep(vm);
