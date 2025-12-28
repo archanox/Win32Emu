@@ -24,6 +24,17 @@ This is a **proof-of-concept** implementation. The Win32Emu core library is desi
 
 These dependencies do not support WebAssembly, so full emulation is not yet available in the browser.
 
+### CPU Emulation
+
+Both CPU backends are now **WASM-compatible**:
+
+- **IcedCpu** (default): Interpreter-based CPU emulation - fully functional in WASM
+- **JitCpu**: Normally uses JIT compilation on native platforms, but automatically falls back to interpreter mode in WASM
+
+In WASM, both CPUs provide identical performance as they both use instruction-by-instruction interpretation. JIT compilation (Roslyn) is not available in WebAssembly environments.
+
+See `docs/implementation/JIT_CPU_WASM_COMPATIBILITY.md` for technical details.
+
 ## Future Work
 
 To enable full web-based emulation, the following work is needed:
@@ -38,10 +49,11 @@ To enable full web-based emulation, the following work is needed:
    - Use Web Audio API for DirectSound emulation
    - Handle audio buffer management and streaming
 
-3. **CPU Emulation Adaptation**
-   - Provide WASM-compatible fallbacks for SIMD intrinsics
-   - Handle threading limitations in WASM
-   - Optimize JIT compilation for browser environment
+3. **CPU Emulation Optimization** ✅ WASM-COMPATIBLE
+   - ✅ Both IcedCpu and JitCpu work in WASM (interpreter mode)
+   - ⚠️ JIT compilation not available in WASM (requires Roslyn)
+   - Future: WASM SIMD optimizations for better performance
+   - Future: Threading support when available in browsers
 
 4. **File System Abstraction** ✅ COMPLETED
    - Browser-based VFS (`BrowserVirtualFileSystem`) for in-memory file storage
