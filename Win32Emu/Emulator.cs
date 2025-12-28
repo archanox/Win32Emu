@@ -85,6 +85,12 @@ public sealed class Emulator : IDisposable
     // (10 iterations at ~2 bytes each = executing about 20 bytes of heap memory)
     private const ulong MAX_CONSECUTIVE_HEAP_EXECUTIONS = 10;
     
+    // Game-specific diagnostic constants for ign_teas investigation
+    // These addresses correspond to the texture loading loop in FUN_004025d0
+    private const uint IGN_TEAS_LOOP_START = 0x00402790;
+    private const uint IGN_TEAS_LOOP_END = 0x004027C0;
+    private const ulong DIAGNOSTIC_LOG_INTERVAL = 1000; // Log every 1000 iterations
+    
     // Instruction tracing for debugging BasicDD crash
     private int _instructionTraceCount = 0;
     private const int MAX_TRACE_INSTRUCTIONS = 1000; // Trace 1000 instructions to find stack corruption
@@ -1331,20 +1337,20 @@ public sealed class Emulator : IDisposable
             
             // Diagnostic logging for ign_teas texture loading loop investigation
             // Log register state when EIP is in the problem range to understand loop behavior
+            // Only enabled when IGN_TEAS_DEBUG environment variable is set to avoid performance impact
             var eipForDiag = eipBeforeStep;
-            if (eipForDiag >= 0x00402790 && eipForDiag <= 0x004027C0)
+            if (eipForDiag >= IGN_TEAS_LOOP_START && eipForDiag <= IGN_TEAS_LOOP_END && 
+                iterationCount % DIAGNOSTIC_LOG_INTERVAL == 0 &&
+                !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("IGN_TEAS_DEBUG")))
             {
-                if (iterationCount % 1000 == 0) // Log every 1000th iteration to avoid spam
-                {
-                    var eax = _cpu.GetRegister("EAX");
-                    var ecx = _cpu.GetRegister("ECX");
-                    var edx = _cpu.GetRegister("EDX");
-                    var ebx = _cpu.GetRegister("EBX");
-                    var esi = _cpu.GetRegister("ESI");
-                    var edi = _cpu.GetRegister("EDI");
-                    _logger.LogWarning("[IGN_TEAS_DEBUG] Iter={Iter} EIP=0x{Eip:X8} EAX=0x{Eax:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} EBX=0x{Ebx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8}",
-                        iterationCount, eipForDiag, eax, ecx, edx, ebx, esi, edi);
-                }
+                var eax = _cpu.GetRegister("EAX");
+                var ecx = _cpu.GetRegister("ECX");
+                var edx = _cpu.GetRegister("EDX");
+                var ebx = _cpu.GetRegister("EBX");
+                var esi = _cpu.GetRegister("ESI");
+                var edi = _cpu.GetRegister("EDI");
+                _logger.LogWarning("[IGN_TEAS_DEBUG] Iter={Iter} EIP=0x{Eip:X8} EAX=0x{Eax:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} EBX=0x{Ebx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8}",
+                    iterationCount, eipForDiag, eax, ecx, edx, ebx, esi, edi);
             }
             
             // Instruction-level tracing for debugging
