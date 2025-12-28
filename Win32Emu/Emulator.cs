@@ -74,8 +74,9 @@ public sealed class Emulator : IDisposable
     private const ulong MAX_SAME_EIP_ITERATIONS_NATIVE = 50000000; // Native: 50M iterations
     
     // Max iterations without a syscall (Win32 API call) before treating as stuck
-    // Reduced from 1M to 200K for faster detection of infinite loops in WASM
-    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 200000;       // WASM: 200K (~0.2-2 seconds)
+    // WASM: Increased to 5M to allow ign_teas texture loading loop to complete (needs ~260K+ iterations)
+    // Games may have long-running initialization loops that don't call Win32 APIs
+    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 5000000;      // WASM: 5M (~5-50 seconds)
     private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 100000000;  // Native: 100M instructions
     
     // Max consecutive heap executions before stopping emulation
@@ -1081,7 +1082,15 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogError("[Emulator] INFINITE LOOP DETECTED: {Iterations} iterations without a syscall. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}. Stopping emulation.", 
                         iterationsSinceLastSyscall, progressEip, progressEsp);
+                    _logger.LogError("[Emulator] This may indicate: 1) Tight CPU-bound loop, 2) Busy-wait polling, 3) Data processing loop. Check decompilation at EIP address.");
                     break;
+                }
+                
+                // Warn about long-running loops without syscalls (diagnostic for games like ign_teas)
+                if (PlatformHelpers.IsWasm && iterationsSinceLastSyscall % 1000000 == 0 && iterationsSinceLastSyscall > 0)
+                {
+                    _logger.LogWarning("[Emulator] Long-running loop: {Iterations} iterations without syscall at EIP=0x{Eip:X8}. Game may be in tight data processing loop.", 
+                        iterationsSinceLastSyscall, progressEip);
                 }
                 
                 lastProgressEip = progressEip;
