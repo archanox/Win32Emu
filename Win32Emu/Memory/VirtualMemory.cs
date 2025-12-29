@@ -1,6 +1,6 @@
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
 namespace Win32Emu.Memory;
@@ -118,8 +118,8 @@ public class VirtualMemory
         
         if (offset <= PageMask - 1 && _pages.TryGetValue(pageIndex, out var page))
         {
-            // Data is within a single page - use MemoryMarshal for efficient access
-            return MemoryMarshal.Read<ushort>(new ReadOnlySpan<byte>(page, (int)offset, 2));
+            // Data is within a single page - use BinaryPrimitives for efficient little-endian access
+            return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 2));
         }
         
         // Slow path: Cross-page boundary or unallocated page
@@ -135,21 +135,14 @@ public class VirtualMemory
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
-        uint value;
-        if (offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page))
-        {
-            // Data is within a single page - use MemoryMarshal for efficient access
-            value = MemoryMarshal.Read<uint>(new ReadOnlySpan<byte>(page, (int)offset, 4));
-        }
-        else
-        {
-            // Slow path: Cross-page boundary or unallocated page
-            value = (uint)(
+        // Use ternary for cleaner assignment to 'value'
+        uint value = offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page)
+            ? BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 4))
+            : (uint)(
                 ReadByteInternal(addr) |
                 (ReadByteInternal(addr + 1) << 8) |
                 (ReadByteInternal(addr + 2) << 16) |
                 (ReadByteInternal(addr + 3) << 24));
-        }
         
         // IAT protection: verify and fix corrupted entries
         if (_iatEntryMap != null && _iatEntryMap.TryGetValue((uint)addr, out var expectedValue))
@@ -186,7 +179,7 @@ public class VirtualMemory
         if (offset <= PageMask - 1)
         {
             var page = GetOrCreatePage(pageIndex);
-            MemoryMarshal.Write(new Span<byte>(page, (int)offset, 2), in value);
+            BinaryPrimitives.WriteUInt16LittleEndian(new Span<byte>(page, (int)offset, 2), value);
             return;
         }
         
@@ -207,7 +200,7 @@ public class VirtualMemory
         if (offset <= PageMask - 3)
         {
             var page = GetOrCreatePage(pageIndex);
-            MemoryMarshal.Write(new Span<byte>(page, (int)offset, 4), in value);
+            BinaryPrimitives.WriteUInt32LittleEndian(new Span<byte>(page, (int)offset, 4), value);
             return;
         }
         
@@ -229,8 +222,8 @@ public class VirtualMemory
         
         if (offset <= PageMask - 7 && _pages.TryGetValue(pageIndex, out var page))
         {
-            // Data is within a single page - use MemoryMarshal for efficient access
-            return MemoryMarshal.Read<ulong>(new ReadOnlySpan<byte>(page, (int)offset, 8));
+            // Data is within a single page - use BinaryPrimitives for efficient little-endian access
+            return BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 8));
         }
         
         // Slow path: Cross-page boundary or unallocated page
@@ -257,7 +250,7 @@ public class VirtualMemory
         if (offset <= PageMask - 7)
         {
             var page = GetOrCreatePage(pageIndex);
-            MemoryMarshal.Write(new Span<byte>(page, (int)offset, 8), in value);
+            BinaryPrimitives.WriteUInt64LittleEndian(new Span<byte>(page, (int)offset, 8), value);
             return;
         }
         

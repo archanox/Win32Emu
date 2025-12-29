@@ -81,25 +81,26 @@ Additional performance improvements that could be considered:
 The `Read16`, `Read32`, `Read64` and their corresponding `Write*` methods were reading/writing individual bytes even when data was within a single memory page. This resulted in multiple dictionary lookups and byte-by-byte processing.
 
 ### Solution
-Added a fast path using `MemoryMarshal.Read<T>` and `MemoryMarshal.Write<T>` for primitive type reads/writes when data doesn't cross page boundaries (the common case):
+Added a fast path using `BinaryPrimitives.ReadUInt*LittleEndian` and `BinaryPrimitives.WriteUInt*LittleEndian` for primitive type reads/writes when data doesn't cross page boundaries (the common case). Using `BinaryPrimitives` ensures correct little-endian interpretation regardless of host platform endianness (important since Win32Emu emulates x86 which is little-endian):
 
 ```csharp
 // Fast path: If within a single page, use direct span access
 uint pageIndex = (uint)(addr >> PageSizeBits);
 uint offset = (uint)(addr & PageMask);
 
-if (offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page))
-{
-    // Data is within a single page - use MemoryMarshal for efficient access
-    return MemoryMarshal.Read<uint>(new ReadOnlySpan<byte>(page, (int)offset, 4));
-}
-
-// Slow path: Cross-page boundary or unallocated page
-// (byte-by-byte processing as fallback)
+// Use ternary for cleaner assignment to 'value'
+uint value = offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page)
+    ? BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 4))
+    : (uint)(
+        ReadByteInternal(addr) |
+        (ReadByteInternal(addr + 1) << 8) |
+        (ReadByteInternal(addr + 2) << 16) |
+        (ReadByteInternal(addr + 3) << 24));
 ```
 
 ### Performance Impact
 - Single dictionary lookup instead of multiple
 - Direct memory access via span instead of byte-by-byte processing
 - JIT can emit efficient load/store instructions
+- Guaranteed little-endian interpretation on all platforms
 - Falls back to byte-by-byte for page boundary crossing (rare case)
