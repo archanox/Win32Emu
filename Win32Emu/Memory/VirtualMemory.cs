@@ -110,14 +110,20 @@ public class VirtualMemory
     public ushort Read16(ulong addr)
     {
         EnsureRange(addr, 2);
-        return (ushort)(Read8(addr) | (Read8(addr + 1) << 8));
+        // Optimized: Read bytes directly without EnsureRange overhead per byte
+        return (ushort)(ReadByteInternal(addr) | (ReadByteInternal(addr + 1) << 8));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public uint Read32(ulong addr)
     {
         EnsureRange(addr, 4);
-        var value = (uint)(Read16(addr) | (Read16(addr + 2) << 16));
+        // Optimized: Read bytes directly without nested function call overhead
+        var value = (uint)(
+            ReadByteInternal(addr) |
+            (ReadByteInternal(addr + 1) << 8) |
+            (ReadByteInternal(addr + 2) << 16) |
+            (ReadByteInternal(addr + 3) << 24));
         
         // IAT protection: verify and fix corrupted entries
         if (_iatEntryMap != null && _iatEntryMap.TryGetValue((uint)addr, out var expectedValue))
@@ -146,31 +152,51 @@ public class VirtualMemory
     public void Write16(ulong addr, ushort value)
     {
         EnsureRange(addr, 2);
-        Write8(addr, (byte)(value & 0xFF));
-        Write8(addr + 1, (byte)(value >> 8));
+        // Optimized: Write bytes directly without EnsureRange overhead per byte
+        WriteByteInternal(addr, (byte)(value & 0xFF));
+        WriteByteInternal(addr + 1, (byte)(value >> 8));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write32(ulong addr, uint value)
     {
         EnsureRange(addr, 4);
-        Write16(addr, (ushort)(value & 0xFFFF));
-        Write16(addr + 2, (ushort)(value >> 16));
+        // Optimized: Write bytes directly without nested function call overhead
+        WriteByteInternal(addr, (byte)(value & 0xFF));
+        WriteByteInternal(addr + 1, (byte)((value >> 8) & 0xFF));
+        WriteByteInternal(addr + 2, (byte)((value >> 16) & 0xFF));
+        WriteByteInternal(addr + 3, (byte)(value >> 24));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public ulong Read64(ulong addr)
     {
         EnsureRange(addr, 8);
-        return Read32(addr) | ((ulong)Read32(addr + 4) << 32);
+        // Optimized: Read bytes directly without nested function call overhead
+        return (ulong)(
+            ReadByteInternal(addr) |
+            ((ulong)ReadByteInternal(addr + 1) << 8) |
+            ((ulong)ReadByteInternal(addr + 2) << 16) |
+            ((ulong)ReadByteInternal(addr + 3) << 24) |
+            ((ulong)ReadByteInternal(addr + 4) << 32) |
+            ((ulong)ReadByteInternal(addr + 5) << 40) |
+            ((ulong)ReadByteInternal(addr + 6) << 48) |
+            ((ulong)ReadByteInternal(addr + 7) << 56));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write64(ulong addr, ulong value)
     {
         EnsureRange(addr, 8);
-        Write32(addr, (uint)(value & 0xFFFFFFFF));
-        Write32(addr + 4, (uint)(value >> 32));
+        // Optimized: Write bytes directly without nested function call overhead
+        WriteByteInternal(addr, (byte)(value & 0xFF));
+        WriteByteInternal(addr + 1, (byte)((value >> 8) & 0xFF));
+        WriteByteInternal(addr + 2, (byte)((value >> 16) & 0xFF));
+        WriteByteInternal(addr + 3, (byte)((value >> 24) & 0xFF));
+        WriteByteInternal(addr + 4, (byte)((value >> 32) & 0xFF));
+        WriteByteInternal(addr + 5, (byte)((value >> 40) & 0xFF));
+        WriteByteInternal(addr + 6, (byte)((value >> 48) & 0xFF));
+        WriteByteInternal(addr + 7, (byte)(value >> 56));
     }
 
     public void WriteBytes(ulong addr, ReadOnlySpan<byte> data)

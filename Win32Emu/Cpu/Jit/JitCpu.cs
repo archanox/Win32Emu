@@ -101,30 +101,36 @@ public class JitCpu : IAsyncCpu
 	public uint GetEip() => _eip;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	public uint GetRegister(string name) => name.ToUpperInvariant() switch
+	public uint GetRegister(string name)
 	{
-		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, 
-		"ESI" => _esi, "EDI" => _edi, "EBP" => _ebp, "ESP" => _esp, 
-		"EIP" => _eip, "EFLAGS" => _eflags,
-		_ => 0
-	};
+		// Optimized: Use OrdinalIgnoreCase comparison to avoid string allocation from ToUpperInvariant()
+		if (string.Equals(name, "EAX", StringComparison.OrdinalIgnoreCase)) return _eax;
+		if (string.Equals(name, "EBX", StringComparison.OrdinalIgnoreCase)) return _ebx;
+		if (string.Equals(name, "ECX", StringComparison.OrdinalIgnoreCase)) return _ecx;
+		if (string.Equals(name, "EDX", StringComparison.OrdinalIgnoreCase)) return _edx;
+		if (string.Equals(name, "ESI", StringComparison.OrdinalIgnoreCase)) return _esi;
+		if (string.Equals(name, "EDI", StringComparison.OrdinalIgnoreCase)) return _edi;
+		if (string.Equals(name, "EBP", StringComparison.OrdinalIgnoreCase)) return _ebp;
+		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) return _esp;
+		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) return _eip;
+		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) return _eflags;
+		return 0;
+	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
-		switch (name.ToUpperInvariant())
-		{
-			case "EAX": _eax = value; break;
-			case "EBX": _ebx = value; break;
-			case "ECX": _ecx = value; break;
-			case "EDX": _edx = value; break;
-			case "ESI": _esi = value; break;
-			case "EDI": _edi = value; break;
-			case "EBP": _ebp = value; break;
-			case "ESP": _esp = value; break;
-			case "EIP": _eip = value; break;
-			case "EFLAGS": _eflags = value; break;
-		}
+		// Optimized: Use OrdinalIgnoreCase comparison to avoid string allocation from ToUpperInvariant()
+		if (string.Equals(name, "EAX", StringComparison.OrdinalIgnoreCase)) { _eax = value; return; }
+		if (string.Equals(name, "EBX", StringComparison.OrdinalIgnoreCase)) { _ebx = value; return; }
+		if (string.Equals(name, "ECX", StringComparison.OrdinalIgnoreCase)) { _ecx = value; return; }
+		if (string.Equals(name, "EDX", StringComparison.OrdinalIgnoreCase)) { _edx = value; return; }
+		if (string.Equals(name, "ESI", StringComparison.OrdinalIgnoreCase)) { _esi = value; return; }
+		if (string.Equals(name, "EDI", StringComparison.OrdinalIgnoreCase)) { _edi = value; return; }
+		if (string.Equals(name, "EBP", StringComparison.OrdinalIgnoreCase)) { _ebp = value; return; }
+		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) { _esp = value; return; }
+		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) { _eip = value; return; }
+		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) { _eflags = value; return; }
 	}
 
 	public CpuStepResult SingleStep(VirtualMemory mem)
