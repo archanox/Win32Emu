@@ -291,15 +291,9 @@ public class ApiCallTracer : IDisposable
 		}
 
 		var takeCount = Math.Min(count, snapshot.Length);
-		var result = new List<ApiCallRecord>(takeCount);
 		var startIndex = snapshot.Length - takeCount;
 
-		for (var i = startIndex; i < snapshot.Length; i++)
-		{
-			result.Add(snapshot[i]);
-		}
-
-		return result;
+		return new ArraySegment<ApiCallRecord>(snapshot, startIndex, takeCount).ToList();
 	}
 
 	/// <summary>
