@@ -73,4 +73,6 @@ Additional performance improvements that could be considered:
 
 3. **Span<byte> for memory operations**: The `WriteBytes` and `GetSpan` methods already use spans, but more operations could benefit from span-based APIs.
 
-4. **Object pooling**: Frequently created objects like `CpuStepResult` could be pooled to reduce GC pressure.
+## Already Optimized
+
+- **CpuStepResult**: Already defined as `readonly record struct` (value type), which means it's allocated on the stack instead of the heap. No GC pressure from this type - object pooling is not needed.
