@@ -153,7 +153,7 @@ public class VirtualMemory
     {
         EnsureRange(addr, 2);
         // Optimized: Write bytes directly without EnsureRange overhead per byte
-        WriteByteInternal(addr, (byte)(value & 0xFF));
+        WriteByteInternal(addr, (byte)value);
         WriteByteInternal(addr + 1, (byte)(value >> 8));
     }
 
@@ -162,9 +162,9 @@ public class VirtualMemory
     {
         EnsureRange(addr, 4);
         // Optimized: Write bytes directly without nested function call overhead
-        WriteByteInternal(addr, (byte)(value & 0xFF));
-        WriteByteInternal(addr + 1, (byte)((value >> 8) & 0xFF));
-        WriteByteInternal(addr + 2, (byte)((value >> 16) & 0xFF));
+        WriteByteInternal(addr, (byte)value);
+        WriteByteInternal(addr + 1, (byte)(value >> 8));
+        WriteByteInternal(addr + 2, (byte)(value >> 16));
         WriteByteInternal(addr + 3, (byte)(value >> 24));
     }
 
@@ -189,13 +189,13 @@ public class VirtualMemory
     {
         EnsureRange(addr, 8);
         // Optimized: Write bytes directly without nested function call overhead
-        WriteByteInternal(addr, (byte)(value & 0xFF));
-        WriteByteInternal(addr + 1, (byte)((value >> 8) & 0xFF));
-        WriteByteInternal(addr + 2, (byte)((value >> 16) & 0xFF));
-        WriteByteInternal(addr + 3, (byte)((value >> 24) & 0xFF));
-        WriteByteInternal(addr + 4, (byte)((value >> 32) & 0xFF));
-        WriteByteInternal(addr + 5, (byte)((value >> 40) & 0xFF));
-        WriteByteInternal(addr + 6, (byte)((value >> 48) & 0xFF));
+        WriteByteInternal(addr, (byte)value);
+        WriteByteInternal(addr + 1, (byte)(value >> 8));
+        WriteByteInternal(addr + 2, (byte)(value >> 16));
+        WriteByteInternal(addr + 3, (byte)(value >> 24));
+        WriteByteInternal(addr + 4, (byte)(value >> 32));
+        WriteByteInternal(addr + 5, (byte)(value >> 40));
+        WriteByteInternal(addr + 6, (byte)(value >> 48));
         WriteByteInternal(addr + 7, (byte)(value >> 56));
     }
 
