@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Microsoft.Extensions.Logging;
 
 namespace Win32Emu.Memory;
@@ -110,7 +111,18 @@ public class VirtualMemory
     public ushort Read16(ulong addr)
     {
         EnsureRange(addr, 2);
-        // Optimized: Read bytes directly without EnsureRange overhead per byte
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 1 && _pages.TryGetValue(pageIndex, out var page))
+        {
+            // Data is within a single page - use MemoryMarshal for efficient access
+            return MemoryMarshal.Read<ushort>(new ReadOnlySpan<byte>(page, (int)offset, 2));
+        }
+        
+        // Slow path: Cross-page boundary or unallocated page
         return (ushort)(ReadByteInternal(addr) | (ReadByteInternal(addr + 1) << 8));
     }
 
@@ -118,12 +130,26 @@ public class VirtualMemory
     public uint Read32(ulong addr)
     {
         EnsureRange(addr, 4);
-        // Optimized: Read bytes directly without nested function call overhead
-        var value = (uint)(
-            ReadByteInternal(addr) |
-            (ReadByteInternal(addr + 1) << 8) |
-            (ReadByteInternal(addr + 2) << 16) |
-            (ReadByteInternal(addr + 3) << 24));
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        uint value;
+        if (offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page))
+        {
+            // Data is within a single page - use MemoryMarshal for efficient access
+            value = MemoryMarshal.Read<uint>(new ReadOnlySpan<byte>(page, (int)offset, 4));
+        }
+        else
+        {
+            // Slow path: Cross-page boundary or unallocated page
+            value = (uint)(
+                ReadByteInternal(addr) |
+                (ReadByteInternal(addr + 1) << 8) |
+                (ReadByteInternal(addr + 2) << 16) |
+                (ReadByteInternal(addr + 3) << 24));
+        }
         
         // IAT protection: verify and fix corrupted entries
         if (_iatEntryMap != null && _iatEntryMap.TryGetValue((uint)addr, out var expectedValue))
@@ -152,7 +178,19 @@ public class VirtualMemory
     public void Write16(ulong addr, ushort value)
     {
         EnsureRange(addr, 2);
-        // Optimized: Write bytes directly without EnsureRange overhead per byte
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 1)
+        {
+            var page = GetOrCreatePage(pageIndex);
+            MemoryMarshal.Write(new Span<byte>(page, (int)offset, 2), in value);
+            return;
+        }
+        
+        // Slow path: Cross-page boundary
         WriteByteInternal(addr, (byte)value);
         WriteByteInternal(addr + 1, (byte)(value >> 8));
     }
@@ -161,7 +199,19 @@ public class VirtualMemory
     public void Write32(ulong addr, uint value)
     {
         EnsureRange(addr, 4);
-        // Optimized: Write bytes directly without nested function call overhead
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 3)
+        {
+            var page = GetOrCreatePage(pageIndex);
+            MemoryMarshal.Write(new Span<byte>(page, (int)offset, 4), in value);
+            return;
+        }
+        
+        // Slow path: Cross-page boundary
         WriteByteInternal(addr, (byte)value);
         WriteByteInternal(addr + 1, (byte)(value >> 8));
         WriteByteInternal(addr + 2, (byte)(value >> 16));
@@ -172,7 +222,18 @@ public class VirtualMemory
     public ulong Read64(ulong addr)
     {
         EnsureRange(addr, 8);
-        // Optimized: Read bytes directly without nested function call overhead
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 7 && _pages.TryGetValue(pageIndex, out var page))
+        {
+            // Data is within a single page - use MemoryMarshal for efficient access
+            return MemoryMarshal.Read<ulong>(new ReadOnlySpan<byte>(page, (int)offset, 8));
+        }
+        
+        // Slow path: Cross-page boundary or unallocated page
         return (ulong)(
             ReadByteInternal(addr) |
             ((ulong)ReadByteInternal(addr + 1) << 8) |
@@ -188,7 +249,19 @@ public class VirtualMemory
     public void Write64(ulong addr, ulong value)
     {
         EnsureRange(addr, 8);
-        // Optimized: Write bytes directly without nested function call overhead
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 7)
+        {
+            var page = GetOrCreatePage(pageIndex);
+            MemoryMarshal.Write(new Span<byte>(page, (int)offset, 8), in value);
+            return;
+        }
+        
+        // Slow path: Cross-page boundary
         WriteByteInternal(addr, (byte)value);
         WriteByteInternal(addr + 1, (byte)(value >> 8));
         WriteByteInternal(addr + 2, (byte)(value >> 16));
