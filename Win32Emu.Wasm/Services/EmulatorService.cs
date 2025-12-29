@@ -253,11 +253,8 @@ public class EmulatorService : IDisposable
 						
 						if (!string.IsNullOrEmpty(cacheJson))
 						{
-							// Write to temp file for IcedCpu to load
-							var tempCacheFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), cacheFileName);
-							await System.IO.File.WriteAllTextAsync(tempCacheFile, cacheJson);
-							
-							await icedCpu.LoadCacheAsync(tempCacheFile, _logger);
+							// Load cache directly from JSON (no file I/O needed in WASM)
+							await icedCpu.LoadCacheFromJsonAsync(cacheJson, _logger);
 							EmitDebugOutput($"Cache loaded successfully: {cacheFileName}");
 						}
 					}

@@ -6846,13 +6846,43 @@ public class IcedCpu : IAsyncCpu
 				return;
 			}
 
+			// Load the cache data directly from the provided file
+			var json = await System.IO.File.ReadAllTextAsync(cacheFilePath);
+			await LoadCacheFromJsonAsync(json, logger);
+			_logger.LogInformation("[IcedCpu] Loaded cache from file: {CacheFilePath}", cacheFilePath);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[IcedCpu] Failed to load cache from {CacheFilePath}", cacheFilePath);
+			_useCache = false;
+			_jitCache = null;
+		}
+	}
+
+	/// <summary>
+	/// Loads a JIT cache from JSON content. This enables faster execution
+	/// by providing pre-analyzed block metadata (addresses, sizes, hashes).
+	/// Useful for WASM environments where file I/O may not work as expected.
+	/// </summary>
+	/// <param name="cacheJson">JSON content containing cache data</param>
+	/// <param name="logger">Optional logger for cache operations</param>
+	public async Task LoadCacheFromJsonAsync(string cacheJson, ILogger? logger = null)
+	{
+		try
+		{
+			if (string.IsNullOrEmpty(cacheJson))
+			{
+				_logger.LogInformation("[IcedCpu] Cache JSON is empty");
+				return;
+			}
+
 			// Create a temporary cache directory for this session
+			// In WASM, directory operations might fail, but JitCache constructor handles it gracefully
 			var tempCacheDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Win32Emu", "IcedCpuCache");
 			_jitCache = new JitCache(tempCacheDir, logger ?? _logger);
 
-			// Load the cache data directly from the provided file
-			var json = await System.IO.File.ReadAllTextAsync(cacheFilePath);
-			var cacheData = System.Text.Json.JsonSerializer.Deserialize<JitCacheData>(json);
+			// Parse and load the cache data
+			var cacheData = System.Text.Json.JsonSerializer.Deserialize<JitCacheData>(cacheJson);
 
 			if (cacheData?.Blocks != null)
 			{
@@ -6862,13 +6892,13 @@ public class IcedCpu : IAsyncCpu
 				}
 
 				_useCache = true;
-				_logger.LogInformation("[IcedCpu] Loaded {Count} cached blocks from {CacheFilePath}", 
-					cacheData.Blocks.Count, cacheFilePath);
+				_logger.LogInformation("[IcedCpu] Loaded {Count} cached blocks from JSON", 
+					cacheData.Blocks.Count);
 			}
 		}
 		catch (Exception ex)
 		{
-			_logger.LogError(ex, "[IcedCpu] Failed to load cache from {CacheFilePath}", cacheFilePath);
+			_logger.LogError(ex, "[IcedCpu] Failed to load cache from JSON");
 			_useCache = false;
 			_jitCache = null;
 		}

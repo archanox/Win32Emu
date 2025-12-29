@@ -31,8 +31,17 @@ public class JitCache
 		_logger = logger ?? NullLogger.Instance;
 		_cacheDirectory = cacheDirectory ?? DefaultCacheDirectory;
 		
-		Directory.CreateDirectory(_cacheDirectory);
-		_logger.LogInformation("[JitCache] Initialized with cache directory: {CacheDirectory}", _cacheDirectory);
+		try
+		{
+			Directory.CreateDirectory(_cacheDirectory);
+			_logger.LogInformation("[JitCache] Initialized with cache directory: {CacheDirectory}", _cacheDirectory);
+		}
+		catch (Exception ex)
+		{
+			// In WASM or other restricted environments, directory creation might fail
+			// This is OK - we can still use the in-memory cache without disk persistence
+			_logger.LogDebug(ex, "[JitCache] Failed to create cache directory (expected in WASM/restricted environments)");
+		}
 	}
 	
 	/// <summary>
