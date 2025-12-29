@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 using Microsoft.Extensions.Logging.Abstractions;

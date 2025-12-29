@@ -1,6 +1,6 @@
 using Xunit;
 using Microsoft.Extensions.Logging.Abstractions;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32.Modules;
 
 namespace Win32Emu.Tests.Kernel32;

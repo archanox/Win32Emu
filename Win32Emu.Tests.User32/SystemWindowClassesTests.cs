@@ -1,4 +1,4 @@
-using Win32Emu.Tests.User32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32;
 using Xunit;
 

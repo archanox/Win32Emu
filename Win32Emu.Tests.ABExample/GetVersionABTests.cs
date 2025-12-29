@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using EasyHook;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Xunit;
 
 namespace Win32Emu.Tests.ABExample;
