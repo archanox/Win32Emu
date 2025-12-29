@@ -6846,7 +6846,7 @@ public class IcedCpu : IAsyncCpu
 				return;
 			}
 
-			// Load the cache data directly from the provided file
+			// Read the file and delegate to LoadCacheFromJsonAsync for processing
 			var json = await System.IO.File.ReadAllTextAsync(cacheFilePath);
 			await LoadCacheFromJsonAsync(json, logger);
 			_logger.LogInformation("[IcedCpu] Loaded cache from file: {CacheFilePath}", cacheFilePath);
@@ -6862,7 +6862,7 @@ public class IcedCpu : IAsyncCpu
 	/// <summary>
 	/// Loads a JIT cache from JSON content. This enables faster execution
 	/// by providing pre-analyzed block metadata (addresses, sizes, hashes).
-	/// Useful for WASM environments where file I/O may not work as expected.
+	/// Useful for WASM or other restricted environments where file I/O may not work as expected.
 	/// </summary>
 	/// <param name="cacheJson">JSON content containing cache data</param>
 	/// <param name="logger">Optional logger for cache operations</param>
@@ -6877,7 +6877,8 @@ public class IcedCpu : IAsyncCpu
 			}
 
 			// Create a temporary cache directory for this session
-			// In WASM, directory operations might fail, but JitCache constructor handles it gracefully
+			// In WASM or other restricted environments, directory operations might fail,
+			// but JitCache constructor handles it gracefully
 			var tempCacheDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Win32Emu", "IcedCpuCache");
 			_jitCache = new JitCache(tempCacheDir, logger ?? _logger);
 
