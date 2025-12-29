@@ -244,7 +244,7 @@ public class EmulatorService : IDisposable
 					EmitDebugOutput($"Attempting to load cache: {cacheUrl}");
 					
 					// Use HttpClient to fetch the cache file from wwwroot
-					using var httpClient = new System.Net.Http.HttpClient { BaseAddress = new Uri(await _jsRuntime.InvokeAsync<string>("eval", "window.location.origin")) };
+					using var httpClient = new System.Net.Http.HttpClient { BaseAddress = new Uri(await _jsRuntime.InvokeAsync<string>("getOrigin")) };
 					var response = await httpClient.GetAsync(cacheUrl);
 					
 					if (response.IsSuccessStatusCode)
