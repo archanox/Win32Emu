@@ -71,8 +71,35 @@ Additional performance improvements that could be considered:
 
 2. **StringComparer.OrdinalIgnoreCase**: Many places call `ToUpperInvariant()` for dictionary lookups. Using dictionaries with `StringComparer.OrdinalIgnoreCase` would eliminate these allocations.
 
-3. **Span<byte> for memory operations**: The `WriteBytes` and `GetSpan` methods already use spans, but more operations could benefit from span-based APIs.
-
 ## Already Optimized
 
 - **CpuStepResult**: Already defined as `readonly record struct` (value type), which means it's allocated on the stack instead of the heap. No GC pressure from this type - object pooling is not needed.
+
+## Span<byte> Memory Operations (Implemented)
+
+### Problem
+The `Read16`, `Read32`, `Read64` and their corresponding `Write*` methods were reading/writing individual bytes even when data was within a single memory page. This resulted in multiple dictionary lookups and byte-by-byte processing.
+
+### Solution
+Added a fast path using `MemoryMarshal.Read<T>` and `MemoryMarshal.Write<T>` for primitive type reads/writes when data doesn't cross page boundaries (the common case):
+
+```csharp
+// Fast path: If within a single page, use direct span access
+uint pageIndex = (uint)(addr >> PageSizeBits);
+uint offset = (uint)(addr & PageMask);
+
+if (offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page))
+{
+    // Data is within a single page - use MemoryMarshal for efficient access
+    return MemoryMarshal.Read<uint>(new ReadOnlySpan<byte>(page, (int)offset, 4));
+}
+
+// Slow path: Cross-page boundary or unallocated page
+// (byte-by-byte processing as fallback)
+```
+
+### Performance Impact
+- Single dictionary lookup instead of multiple
+- Direct memory access via span instead of byte-by-byte processing
+- JIT can emit efficient load/store instructions
+- Falls back to byte-by-byte for page boundary crossing (rare case)
