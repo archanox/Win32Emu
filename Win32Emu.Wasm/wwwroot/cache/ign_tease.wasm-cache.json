@@ -1,0 +1,29 @@
+{
+  "Version": 1,
+  "ExecutablePath": "ign_tease.exe",
+  "Timestamp": "2025-12-29T13:00:00Z",
+  "Blocks": [
+    {
+      "StartAddress": 4198400,
+      "InstructionCount": 5,
+      "ByteLength": 15,
+      "CodeHash": "ABC123DEF456789012345678901234567890123456789012345678901234ABCD",
+      "FirstCompiled": "2025-12-29T13:00:00Z",
+      "ExecutionCount": 0,
+      "EndsWithCall": false,
+      "EndsWithReturn": false,
+      "DirectTarget": null
+    },
+    {
+      "StartAddress": 4198420,
+      "InstructionCount": 3,
+      "ByteLength": 9,
+      "CodeHash": "DEF456789012345678901234567890123456789012345678901234ABCD123456",
+      "FirstCompiled": "2025-12-29T13:00:00Z",
+      "ExecutionCount": 0,
+      "EndsWithCall": false,
+      "EndsWithReturn": true,
+      "DirectTarget": null
+    }
+  ]
+}
