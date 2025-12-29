@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 using Xunit;
-using Win32Emu.Tests.User32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32;
 
 namespace Win32Emu.Tests.User32;

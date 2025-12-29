@@ -1,6 +1,6 @@
 using Xunit;
 using Win32Emu.Memory;
-using Win32Emu.Tests.User32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Messaging;
 using Win32Emu.Win32.Messaging.Handlers;

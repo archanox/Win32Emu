@@ -1,4 +1,4 @@
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.VirtualFileSystem;
 using Xunit;
 

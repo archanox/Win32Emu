@@ -65,6 +65,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Win32Emu.Tests.Infrastructure" />
     <InternalsVisibleTo Include="Win32Emu.Tests.Kernel32" />
     <InternalsVisibleTo Include="Win32Emu.Tests.User32" />
     <InternalsVisibleTo Include="Win32Emu.Tests.Emulator" />
