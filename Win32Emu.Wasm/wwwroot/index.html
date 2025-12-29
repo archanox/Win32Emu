@@ -741,6 +741,15 @@
 			}
 		};
 		
+		// ===========================================
+		// Utility Functions for Blazor Interop
+		// ===========================================
+		
+		// Get window origin for HttpClient base address
+		window.getOrigin = () => {
+			return window.location.origin;
+		};
+		
 		// Folder selection helper
 		window.getFilesFromInput = async (inputId) => {
 			const input = document.getElementById(inputId);

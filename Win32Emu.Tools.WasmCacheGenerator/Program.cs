@@ -14,6 +14,21 @@ namespace Win32Emu.Tools.WasmCacheGenerator;
 /// </summary>
 class Program
 {
+	// PE format constants
+	private const int PE_HEADER_OFFSET_LOCATION = 0x3C; // Offset in DOS header to PE header offset
+	private const int PE_HEADER_OFFSET_SIZE = 4; // Size of PE header offset field
+	private const int PE_IMAGE_BASE_OFFSET = 0x34; // Offset in PE header to image base (PE32)
+	private const int PE_ENTRY_POINT_RVA_OFFSET = 0x28; // Offset in PE header to entry point RVA
+	
+	// Default addresses
+	private const uint DEFAULT_IMAGE_BASE = 0x400000; // Standard Win32 image base
+	private const uint DEFAULT_ENTRY_POINT = 0x401000; // Default entry point if parsing fails
+	private const uint COMMON_CODE_SECTION_OFFSET = 0x1000; // Common code section RVA
+	
+	// Block analysis constants
+	private const int MAX_INSTRUCTIONS_PER_BLOCK = 50; // Maximum instructions to decode per block
+	private const int MAX_BYTES_TO_DECODE = 1024; // Maximum bytes to decode per block
+	
 	static async Task<int> Main(string[] args)
 	{
 		if (args.Length < 1)
@@ -42,21 +57,25 @@ class Program
 		var maxBlocksStr = GetArgument(args, "--max-blocks", "10000");
 		var verbose = args.Contains("--verbose");
 
+		// Create logger for error reporting
+		using var loggerFactory = LoggerFactory.Create(builder =>
+		{
+			builder.AddConsole();
+			if (verbose)
+			{
+				builder.SetMinimumLevel(LogLevel.Debug);
+			}
+		});
+		var logger = loggerFactory.CreateLogger<Program>();
+
 		if (!File.Exists(exePath))
 		{
+			logger.LogError("File not found: {ExePath}", exePath);
 			Console.Error.WriteLine($"Error: File not found: {exePath}");
 			return 1;
 		}
 
 		// Setup logging
-		using var loggerFactory = LoggerFactory.Create(builder =>
-		{
-			builder.AddConsole();
-			builder.SetMinimumLevel(verbose ? LogLevel.Debug : LogLevel.Information);
-		});
-
-		var logger = loggerFactory.CreateLogger<Program>();
-
 		logger.LogInformation("Win32Emu WASM Cache Generator");
 		logger.LogInformation("Executable: {Path}", exePath);
 		logger.LogInformation("Output: {Output}", outputFile);
@@ -129,18 +148,18 @@ class Program
 	static uint ParsePEEntryPoint(byte[] exeBytes)
 	{
 		// Simple PE parser - find entry point from PE header
-		if (exeBytes.Length < 0x3C + 4)
-			return 0x401000; // Default
+		if (exeBytes.Length < PE_HEADER_OFFSET_LOCATION + PE_HEADER_OFFSET_SIZE)
+			return DEFAULT_ENTRY_POINT;
 
-		var peOffset = BitConverter.ToInt32(exeBytes, 0x3C);
-		if (peOffset < 0 || peOffset + 0x34 >= exeBytes.Length)
-			return 0x401000;
+		var peOffset = BitConverter.ToInt32(exeBytes, PE_HEADER_OFFSET_LOCATION);
+		if (peOffset < 0 || peOffset + PE_IMAGE_BASE_OFFSET >= exeBytes.Length)
+			return DEFAULT_ENTRY_POINT;
 
 		// Image base is at PE header + 0x34 (for PE32)
-		var imageBase = BitConverter.ToUInt32(exeBytes, peOffset + 0x34);
+		var imageBase = BitConverter.ToUInt32(exeBytes, peOffset + PE_IMAGE_BASE_OFFSET);
 		
 		// Entry point RVA is at PE header + 0x28
-		var entryPointRva = BitConverter.ToUInt32(exeBytes, peOffset + 0x28);
+		var entryPointRva = BitConverter.ToUInt32(exeBytes, peOffset + PE_ENTRY_POINT_RVA_OFFSET);
 		
 		// Return image base + entry point RVA
 		return imageBase + entryPointRva;
@@ -216,11 +235,11 @@ class BlockAnalyzer
 		// Compute hash of the code bytes
 		// Try to map from virtual address to file offset
 		// For simplicity, assume image base 0x400000 and RVA = file offset for code section
-		long offset = address - 0x400000;
+		long offset = address - DEFAULT_IMAGE_BASE;
 		if (offset < 0 || offset + byteLength > _exeBytes.Length)
 		{
 			// Try alternative: address might already be an RVA
-			offset = address - 0x1000; // Common code section start
+			offset = address - COMMON_CODE_SECTION_OFFSET; // Common code section start
 			if (offset < 0 || offset + byteLength > _exeBytes.Length)
 				return null;
 		}
@@ -235,22 +254,20 @@ class BlockAnalyzer
 		bool endsWithReturn = lastInsn.Mnemonic == Mnemonic.Ret;
 		uint? directTarget = null;
 
-		// Queue targets for analysis
-		foreach (var insn in instructions)
+		// Queue targets for analysis - explicitly filter conditional jumps
+		foreach (var insn in instructions.Where(i => 
+			i.Mnemonic == Mnemonic.Call || 
+			i.Mnemonic == Mnemonic.Jmp ||
+			i.Mnemonic.ToString().StartsWith("J"))) // All conditional jumps
 		{
-			if (insn.Mnemonic == Mnemonic.Call || 
-				insn.Mnemonic == Mnemonic.Jmp ||
-				insn.Mnemonic.ToString().StartsWith("J")) // All conditional jumps
+			var target = GetBranchTarget(insn);
+			if (target.HasValue && !_analyzedAddresses.Contains(target.Value))
 			{
-				var target = GetBranchTarget(insn);
-				if (target.HasValue && !_analyzedAddresses.Contains(target.Value))
+				_addressesToAnalyze.Enqueue(target.Value);
+				
+				if (insn == lastInsn && (insn.Mnemonic == Mnemonic.Call || insn.Mnemonic == Mnemonic.Jmp))
 				{
-					_addressesToAnalyze.Enqueue(target.Value);
-					
-					if (insn == lastInsn && (insn.Mnemonic == Mnemonic.Call || insn.Mnemonic == Mnemonic.Jmp))
-					{
-						directTarget = target.Value;
-					}
+					directTarget = target.Value;
 				}
 			}
 		}
@@ -274,24 +291,23 @@ class BlockAnalyzer
 		var instructions = new List<Instruction>();
 		
 		// Try to map from virtual address to file offset
-		long offset = address - 0x400000;
+		long offset = address - DEFAULT_IMAGE_BASE;
 		if (offset < 0 || offset >= _exeBytes.Length)
 		{
 			// Try alternative mapping
-			offset = address - 0x1000;
+			offset = address - COMMON_CODE_SECTION_OFFSET;
 			if (offset < 0 || offset >= _exeBytes.Length)
 				return instructions;
 		}
 
-		var codeReader = new ByteArrayCodeReader(_exeBytes, (int)offset, Math.Min(1024, _exeBytes.Length - (int)offset));
+		var codeReader = new ByteArrayCodeReader(_exeBytes, (int)offset, Math.Min(Program.MAX_BYTES_TO_DECODE, _exeBytes.Length - (int)offset));
 		var decoder = Decoder.Create(32, codeReader);
 		decoder.IP = address;
 
 		// Decode until we hit a terminating instruction or max instructions
-		const int maxInstructions = 50;
 		int count = 0;
 
-		while (count < maxInstructions && decoder.IP < address + 1024)
+		while (count < Program.MAX_INSTRUCTIONS_PER_BLOCK && decoder.IP < address + Program.MAX_BYTES_TO_DECODE)
 		{
 			decoder.Decode(out var instruction);
 			
@@ -343,19 +359,21 @@ class BlockAnalyzer
 class ByteArrayCodeReader : CodeReader
 {
 	private readonly byte[] _data;
+	private readonly int _startOffset;
 	private int _offset;
 	private readonly int _length;
 
 	public ByteArrayCodeReader(byte[] data, int offset, int length)
 	{
 		_data = data;
+		_startOffset = offset;
 		_offset = offset;
 		_length = length;
 	}
 
 	public override int ReadByte()
 	{
-		if (_offset >= _data.Length || _offset - (_offset - _length) >= _length)
+		if (_offset >= _data.Length || _offset >= _startOffset + _length)
 			return -1;
 
 		return _data[_offset++];
