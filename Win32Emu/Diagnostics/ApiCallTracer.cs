@@ -279,7 +279,27 @@ public class ApiCallTracer : IDisposable
 	/// </summary>
 	public List<ApiCallRecord> GetRecentCalls(int count = 100)
 	{
-		return _callQueue.Reverse().Take(count).Reverse().ToList();
+		if (count <= 0)
+		{
+			return new List<ApiCallRecord>(0);
+		}
+
+		var snapshot = _callQueue.ToArray();
+		if (snapshot.Length == 0)
+		{
+			return new List<ApiCallRecord>(0);
+		}
+
+		var takeCount = Math.Min(count, snapshot.Length);
+		var result = new List<ApiCallRecord>(takeCount);
+		var startIndex = snapshot.Length - takeCount;
+
+		for (var i = startIndex; i < snapshot.Length; i++)
+		{
+			result.Add(snapshot[i]);
+		}
+
+		return result;
 	}
 
 	/// <summary>
