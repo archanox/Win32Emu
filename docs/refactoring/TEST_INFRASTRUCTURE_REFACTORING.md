@@ -58,14 +58,15 @@ public uint CallUser32Api(string functionName, params object[] args);
 1. Created `Win32Emu.Tests.Infrastructure/Win32Emu.Tests.Infrastructure.csproj`
 2. Updated `Win32Emu.Tests.Kernel32.csproj` - added infrastructure reference
 3. Updated `Win32Emu.Tests.User32.csproj` - added infrastructure reference
-4. Updated `Win32Emu.Tests.Emulator.csproj` - added infrastructure reference
+4. Updated `Win32Emu.Tests.ABExample.csproj` - added infrastructure reference
 5. Updated `Win32Emu.slnx` - added new project to solution
 6. Updated `Win32Emu.csproj` - added InternalsVisibleTo for infrastructure project
 
 ### Code Updates
 - **Deleted**: `Win32Emu.Tests.User32/TestInfrastructure/` (2 files)
 - **Deleted**: `Win32Emu.Tests.Kernel32/TestInfrastructure/` (2 files)
-- **Updated**: 64 test files - changed namespace from `Win32Emu.Tests.*.TestInfrastructure` to `Win32Emu.Tests.Infrastructure`
+- **Updated**: 60 test files (30 User32 + 30 Kernel32) - changed namespace from `Win32Emu.Tests.*.TestInfrastructure` to `Win32Emu.Tests.Infrastructure`
+- **Updated**: 4 ABExample test files - changed namespace to use shared infrastructure directly
 
 ## Impact
 
