@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Iced.Intel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Win32Emu.Threading;
 
@@ -107,6 +108,10 @@ public class IcedCpu : IAsyncCpu
 	private static readonly Stopwatch RdtscStopwatch = Stopwatch.StartNew();
 	private static readonly bool RdtscIsHighResolution = Stopwatch.IsHighResolution;
 	private static readonly long RdtscFrequency = Stopwatch.Frequency;
+
+	// JIT cache for block metadata (optional, improves performance)
+	private JitCache? _jitCache;
+	private bool _useCache;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="IcedCpu"/> class.
@@ -6824,4 +6829,64 @@ public class IcedCpu : IAsyncCpu
 		Rcl,
 		Rcr
 	}
+
+	/// <summary>
+	/// Loads a JIT cache from the specified file path. This enables faster execution
+	/// by providing pre-analyzed block metadata (addresses, sizes, hashes).
+	/// </summary>
+	/// <param name="cacheFilePath">Path to the cache JSON file</param>
+	/// <param name="logger">Optional logger for cache operations</param>
+	public async Task LoadCacheAsync(string cacheFilePath, ILogger? logger = null)
+	{
+		try
+		{
+			if (!System.IO.File.Exists(cacheFilePath))
+			{
+				_logger.LogInformation("[IcedCpu] Cache file not found: {CacheFilePath}", cacheFilePath);
+				return;
+			}
+
+			// Create a temporary cache directory for this session
+			var tempCacheDir = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "Win32Emu", "IcedCpuCache");
+			_jitCache = new JitCache(tempCacheDir, logger ?? _logger);
+
+			// Load the cache data directly from the provided file
+			var json = await System.IO.File.ReadAllTextAsync(cacheFilePath);
+			var cacheData = System.Text.Json.JsonSerializer.Deserialize<JitCacheData>(json);
+
+			if (cacheData?.Blocks != null)
+			{
+				foreach (var block in cacheData.Blocks)
+				{
+					_jitCache.AddBlockMetadata(block.StartAddress, block);
+				}
+
+				_useCache = true;
+				_logger.LogInformation("[IcedCpu] Loaded {Count} cached blocks from {CacheFilePath}", 
+					cacheData.Blocks.Count, cacheFilePath);
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[IcedCpu] Failed to load cache from {CacheFilePath}", cacheFilePath);
+			_useCache = false;
+			_jitCache = null;
+		}
+	}
+
+	/// <summary>
+	/// Checks if a cached block exists at the given address
+	/// </summary>
+	public bool HasCachedBlock(uint address)
+	{
+		if (!_useCache || _jitCache == null)
+			return false;
+
+		return _jitCache.TryGetBlockMetadata(address, out _);
+	}
+
+	/// <summary>
+	/// Gets whether cache is enabled and loaded
+	/// </summary>
+	public bool IsCacheEnabled => _useCache && _jitCache != null;
 }
