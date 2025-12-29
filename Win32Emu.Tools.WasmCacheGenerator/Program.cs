@@ -21,13 +21,13 @@ class Program
 	private const int PE_ENTRY_POINT_RVA_OFFSET = 0x28; // Offset in PE header to entry point RVA
 	
 	// Default addresses
-	internal const uint DEFAULT_IMAGE_BASE = 0x400000; // Standard Win32 image base
+	private const uint DEFAULT_IMAGE_BASE = 0x400000; // Standard Win32 image base
 	private const uint DEFAULT_ENTRY_POINT = 0x401000; // Default entry point if parsing fails
-	internal const uint COMMON_CODE_SECTION_OFFSET = 0x1000; // Common code section RVA
+	private const uint COMMON_CODE_SECTION_OFFSET = 0x1000; // Common code section RVA
 	
 	// Block analysis constants
-	internal const int MAX_INSTRUCTIONS_PER_BLOCK = 50; // Maximum instructions to decode per block
-	internal const int MAX_BYTES_TO_DECODE = 1024; // Maximum bytes to decode per block
+	private const int MAX_INSTRUCTIONS_PER_BLOCK = 50; // Maximum instructions to decode per block
+	private const int MAX_BYTES_TO_DECODE = 1024; // Maximum bytes to decode per block
 	
 	static async Task<int> Main(string[] args)
 	{
@@ -93,7 +93,13 @@ class Program
 			logger.LogInformation("Entry point: 0x{EntryPoint:X8}", entryPoint);
 
 			// Analyze code blocks
-			var analyzer = new BlockAnalyzer(exeBytes, logger);
+			var analyzer = new BlockAnalyzer(
+				exeBytes, 
+				logger,
+				imageBase: DEFAULT_IMAGE_BASE,
+				codeSectionOffset: COMMON_CODE_SECTION_OFFSET,
+				maxInstructionsPerBlock: MAX_INSTRUCTIONS_PER_BLOCK,
+				maxBytesToDecode: MAX_BYTES_TO_DECODE);
 			var blocks = await analyzer.AnalyzeBlocksAsync(entryPoint, maxBlocks);
 
 			logger.LogInformation("Analyzed {Count} code blocks", blocks.Count);
@@ -175,11 +181,25 @@ class BlockAnalyzer
 	private readonly ILogger _logger;
 	private readonly HashSet<uint> _analyzedAddresses = new();
 	private readonly Queue<uint> _addressesToAnalyze = new();
+	private readonly uint _imageBase;
+	private readonly uint _codeSectionOffset;
+	private readonly int _maxInstructionsPerBlock;
+	private readonly int _maxBytesToDecode;
 
-	public BlockAnalyzer(byte[] exeBytes, ILogger logger)
+	public BlockAnalyzer(
+		byte[] exeBytes, 
+		ILogger logger,
+		uint imageBase = 0x400000,
+		uint codeSectionOffset = 0x1000,
+		int maxInstructionsPerBlock = 50,
+		int maxBytesToDecode = 1024)
 	{
 		_exeBytes = exeBytes;
 		_logger = logger;
+		_imageBase = imageBase;
+		_codeSectionOffset = codeSectionOffset;
+		_maxInstructionsPerBlock = maxInstructionsPerBlock;
+		_maxBytesToDecode = maxBytesToDecode;
 	}
 
 	public async Task<List<BlockMetadata>> AnalyzeBlocksAsync(uint startAddress, int maxBlocks)
@@ -235,11 +255,11 @@ class BlockAnalyzer
 		// Compute hash of the code bytes
 		// Try to map from virtual address to file offset
 		// For simplicity, assume image base 0x400000 and RVA = file offset for code section
-		long offset = address - Program.DEFAULT_IMAGE_BASE;
+		long offset = address - _imageBase;
 		if (offset < 0 || offset + byteLength > _exeBytes.Length)
 		{
 			// Try alternative: address might already be an RVA
-			offset = address - Program.COMMON_CODE_SECTION_OFFSET; // Common code section start
+			offset = address - _codeSectionOffset; // Common code section start
 			if (offset < 0 || offset + byteLength > _exeBytes.Length)
 				return null;
 		}
@@ -291,23 +311,23 @@ class BlockAnalyzer
 		var instructions = new List<Instruction>();
 		
 		// Try to map from virtual address to file offset
-		long offset = address - Program.DEFAULT_IMAGE_BASE;
+		long offset = address - _imageBase;
 		if (offset < 0 || offset >= _exeBytes.Length)
 		{
 			// Try alternative mapping
-			offset = address - Program.COMMON_CODE_SECTION_OFFSET;
+			offset = address - _codeSectionOffset;
 			if (offset < 0 || offset >= _exeBytes.Length)
 				return instructions;
 		}
 
-		var codeReader = new ByteArrayCodeReader(_exeBytes, (int)offset, Math.Min(Program.MAX_BYTES_TO_DECODE, _exeBytes.Length - (int)offset));
+		var codeReader = new ByteArrayCodeReader(_exeBytes, (int)offset, Math.Min(_maxBytesToDecode, _exeBytes.Length - (int)offset));
 		var decoder = Decoder.Create(32, codeReader);
 		decoder.IP = address;
 
 		// Decode until we hit a terminating instruction or max instructions
 		int count = 0;
 
-		while (count < Program.MAX_INSTRUCTIONS_PER_BLOCK && decoder.IP < address + Program.MAX_BYTES_TO_DECODE)
+		while (count < _maxInstructionsPerBlock && decoder.IP < address + (uint)_maxBytesToDecode)
 		{
 			decoder.Decode(out var instruction);
 			
