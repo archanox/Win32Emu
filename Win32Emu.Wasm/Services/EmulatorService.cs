@@ -60,6 +60,28 @@ public class EmulatorService : IDisposable
 	/// </summary>
 	public int VfsFileCount => _browserVfs?.FileCount ?? 0;
 	
+	/// <summary>
+	/// Gets whether cache is enabled and loaded
+	/// </summary>
+	public bool IsCacheEnabled => _emulator?.Cpu is Win32Emu.Cpu.Iced.IcedCpu icedCpu && icedCpu.IsCacheEnabled;
+	
+	/// <summary>
+	/// Gets the current CPU backend name
+	/// </summary>
+	public string CpuBackend
+	{
+		get
+		{
+			if (_emulator?.Cpu == null) return "None";
+			return _emulator.Cpu switch
+			{
+				Win32Emu.Cpu.Jit.JitCpu => "JitCpu (Interpreter in WASM)",
+				Win32Emu.Cpu.Iced.IcedCpu => "IcedCpu (Interpreter)",
+				_ => _emulator.Cpu.GetType().Name
+			};
+		}
+	}
+	
 	public EmulatorService(IJSRuntime jsRuntime, ILoggerFactory loggerFactory)
 	{
 		_jsRuntime = jsRuntime;
@@ -85,13 +107,15 @@ public class EmulatorService : IDisposable
 	/// <param name="additionalFiles">Optional dictionary of additional files (path -> bytes) for the VFS</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
 	/// <param name="useJitCpu">Enable JIT CPU (will run in interpreter mode in WASM)</param>
+	/// <param name="useCache">Enable cache loading from wwwroot/cache/ directory</param>
 	/// <returns>True if loading succeeded</returns>
 	public async Task<bool> LoadExecutableAsync(
 		byte[] executableBytes, 
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null,
 		bool force32BitStackOps = true,
-		bool useJitCpu = false)
+		bool useJitCpu = false,
+		bool useCache = true)
 	{
 		try
 		{
@@ -207,6 +231,48 @@ public class EmulatorService : IDisposable
 			// with the browser VFS for file operations
 			// Note: useJitCpu is supported in WASM but will run in interpreter mode
 			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, useJitCpu);
+			
+			// Load cache if enabled and IcedCpu is being used
+			if (useCache && !useJitCpu && _emulator.Cpu is Win32Emu.Cpu.Iced.IcedCpu icedCpu)
+			{
+				try
+				{
+					// Try to load cache from wwwroot/cache directory
+					var cacheFileName = $"{System.IO.Path.GetFileNameWithoutExtension(fileName)}.wasm-cache.json";
+					var cacheUrl = $"cache/{cacheFileName}";
+					
+					EmitDebugOutput($"Attempting to load cache: {cacheUrl}");
+					
+					// Use HttpClient to fetch the cache file from wwwroot
+					using var httpClient = new System.Net.Http.HttpClient { BaseAddress = new Uri(await _jsRuntime.InvokeAsync<string>("eval", "window.location.origin")) };
+					var response = await httpClient.GetAsync(cacheUrl);
+					
+					if (response.IsSuccessStatusCode)
+					{
+						var cacheJson = await response.Content.ReadAsStringAsync();
+						
+						if (!string.IsNullOrEmpty(cacheJson))
+						{
+							// Write to temp file for IcedCpu to load
+							var tempCacheFile = System.IO.Path.Combine(System.IO.Path.GetTempPath(), cacheFileName);
+							await System.IO.File.WriteAllTextAsync(tempCacheFile, cacheJson);
+							
+							await icedCpu.LoadCacheAsync(tempCacheFile, _logger);
+							EmitDebugOutput($"Cache loaded successfully: {cacheFileName}");
+						}
+					}
+					else
+					{
+						EmitDebugOutput($"No cache file found: {cacheUrl} (HTTP {response.StatusCode})");
+					}
+				}
+				catch (Exception cacheEx)
+				{
+					// Don't fail if cache loading fails - just log it
+					_logger.LogWarning(cacheEx, "Failed to load cache for {FileName}", fileName);
+					EmitDebugOutput($"Cache loading failed (non-fatal): {cacheEx.Message}");
+				}
+			}
 			
 			_loadedExecutableName = fileName;
 			EmitDebugOutput($"Successfully loaded: {fileName}");

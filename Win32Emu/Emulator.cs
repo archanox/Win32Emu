@@ -253,6 +253,11 @@ public sealed class Emulator : IDisposable
     public LoadedImage? LoadedImage => _image;
     
     /// <summary>
+    /// Gets the current CPU backend instance (IcedCpu or JitCpu)
+    /// </summary>
+    public IAsyncCpu? Cpu => _cpu;
+    
+    /// <summary>
     /// Post a message to the Win32 message queue (for GUI-to-emulator communication)
     /// </summary>
     public bool PostMessage(uint hwnd, uint message, uint wParam, uint lParam)
@@ -550,12 +555,7 @@ public sealed class Emulator : IDisposable
         }
         
         // Log the actual CPU backend being used (after initialization and potential fallback)
-        var actualCpuBackend = _cpu switch
-        {
-            Cpu.Jit.JitCpu => "JitCpu",
-            IcedCpu => "IcedCpu",
-            _ => "Unknown"
-        };
+        var actualCpuBackend = _cpu?.GetType().Name ?? "None";
         _logger.LogInformation("[Loader] Selected CPU Emulator: {CpuBackend}", actualCpuBackend);
         
         _cpu.SetEip(_image.EntryPointAddress);
