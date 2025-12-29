@@ -157,15 +157,37 @@ public class IcedCpu : IAsyncCpu
 	public uint GetEip() => _eip;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	public uint GetRegister(string name) => name.ToUpperInvariant() switch
+	public uint GetRegister(string name)
 	{
-		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, "ESI" => _esi, "EDI" => _edi, "EBP" => _ebp,
-		"ESP" => _esp, "EIP" => _eip, "EFLAGS" => _eflags,
-		"CS" => _cs, "DS" => _ds, "ES" => _es, "FS" => _fs, "GS" => _gs, "SS" => _ss,
-		"CR0" => _cr0, "CR2" => _cr2, "CR3" => _cr3, "CR4" => _cr4,
-		"DR0" => _dr0, "DR1" => _dr1, "DR2" => _dr2, "DR3" => _dr3, "DR6" => _dr6, "DR7" => _dr7,
-		_ => 0
-	};
+		// Optimized: Use OrdinalIgnoreCase comparison to avoid string allocation from ToUpperInvariant()
+		if (string.Equals(name, "EAX", StringComparison.OrdinalIgnoreCase)) return _eax;
+		if (string.Equals(name, "EBX", StringComparison.OrdinalIgnoreCase)) return _ebx;
+		if (string.Equals(name, "ECX", StringComparison.OrdinalIgnoreCase)) return _ecx;
+		if (string.Equals(name, "EDX", StringComparison.OrdinalIgnoreCase)) return _edx;
+		if (string.Equals(name, "ESI", StringComparison.OrdinalIgnoreCase)) return _esi;
+		if (string.Equals(name, "EDI", StringComparison.OrdinalIgnoreCase)) return _edi;
+		if (string.Equals(name, "EBP", StringComparison.OrdinalIgnoreCase)) return _ebp;
+		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) return _esp;
+		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) return _eip;
+		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) return _eflags;
+		if (string.Equals(name, "CS", StringComparison.OrdinalIgnoreCase)) return _cs;
+		if (string.Equals(name, "DS", StringComparison.OrdinalIgnoreCase)) return _ds;
+		if (string.Equals(name, "ES", StringComparison.OrdinalIgnoreCase)) return _es;
+		if (string.Equals(name, "FS", StringComparison.OrdinalIgnoreCase)) return _fs;
+		if (string.Equals(name, "GS", StringComparison.OrdinalIgnoreCase)) return _gs;
+		if (string.Equals(name, "SS", StringComparison.OrdinalIgnoreCase)) return _ss;
+		if (string.Equals(name, "CR0", StringComparison.OrdinalIgnoreCase)) return _cr0;
+		if (string.Equals(name, "CR2", StringComparison.OrdinalIgnoreCase)) return _cr2;
+		if (string.Equals(name, "CR3", StringComparison.OrdinalIgnoreCase)) return _cr3;
+		if (string.Equals(name, "CR4", StringComparison.OrdinalIgnoreCase)) return _cr4;
+		if (string.Equals(name, "DR0", StringComparison.OrdinalIgnoreCase)) return _dr0;
+		if (string.Equals(name, "DR1", StringComparison.OrdinalIgnoreCase)) return _dr1;
+		if (string.Equals(name, "DR2", StringComparison.OrdinalIgnoreCase)) return _dr2;
+		if (string.Equals(name, "DR3", StringComparison.OrdinalIgnoreCase)) return _dr3;
+		if (string.Equals(name, "DR6", StringComparison.OrdinalIgnoreCase)) return _dr6;
+		if (string.Equals(name, "DR7", StringComparison.OrdinalIgnoreCase)) return _dr7;
+		return 0;
+	}
 
 	/// <summary>
 	/// Gets the instruction analyzer if it was enabled during construction.
@@ -213,37 +235,33 @@ public class IcedCpu : IAsyncCpu
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
-		switch (name.ToUpperInvariant())
-		{
-			case "EAX": _eax = value; break;
-			case "EBX": _ebx = value; break;
-			case "ECX": _ecx = value; break;
-			case "EDX": _edx = value; break;
-			case "ESI": _esi = value; break;
-			case "EDI": _edi = value; break;
-			case "EBP":
-				_ebp = value;
-				break;
-			case "ESP": _esp = value; break;
-			case "EIP": _eip = value; break;
-			case "EFLAGS": _eflags = value; break;
-			case "CS": _cs = (ushort)value; break;
-			case "DS": _ds = (ushort)value; break;
-			case "ES": _es = (ushort)value; break;
-			case "FS": _fs = (ushort)value; break;
-			case "GS": _gs = (ushort)value; break;
-			case "SS": _ss = (ushort)value; break;
-			case "CR0": _cr0 = value; break;
-			case "CR2": _cr2 = value; break;
-			case "CR3": _cr3 = value; break;
-			case "CR4": _cr4 = value; break;
-			case "DR0": _dr0 = value; break;
-			case "DR1": _dr1 = value; break;
-			case "DR2": _dr2 = value; break;
-			case "DR3": _dr3 = value; break;
-			case "DR6": _dr6 = value; break;
-			case "DR7": _dr7 = value; break;
-		}
+		// Optimized: Use OrdinalIgnoreCase comparison to avoid string allocation from ToUpperInvariant()
+		if (string.Equals(name, "EAX", StringComparison.OrdinalIgnoreCase)) { _eax = value; return; }
+		if (string.Equals(name, "EBX", StringComparison.OrdinalIgnoreCase)) { _ebx = value; return; }
+		if (string.Equals(name, "ECX", StringComparison.OrdinalIgnoreCase)) { _ecx = value; return; }
+		if (string.Equals(name, "EDX", StringComparison.OrdinalIgnoreCase)) { _edx = value; return; }
+		if (string.Equals(name, "ESI", StringComparison.OrdinalIgnoreCase)) { _esi = value; return; }
+		if (string.Equals(name, "EDI", StringComparison.OrdinalIgnoreCase)) { _edi = value; return; }
+		if (string.Equals(name, "EBP", StringComparison.OrdinalIgnoreCase)) { _ebp = value; return; }
+		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) { _esp = value; return; }
+		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) { _eip = value; return; }
+		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) { _eflags = value; return; }
+		if (string.Equals(name, "CS", StringComparison.OrdinalIgnoreCase)) { _cs = (ushort)value; return; }
+		if (string.Equals(name, "DS", StringComparison.OrdinalIgnoreCase)) { _ds = (ushort)value; return; }
+		if (string.Equals(name, "ES", StringComparison.OrdinalIgnoreCase)) { _es = (ushort)value; return; }
+		if (string.Equals(name, "FS", StringComparison.OrdinalIgnoreCase)) { _fs = (ushort)value; return; }
+		if (string.Equals(name, "GS", StringComparison.OrdinalIgnoreCase)) { _gs = (ushort)value; return; }
+		if (string.Equals(name, "SS", StringComparison.OrdinalIgnoreCase)) { _ss = (ushort)value; return; }
+		if (string.Equals(name, "CR0", StringComparison.OrdinalIgnoreCase)) { _cr0 = value; return; }
+		if (string.Equals(name, "CR2", StringComparison.OrdinalIgnoreCase)) { _cr2 = value; return; }
+		if (string.Equals(name, "CR3", StringComparison.OrdinalIgnoreCase)) { _cr3 = value; return; }
+		if (string.Equals(name, "CR4", StringComparison.OrdinalIgnoreCase)) { _cr4 = value; return; }
+		if (string.Equals(name, "DR0", StringComparison.OrdinalIgnoreCase)) { _dr0 = value; return; }
+		if (string.Equals(name, "DR1", StringComparison.OrdinalIgnoreCase)) { _dr1 = value; return; }
+		if (string.Equals(name, "DR2", StringComparison.OrdinalIgnoreCase)) { _dr2 = value; return; }
+		if (string.Equals(name, "DR3", StringComparison.OrdinalIgnoreCase)) { _dr3 = value; return; }
+		if (string.Equals(name, "DR6", StringComparison.OrdinalIgnoreCase)) { _dr6 = value; return; }
+		if (string.Equals(name, "DR7", StringComparison.OrdinalIgnoreCase)) { _dr7 = value; return; }
 	}
 
 	public CpuStepResult SingleStep(VirtualMemory mem)

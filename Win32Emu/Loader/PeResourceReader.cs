@@ -417,16 +417,15 @@ public class PeResourceReader : IResourceReader
 			// Try case-sensitive match first, then case-insensitive
 			// Note: If multiple resources exist with names differing only in case,
 			// the case-insensitive search will return the first match found
-			var nameEntry = typeDir.Entries.Where(e => e.Name == bitmapName).FirstOrDefault();
-			if (nameEntry == null)
-			{
-				nameEntry = typeDir.Entries.Where(e => string.Equals(e.Name, bitmapName, StringComparison.OrdinalIgnoreCase)).FirstOrDefault();
-			}
+			// Optimized: Use FirstOrDefault with predicate directly instead of Where().FirstOrDefault()
+			var nameEntry = typeDir.Entries.FirstOrDefault(e => e.Name == bitmapName);
+			nameEntry ??= typeDir.Entries.FirstOrDefault(e => string.Equals(e.Name, bitmapName, StringComparison.OrdinalIgnoreCase));
 			
 			if (nameEntry is ResourceDirectory nameDir)
 			{
 				// Get first language version
-				var langEntry = nameDir.Entries.OfType<ResourceData>().Where(d => d.Contents != null).FirstOrDefault();
+				// Optimized: Use FirstOrDefault with predicate instead of Where().FirstOrDefault()
+				var langEntry = nameDir.Entries.OfType<ResourceData>().FirstOrDefault(d => d.Contents != null);
 				if (langEntry?.Contents != null)
 				{
 					return langEntry.Contents.WriteIntoArray();
@@ -455,14 +454,15 @@ public class PeResourceReader : IResourceReader
 		var typeName = typeId == null ? ReadResourceString(lpType) : null;
 
 		// Find the type directory
+		// Optimized: Use FirstOrDefault with predicate instead of Where().FirstOrDefault()
 		IResourceEntry? typeEntry = null;
 		if (typeId.HasValue)
 		{
-			typeEntry = resources.Entries.Where(e => e.Id == typeId.Value).FirstOrDefault();
+			typeEntry = resources.Entries.FirstOrDefault(e => e.Id == typeId.Value);
 		}
 		else if (typeName != null)
 		{
-			typeEntry = resources.Entries.Where(e => e.Name == typeName).FirstOrDefault();
+			typeEntry = resources.Entries.FirstOrDefault(e => e.Name == typeName);
 		}
 
 		if (typeEntry is not ResourceDirectory typeDir)
