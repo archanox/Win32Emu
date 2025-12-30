@@ -342,32 +342,14 @@ public class EmulatorService : IDisposable
 				ExecutableName = _loadedExecutableName
 			});
 			
-			// Run emulation on a background task
+			// Run emulation directly as an async task without Task.Run
+			// In WebAssembly, Task.Run doesn't create a real background thread - it just queues work
+			// on the same thread. Calling RunAsync() directly allows it to properly yield to the
+			// browser event loop at await points. Task.Run can actually cause issues because it
+			// wraps the async work in a way that may block the UI thread until the first await.
 			// Note: Emulator.RunAsync() doesn't accept a CancellationToken - it uses Stop() method
-			// for cancellation. The token here is used to cancel Task.Run() startup, while
-			// _emulator.Stop() (called in StopAsync) stops the actual emulation loop.
-			_emulationTask = Task.Run(async () =>
-			{
-				try
-				{
-					await _emulator.RunAsync();
-				}
-				catch (Exception ex)
-				{
-					_logger.LogError(ex, "Emulation error");
-					EmitDebugOutput($"Emulation error: {ex.Message}");
-				}
-				finally
-				{
-					_isRunning = false;
-					OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
-					{
-						IsLoaded = true,
-						IsRunning = false,
-						ExecutableName = _loadedExecutableName
-					});
-				}
-			}, _emulationCts.Token);
+			// for cancellation. The cancellation token is only used to cancel the task wrapper.
+			_emulationTask = RunEmulationLoopAsync(_emulationCts.Token);
 			
 			return true;
 		}
@@ -491,6 +473,55 @@ public class EmulatorService : IDisposable
 		var timestampedMessage = $"[{DateTime.Now:HH:mm:ss}] {message}";
 		_logger.LogDebug(message);
 		OnDebugOutput?.Invoke(this, timestampedMessage);
+	}
+	
+	/// <summary>
+	/// Helper method to run emulation loop with proper error handling and state management.
+	/// This is extracted to a separate method to allow calling RunAsync directly without Task.Run,
+	/// which is important for WASM where Task.Run doesn't create real background threads.
+	/// </summary>
+	private async Task RunEmulationLoopAsync(CancellationToken cancellationToken)
+	{
+		try
+		{
+			// Log that we're starting the emulation loop
+			EmitDebugOutput("[EmulationLoop] Starting emulator.RunAsync()...");
+			
+			await _emulator!.RunAsync();
+			
+			// If we get here, emulation completed normally
+			EmitDebugOutput("[EmulationLoop] Emulation completed successfully");
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected when cancellation is requested
+			EmitDebugOutput("[EmulationLoop] Emulation cancelled");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[EmulationLoop] Emulation error");
+			EmitDebugOutput($"[EmulationLoop] Emulation error: {ex.GetType().Name}: {ex.Message}");
+			
+			// Log stack trace for debugging
+			if (ex.StackTrace != null)
+			{
+				EmitDebugOutput($"[EmulationLoop] Stack trace: {ex.StackTrace}");
+			}
+		}
+		finally
+		{
+			_isRunning = false;
+			EmitDebugOutput("[EmulationLoop] Emulation stopped, updating state...");
+			
+			OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
+			{
+				IsLoaded = true,
+				IsRunning = false,
+				ExecutableName = _loadedExecutableName
+			});
+			
+			EmitDebugOutput("[EmulationLoop] State updated");
+		}
 	}
 	
 	public void Dispose()
