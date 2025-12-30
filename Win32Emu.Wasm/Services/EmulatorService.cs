@@ -245,7 +245,9 @@ public class EmulatorService : IDisposable
 					EmitDebugOutput($"[Cache] Attempting to load pre-compiled cache: {cacheUrl}");
 					
 					// Use HttpClient to fetch the cache file from wwwroot
-					using var httpClient = new System.Net.Http.HttpClient { BaseAddress = new Uri(await _jsRuntime.InvokeAsync<string>("getOrigin")) };
+					// Use relative URL to respect the <base href> tag in index.html
+					// This ensures the cache is loaded from the correct path on GitHub Pages
+					using var httpClient = new System.Net.Http.HttpClient();
 					var response = await httpClient.GetAsync(cacheUrl);
 					
 					if (response.IsSuccessStatusCode)
