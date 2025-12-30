@@ -350,7 +350,7 @@ public class EmulatorService : IDisposable
 			// browser event loop at await points. Task.Run can actually cause issues because it
 			// wraps the async work in a way that may block the UI thread until the first await.
 			// Note: Emulator.RunAsync() doesn't accept a CancellationToken - it uses Stop() method
-			// for cancellation. The cancellation token is only used to cancel the task wrapper.
+			// for cancellation. The cancellation token parameter is kept for potential future use.
 			_emulationTask = RunEmulationLoopAsync(_emulationCts.Token);
 			
 			// Wait a brief moment to allow the emulation loop to start and log its first message
@@ -489,6 +489,8 @@ public class EmulatorService : IDisposable
 	/// This is extracted to a separate method to allow calling RunAsync directly without Task.Run,
 	/// which is important for WASM where Task.Run doesn't create real background threads.
 	/// </summary>
+	/// <param name="cancellationToken">Currently unused. Cancellation is handled via _emulator.Stop().
+	/// Kept for potential future use if cooperative cancellation is needed.</param>
 	private async Task RunEmulationLoopAsync(CancellationToken cancellationToken)
 	{
 		try
@@ -496,6 +498,8 @@ public class EmulatorService : IDisposable
 			// Log that we're starting the emulation loop
 			EmitDebugOutput("[EmulationLoop] Starting emulator.RunAsync()...");
 			
+			// Note: cancellationToken is not used here because Emulator.RunAsync() doesn't support
+			// cancellation tokens. Cancellation is handled via _emulator.Stop() in StopAsync().
 			await _emulator!.RunAsync();
 			
 			// If we get here, emulation completed normally
