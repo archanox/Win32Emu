@@ -875,7 +875,15 @@ public class ProcessEnvironment
 	{
 		if (_environmentVariables.TryGetValue(name, out var value))
 		{
-			_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			// Use Trace level for commonly-accessed variables to reduce log spam
+			if (name == "IGN_TEAS_DEBUG")
+			{
+				_logger.LogTrace("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			}
+			else
+			{
+				_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			}
 			return value;
 		}
 
