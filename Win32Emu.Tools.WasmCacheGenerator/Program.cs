@@ -113,11 +113,11 @@ class Program
 				Blocks = blocks
 			};
 
-			// Serialize to JSON
+			// Serialize to JSON with PascalCase (default) to match C# property names
+			// This ensures deserialization works without requiring case-insensitive options
 			var options = new JsonSerializerOptions
 			{
-				WriteIndented = true,
-				PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+				WriteIndented = true
 			};
 			
 			var json = JsonSerializer.Serialize(cacheData, options);
