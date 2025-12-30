@@ -40,6 +40,7 @@ public readonly struct LpcStr
 
 		// Use stackalloc for small strings (most common case)
 		const int stackAllocThreshold = 256;
+		const int maxStringBytes = 65536; // Max 64KB string
 		Span<byte> buffer = stackalloc byte[stackAllocThreshold];
 		var length = 0;
 		var a = Address;
@@ -65,6 +66,13 @@ public readonly struct LpcStr
 			// Continue reading
 			while (true)
 			{
+				// Safety check to prevent infinite loops on malformed strings
+				if (length >= maxStringBytes)
+				{
+					// Return what we have so far rather than failing
+					return Encoding.ASCII.GetString(rentedArray, 0, length);
+				}
+				
 				var b = memory.Read8(a++);
 				if (b == 0)
 				{
