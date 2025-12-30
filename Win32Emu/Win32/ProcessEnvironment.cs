@@ -597,6 +597,7 @@ public class ProcessEnvironment
 	{
 		// Use stackalloc for small strings (most common case), fall back to array pool for larger ones
 		const int stackAllocThreshold = 256;
+		const int maxStringBytes = 65536; // Max 64KB string
 		Span<byte> stackBuffer = stackalloc byte[stackAllocThreshold];
 		var length = 0;
 		var p = addr;
@@ -625,6 +626,14 @@ public class ProcessEnvironment
 			// Continue reading
 			while (true)
 			{
+				// Safety check to prevent infinite loops on malformed strings
+				if (length >= maxStringBytes)
+				{
+					_logger.LogWarning("[ProcessEnv] ReadAnsiString exceeded maximum length at addr=0x{Addr:X8}", addr);
+					var safeResult = Encoding.ASCII.GetString(rentedArray, 0, length);
+					return safeResult;
+				}
+				
 				var b = Memory.Read8(p++);
 				if (b == 0)
 				{
@@ -680,6 +689,14 @@ public class ProcessEnvironment
 			var p = addr;
 			while (true)
 			{
+				// Safety check to prevent infinite loops on malformed strings
+				if (length >= maxStringBytes)
+				{
+					_logger.LogWarning("[ProcessEnv] ReadUnicodeString exceeded maximum length at addr=0x{Addr:X8}", addr);
+					var safeResult = Encoding.Unicode.GetString(rentedArray, 0, length);
+					return safeResult;
+				}
+				
 				// Read two bytes at a time for Unicode (UTF-16)
 				var b1 = Memory.Read8(p++);
 				var b2 = Memory.Read8(p++);
@@ -703,14 +720,6 @@ public class ProcessEnvironment
 				
 				rentedArray[length++] = b1;
 				rentedArray[length++] = b2;
-				
-				// Safety check to prevent infinite loops on malformed strings
-				if (length >= maxStringBytes)
-				{
-					_logger.LogWarning("[ProcessEnv] ReadUnicodeString exceeded maximum length at addr=0x{Addr:X8}", addr);
-					var safeResult = Encoding.Unicode.GetString(rentedArray, 0, length);
-					return safeResult;
-				}
 			}
 		}
 		finally
