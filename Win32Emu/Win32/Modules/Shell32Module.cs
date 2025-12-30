@@ -545,7 +545,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 			{
 				// Build the resolved path: currentDir + pathWithoutDrive
 				// For example: "C:\ign_install" + "\Ign_win.exe" = "C:\ign_install\Ign_win.exe"
-				var resolvedPath = currentDir.TrimEnd('\\', '/') + "\\" + pathWithoutDrive.TrimStart('\\', '/');
+				var resolvedPath = string.Concat(currentDir.TrimEnd('\\', '/'), "\\", pathWithoutDrive.TrimStart('\\', '/'));
 				
 				_logger.LogDebug("[Shell32] Trying to resolve {OriginalPath} as {ResolvedPath}", path, resolvedPath);
 				
@@ -573,7 +573,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 				var current = string.Empty;
 				foreach (var part in parts)
 				{
-					current = string.IsNullOrEmpty(current) ? part : current + "\\" + part;
+					current = string.IsNullOrEmpty(current) ? part : string.Concat(current, "\\", part);
 					// VFS implementations should handle this gracefully
 				}
 			}

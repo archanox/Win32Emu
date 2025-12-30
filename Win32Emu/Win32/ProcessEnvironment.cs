@@ -595,22 +595,62 @@ public class ProcessEnvironment
 
 	public string ReadAnsiString(uint addr)
 	{
-		var buf = new List<byte>();
+		// Use stackalloc for small strings (most common case), fall back to array pool for larger ones
+		const int stackAllocThreshold = 256;
+		Span<byte> stackBuffer = stackalloc byte[stackAllocThreshold];
+		var length = 0;
 		var p = addr;
-		while (true)
+		
+		// First pass: read into stack buffer if small enough
+		while (length < stackAllocThreshold)
 		{
 			var b = Memory.Read8(p++);
 			if (b == 0)
 			{
-				break;
+				// String fits in stack buffer - decode and return
+				var result = Encoding.ASCII.GetString(stackBuffer[..length]);
+				_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} result='{Result}'", addr, result);
+				return result;
 			}
-
-			buf.Add(b);
+			stackBuffer[length++] = b;
 		}
-
-		var result = Encoding.ASCII.GetString(buf.ToArray());
-		_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} result='{Result}'", addr, result);
-		return result;
+		
+		// String is larger than stack buffer - use array pool
+		var rentedArray = System.Buffers.ArrayPool<byte>.Shared.Rent(1024);
+		try
+		{
+			// Copy what we already read
+			stackBuffer.CopyTo(rentedArray);
+			
+			// Continue reading
+			while (true)
+			{
+				var b = Memory.Read8(p++);
+				if (b == 0)
+				{
+					break;
+				}
+				
+				// Grow array if needed
+				if (length >= rentedArray.Length)
+				{
+					var newArray = System.Buffers.ArrayPool<byte>.Shared.Rent(rentedArray.Length * 2);
+					Array.Copy(rentedArray, newArray, length);
+					System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+					rentedArray = newArray;
+				}
+				
+				rentedArray[length++] = b;
+			}
+			
+			var result = Encoding.ASCII.GetString(rentedArray, 0, length);
+			_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} result='{Result}'", addr, result);
+			return result;
+		}
+		finally
+		{
+			System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+		}
 	}
 
 	public string ReadAnsiString(uint addr, int maxLength)
@@ -628,46 +668,54 @@ public class ProcessEnvironment
 
 	public string ReadUnicodeString(uint addr)
 	{
-		const int chunkSize = 256; // Read 256 bytes at a time
-		var bytes = new List<byte>();
-		var offset = 0u;
+		// Use ArrayPool for better memory efficiency
+		const int initialSize = 512; // 256 Unicode characters
+		const int maxStringBytes = 65536; // Max 64KB string
 		
-		while (true)
+		var rentedArray = System.Buffers.ArrayPool<byte>.Shared.Rent(initialSize);
+		var length = 0;
+		
+		try
 		{
-			// Read a chunk of memory
-			var chunk = new byte[chunkSize];
-			for (var i = 0; i < chunkSize; i++)
+			var p = addr;
+			while (true)
 			{
-				chunk[i] = Memory.Read8(addr + offset + (uint)i);
-			}
-			
-			// Find the null terminator (two consecutive zero bytes for Unicode)
-			for (var i = 0; i < chunkSize - 1; i += 2)
-			{
-				if (chunk[i] == 0 && chunk[i + 1] == 0)
+				// Read two bytes at a time for Unicode (UTF-16)
+				var b1 = Memory.Read8(p++);
+				var b2 = Memory.Read8(p++);
+				
+				// Check for null terminator (two consecutive zero bytes)
+				if (b1 == 0 && b2 == 0)
 				{
-					// Found null terminator, add remaining bytes and return
-					for (var j = 0; j < i; j++)
-					{
-						bytes.Add(chunk[j]);
-					}
-					var result = Encoding.Unicode.GetString(bytes.ToArray());
+					var result = Encoding.Unicode.GetString(rentedArray, 0, length);
 					_logger.LogDebug("[ProcessEnv] ReadUnicodeString addr=0x{Addr:X8} result='{Result}'", addr, result);
 					return result;
 				}
+				
+				// Grow array if needed
+				if (length + 2 > rentedArray.Length)
+				{
+					var newArray = System.Buffers.ArrayPool<byte>.Shared.Rent(rentedArray.Length * 2);
+					Array.Copy(rentedArray, newArray, length);
+					System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+					rentedArray = newArray;
+				}
+				
+				rentedArray[length++] = b1;
+				rentedArray[length++] = b2;
+				
+				// Safety check to prevent infinite loops on malformed strings
+				if (length >= maxStringBytes)
+				{
+					_logger.LogWarning("[ProcessEnv] ReadUnicodeString exceeded maximum length at addr=0x{Addr:X8}", addr);
+					var safeResult = Encoding.Unicode.GetString(rentedArray, 0, length);
+					return safeResult;
+				}
 			}
-			
-			// No null terminator found in this chunk, add all bytes and continue
-			bytes.AddRange(chunk);
-			offset += chunkSize;
-			
-			// Safety check to prevent infinite loops on malformed strings
-			if (offset > 65536) // Max 64KB string
-			{
-				_logger.LogWarning("[ProcessEnv] ReadUnicodeString exceeded maximum length at addr=0x{Addr:X8}", addr);
-				var safeResult = Encoding.Unicode.GetString(bytes.ToArray());
-				return safeResult;
-			}
+		}
+		finally
+		{
+			System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
 		}
 	}
 

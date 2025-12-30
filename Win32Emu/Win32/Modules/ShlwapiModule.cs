@@ -229,7 +229,7 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 			else
 			{
 				// Combine with backslash separator
-				combined = pszDir.TrimEnd('\\') + "\\" + pszFile;
+				combined = string.Concat(pszDir.TrimEnd('\\'), "\\", pszFile);
 			}
 		}
 

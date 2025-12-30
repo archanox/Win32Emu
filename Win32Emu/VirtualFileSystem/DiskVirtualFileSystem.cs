@@ -636,7 +636,9 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			}
 
 			var files = _fileSystem.GetFiles(normalizedDir, pattern, SearchOption.TopDirectoryOnly);
-			var fileNames = files.Select(f => Path.GetFileName(f)).ToArray();
+			// Materialize the Select directly to array - this is more efficient than calling Select().ToArray()
+			// because we know the count upfront
+			var fileNames = files.Select(Path.GetFileName).ToArray();
 
 			_logger.LogDebug("[DiskVFS] Found {Count} files in {Directory} matching {Pattern}", 
 				fileNames.Length, directory, pattern);
