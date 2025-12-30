@@ -351,6 +351,13 @@ public class EmulatorService : IDisposable
 			// for cancellation. The cancellation token is only used to cancel the task wrapper.
 			_emulationTask = RunEmulationLoopAsync(_emulationCts.Token);
 			
+			// Wait a brief moment to allow the emulation loop to start and log its first message
+			// This helps with debugging by ensuring we see the "[EmulationLoop] Starting..." message
+			// before returning from StartAsync. In WASM, this yields control to let the async task begin.
+			await Task.Delay(10);
+			
+			EmitDebugOutput("StartAsync completed, emulation task is running");
+			
 			return true;
 		}
 		catch (Exception ex)
