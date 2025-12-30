@@ -550,19 +550,16 @@ public sealed class Emulator : IDisposable
             jitCpu.SetExecutablePath(path);
             _logger.LogInformation("[Loader] JIT cache: Set executable path to {Path}", path);
             
-            // Load existing cache asynchronously (non-blocking)
-            // We use ConfigureAwait(false) since we're in a non-UI context
-            Task.Run(async () =>
+            // Load existing cache using async API and wait for completion
+            // We still wait synchronously here to ensure cache loading completes before execution
+            try
             {
-                try
-                {
-                    await jitCpu.LoadCacheAsync().ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogWarning(ex, "[Loader] Failed to load JIT cache (non-fatal)");
-                }
-            }).Wait(); // Wait for cache loading to complete before execution
+                Task.Run(() => jitCpu.LoadCacheAsync()).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Loader] Failed to load JIT cache (non-fatal)");
+            }
         }
         else
         {
