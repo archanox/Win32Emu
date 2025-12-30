@@ -38,19 +38,57 @@ public readonly struct LpcStr
 			return null;
 		}
 
-		var buf = new List<byte>();
+		// Use stackalloc for small strings (most common case)
+		const int stackAllocThreshold = 256;
+		Span<byte> buffer = stackalloc byte[stackAllocThreshold];
+		var length = 0;
 		var a = Address;
-		while (true)
+		
+		// First pass: try to fit in stack buffer
+		while (length < stackAllocThreshold)
 		{
 			var b = memory.Read8(a++);
 			if (b == 0)
 			{
-				break;
+				return Encoding.ASCII.GetString(buffer[..length]);
 			}
-
-			buf.Add(b);
+			buffer[length++] = b;
 		}
-		return Encoding.ASCII.GetString(buf.ToArray());
+		
+		// String is larger - use array pool
+		var rentedArray = System.Buffers.ArrayPool<byte>.Shared.Rent(1024);
+		try
+		{
+			// Copy what we already read
+			buffer.CopyTo(rentedArray);
+			
+			// Continue reading
+			while (true)
+			{
+				var b = memory.Read8(a++);
+				if (b == 0)
+				{
+					break;
+				}
+				
+				// Grow array if needed
+				if (length >= rentedArray.Length)
+				{
+					var newArray = System.Buffers.ArrayPool<byte>.Shared.Rent(rentedArray.Length * 2);
+					Array.Copy(rentedArray, newArray, length);
+					System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+					rentedArray = newArray;
+				}
+				
+				rentedArray[length++] = b;
+			}
+			
+			return Encoding.ASCII.GetString(rentedArray, 0, length);
+		}
+		finally
+		{
+			System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+		}
 	}
 
 	/// <summary>

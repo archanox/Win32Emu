@@ -256,7 +256,7 @@ public class ApiCallTracer : IDisposable
 		sb.AppendLine();
 
 		// DirectX/COM calls breakdown
-		var comCalls = _callStats.Where(kvp => kvp.Key.StartsWith("COM.")).ToList();
+		var comCalls = _callStats.Where(kvp => kvp.Key.StartsWith("COM."));
 		if (comCalls.Any())
 		{
 			sb.AppendLine("DirectX COM Calls:");

@@ -2341,7 +2341,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (parts.Length == 2)
 		{
 			// Format: "DLL.ExportName"
-			targetDll = parts[0] + ".DLL";
+			targetDll = string.Concat(parts[0], ".DLL");
 			targetExport = parts[1];
 		}
 		else
@@ -2350,12 +2350,12 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			// Check if second part is "DLL"
 			if (parts[1].Equals("DLL", StringComparison.OrdinalIgnoreCase))
 			{
-				targetDll = parts[0] + "." + parts[1];
+				targetDll = string.Concat(parts[0], ".", parts[1]);
 				targetExport = string.Join(".", parts.Skip(2));
 			}
 			else
 			{
-				targetDll = parts[0] + ".DLL";
+				targetDll = string.Concat(parts[0], ".DLL");
 				targetExport = string.Join(".", parts.Skip(1));
 			}
 		}
