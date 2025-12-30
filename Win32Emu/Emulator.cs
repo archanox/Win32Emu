@@ -2452,13 +2452,6 @@ public sealed class Emulator : IDisposable
                                 var val = _vm!.Read32(addr);
                                 var marker = offset == 0 ? " <-- Future ESP" : "";
                                 stackDump.Append($"\n  [ESP+{offset:+0;-#}] = 0x{addr:X8}: 0x{val:X8}{marker}");
-                                
-                                // Warn about suspicious values (very low addresses that might be used as return addresses or function pointers)
-                                if (offset >= 0 && val > 0 && val < MemoryRegions.MinValidUserAddress)
-                                {
-                                    _logger.LogWarning("[Syscall] SUSPICIOUS: Stack location 0x{Addr:X8} contains suspiciously low value 0x{Val:X8} which could cause corruption if used as return address or function pointer", 
-                                        addr, val);
-                                }
                             }
                         }
                         
