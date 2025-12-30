@@ -542,8 +542,27 @@ public sealed class Emulator : IDisposable
         // Create CPU based on backend preference
         if (useJitCpu)
         {
-            _cpu = new Cpu.Jit.JitCpu(_vm, _logger);
+            var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger);
+            _cpu = jitCpu;
             LogDebug("[Loader] JIT CPU backend enabled (async-capable)");
+            
+            // Initialize JIT cache for pre-compiled blocks
+            jitCpu.SetExecutablePath(path);
+            _logger.LogInformation("[Loader] JIT cache: Set executable path to {Path}", path);
+            
+            // Load existing cache asynchronously (non-blocking)
+            // We use ConfigureAwait(false) since we're in a non-UI context
+            Task.Run(async () =>
+            {
+                try
+                {
+                    await jitCpu.LoadCacheAsync().ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[Loader] Failed to load JIT cache (non-fatal)");
+                }
+            }).Wait(); // Wait for cache loading to complete before execution
         }
         else
         {
@@ -942,6 +961,20 @@ public sealed class Emulator : IDisposable
         {
             // Stop event processing thread
             StopEventProcessing();
+            
+            // Save JIT cache if using JitCpu
+            if (_cpu is Cpu.Jit.JitCpu jitCpu)
+            {
+                try
+                {
+                    await jitCpu.SaveCacheAsync().ConfigureAwait(false);
+                    _logger.LogInformation("[Emulator] JIT cache saved successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[Emulator] Failed to save JIT cache (non-fatal)");
+                }
+            }
             
             // Always print exit message and summary, even if there was an exception
             string exitMessage;
