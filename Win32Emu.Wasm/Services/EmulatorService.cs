@@ -241,7 +241,8 @@ public class EmulatorService : IDisposable
 					var cacheFileName = $"{System.IO.Path.GetFileNameWithoutExtension(fileName)}.wasm-cache.json";
 					var cacheUrl = $"cache/{cacheFileName}";
 					
-					EmitDebugOutput($"Attempting to load cache: {cacheUrl}");
+					_logger.LogInformation("Attempting to load pre-compiled cache: {CacheUrl}", cacheUrl);
+					EmitDebugOutput($"[Cache] Attempting to load pre-compiled cache: {cacheUrl}");
 					
 					// Use HttpClient to fetch the cache file from wwwroot
 					using var httpClient = new System.Net.Http.HttpClient { BaseAddress = new Uri(await _jsRuntime.InvokeAsync<string>("getOrigin")) };
@@ -255,20 +256,34 @@ public class EmulatorService : IDisposable
 						{
 							// Load cache directly from JSON (no file I/O needed in WASM)
 							await icedCpu.LoadCacheFromJsonAsync(cacheJson, _logger);
-							EmitDebugOutput($"Cache loaded successfully: {cacheFileName}");
+							_logger.LogInformation("Pre-compiled cache loaded successfully: {CacheFileName}", cacheFileName);
+							EmitDebugOutput($"[Cache] ✓ Pre-compiled cache loaded successfully: {cacheFileName}");
+						}
+						else
+						{
+							EmitDebugOutput($"[Cache] Cache file was empty: {cacheUrl}");
 						}
 					}
 					else
 					{
-						EmitDebugOutput($"No cache file found: {cacheUrl} (HTTP {response.StatusCode})");
+						_logger.LogInformation("No pre-compiled cache file found: {CacheUrl} (HTTP {StatusCode})", cacheUrl, response.StatusCode);
+						EmitDebugOutput($"[Cache] No pre-compiled cache file found: {cacheUrl} (HTTP {response.StatusCode})");
 					}
 				}
 				catch (Exception cacheEx)
 				{
 					// Don't fail if cache loading fails - just log it
-					_logger.LogWarning(cacheEx, "Failed to load cache for {FileName}", fileName);
-					EmitDebugOutput($"Cache loading failed (non-fatal): {cacheEx.Message}");
+					_logger.LogWarning(cacheEx, "Failed to load pre-compiled cache for {FileName}", fileName);
+					EmitDebugOutput($"[Cache] ⚠ Cache loading failed (non-fatal): {cacheEx.Message}");
 				}
+			}
+			else if (useCache && useJitCpu)
+			{
+				EmitDebugOutput($"[Cache] Pre-compiled cache is not supported with JIT CPU");
+			}
+			else if (!useCache)
+			{
+				EmitDebugOutput($"[Cache] Cache loading is disabled (useCache=false)");
 			}
 			
 			_loadedExecutableName = fileName;

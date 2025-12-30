@@ -126,7 +126,7 @@ jobs:
           dotnet run --project Win32Emu.Tools.WasmCacheGenerator \
             --configuration Release --no-build -- \
             EXEs/ign_teas/IGN_TEAS.EXE \
-            --output Win32Emu.Wasm/wwwroot/cache/ign_teas.wasm-cache.json \
+            --output Win32Emu.Wasm/wwwroot/cache/IGN_TEAS.wasm-cache.json \
             --max-blocks 5000 \
             || echo "Note: Cache generation failed, will skip for now"
 
