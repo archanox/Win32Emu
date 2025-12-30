@@ -1,29 +1,18 @@
 {
-  "Version": 1,
-  "ExecutablePath": "IGN_TEAS.EXE",
-  "Timestamp": "2025-12-29T13:00:00Z",
-  "Blocks": [
+  "version": 1,
+  "executablePath": "IGN_TEAS.EXE",
+  "timestamp": "2025-12-30T06:20:49.9962623Z",
+  "blocks": [
     {
-      "StartAddress": 4198400,
-      "InstructionCount": 5,
-      "ByteLength": 15,
-      "CodeHash": "ABC123DEF456789012345678901234567890123456789012345678901234ABCD",
-      "FirstCompiled": "2025-12-29T13:00:00Z",
-      "ExecutionCount": 0,
-      "EndsWithCall": false,
-      "EndsWithReturn": false,
-      "DirectTarget": null
-    },
-    {
-      "StartAddress": 4198420,
-      "InstructionCount": 3,
-      "ByteLength": 9,
-      "CodeHash": "DEF456789012345678901234567890123456789012345678901234ABCD123456",
-      "FirstCompiled": "2025-12-29T13:00:00Z",
-      "ExecutionCount": 0,
-      "EndsWithCall": false,
-      "EndsWithReturn": true,
-      "DirectTarget": null
+      "startAddress": 4263888,
+      "instructionCount": 6,
+      "byteLength": 12,
+      "codeHash": "0F6B7B0EE4E770F7DEB35D3D7F4083DEB50C3AE77EA32AB5A767981BCA0BD6B2",
+      "firstCompiled": "2025-12-30T06:20:49.9942109Z",
+      "executionCount": 0,
+      "endsWithCall": false,
+      "endsWithReturn": true,
+      "directTarget": null
     }
   ]
 }
