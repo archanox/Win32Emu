@@ -76,9 +76,6 @@ public class EmulatorService
                 // Get the global telemetry service if enabled
                 var telemetryService = App.TelemetryService;
                 
-                // Determine which CPU backend to use based on configuration
-                var useJitCpu = _configuration.CpuBackend == "JitCPU";
-                
                 // Create and configure the emulator with backend factory
                 _currentEmulator = new Emulator(_host, _logger, telemetryService, backendFactory);
                 
@@ -113,6 +110,7 @@ public class EmulatorService
                 // Load the executable with configured memory size and GDB server settings
                 // The virtual disk path is passed to LoadExecutable so the VFS can be initialized
                 // after the emulator environment is ready but before file access is needed
+                // Note: Unified JitCpu backend is always used (with JIT compilation or interpreter mode)
                 _currentEmulator.LoadExecutable(
                     executablePath,
                     programArgs,
@@ -123,7 +121,6 @@ public class EmulatorService
                     _configuration.GdbServerPort,
                     _configuration.EnableInstructionAnalyzer,
                     _configuration.EnableLegacyInstructionDecoding,
-                    useJitCpu,
                     virtualDiskPath, // Pass the virtual disk path
                     preloadedBytes: null,
                     customVirtualFileSystem: null,

@@ -23,6 +23,9 @@ public class JitCpu : IAsyncCpu
 	// CPU state - same as IcedCpu
 	private uint _eax, _ebx, _ecx, _edx, _esi, _edi, _ebp, _esp, _eip, _eflags;
 	
+	// Segment registers (stored as 16-bit values in lower 16 bits)
+	private ushort _cs, _ds, _es, _fs, _gs, _ss;
+	
 	// FPU state
 	private readonly double[] _fpu = new double[8];
 	private int _fpuTop = 0;
@@ -41,6 +44,43 @@ public class JitCpu : IAsyncCpu
 	// format and MMX integer format. The tag word management ensures proper state transitions.
 	private readonly ulong[] _mmx = new ulong[8];
 	
+	// Control Registers (CR0-CR4) for protected mode and system control
+	private uint _cr0 = 0x00000010; // ET flag set by default (387 present)
+	private uint _cr2 = 0;
+	private uint _cr3 = 0;
+	private uint _cr4 = 0;
+	
+	// Debug Registers (DR0-DR7) for hardware breakpoints
+	private uint _dr0 = 0;
+	private uint _dr1 = 0;
+	private uint _dr2 = 0;
+	private uint _dr3 = 0;
+	private uint _dr6 = 0xFFFF0FF0; // Initial value per Intel specification
+	private uint _dr7 = 0x00000400; // Initial value per Intel specification
+	
+	// Default image base if not specified (typical default for Win32 executables)
+	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
+	
+	// Default stack region bounds if not specified (typical range for Windows applications)
+	private const uint DEFAULT_STACK_LIMIT = 0x00100000;  // 1 MB (bottom of stack)
+	private const uint DEFAULT_STACK_BASE = 0x01000000;   // 16 MB (top of stack)
+	
+	// Image base from PE header (used for validation of indirect calls/jumps)
+	private readonly uint _imageBase;
+	
+	// Stack bounds from PE header (used for validation of indirect calls/jumps)
+	// Stack grows downward from _stackBase to _stackLimit
+	private readonly uint _stackLimit;
+	private readonly uint _stackBase;
+	
+	// CPU bitness mode (16 for real mode, 32 for protected mode)
+	private readonly int _bitness;
+	
+	// Force 32-bit operand size for stack operations in 32-bit mode
+	// When true, PUSH/POP/CALL/RET always use 32-bit operands in 32-bit mode,
+	// ignoring operand-size override prefix (0x66). Improves Win32 compatibility.
+	private readonly bool _force32BitStackOps;
+	
 	// JIT compilation infrastructure - now using RTL pipeline
 	private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
 	
@@ -56,12 +96,29 @@ public class JitCpu : IAsyncCpu
 	// WASM environment detection - JIT compilation not available in WASM
 	private readonly bool _isWasmEnvironment;
 
-	public JitCpu(VirtualMemory mem, ILogger? logger = null)
+	/// <summary>
+	/// Initializes a new instance of the <see cref="JitCpu"/> class with full configuration options.
+	/// </summary>
+	/// <param name="mem">The virtual memory instance used by the CPU.</param>
+	/// <param name="logger">Optional logger for CPU events and diagnostics.</param>
+	/// <param name="decoderOptions">Options for the instruction decoder.</param>
+	/// <param name="enableInstructionAnalyzer">Whether to enable instruction analysis for debugging (currently unused in JitCpu).</param>
+	/// <param name="imageBase">The image base address for the emulated executable.</param>
+	/// <param name="stackLimit">The lower bound of the stack region.</param>
+	/// <param name="stackBase">The upper bound of the stack region.</param>
+	/// <param name="bitness">The CPU bitness mode (16 for real mode, 32 for protected mode). Defaults to 32-bit.</param>
+	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode. Defaults to true.</param>
+	public JitCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
+		_imageBase = imageBase;
+		_stackLimit = stackLimit;
+		_stackBase = stackBase;
+		_bitness = bitness;
+		_force32BitStackOps = force32BitStackOps;
 		_reader = new SimpleMemoryCodeReader(this);
-		_decoder = Decoder.Create(32, _reader, DecoderOptions.None);
+		_decoder = Decoder.Create(bitness, _reader, decoderOptions);
 		
 		// Detect WASM environment
 		_isWasmEnvironment = RuntimeEnvironment.IsWasm;
@@ -77,22 +134,15 @@ public class JitCpu : IAsyncCpu
 		{
 			_logger.LogInformation("[JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode");
 		}
-	}
-	
-	/// <summary>
-	/// Creates a new JitCpu instance with a custom cache directory
-	/// </summary>
-	public JitCpu(VirtualMemory mem, ILogger? logger, string cacheDirectory) : this(mem, logger)
-	{
-		// Replace the default cache with one using the custom directory
-		// Only if not in WASM environment (JIT cache not available in WASM)
-		if (!_isWasmEnvironment && _rtlJitCache != null)
+		
+		// Note: enableInstructionAnalyzer parameter is accepted for compatibility with IcedCpu
+		// but instruction analysis is not yet implemented in JitCpu
+		if (enableInstructionAnalyzer)
 		{
-			// Note: We cannot reassign readonly field here, so this constructor
-			// should only be used when creating a new instance
-			_logger.LogWarning("[JitCpu] Custom cache directory specified but already initialized. Create new instance instead.");
+			_logger.LogWarning("[JitCpu] Instruction analyzer requested but not yet implemented in JitCpu");
 		}
 	}
+
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetEip(uint eip) => _eip = eip;
@@ -114,6 +164,25 @@ public class JitCpu : IAsyncCpu
 		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) return _esp;
 		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) return _eip;
 		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) return _eflags;
+		// Segment registers
+		if (string.Equals(name, "CS", StringComparison.OrdinalIgnoreCase)) return _cs;
+		if (string.Equals(name, "DS", StringComparison.OrdinalIgnoreCase)) return _ds;
+		if (string.Equals(name, "ES", StringComparison.OrdinalIgnoreCase)) return _es;
+		if (string.Equals(name, "FS", StringComparison.OrdinalIgnoreCase)) return _fs;
+		if (string.Equals(name, "GS", StringComparison.OrdinalIgnoreCase)) return _gs;
+		if (string.Equals(name, "SS", StringComparison.OrdinalIgnoreCase)) return _ss;
+		// Control registers
+		if (string.Equals(name, "CR0", StringComparison.OrdinalIgnoreCase)) return _cr0;
+		if (string.Equals(name, "CR2", StringComparison.OrdinalIgnoreCase)) return _cr2;
+		if (string.Equals(name, "CR3", StringComparison.OrdinalIgnoreCase)) return _cr3;
+		if (string.Equals(name, "CR4", StringComparison.OrdinalIgnoreCase)) return _cr4;
+		// Debug registers
+		if (string.Equals(name, "DR0", StringComparison.OrdinalIgnoreCase)) return _dr0;
+		if (string.Equals(name, "DR1", StringComparison.OrdinalIgnoreCase)) return _dr1;
+		if (string.Equals(name, "DR2", StringComparison.OrdinalIgnoreCase)) return _dr2;
+		if (string.Equals(name, "DR3", StringComparison.OrdinalIgnoreCase)) return _dr3;
+		if (string.Equals(name, "DR6", StringComparison.OrdinalIgnoreCase)) return _dr6;
+		if (string.Equals(name, "DR7", StringComparison.OrdinalIgnoreCase)) return _dr7;
 		return 0;
 	}
 
@@ -131,6 +200,25 @@ public class JitCpu : IAsyncCpu
 		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) { _esp = value; return; }
 		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) { _eip = value; return; }
 		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) { _eflags = value; return; }
+		// Segment registers
+		if (string.Equals(name, "CS", StringComparison.OrdinalIgnoreCase)) { _cs = (ushort)value; return; }
+		if (string.Equals(name, "DS", StringComparison.OrdinalIgnoreCase)) { _ds = (ushort)value; return; }
+		if (string.Equals(name, "ES", StringComparison.OrdinalIgnoreCase)) { _es = (ushort)value; return; }
+		if (string.Equals(name, "FS", StringComparison.OrdinalIgnoreCase)) { _fs = (ushort)value; return; }
+		if (string.Equals(name, "GS", StringComparison.OrdinalIgnoreCase)) { _gs = (ushort)value; return; }
+		if (string.Equals(name, "SS", StringComparison.OrdinalIgnoreCase)) { _ss = (ushort)value; return; }
+		// Control registers
+		if (string.Equals(name, "CR0", StringComparison.OrdinalIgnoreCase)) { _cr0 = value; return; }
+		if (string.Equals(name, "CR2", StringComparison.OrdinalIgnoreCase)) { _cr2 = value; return; }
+		if (string.Equals(name, "CR3", StringComparison.OrdinalIgnoreCase)) { _cr3 = value; return; }
+		if (string.Equals(name, "CR4", StringComparison.OrdinalIgnoreCase)) { _cr4 = value; return; }
+		// Debug registers
+		if (string.Equals(name, "DR0", StringComparison.OrdinalIgnoreCase)) { _dr0 = value; return; }
+		if (string.Equals(name, "DR1", StringComparison.OrdinalIgnoreCase)) { _dr1 = value; return; }
+		if (string.Equals(name, "DR2", StringComparison.OrdinalIgnoreCase)) { _dr2 = value; return; }
+		if (string.Equals(name, "DR3", StringComparison.OrdinalIgnoreCase)) { _dr3 = value; return; }
+		if (string.Equals(name, "DR6", StringComparison.OrdinalIgnoreCase)) { _dr6 = value; return; }
+		if (string.Equals(name, "DR7", StringComparison.OrdinalIgnoreCase)) { _dr7 = value; return; }
 	}
 
 	public CpuStepResult SingleStep(VirtualMemory mem)

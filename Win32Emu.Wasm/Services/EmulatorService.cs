@@ -106,7 +106,6 @@ public class EmulatorService : IDisposable
 	/// <param name="fileName">The name of the executable file</param>
 	/// <param name="additionalFiles">Optional dictionary of additional files (path -> bytes) for the VFS</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
-	/// <param name="useJitCpu">Enable JIT CPU (will run in interpreter mode in WASM)</param>
 	/// <param name="useCache">Enable cache loading from wwwroot/cache/ directory</param>
 	/// <returns>True if loading succeeded</returns>
 	public async Task<bool> LoadExecutableAsync(
@@ -114,7 +113,6 @@ public class EmulatorService : IDisposable
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null,
 		bool force32BitStackOps = true,
-		bool useJitCpu = false,
 		bool useCache = true)
 	{
 		try
