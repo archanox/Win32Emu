@@ -171,6 +171,17 @@
                                      TextWrapping="Wrap"/>
                         </StackPanel>
 
+                        <!-- Force Interpreter Mode -->
+                        <StackPanel Spacing="8">
+                            <CheckBox IsChecked="{Binding ForceInterpreterMode}"
+                                    Content="Force Interpreter Mode"/>
+                            <TextBlock Text="Force interpreter mode even on desktop platforms (disables JIT compilation). Useful for debugging or when JIT compilation causes issues. JIT is always disabled in WASM. (Default: disabled)"
+                                     FontSize="12"
+                                     Opacity="0.7"
+                                     Margin="0,-8,0,0"
+                                     TextWrapping="Wrap"/>
+                        </StackPanel>
+
                         <!-- Information Panel -->
                         <Border Background="{DynamicResource SystemControlBackgroundAltMediumBrush}"
                                 Padding="12"

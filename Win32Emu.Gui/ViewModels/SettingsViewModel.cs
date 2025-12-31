@@ -49,6 +49,9 @@ public partial class SettingsViewModel : ViewModelBase
     private bool _force32BitStackOps;
     
     [ObservableProperty]
+    private bool _forceInterpreterMode;
+    
+    [ObservableProperty]
     private bool _enableOpenTelemetry;
     
     [ObservableProperty]
@@ -129,6 +132,7 @@ public partial class SettingsViewModel : ViewModelBase
         _enableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
         _enableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
         _force32BitStackOps = configuration.Force32BitStackOps;
+        _forceInterpreterMode = configuration.ForceInterpreterMode;
         _enableOpenTelemetry = configuration.EnableOpenTelemetry;
         _useConsoleExporter = configuration.UseConsoleExporter;
         _useOtlpExporter = configuration.UseOtlpExporter;
@@ -210,7 +214,13 @@ public partial class SettingsViewModel : ViewModelBase
         _configuration.Force32BitStackOps = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
-    
+
+    partial void OnForceInterpreterModeChanged(bool value)
+    {
+        _configuration.ForceInterpreterMode = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
     partial void OnEnableOpenTelemetryChanged(bool value)
     {
         _configuration.EnableOpenTelemetry = value;

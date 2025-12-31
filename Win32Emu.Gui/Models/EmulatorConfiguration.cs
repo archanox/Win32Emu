@@ -24,6 +24,12 @@ public class EmulatorConfiguration
 	/// </summary>
 	public bool Force32BitStackOps { get; set; } = true;
 	
+	/// <summary>
+	/// Force interpreter mode even on desktop platforms (disables JIT compilation).
+	/// Useful for debugging or when JIT compilation causes issues. Default: false (JIT enabled on desktop).
+	/// </summary>
+	public bool ForceInterpreterMode { get; set; } = false;
+	
 	// OpenTelemetry Settings
 	public bool EnableOpenTelemetry { get; set; }
 	public bool UseConsoleExporter { get; set; }

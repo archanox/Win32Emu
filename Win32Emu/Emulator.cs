@@ -313,7 +313,8 @@ public sealed class Emulator : IDisposable
     /// <param name="reservedMemoryMb">Reserved memory in megabytes</param>
     /// <param name="virtualFileSystem">Optional custom virtual file system for file operations</param>
     /// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
-    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true)
+    /// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation)</param>
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true, bool forceInterpreterMode = false)
     {
         // Use a synthetic path for internal tracking
         var syntheticPath = $"C:\\WASM\\{executableName}";
@@ -329,13 +330,14 @@ public sealed class Emulator : IDisposable
             gdbServerPort: 1234, 
             enableInstructionAnalyzer: false, 
             enableLegacyInstructionDecoding: false, 
+            forceInterpreterMode: forceInterpreterMode,
             virtualDiskPath: null,
             preloadedBytes: executableBytes,
             customVirtualFileSystem: virtualFileSystem,
             force32BitStackOps: force32BitStackOps);
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null, bool force32BitStackOps = true)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool forceInterpreterMode = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null, bool force32BitStackOps = true)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -534,8 +536,8 @@ public sealed class Emulator : IDisposable
 
         // Create unified CPU backend (JitCpu with interpreter mode)
         // JitCpu uses JIT compilation when available (native platforms) and falls back to
-        // interpreter mode in WASM or when JIT compilation is not available
-        var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps);
+        // interpreter mode in WASM or when forceInterpreterMode is true
+        var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps, forceInterpreterMode: forceInterpreterMode);
         _cpu = jitCpu;
         
         _logger.LogInformation("[Loader] Unified JitCpu backend enabled (JIT compilation: {JitEnabled}, Interpreter mode: {InterpreterEnabled})", 

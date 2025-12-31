@@ -95,6 +95,9 @@ public class JitCpu : IAsyncCpu
 	
 	// WASM environment detection - JIT compilation not available in WASM
 	private readonly bool _isWasmEnvironment;
+	
+	// Force interpreter mode - allows disabling JIT compilation even on native platforms
+	private readonly bool _forceInterpreterMode;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="JitCpu"/> class with full configuration options.
@@ -108,7 +111,8 @@ public class JitCpu : IAsyncCpu
 	/// <param name="stackBase">The upper bound of the stack region.</param>
 	/// <param name="bitness">The CPU bitness mode (16 for real mode, 32 for protected mode). Defaults to 32-bit.</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode. Defaults to true.</param>
-	public JitCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true)
+	/// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation). Defaults to false.</param>
+	public JitCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true, bool forceInterpreterMode = false)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
@@ -117,22 +121,27 @@ public class JitCpu : IAsyncCpu
 		_stackBase = stackBase;
 		_bitness = bitness;
 		_force32BitStackOps = force32BitStackOps;
+		_forceInterpreterMode = forceInterpreterMode;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(bitness, _reader, decoderOptions);
 		
 		// Detect WASM environment
 		_isWasmEnvironment = RuntimeEnvironment.IsWasm;
 		
-		// Initialize RTL-based JIT cache only in native environments
-		// In WASM, Roslyn compilation is not available, so we fall back to interpretation
-		if (!_isWasmEnvironment)
+		// Initialize RTL-based JIT cache only in native environments when JIT is enabled
+		// In WASM or when interpreter mode is forced, Roslyn compilation is not available/desired
+		if (!_isWasmEnvironment && !_forceInterpreterMode)
 		{
 			_rtlJitCache = new RtlJitCache(null, logger);
 			_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
 		}
-		else
+		else if (_isWasmEnvironment)
 		{
 			_logger.LogInformation("[JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode");
+		}
+		else if (_forceInterpreterMode)
+		{
+			_logger.LogInformation("[JitCpu] Interpreter mode forced - JIT compilation disabled");
 		}
 		
 		// Note: enableInstructionAnalyzer parameter is accepted for compatibility with IcedCpu
@@ -234,9 +243,9 @@ public class JitCpu : IAsyncCpu
 
 	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)
 	{
-		// In WASM environment, JIT compilation is not available
+		// In WASM environment or when interpreter mode is forced, JIT compilation is not available/desired
 		// Fall back to single instruction interpretation
-		if (_isWasmEnvironment)
+		if (_isWasmEnvironment || _forceInterpreterMode)
 		{
 			return await Task.FromResult(InterpretSingleInstruction(mem));
 		}
@@ -254,7 +263,7 @@ public class JitCpu : IAsyncCpu
 		return result;
 	}
 
-	public bool SupportsJit => !_isWasmEnvironment;
+	public bool SupportsJit => !_isWasmEnvironment && !_forceInterpreterMode;
 
 	/// <summary>
 	/// Sets the current executable path for cache management
@@ -270,10 +279,10 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task LoadCacheAsync()
 	{
-		// In WASM environment, JIT cache is not available
-		if (_isWasmEnvironment)
+		// In WASM environment or when interpreter mode is forced, JIT cache is not available
+		if (_isWasmEnvironment || _forceInterpreterMode)
 		{
-			_logger.LogInformation("[JitCpu] JIT cache not available in WASM environment");
+			_logger.LogInformation("[JitCpu] JIT cache not available (WASM environment or interpreter mode forced)");
 			return;
 		}
 		
@@ -302,10 +311,10 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task SaveCacheAsync()
 	{
-		// In WASM environment, JIT cache is not available
-		if (_isWasmEnvironment)
+		// In WASM environment or when interpreter mode is forced, JIT cache is not available
+		if (_isWasmEnvironment || _forceInterpreterMode)
 		{
-			_logger.LogInformation("[JitCpu] JIT cache not available in WASM environment");
+			_logger.LogInformation("[JitCpu] JIT cache not available (WASM environment or interpreter mode forced)");
 			return;
 		}
 		
@@ -333,10 +342,10 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 	{
-		// In WASM environment, JIT cache is not available
-		if (_isWasmEnvironment)
+		// In WASM environment or when interpreter mode is forced, JIT cache is not available
+		if (_isWasmEnvironment || _forceInterpreterMode)
 		{
-			_logger.LogInformation("[JitCpu] Precompilation not available in WASM environment");
+			_logger.LogInformation("[JitCpu] Precompilation not available (WASM environment or interpreter mode forced)");
 			return await Task.FromResult(0);
 		}
 		
@@ -368,14 +377,14 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public RtlCacheStatistics GetCacheStatistics()
 	{
-		// In WASM environment, return empty statistics
-		if (_isWasmEnvironment || _rtlJitCache == null)
+		// In WASM environment or interpreter mode, return empty statistics
+		if (_isWasmEnvironment || _forceInterpreterMode || _rtlJitCache == null)
 		{
 			return new RtlCacheStatistics
 			{
 				TotalBlocks = 0,
-				CacheDirectory = "N/A (WASM)",
-				SourceDirectory = "N/A (WASM)"
+				CacheDirectory = "N/A (WASM/Interpreter)",
+				SourceDirectory = "N/A (WASM/Interpreter)"
 			};
 		}
 		
@@ -387,7 +396,7 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public void PurgeCache()
 	{
-		if (_rtlJitCache != null && !_isWasmEnvironment)
+		if (_rtlJitCache != null && !_isWasmEnvironment && !_forceInterpreterMode)
 		{
 			_rtlJitCache.PurgeCache();
 		}
@@ -1324,11 +1333,11 @@ public class JitCpu : IAsyncCpu
 
 	private RtlCompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
 	{
-		// This should never be called in WASM environment due to check in ExecuteBlockAsync
+		// This should never be called in WASM environment or interpreter mode due to check in ExecuteBlockAsync
 		// But add safety check anyway
-		if (_isWasmEnvironment || _rtlJitCache == null)
+		if (_isWasmEnvironment || _forceInterpreterMode || _rtlJitCache == null)
 		{
-			throw new NotSupportedException("JIT compilation is not available in WASM environment");
+			throw new NotSupportedException("JIT compilation is not available in WASM environment or when interpreter mode is forced");
 		}
 		
 		_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8} using RTL pipeline", startEip);

@@ -121,6 +121,7 @@ public class EmulatorService
                     _configuration.GdbServerPort,
                     _configuration.EnableInstructionAnalyzer,
                     _configuration.EnableLegacyInstructionDecoding,
+                    _configuration.ForceInterpreterMode, // User can force interpreter mode on desktop
                     virtualDiskPath, // Pass the virtual disk path
                     preloadedBytes: null,
                     customVirtualFileSystem: null,

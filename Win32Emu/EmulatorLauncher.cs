@@ -260,7 +260,7 @@ public static class EmulatorLauncher
 					// Let critical exceptions propagate
 					
 					using var emulator = new Emulator(null, logger, telemetryService, backendFactory);
-					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, virtualDiskPath, null, null, force32BitStackOps);
+					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, null, null, force32BitStackOps);
 					
 					// Enable API tracing if requested
 					if (enableApiTrace && emulator.Environment != null)
