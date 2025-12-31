@@ -206,9 +206,9 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 		Assert.True(success);
 		Assert.NotEqual(0u, result);
 		
-		// Read the daylight value (should be 1 by default)
+		// Read the daylight value (should be 0 or 1 depending on system timezone)
 		var daylight = _testEnv.Memory.Read32(result);
-		Assert.Equal(1u, daylight);
+		Assert.InRange(daylight, 0u, 1u);
 	}
 	
 	[Fact]
@@ -221,9 +221,9 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 		Assert.True(success);
 		Assert.NotEqual(0u, result);
 		
-		// Read the timezone value (should be 28800 by default - PST offset)
+		// Read the timezone value (seconds west of UTC, typically -43200 to 50400)
 		var timezone = (int)_testEnv.Memory.Read32(result);
-		Assert.Equal(28800, timezone);
+		Assert.InRange(timezone, -43200, 50400); // Valid timezone range
 	}
 	
 	[Fact]
@@ -236,9 +236,9 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 		Assert.True(success);
 		Assert.NotEqual(0u, result);
 		
-		// Read the dstbias value (should be -3600 by default)
+		// Read the dstbias value (typically -3600 for 1 hour DST, but can vary)
 		var dstbias = (int)_testEnv.Memory.Read32(result);
-		Assert.Equal(-3600, dstbias);
+		Assert.InRange(dstbias, -7200, 0); // DST bias is usually negative, up to 2 hours
 	}
 	
 	[Fact]
