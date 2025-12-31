@@ -122,7 +122,6 @@ public class ConfigurationService
         {
             RenderingBackend = _settings.RenderingBackend,
             InputBackend = _settings.InputBackend,
-            CpuBackend = _settings.CpuBackend,
             ResolutionScaleFactor = _settings.ResolutionScaleFactor,
             ReservedMemoryMb = _settings.ReservedMemoryMB,
             WindowsVersion = _settings.WindowsVersion,
@@ -133,6 +132,7 @@ public class ConfigurationService
             EnableInstructionAnalyzer = _settings.EnableInstructionAnalyzer,
             EnableLegacyInstructionDecoding = _settings.EnableLegacyInstructionDecoding,
             Force32BitStackOps = _settings.Force32BitStackOps,
+            ForceInterpreterMode = _settings.ForceInterpreterMode,
             EnableOpenTelemetry = _settings.EnableOpenTelemetry,
             UseConsoleExporter = _settings.UseConsoleExporter,
             UseOtlpExporter = _settings.UseOtlpExporter,
@@ -178,7 +178,6 @@ public class ConfigurationService
     {
         _settings.RenderingBackend = configuration.RenderingBackend;
         _settings.InputBackend = configuration.InputBackend;
-        _settings.CpuBackend = configuration.CpuBackend;
         _settings.ResolutionScaleFactor = configuration.ResolutionScaleFactor;
         _settings.ReservedMemoryMB = configuration.ReservedMemoryMb;
         _settings.WindowsVersion = configuration.WindowsVersion;
@@ -189,6 +188,7 @@ public class ConfigurationService
         _settings.EnableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
         _settings.EnableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
         _settings.Force32BitStackOps = configuration.Force32BitStackOps;
+        _settings.ForceInterpreterMode = configuration.ForceInterpreterMode;
         _settings.EnableOpenTelemetry = configuration.EnableOpenTelemetry;
         _settings.UseConsoleExporter = configuration.UseConsoleExporter;
         _settings.UseOtlpExporter = configuration.UseOtlpExporter;

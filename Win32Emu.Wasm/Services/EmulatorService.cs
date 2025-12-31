@@ -106,7 +106,6 @@ public class EmulatorService : IDisposable
 	/// <param name="fileName">The name of the executable file</param>
 	/// <param name="additionalFiles">Optional dictionary of additional files (path -> bytes) for the VFS</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
-	/// <param name="useJitCpu">Enable JIT CPU (will run in interpreter mode in WASM)</param>
 	/// <param name="useCache">Enable cache loading from wwwroot/cache/ directory</param>
 	/// <returns>True if loading succeeded</returns>
 	public async Task<bool> LoadExecutableAsync(
@@ -114,7 +113,6 @@ public class EmulatorService : IDisposable
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null,
 		bool force32BitStackOps = true,
-		bool useJitCpu = false,
 		bool useCache = true)
 	{
 		try
@@ -229,63 +227,16 @@ public class EmulatorService : IDisposable
 			
 			// Load the executable from bytes using the Emulator's built-in method
 			// with the browser VFS for file operations
-			// Note: useJitCpu is supported in WASM but will run in interpreter mode
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, useJitCpu);
+			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps);
 			
-			// Load cache if enabled and IcedCpu is being used
-			if (useCache && !useJitCpu && _emulator.Cpu is Win32Emu.Cpu.Iced.IcedCpu icedCpu)
+			// Load cache if enabled - JitCpu uses RTL-based cache
+			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
+			// Therefore, cache loading is not applicable - all instructions are interpreted on-demand
+			if (useCache)
 			{
-				try
-				{
-					// Try to load cache from wwwroot/cache directory
-					var cacheFileName = $"{System.IO.Path.GetFileNameWithoutExtension(fileName)}.wasm-cache.json";
-					var cacheUrl = $"cache/{cacheFileName}";
-					
-					_logger.LogInformation("Attempting to load pre-compiled cache: {CacheUrl}", cacheUrl);
-					EmitDebugOutput($"[Cache] Attempting to load pre-compiled cache: {cacheUrl}");
-					
-					// Use HttpClient to fetch the cache file from wwwroot
-					// Use relative URL to respect the <base href> tag in index.html
-					// This ensures the cache is loaded from the correct path on GitHub Pages
-					using var httpClient = new System.Net.Http.HttpClient();
-					var response = await httpClient.GetAsync(cacheUrl);
-					
-					if (response.IsSuccessStatusCode)
-					{
-						var cacheJson = await response.Content.ReadAsStringAsync();
-						
-						if (!string.IsNullOrEmpty(cacheJson))
-						{
-							// Load cache directly from JSON (no file I/O needed in WASM)
-							await icedCpu.LoadCacheFromJsonAsync(cacheJson, _logger);
-							_logger.LogInformation("Pre-compiled cache loaded successfully: {CacheFileName}", cacheFileName);
-							EmitDebugOutput($"[Cache] ✓ Pre-compiled cache loaded successfully: {cacheFileName}");
-						}
-						else
-						{
-							EmitDebugOutput($"[Cache] Cache file was empty: {cacheUrl}");
-						}
-					}
-					else
-					{
-						_logger.LogInformation("No pre-compiled cache file found: {CacheUrl} (HTTP {StatusCode})", cacheUrl, response.StatusCode);
-						EmitDebugOutput($"[Cache] No pre-compiled cache file found: {cacheUrl} (HTTP {response.StatusCode})");
-					}
-				}
-				catch (Exception cacheEx)
-				{
-					// Don't fail if cache loading fails - just log it
-					_logger.LogWarning(cacheEx, "Failed to load pre-compiled cache for {FileName}", fileName);
-					EmitDebugOutput($"[Cache] ⚠ Cache loading failed (non-fatal): {cacheEx.Message}");
-				}
-			}
-			else if (useCache && useJitCpu)
-			{
-				EmitDebugOutput($"[Cache] Pre-compiled cache is not supported with JIT CPU");
-			}
-			else if (!useCache)
-			{
-				EmitDebugOutput($"[Cache] Cache loading is disabled (useCache=false)");
+				_logger.LogInformation("[WASM] JitCpu runs in interpreter mode - cache loading not needed");
+				EmitDebugOutput("[Cache] JitCpu uses interpreter mode in WASM - no cache needed");
 			}
 			
 			_loadedExecutableName = fileName;

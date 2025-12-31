@@ -9,7 +9,6 @@ public class EmulatorSettings
 {
     public string RenderingBackend { get; set; } = "GLFW";
     public string InputBackend { get; set; } = "GLFW"; // SDL or GLFW
-    public string CpuBackend { get; set; } = "IcedCPU"; // IcedCPU, JitCPU, or Unicorn
     public int ResolutionScaleFactor { get; set; } = 1;
     public int ReservedMemoryMB { get; set; } = 256;
     public string WindowsVersion { get; set; } = "Windows 95";
@@ -29,6 +28,12 @@ public class EmulatorSettings
     /// break Win16 or mixed-mode code. Default: true for Win32 compatibility.
     /// </summary>
     public bool Force32BitStackOps { get; set; } = true;
+    
+    /// <summary>
+    /// Force interpreter mode even on desktop platforms (disables JIT compilation).
+    /// Useful for debugging or when JIT compilation causes issues. Default: false (JIT enabled on desktop).
+    /// </summary>
+    public bool ForceInterpreterMode { get; set; } = false;
     
     // OpenTelemetry Settings
     public bool EnableOpenTelemetry { get; set; } = false;

@@ -19,9 +19,6 @@ public partial class SettingsViewModel : ViewModelBase
     private string _inputBackend;
 
     [ObservableProperty]
-    private string _cpuBackend;
-
-    [ObservableProperty]
     private int _resolutionScaleFactor;
 
     [ObservableProperty]
@@ -50,6 +47,9 @@ public partial class SettingsViewModel : ViewModelBase
     
     [ObservableProperty]
     private bool _force32BitStackOps;
+    
+    [ObservableProperty]
+    private bool _forceInterpreterMode;
     
     [ObservableProperty]
     private bool _enableOpenTelemetry;
@@ -93,14 +93,6 @@ public partial class SettingsViewModel : ViewModelBase
         "SDL",
         "GLFW"
     };
-
-    public ObservableCollection<string> CpuBackends { get; } = new()
-    {
-        "IcedCPU",
-        "JitCPU",
-        "Unicorn"
-    };
-
     public ObservableCollection<string> WindowsVersions { get; } = new()
     {
         "Windows 95",
@@ -130,7 +122,6 @@ public partial class SettingsViewModel : ViewModelBase
         // Initialize properties from configuration
         _renderingBackend = configuration.RenderingBackend;
         _inputBackend = configuration.InputBackend;
-        _cpuBackend = configuration.CpuBackend;
         _resolutionScaleFactor = configuration.ResolutionScaleFactor;
         _reservedMemoryMb = configuration.ReservedMemoryMb;
         _windowsVersion = configuration.WindowsVersion;
@@ -141,6 +132,7 @@ public partial class SettingsViewModel : ViewModelBase
         _enableInstructionAnalyzer = configuration.EnableInstructionAnalyzer;
         _enableLegacyInstructionDecoding = configuration.EnableLegacyInstructionDecoding;
         _force32BitStackOps = configuration.Force32BitStackOps;
+        _forceInterpreterMode = configuration.ForceInterpreterMode;
         _enableOpenTelemetry = configuration.EnableOpenTelemetry;
         _useConsoleExporter = configuration.UseConsoleExporter;
         _useOtlpExporter = configuration.UseOtlpExporter;
@@ -160,12 +152,6 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnInputBackendChanged(string value)
     {
         _configuration.InputBackend = value;
-        _configService.SaveEmulatorConfiguration(_configuration);
-    }
-
-    partial void OnCpuBackendChanged(string value)
-    {
-        _configuration.CpuBackend = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
 
@@ -228,7 +214,13 @@ public partial class SettingsViewModel : ViewModelBase
         _configuration.Force32BitStackOps = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
-    
+
+    partial void OnForceInterpreterModeChanged(bool value)
+    {
+        _configuration.ForceInterpreterMode = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+
     partial void OnEnableOpenTelemetryChanged(bool value)
     {
         _configuration.EnableOpenTelemetry = value;
