@@ -106,7 +106,7 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Initializes a new instance of the <see cref="JitCpu"/> class with default configuration.
 	/// </summary>
-	public JitCpu(VirtualMemory mem, ILogger? logger = null) : this(mem, logger, DecoderOptions.None, false, DEFAULT_IMAGE_BASE, DEFAULT_STACK_LIMIT, DEFAULT_STACK_BASE, 32, true, false, null)
+	public JitCpu(VirtualMemory mem) : this(mem, null, null)
 	{
 	}
 
@@ -131,7 +131,7 @@ public class JitCpu : IAsyncCpu
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode. Defaults to true.</param>
 	/// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation). Defaults to false.</param>
 	/// <param name="cacheDirectory">Optional custom cache directory for JIT compilation. If null, uses default cache directory.</param>
-	public JitCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true, bool forceInterpreterMode = false, string? cacheDirectory = null)
+	public JitCpu(VirtualMemory mem, ILogger? logger, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true, bool forceInterpreterMode = false, string? cacheDirectory = null)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
