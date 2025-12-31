@@ -42,12 +42,13 @@ namespace Win32Emu.Win32.Modules
 		private const byte SHIFTJIS_LEAD_BYTE_RANGE2_END = 0xFC;
 		
 		// Random number generator state (thread-specific in real MSVCRT, but we use a simple global)
-		private uint _randomSeed = 1;
+		// Initialized with a proper random seed based on current time
+		private uint _randomSeed;
 		
-		// Timezone variables (matching Wine/ReactOS implementation)
-		private int _daylight = 1;
-		private int _timezone = 28800; // PST offset in seconds
-		private int _dstbias = -3600;  // DST bias in seconds
+		// Timezone variables - initialized from .NET environment
+		private readonly int _daylight;
+		private readonly int _timezone;
+		private readonly int _dstbias;
 		
 		/// <summary>
 		/// Stream buffering mode
@@ -76,6 +77,28 @@ namespace Win32Emu.Win32.Modules
 			_imageBase = imageBase;
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
+			
+			// Initialize random seed with a proper random value based on current time
+			// Use a combination of ticks and process-specific data for better randomness
+			_randomSeed = unchecked((uint)(DateTime.Now.Ticks ^ (DateTime.Now.Ticks >> 32)));
+			
+			// Initialize timezone variables from .NET environment
+			var tz = TimeZoneInfo.Local;
+			_daylight = tz.SupportsDaylightSavingTime ? 1 : 0;
+			_timezone = -(int)tz.BaseUtcOffset.TotalSeconds; // MSVCRT uses seconds west of UTC (negative of UTC offset)
+			
+			// Get DST bias from adjustment rules if available
+			var adjustmentRules = tz.GetAdjustmentRules();
+			if (adjustmentRules.Length > 0)
+			{
+				// Use the most recent adjustment rule
+				var latestRule = adjustmentRules[adjustmentRules.Length - 1];
+				_dstbias = -(int)latestRule.DaylightDelta.TotalSeconds; // MSVCRT uses negative value
+			}
+			else
+			{
+				_dstbias = -3600; // Default to -1 hour if no DST rules available
+			}
 		}
 
 		public string Name => "MSVCRT.DLL";
