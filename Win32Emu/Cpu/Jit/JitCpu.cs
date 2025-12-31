@@ -104,6 +104,20 @@ public class JitCpu : IAsyncCpu
 	private readonly InstructionAnalyzer? _analyzer;
 
 	/// <summary>
+	/// Initializes a new instance of the <see cref="JitCpu"/> class with default configuration.
+	/// </summary>
+	public JitCpu(VirtualMemory mem, ILogger? logger = null) : this(mem, logger, DecoderOptions.None, false, DEFAULT_IMAGE_BASE, DEFAULT_STACK_LIMIT, DEFAULT_STACK_BASE, 32, true, false, null)
+	{
+	}
+
+	/// <summary>
+	/// Creates a new JitCpu instance with a custom cache directory
+	/// </summary>
+	public JitCpu(VirtualMemory mem, ILogger? logger, string? cacheDirectory) : this(mem, logger, DecoderOptions.None, false, DEFAULT_IMAGE_BASE, DEFAULT_STACK_LIMIT, DEFAULT_STACK_BASE, 32, true, false, cacheDirectory)
+	{
+	}
+
+	/// <summary>
 	/// Initializes a new instance of the <see cref="JitCpu"/> class with full configuration options.
 	/// </summary>
 	/// <param name="mem">The virtual memory instance used by the CPU.</param>
@@ -116,7 +130,8 @@ public class JitCpu : IAsyncCpu
 	/// <param name="bitness">The CPU bitness mode (16 for real mode, 32 for protected mode). Defaults to 32-bit.</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode. Defaults to true.</param>
 	/// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation). Defaults to false.</param>
-	public JitCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true, bool forceInterpreterMode = false)
+	/// <param name="cacheDirectory">Optional custom cache directory for JIT compilation. If null, uses default cache directory.</param>
+	public JitCpu(VirtualMemory mem, ILogger? logger = null, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true, bool forceInterpreterMode = false, string? cacheDirectory = null)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
@@ -136,7 +151,7 @@ public class JitCpu : IAsyncCpu
 		// In WASM or when interpreter mode is forced, Roslyn compilation is not available/desired
 		if (!_isWasmEnvironment && !_forceInterpreterMode)
 		{
-			_rtlJitCache = new RtlJitCache(null, logger);
+			_rtlJitCache = new RtlJitCache(cacheDirectory, logger);
 			_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
 		}
 		else if (_isWasmEnvironment)
