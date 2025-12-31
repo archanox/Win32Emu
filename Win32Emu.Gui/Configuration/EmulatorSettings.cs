@@ -9,7 +9,6 @@ public class EmulatorSettings
 {
     public string RenderingBackend { get; set; } = "GLFW";
     public string InputBackend { get; set; } = "GLFW"; // SDL or GLFW
-    public string CpuBackend { get; set; } = "IcedCPU"; // IcedCPU, JitCPU, or Unicorn
     public int ResolutionScaleFactor { get; set; } = 1;
     public int ReservedMemoryMB { get; set; } = 256;
     public string WindowsVersion { get; set; } = "Windows 95";

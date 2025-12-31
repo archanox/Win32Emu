@@ -122,7 +122,6 @@ public class ConfigurationService
         {
             RenderingBackend = _settings.RenderingBackend,
             InputBackend = _settings.InputBackend,
-            CpuBackend = _settings.CpuBackend,
             ResolutionScaleFactor = _settings.ResolutionScaleFactor,
             ReservedMemoryMb = _settings.ReservedMemoryMB,
             WindowsVersion = _settings.WindowsVersion,
@@ -178,7 +177,6 @@ public class ConfigurationService
     {
         _settings.RenderingBackend = configuration.RenderingBackend;
         _settings.InputBackend = configuration.InputBackend;
-        _settings.CpuBackend = configuration.CpuBackend;
         _settings.ResolutionScaleFactor = configuration.ResolutionScaleFactor;
         _settings.ReservedMemoryMB = configuration.ReservedMemoryMb;
         _settings.WindowsVersion = configuration.WindowsVersion;
