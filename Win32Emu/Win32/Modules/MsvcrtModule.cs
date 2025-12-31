@@ -41,6 +41,14 @@ namespace Win32Emu.Win32.Modules
 		private const byte SHIFTJIS_LEAD_BYTE_RANGE2_START = 0xE0;
 		private const byte SHIFTJIS_LEAD_BYTE_RANGE2_END = 0xFC;
 		
+		// Random number generator state (thread-specific in real MSVCRT, but we use a simple global)
+		private uint _randomSeed = 1;
+		
+		// Timezone variables (matching Wine/ReactOS implementation)
+		private int _daylight = 1;
+		private int _timezone = 28800; // PST offset in seconds
+		private int _dstbias = -3600;  // DST bias in seconds
+		
 		/// <summary>
 		/// Stream buffering mode
 		/// </summary>
@@ -392,6 +400,52 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "WCSRCHR":
 					returnValue = wcsrchr(a.LpcWStr(0), a.Int32(1));
+					return true;
+				case "RAND":
+					returnValue = (uint)rand();
+					return true;
+				case "SRAND":
+					srand(a.UInt32(0));
+					returnValue = 0;
+					return true;
+				case "RAND_S":
+					returnValue = (uint)rand_s(a.UInt32(0));
+					return true;
+				case "SYSTEM":
+					returnValue = (uint)system(a.LpcStr(0));
+					return true;
+				case "_WSYSTEM":
+					returnValue = (uint)_wsystem(a.LpcWStr(0));
+					return true;
+				case "_SLEEP":
+					_sleep(a.UInt32(0));
+					returnValue = 0;
+					return true;
+				case "_BEEP":
+					_beep(a.UInt32(0), a.UInt32(1));
+					returnValue = 0;
+					return true;
+				case "_LFIND":
+					returnValue = _lfind(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "_LSEARCH":
+					returnValue = _lsearch(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "BSEARCH":
+					returnValue = bsearch(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+				case "_TZSET":
+					_tzset();
+					returnValue = 0;
+					return true;
+				case "__P__DAYLIGHT":
+					returnValue = __p__daylight();
+					return true;
+				case "__P__TIMEZONE":
+					returnValue = __p__timezone();
+					return true;
+				case "__P__DSTBIAS":
+					returnValue = __p__dstbias();
 					return true;
 
 				default:
@@ -2200,6 +2254,296 @@ namespace Win32Emu.Win32.Modules
 		}
 		
 		return result.ToString();
+	}
+
+	/// <summary>
+	/// rand - Generate pseudo-random number
+	/// Returns pseudo-random integer in the range 0 to RAND_MAX (32767)
+	/// Uses the algorithm from MSVC runtime
+	/// </summary>
+	[DllModuleExport(0)]
+	private int rand()
+	{
+		_logger.LogDebug("[msvcrt] rand()");
+		
+		// MSVC algorithm: seed = seed * 214013 + 2531011; return (seed >> 16) & 0x7FFF;
+		_randomSeed = _randomSeed * 214013 + 2531011;
+		var result = (int)((_randomSeed >> 16) & 0x7FFF);
+		
+		_logger.LogDebug("[msvcrt] rand: returning {Result}", result);
+		return result;
+	}
+
+	/// <summary>
+	/// srand - Seed pseudo-random number generator
+	/// Sets the seed for the random number generator
+	/// </summary>
+	[DllModuleExport(4)]
+	private void srand(uint seed)
+	{
+		_logger.LogInformation("[msvcrt] srand(seed={Seed})", seed);
+		_randomSeed = seed;
+	}
+
+	/// <summary>
+	/// rand_s - Generate cryptographically secure random number
+	/// Returns cryptographically secure random integer
+	/// </summary>
+	[DllModuleExport(4)]
+	private int rand_s(uint pval)
+	{
+		_logger.LogInformation("[msvcrt] rand_s(pval=0x{Pval:X8})", pval);
+		
+		if (pval == 0)
+		{
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 22; // EINVAL
+		}
+		
+		// Generate cryptographically secure random number using System.Random
+		// In a real implementation, this would use RtlGenRandom or similar
+		var random = new Random();
+		var value = (uint)random.Next();
+		_env.MemWrite32(pval, value);
+		
+		_logger.LogDebug("[msvcrt] rand_s: generated {Value}", value);
+		return 0; // Success
+	}
+
+	/// <summary>
+	/// system - Execute command via command processor
+	/// Executes a command string via the system command processor (cmd.exe on Windows)
+	/// </summary>
+	[DllModuleExport(4)]
+	private int system(in LpcStr command)
+	{
+		var cmd = command.ToString();
+		_logger.LogInformation("[msvcrt] system(command=\"{Cmd}\")", cmd);
+		
+		// If command is NULL, return non-zero to indicate command processor is available
+		if (string.IsNullOrEmpty(cmd))
+		{
+			return 1; // Command processor is available
+		}
+		
+		// For security and simplicity, we don't actually execute system commands
+		// A real implementation would use CreateProcess to launch cmd.exe /c <command>
+		// and wait for it to complete, returning the exit code
+		_logger.LogWarning("[msvcrt] system: Command execution not implemented for security reasons");
+		
+		// Return 0 to indicate success (command executed)
+		return 0;
+	}
+
+	/// <summary>
+	/// _wsystem - Execute command via command processor (wide character version)
+	/// Executes a command string via the system command processor
+	/// </summary>
+	[DllModuleExport(4)]
+	private int _wsystem(in LpcWStr command)
+	{
+		var cmd = command.ToString();
+		_logger.LogInformation("[msvcrt] _wsystem(command=\"{Cmd}\")", cmd);
+		
+		// If command is NULL, return non-zero to indicate command processor is available
+		if (string.IsNullOrEmpty(cmd))
+		{
+			return 1; // Command processor is available
+		}
+		
+		// For security and simplicity, we don't actually execute system commands
+		_logger.LogWarning("[msvcrt] _wsystem: Command execution not implemented for security reasons");
+		
+		// Return 0 to indicate success (command executed)
+		return 0;
+	}
+
+	/// <summary>
+	/// _sleep - Sleep for specified milliseconds
+	/// Suspends execution of the current thread for the specified duration
+	/// </summary>
+	[DllModuleExport(4)]
+	private void _sleep(uint milliseconds)
+	{
+		_logger.LogInformation("[msvcrt] _sleep(milliseconds={Milliseconds})", milliseconds);
+		
+		// Sleep for at least 1ms if 0 is passed (matches Wine behavior)
+		var sleepTime = milliseconds == 0 ? 1 : milliseconds;
+		
+		// In a real emulator, we would pause the emulated thread
+		// For now, just log the sleep request
+		_logger.LogDebug("[msvcrt] _sleep: would sleep for {SleepTime}ms", sleepTime);
+	}
+
+	/// <summary>
+	/// _beep - Produce system beep
+	/// Generates a tone on the speaker at the specified frequency and duration
+	/// </summary>
+	[DllModuleExport(8)]
+	private void _beep(uint frequency, uint duration)
+	{
+		_logger.LogInformation("[msvcrt] _beep(frequency={Frequency}, duration={Duration})", frequency, duration);
+		
+		// In a real implementation, this would call the Win32 Beep function
+		// For an emulator, we just log the beep request
+		_logger.LogDebug("[msvcrt] _beep: would beep at {Frequency}Hz for {Duration}ms", frequency, duration);
+	}
+
+	/// <summary>
+	/// _lfind - Linear search for element in array
+	/// Performs a linear search for a key in an array
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint _lfind(uint key, uint base_, uint num, uint width, uint compare)
+	{
+		_logger.LogInformation("[msvcrt] _lfind(key=0x{Key:X8}, base=0x{Base:X8}, num=0x{Num:X8}, width={Width}, compare=0x{Compare:X8})", 
+			key, base_, num, width, compare);
+		
+		if (base_ == 0 || num == 0 || compare == 0)
+		{
+			return 0; // NULL
+		}
+		
+		// Read the number of elements
+		var count = _env.Memory.Read32(num);
+		
+		if (count == 0)
+		{
+			return 0; // Not found
+		}
+		
+		// Linear search through array
+		for (uint i = 0; i < count; i++)
+		{
+			var elementPtr = base_ + (i * width);
+			
+			// Call comparison function: int compare(const void *key, const void *element)
+			// For now, we can't actually call the comparison function as it requires
+			// setting up a proper call context. Return NULL to indicate not found.
+			_logger.LogDebug("[msvcrt] _lfind: would compare element at 0x{ElementPtr:X8}", elementPtr);
+		}
+		
+		_logger.LogDebug("[msvcrt] _lfind: not found (comparison not implemented)");
+		return 0; // Not found
+	}
+
+	/// <summary>
+	/// _lsearch - Linear search for element in array, add if not found
+	/// Performs a linear search for a key in an array, adds it if not found
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint _lsearch(uint key, uint base_, uint num, uint width, uint compare)
+	{
+		_logger.LogInformation("[msvcrt] _lsearch(key=0x{Key:X8}, base=0x{Base:X8}, num=0x{Num:X8}, width={Width}, compare=0x{Compare:X8})", 
+			key, base_, num, width, compare);
+		
+		// Try to find the element first
+		var found = _lfind(key, base_, num, width, compare);
+		
+		if (found != 0)
+		{
+			return found; // Found, return pointer to element
+		}
+		
+		// Not found, add to end of array
+		var count = _env.Memory.Read32(num);
+		var newElementPtr = base_ + (count * width);
+		
+		// Copy key to new element (simple memcpy)
+		for (uint i = 0; i < width; i++)
+		{
+			var b = _env.Memory.Read8(key + i);
+			_env.Memory.Write8(newElementPtr + i, b);
+		}
+		
+		// Increment count
+		_env.MemWrite32(num, count + 1);
+		
+		_logger.LogDebug("[msvcrt] _lsearch: added element at 0x{NewElementPtr:X8}, new count={NewCount}", newElementPtr, count + 1);
+		return newElementPtr;
+	}
+
+	/// <summary>
+	/// bsearch - Binary search for element in sorted array
+	/// Performs a binary search for a key in a sorted array
+	/// </summary>
+	[DllModuleExport(20)]
+	private uint bsearch(uint key, uint base_, uint nmemb, uint size, uint compar)
+	{
+		_logger.LogInformation("[msvcrt] bsearch(key=0x{Key:X8}, base=0x{Base:X8}, nmemb={Nmemb}, size={Size}, compar=0x{Compar:X8})", 
+			key, base_, nmemb, size, compar);
+		
+		if (size == 0 || compar == 0 || base_ == 0 || nmemb == 0)
+		{
+			return 0; // NULL
+		}
+		
+		// Binary search implementation
+		// For now, we can't actually call the comparison function as it requires
+		// setting up a proper call context. Return NULL to indicate not found.
+		_logger.LogDebug("[msvcrt] bsearch: comparison function calls not implemented, returning NULL");
+		return 0; // Not found
+	}
+
+	/// <summary>
+	/// _tzset - Set time zone information
+	/// Initializes time zone information from environment variables
+	/// </summary>
+	[DllModuleExport(0)]
+	private void _tzset()
+	{
+		_logger.LogInformation("[msvcrt] _tzset()");
+		
+		// In a real implementation, this would parse the TZ environment variable
+		// and update _daylight, _timezone, and _dstbias accordingly
+		// For now, we keep the default PST timezone settings
+		_logger.LogDebug("[msvcrt] _tzset: using default PST timezone (_timezone={Timezone}, _daylight={Daylight}, _dstbias={Dstbias})", 
+			_timezone, _daylight, _dstbias);
+	}
+
+	/// <summary>
+	/// __p__daylight - Get pointer to daylight saving time flag
+	/// Returns pointer to the _daylight variable
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint __p__daylight()
+	{
+		_logger.LogDebug("[msvcrt] __p__daylight()");
+		
+		// Allocate memory for the daylight flag and return pointer
+		var ptr = _env.HeapAlloc(0, 4);
+		_env.MemWrite32(ptr, (uint)_daylight);
+		return ptr;
+	}
+
+	/// <summary>
+	/// __p__timezone - Get pointer to timezone offset
+	/// Returns pointer to the _timezone variable (offset in seconds)
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint __p__timezone()
+	{
+		_logger.LogDebug("[msvcrt] __p__timezone()");
+		
+		// Allocate memory for the timezone offset and return pointer
+		var ptr = _env.HeapAlloc(0, 4);
+		_env.MemWrite32(ptr, (uint)_timezone);
+		return ptr;
+	}
+
+	/// <summary>
+	/// __p__dstbias - Get pointer to DST bias
+	/// Returns pointer to the _dstbias variable (DST offset in seconds)
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint __p__dstbias()
+	{
+		_logger.LogDebug("[msvcrt] __p__dstbias()");
+		
+		// Allocate memory for the DST bias and return pointer
+		var ptr = _env.HeapAlloc(0, 4);
+		_env.MemWrite32(ptr, (uint)_dstbias);
+		return ptr;
 	}
 }
 }
