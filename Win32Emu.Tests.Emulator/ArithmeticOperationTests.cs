@@ -47,7 +47,8 @@ public class ArithmeticOperationTests
         var vm = new VirtualMemory(MEMORY_SIZE);
         var cpu = new IcedCpu(vm, NullLogger<IcedCpu>.Instance, Iced.Intel.DecoderOptions.None, false, CODE_BASE_ADDRESS, STACK_LIMIT, STACK_BASE);
         
-        // Set up: EAX = file size (1MB = 0x100000)
+        // Set up: EIP at code base address and EAX = file size (1MB = 0x100000)
+        cpu.SetEip(CODE_BASE_ADDRESS);
         cpu.SetRegister("EAX", TEST_FILE_SIZE);
         
         // Emulate: ADD EAX, 0xFFFF
