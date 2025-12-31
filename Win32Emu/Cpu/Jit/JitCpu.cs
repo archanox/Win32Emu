@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
 using Win32Emu.Rtl;
 using Iced.Intel;
+using Win32Emu.Cpu.Iced;
 
 namespace Win32Emu.Cpu.Jit;
 
@@ -100,7 +101,7 @@ public class JitCpu : IAsyncCpu
 	private readonly bool _forceInterpreterMode;
 	
 	// Instruction analyzer for debugging support
-	private readonly Iced.InstructionAnalyzer? _analyzer;
+	private readonly InstructionAnalyzer? _analyzer;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="JitCpu"/> class with full configuration options.
@@ -108,7 +109,7 @@ public class JitCpu : IAsyncCpu
 	/// <param name="mem">The virtual memory instance used by the CPU.</param>
 	/// <param name="logger">Optional logger for CPU events and diagnostics.</param>
 	/// <param name="decoderOptions">Options for the instruction decoder.</param>
-	/// <param name="enableInstructionAnalyzer">Whether to enable instruction analysis for debugging (currently unused in JitCpu).</param>
+	/// <param name="enableInstructionAnalyzer">Whether to enable instruction analysis using <see cref="InstructionAnalyzer"/> for additional debugging and diagnostics.</param>
 	/// <param name="imageBase">The image base address for the emulated executable.</param>
 	/// <param name="stackLimit">The lower bound of the stack region.</param>
 	/// <param name="stackBase">The upper bound of the stack region.</param>
@@ -142,7 +143,7 @@ public class JitCpu : IAsyncCpu
 		{
 			_logger.LogInformation("[JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode");
 		}
-		else if (_forceInterpreterMode)
+		else // _forceInterpreterMode is true
 		{
 			_logger.LogInformation("[JitCpu] Interpreter mode forced - JIT compilation disabled");
 		}
@@ -150,7 +151,7 @@ public class JitCpu : IAsyncCpu
 		// Initialize instruction analyzer if requested
 		if (enableInstructionAnalyzer)
 		{
-			_analyzer = new Iced.InstructionAnalyzer(logger);
+			_analyzer = new InstructionAnalyzer(logger);
 			_logger.LogInformation("[JitCpu] Instruction analyzer enabled");
 		}
 	}
@@ -247,7 +248,7 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Gets the instruction analyzer instance if enabled, otherwise null
 	/// </summary>
-	public Iced.InstructionAnalyzer? GetInstructionAnalyzer() => _analyzer;
+	public InstructionAnalyzer? GetInstructionAnalyzer() => _analyzer;
 
 	/// <summary>
 	/// Formats an instruction to a human-readable string for debugging
@@ -265,7 +266,7 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Gets detailed analysis of an instruction including read/written registers and memory
 	/// </summary>
-	public Iced.InstructionAnalysis AnalyzeInstruction(in Instruction insn)
+	public InstructionAnalysis AnalyzeInstruction(in Instruction insn)
 	{
 		if (_analyzer == null)
 		{
