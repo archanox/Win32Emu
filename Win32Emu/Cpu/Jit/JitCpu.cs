@@ -98,6 +98,9 @@ public class JitCpu : IAsyncCpu
 	
 	// Force interpreter mode - allows disabling JIT compilation even on native platforms
 	private readonly bool _forceInterpreterMode;
+	
+	// Instruction analyzer for debugging support
+	private readonly Iced.InstructionAnalyzer? _analyzer;
 
 	/// <summary>
 	/// Initializes a new instance of the <see cref="JitCpu"/> class with full configuration options.
@@ -144,11 +147,11 @@ public class JitCpu : IAsyncCpu
 			_logger.LogInformation("[JitCpu] Interpreter mode forced - JIT compilation disabled");
 		}
 		
-		// Note: enableInstructionAnalyzer parameter is accepted for compatibility with IcedCpu
-		// but instruction analysis is not yet implemented in JitCpu
+		// Initialize instruction analyzer if requested
 		if (enableInstructionAnalyzer)
 		{
-			_logger.LogWarning("[JitCpu] Instruction analyzer requested but not yet implemented in JitCpu");
+			_analyzer = new Iced.InstructionAnalyzer(logger);
+			_logger.LogInformation("[JitCpu] Instruction analyzer enabled");
 		}
 	}
 
@@ -239,6 +242,37 @@ public class JitCpu : IAsyncCpu
 	{
 		var result = InterpretSingleInstruction(mem);
 		return Task.FromResult(result);
+	}
+
+	/// <summary>
+	/// Gets the instruction analyzer instance if enabled, otherwise null
+	/// </summary>
+	public Iced.InstructionAnalyzer? GetInstructionAnalyzer() => _analyzer;
+
+	/// <summary>
+	/// Formats an instruction to a human-readable string for debugging
+	/// </summary>
+	public string FormatInstruction(in Instruction insn)
+	{
+		if (_analyzer == null)
+		{
+			throw new InvalidOperationException("Instruction analyzer is not enabled. Enable it in the constructor.");
+		}
+
+		return _analyzer.FormatInstructionWithAddress(insn);
+	}
+
+	/// <summary>
+	/// Gets detailed analysis of an instruction including read/written registers and memory
+	/// </summary>
+	public Iced.InstructionAnalysis AnalyzeInstruction(in Instruction insn)
+	{
+		if (_analyzer == null)
+		{
+			throw new InvalidOperationException("Instruction analyzer is not enabled. Enable it in the constructor.");
+		}
+
+		return _analyzer.AnalyzeInstruction(insn);
 	}
 
 	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)

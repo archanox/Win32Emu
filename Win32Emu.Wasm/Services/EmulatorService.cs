@@ -231,11 +231,12 @@ public class EmulatorService : IDisposable
 			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps);
 			
 			// Load cache if enabled - JitCpu uses RTL-based cache
-			// Note: Cache loading not yet implemented for WASM JitCpu
+			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
+			// Therefore, cache loading is not applicable - all instructions are interpreted on-demand
 			if (useCache)
 			{
-				_logger.LogInformation("Cache loading is not yet fully implemented for WASM JitCpu");
-				EmitDebugOutput("[Cache] RTL-based JIT cache loading not yet implemented for WASM");
+				_logger.LogInformation("[WASM] JitCpu runs in interpreter mode - cache loading not needed");
+				EmitDebugOutput("[Cache] JitCpu uses interpreter mode in WASM - no cache needed");
 			}
 			
 			_loadedExecutableName = fileName;
