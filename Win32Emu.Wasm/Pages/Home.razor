@@ -754,7 +754,7 @@
 			// Load the executable using the real emulator
 			AddDebugOutput($"Loading PE executable: {_loadedFileName}");
 			AddDebugOutput($"SIMD: {EmulatorService.GetSimdCapabilities()}");
-			AddDebugOutput($"CPU Backend: {(_useJitCpu ? "JitCpu" : "IcedCpu")}");
+			AddDebugOutput($"CPU Backend: Unified JitCpu (Interpreter mode in WASM)");
 			AddDebugOutput($"Cache: {(_useCache ? "Enabled" : "Disabled")}");
 			
 			var loadSuccess = await EmulatorService.LoadExecutableAsync(
@@ -762,7 +762,6 @@
 				_loadedFileName,
 				_folderMode ? _loadedFiles : null,
 				_force32BitStackOps,
-				_useJitCpu,
 				_useCache);
 			
 			if (!loadSuccess)

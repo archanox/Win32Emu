@@ -227,63 +227,15 @@ public class EmulatorService : IDisposable
 			
 			// Load the executable from bytes using the Emulator's built-in method
 			// with the browser VFS for file operations
-			// Note: useJitCpu is supported in WASM but will run in interpreter mode
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, useJitCpu);
+			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps);
 			
-			// Load cache if enabled and IcedCpu is being used
-			if (useCache && !useJitCpu && _emulator.Cpu is Win32Emu.Cpu.Iced.IcedCpu icedCpu)
+			// Load cache if enabled - JitCpu uses RTL-based cache
+			// Note: Cache loading not yet implemented for WASM JitCpu
+			if (useCache)
 			{
-				try
-				{
-					// Try to load cache from wwwroot/cache directory
-					var cacheFileName = $"{System.IO.Path.GetFileNameWithoutExtension(fileName)}.wasm-cache.json";
-					var cacheUrl = $"cache/{cacheFileName}";
-					
-					_logger.LogInformation("Attempting to load pre-compiled cache: {CacheUrl}", cacheUrl);
-					EmitDebugOutput($"[Cache] Attempting to load pre-compiled cache: {cacheUrl}");
-					
-					// Use HttpClient to fetch the cache file from wwwroot
-					// Use relative URL to respect the <base href> tag in index.html
-					// This ensures the cache is loaded from the correct path on GitHub Pages
-					using var httpClient = new System.Net.Http.HttpClient();
-					var response = await httpClient.GetAsync(cacheUrl);
-					
-					if (response.IsSuccessStatusCode)
-					{
-						var cacheJson = await response.Content.ReadAsStringAsync();
-						
-						if (!string.IsNullOrEmpty(cacheJson))
-						{
-							// Load cache directly from JSON (no file I/O needed in WASM)
-							await icedCpu.LoadCacheFromJsonAsync(cacheJson, _logger);
-							_logger.LogInformation("Pre-compiled cache loaded successfully: {CacheFileName}", cacheFileName);
-							EmitDebugOutput($"[Cache] ✓ Pre-compiled cache loaded successfully: {cacheFileName}");
-						}
-						else
-						{
-							EmitDebugOutput($"[Cache] Cache file was empty: {cacheUrl}");
-						}
-					}
-					else
-					{
-						_logger.LogInformation("No pre-compiled cache file found: {CacheUrl} (HTTP {StatusCode})", cacheUrl, response.StatusCode);
-						EmitDebugOutput($"[Cache] No pre-compiled cache file found: {cacheUrl} (HTTP {response.StatusCode})");
-					}
-				}
-				catch (Exception cacheEx)
-				{
-					// Don't fail if cache loading fails - just log it
-					_logger.LogWarning(cacheEx, "Failed to load pre-compiled cache for {FileName}", fileName);
-					EmitDebugOutput($"[Cache] ⚠ Cache loading failed (non-fatal): {cacheEx.Message}");
-				}
-			}
-			else if (useCache && useJitCpu)
-			{
-				EmitDebugOutput($"[Cache] Pre-compiled cache is not supported with JIT CPU");
-			}
-			else if (!useCache)
-			{
-				EmitDebugOutput($"[Cache] Cache loading is disabled (useCache=false)");
+				_logger.LogInformation("Cache loading is not yet fully implemented for WASM JitCpu");
+				EmitDebugOutput("[Cache] RTL-based JIT cache loading not yet implemented for WASM");
 			}
 			
 			_loadedExecutableName = fileName;
