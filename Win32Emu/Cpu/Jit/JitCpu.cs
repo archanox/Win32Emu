@@ -56,7 +56,14 @@ public class JitCpu : IAsyncCpu
 	// WASM environment detection - JIT compilation not available in WASM
 	private readonly bool _isWasmEnvironment;
 
-	public JitCpu(VirtualMemory mem, ILogger? logger = null)
+	public JitCpu(VirtualMemory mem, ILogger? logger = null) : this(mem, logger, null)
+	{
+	}
+	
+	/// <summary>
+	/// Creates a new JitCpu instance with a custom cache directory
+	/// </summary>
+	public JitCpu(VirtualMemory mem, ILogger? logger, string? cacheDirectory)
 	{
 		_mem = mem;
 		_logger = logger ?? NullLogger.Instance;
@@ -70,27 +77,12 @@ public class JitCpu : IAsyncCpu
 		// In WASM, Roslyn compilation is not available, so we fall back to interpretation
 		if (!_isWasmEnvironment)
 		{
-			_rtlJitCache = new RtlJitCache(null, logger);
+			_rtlJitCache = new RtlJitCache(cacheDirectory, logger);
 			_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
 		}
 		else
 		{
 			_logger.LogInformation("[JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode");
-		}
-	}
-	
-	/// <summary>
-	/// Creates a new JitCpu instance with a custom cache directory
-	/// </summary>
-	public JitCpu(VirtualMemory mem, ILogger? logger, string cacheDirectory) : this(mem, logger)
-	{
-		// Replace the default cache with one using the custom directory
-		// Only if not in WASM environment (JIT cache not available in WASM)
-		if (!_isWasmEnvironment && _rtlJitCache != null)
-		{
-			// Note: We cannot reassign readonly field here, so this constructor
-			// should only be used when creating a new instance
-			_logger.LogWarning("[JitCpu] Custom cache directory specified but already initialized. Create new instance instead.");
 		}
 	}
 
