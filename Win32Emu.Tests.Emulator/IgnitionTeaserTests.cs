@@ -99,7 +99,7 @@ public class IgnitionTeaserTests
             using var emulator = new Win32Emu.Emulator(testHost, logger);
             
             _output.WriteLine("Loading executable with JitCpu backend...");
-            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256, useJitCpu: true);
+            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256);
             
             _output.WriteLine("Starting emulation with debug mode and JitCpu...");
             _output.WriteLine("");
@@ -271,7 +271,7 @@ public class IgnitionTeaserTests
             using var emulator = new Win32Emu.Emulator(testHost, logger);
             
             _output.WriteLine("Loading executable with IcedCpu backend (Software renderer)...");
-            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256, useJitCpu: false);
+            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256);
             
             _output.WriteLine("Starting emulation with debug mode and IcedCpu...");
             _output.WriteLine("");
@@ -434,7 +434,7 @@ public class IgnitionTeaserTests
         {
             using var emulator = new Win32Emu.Emulator(testHost, logger);
             
-            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256, useJitCpu: true);
+            emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256);
             
             var cancellationTokenSource = new CancellationTokenSource();
             cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(10));

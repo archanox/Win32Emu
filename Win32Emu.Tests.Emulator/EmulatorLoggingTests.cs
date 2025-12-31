@@ -110,7 +110,7 @@ public class EmulatorLoggingTests
 
         // Act
         using var emulator = new Win32Emu.Emulator(logger: logger);
-        emulator.LoadExecutable(exePath, debugMode: false, reservedMemoryMb: 256, useJitCpu: true);
+        emulator.LoadExecutable(exePath, debugMode: false, reservedMemoryMb: 256);
 
         // Assert
         _output.WriteLine("=== Captured Log Messages ===");
