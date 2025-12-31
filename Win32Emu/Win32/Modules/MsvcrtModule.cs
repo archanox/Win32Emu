@@ -447,6 +447,55 @@ namespace Win32Emu.Win32.Modules
 				case "__P__DSTBIAS":
 					returnValue = __p__dstbias();
 					return true;
+				case "_STRLWR":
+					returnValue = _strlwr(a.UInt32(0));
+					return true;
+				case "_STRUPR":
+					returnValue = _strupr(a.UInt32(0));
+					return true;
+				case "_STRSET":
+					returnValue = _strset(a.UInt32(0), a.Int32(1));
+					return true;
+				case "_STRNSET":
+					returnValue = _strnset(a.UInt32(0), a.Int32(1), a.UInt32(2));
+					return true;
+				case "_LTOA":
+					returnValue = _ltoa(a.Int32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "_ULTOA":
+					returnValue = _ultoa(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					return true;
+				case "_I64TOA":
+					{
+						// Read 64-bit value as two 32-bit values (low, high)
+						var low = a.UInt32(0);
+						var high = a.UInt32(1);
+						var value = ((long)high << 32) | low;
+						returnValue = _i64toa(value, a.UInt32(2), a.Int32(3));
+					}
+					return true;
+				case "_UI64TOA":
+					{
+						// Read 64-bit value as two 32-bit values (low, high)
+						var low = a.UInt32(0);
+						var high = a.UInt32(1);
+						var value = ((ulong)high << 32) | low;
+						returnValue = _ui64toa(value, a.UInt32(2), a.Int32(3));
+					}
+					return true;
+				case "_WCSLWR":
+					returnValue = _wcslwr(a.UInt32(0));
+					return true;
+				case "_WCSUPR":
+					returnValue = _wcsupr(a.UInt32(0));
+					return true;
+				case "STRTOK":
+					returnValue = strtok(a.UInt32(0), a.LpcStr(1));
+					return true;
+				case "_SWAB":
+					_swab(a.UInt32(0), a.UInt32(1), a.Int32(2));
+					returnValue = 0;
+					return true;
 
 				default:
 					_logger.LogInformation("[msvcrt] Unimplemented export: {Export}", export);
@@ -2544,6 +2593,430 @@ namespace Win32Emu.Win32.Modules
 		var ptr = _env.HeapAlloc(0, 4);
 		_env.MemWrite32(ptr, (uint)_dstbias);
 		return ptr;
+	}
+
+	/// <summary>
+	/// _strlwr - Convert string to lowercase
+	/// Converts all uppercase characters in a string to lowercase in-place
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _strlwr(uint str)
+	{
+		_logger.LogInformation("[msvcrt] _strlwr(str=0x{Str:X8})", str);
+		
+		if (str == 0)
+		{
+			return 0; // NULL pointer
+		}
+		
+		var s = _env.ReadAnsiString(str);
+		if (string.IsNullOrEmpty(s))
+		{
+			return str;
+		}
+		
+		var lowered = s.ToLowerInvariant();
+		_env.WriteAnsiStringAt(str, lowered);
+		
+		return str;
+	}
+
+	/// <summary>
+	/// _strupr - Convert string to uppercase
+	/// Converts all lowercase characters in a string to uppercase in-place
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _strupr(uint str)
+	{
+		_logger.LogInformation("[msvcrt] _strupr(str=0x{Str:X8})", str);
+		
+		if (str == 0)
+		{
+			return 0; // NULL pointer
+		}
+		
+		var s = _env.ReadAnsiString(str);
+		if (string.IsNullOrEmpty(s))
+		{
+			return str;
+		}
+		
+		var uppered = s.ToUpperInvariant();
+		_env.WriteAnsiStringAt(str, uppered);
+		
+		return str;
+	}
+
+	/// <summary>
+	/// _strset - Set all characters in string to a value
+	/// Sets all characters in a string (except the null terminator) to the specified character
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint _strset(uint str, int value)
+	{
+		_logger.LogInformation("[msvcrt] _strset(str=0x{Str:X8}, value={Value})", str, value);
+		
+		if (str == 0)
+		{
+			return 0; // NULL pointer
+		}
+		
+		var s = _env.ReadAnsiString(str);
+		if (string.IsNullOrEmpty(s))
+		{
+			return str;
+		}
+		
+		var ch = (char)(byte)value;
+		var result = new string(ch, s.Length);
+		_env.WriteAnsiStringAt(str, result);
+		
+		return str;
+	}
+
+	/// <summary>
+	/// _strnset - Set first n characters in string to a value
+	/// Sets the first n characters in a string to the specified character
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint _strnset(uint str, int value, uint count)
+	{
+		_logger.LogInformation("[msvcrt] _strnset(str=0x{Str:X8}, value={Value}, count={Count})", str, value, count);
+		
+		if (str == 0)
+		{
+			return 0; // NULL pointer
+		}
+		
+		var s = _env.ReadAnsiString(str);
+		if (string.IsNullOrEmpty(s))
+		{
+			return str;
+		}
+		
+		var ch = (char)(byte)value;
+		var setCount = (int)Math.Min(count, (uint)s.Length);
+		var result = new string(ch, setCount) + s.Substring(setCount);
+		_env.WriteAnsiStringAt(str, result);
+		
+		return str;
+	}
+
+	/// <summary>
+	/// _ltoa - Convert long integer to string
+	/// Converts a long integer value to a string representation in the specified radix
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint _ltoa(int value, uint buffer, int radix)
+	{
+		_logger.LogInformation("[msvcrt] _ltoa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
+		
+		if (buffer == 0)
+		{
+			return 0; // NULL buffer
+		}
+		
+		string result;
+		if (radix == 10)
+		{
+			result = value.ToString();
+		}
+		else if (radix == 16)
+		{
+			result = value < 0 ? "-" + ((uint)(-value)).ToString("x") : ((uint)value).ToString("x");
+		}
+		else if (radix == 8)
+		{
+			result = Convert.ToString(value < 0 ? (uint)value : (uint)value, 8);
+		}
+		else if (radix == 2)
+		{
+			result = Convert.ToString(value < 0 ? (uint)value : (uint)value, 2);
+		}
+		else
+		{
+			// Unsupported radix, default to decimal
+			result = value.ToString();
+		}
+		
+		_env.WriteAnsiStringAt(buffer, result + '\0');
+		return buffer;
+	}
+
+	/// <summary>
+	/// _ultoa - Convert unsigned long integer to string
+	/// Converts an unsigned long integer value to a string representation in the specified radix
+	/// </summary>
+	[DllModuleExport(12)]
+	private uint _ultoa(uint value, uint buffer, int radix)
+	{
+		_logger.LogInformation("[msvcrt] _ultoa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
+		
+		if (buffer == 0)
+		{
+			return 0; // NULL buffer
+		}
+		
+		string result;
+		if (radix == 10)
+		{
+			result = value.ToString();
+		}
+		else if (radix == 16)
+		{
+			result = value.ToString("x");
+		}
+		else if (radix == 8)
+		{
+			result = Convert.ToString(value, 8);
+		}
+		else if (radix == 2)
+		{
+			result = Convert.ToString(value, 2);
+		}
+		else
+		{
+			// Unsupported radix, default to decimal
+			result = value.ToString();
+		}
+		
+		_env.WriteAnsiStringAt(buffer, result + '\0');
+		return buffer;
+	}
+
+	/// <summary>
+	/// _i64toa - Convert 64-bit integer to string
+	/// Converts a 64-bit integer value to a string representation in the specified radix
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint _i64toa(long value, uint buffer, int radix)
+	{
+		_logger.LogInformation("[msvcrt] _i64toa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
+		
+		if (buffer == 0)
+		{
+			return 0; // NULL buffer
+		}
+		
+		string result;
+		if (radix == 10)
+		{
+			result = value.ToString();
+		}
+		else if (radix == 16)
+		{
+			result = value < 0 ? "-" + ((ulong)(-value)).ToString("x") : ((ulong)value).ToString("x");
+		}
+		else if (radix == 8)
+		{
+			result = Convert.ToString(value < 0 ? (long)(ulong)value : value, 8);
+		}
+		else if (radix == 2)
+		{
+			result = Convert.ToString(value < 0 ? (long)(ulong)value : value, 2);
+		}
+		else
+		{
+			// Unsupported radix, default to decimal
+			result = value.ToString();
+		}
+		
+		_env.WriteAnsiStringAt(buffer, result + '\0');
+		return buffer;
+	}
+
+	/// <summary>
+	/// _ui64toa - Convert unsigned 64-bit integer to string
+	/// Converts an unsigned 64-bit integer value to a string representation in the specified radix
+	/// </summary>
+	[DllModuleExport(16)]
+	private uint _ui64toa(ulong value, uint buffer, int radix)
+	{
+		_logger.LogInformation("[msvcrt] _ui64toa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
+		
+		if (buffer == 0)
+		{
+			return 0; // NULL buffer
+		}
+		
+		string result;
+		if (radix == 10)
+		{
+			result = value.ToString();
+		}
+		else if (radix == 16)
+		{
+			result = value.ToString("x");
+		}
+		else if (radix == 8)
+		{
+			result = Convert.ToString((long)value, 8);
+		}
+		else if (radix == 2)
+		{
+			result = Convert.ToString((long)value, 2);
+		}
+		else
+		{
+			// Unsupported radix, default to decimal
+			result = value.ToString();
+		}
+		
+		_env.WriteAnsiStringAt(buffer, result + '\0');
+		return buffer;
+	}
+
+	/// <summary>
+	/// _wcslwr - Convert wide string to lowercase
+	/// Converts all uppercase characters in a wide string to lowercase in-place
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _wcslwr(uint str)
+	{
+		_logger.LogInformation("[msvcrt] _wcslwr(str=0x{Str:X8})", str);
+		
+		if (str == 0)
+		{
+			return 0; // NULL pointer
+		}
+		
+		var s = _env.ReadUnicodeString(str);
+		if (string.IsNullOrEmpty(s))
+		{
+			return str;
+		}
+		
+		var lowered = s.ToLowerInvariant();
+		
+		// Write wide string back to memory manually
+		var bytes = Encoding.Unicode.GetBytes(lowered + '\0');
+		_env.Memory.WriteBytes(str, bytes);
+		
+		return str;
+	}
+
+	/// <summary>
+	/// _wcsupr - Convert wide string to uppercase
+	/// Converts all lowercase characters in a wide string to uppercase in-place
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint _wcsupr(uint str)
+	{
+		_logger.LogInformation("[msvcrt] _wcsupr(str=0x{Str:X8})", str);
+		
+		if (str == 0)
+		{
+			return 0; // NULL pointer
+		}
+		
+		var s = _env.ReadUnicodeString(str);
+		if (string.IsNullOrEmpty(s))
+		{
+			return str;
+		}
+		
+		var uppered = s.ToUpperInvariant();
+		
+		// Write wide string back to memory manually
+		var bytes = Encoding.Unicode.GetBytes(uppered + '\0');
+		_env.Memory.WriteBytes(str, bytes);
+		
+		return str;
+	}
+
+	// Static storage for strtok state (not thread-safe, matches MSVC behavior)
+	private uint _strtokLastPtr = 0;
+
+	/// <summary>
+	/// strtok - Tokenize string using delimiters
+	/// Finds the next token in a string, using delimiters to separate tokens
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint strtok(uint str, in LpcStr delim)
+	{
+		var delimStr = delim.ToString() ?? string.Empty;
+		_logger.LogInformation("[msvcrt] strtok(str=0x{Str:X8}, delim=\"{Delim}\")", str, delimStr);
+		
+		if (delimStr.Length == 0)
+		{
+			return 0; // No delimiters
+		}
+		
+		// If str is NULL, continue from last position
+		var startPtr = str != 0 ? str : _strtokLastPtr;
+		
+		if (startPtr == 0)
+		{
+			return 0; // No string to tokenize
+		}
+		
+		// Read string from current position
+		var remaining = _env.ReadAnsiString(startPtr);
+		if (string.IsNullOrEmpty(remaining))
+		{
+			_strtokLastPtr = 0;
+			return 0; // No more tokens
+		}
+		
+		// Skip leading delimiters
+		var startIdx = 0;
+		while (startIdx < remaining.Length && delimStr.Contains(remaining[startIdx]))
+		{
+			startIdx++;
+		}
+		
+		if (startIdx >= remaining.Length)
+		{
+			_strtokLastPtr = 0;
+			return 0; // No token found
+		}
+		
+		// Find end of token
+		var endIdx = startIdx;
+		while (endIdx < remaining.Length && !delimStr.Contains(remaining[endIdx]))
+		{
+			endIdx++;
+		}
+		
+		// Calculate token address
+		var tokenPtr = startPtr + (uint)startIdx;
+		
+		// Write null terminator after token
+		if (endIdx < remaining.Length)
+		{
+			_env.Memory.Write8(startPtr + (uint)endIdx, 0);
+			_strtokLastPtr = startPtr + (uint)endIdx + 1;
+		}
+		else
+		{
+			_strtokLastPtr = 0; // No more tokens
+		}
+		
+		return tokenPtr;
+	}
+
+	/// <summary>
+	/// _swab - Swap bytes in buffer
+	/// Swaps adjacent bytes in a buffer (byte swapping)
+	/// </summary>
+	[DllModuleExport(12)]
+	private void _swab(uint src, uint dst, int len)
+	{
+		_logger.LogInformation("[msvcrt] _swab(src=0x{Src:X8}, dst=0x{Dst:X8}, len={Len})", src, dst, len);
+		
+		if (src == 0 || dst == 0 || len <= 0)
+		{
+			return;
+		}
+		
+		// Swap adjacent bytes
+		for (int i = 0; i < len - 1; i += 2)
+		{
+			var b1 = _env.Memory.Read8(src + (uint)i);
+			var b2 = _env.Memory.Read8(src + (uint)(i + 1));
+			_env.Memory.Write8(dst + (uint)i, b2);
+			_env.Memory.Write8(dst + (uint)(i + 1), b1);
+		}
 	}
 }
 }
