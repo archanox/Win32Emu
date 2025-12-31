@@ -52,7 +52,7 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 	public void Srand_SeedsRandomNumberGenerator()
 	{
 		// Arrange - set up stack args for srand
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0, 12345u);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 12345u);
 		
 		// Act - seed with a specific value and get some random numbers
 		var success1 = _msvcrt.TryInvokeUnsafe("SRAND", _testEnv.Cpu, _testEnv.Memory, out _);
@@ -65,7 +65,7 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 		Assert.True(success3);
 		
 		// Seed again with the same value
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0, 12345u);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 12345u);
 		var success4 = _msvcrt.TryInvokeUnsafe("SRAND", _testEnv.Cpu, _testEnv.Memory, out _);
 		Assert.True(success4);
 		
@@ -115,7 +115,7 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 	public void System_ReturnsNonZeroForNullCommand()
 	{
 		// Arrange - pass NULL to check if command processor is available
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0, 0u);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0u);
 		
 		// Act
 		var success = _msvcrt.TryInvokeUnsafe("SYSTEM", _testEnv.Cpu, _testEnv.Memory, out var result);
@@ -146,7 +146,7 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 	public void Wsystem_ReturnsNonZeroForNullCommand()
 	{
 		// Arrange - pass NULL to check if command processor is available
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0, 0u);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0u);
 		
 		// Act
 		var success = _msvcrt.TryInvokeUnsafe("_WSYSTEM", _testEnv.Cpu, _testEnv.Memory, out var result);
@@ -160,7 +160,7 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 	public void Sleep_AcceptsMilliseconds()
 	{
 		// Arrange - sleep for 10ms (doesn't actually sleep in emulator)
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0, 10u);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 10u);
 		
 		// Act
 		var success = _msvcrt.TryInvokeUnsafe("_SLEEP", _testEnv.Cpu, _testEnv.Memory, out var result);
@@ -174,7 +174,7 @@ public sealed class MsvcrtUtilityFunctionsTests : IDisposable
 	public void Beep_AcceptsFrequencyAndDuration()
 	{
 		// Arrange - beep at 440Hz for 100ms (doesn't actually beep in emulator)
-		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0, 440u);
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 440u, 100u);
 		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 1, 100u);
 		
 		// Act

@@ -41,6 +41,14 @@ namespace Win32Emu.Win32.Modules
 		private const byte SHIFTJIS_LEAD_BYTE_RANGE2_START = 0xE0;
 		private const byte SHIFTJIS_LEAD_BYTE_RANGE2_END = 0xFC;
 		
+		// MSVC PRNG constants
+		private const uint MSVC_RAND_MULTIPLIER = 214013;
+		private const uint MSVC_RAND_INCREMENT = 2531011;
+		private const int MSVC_RAND_MAX = 0x7FFF;
+		
+		// Error codes
+		private const int EINVAL = 22;
+		
 		// Random number generator state (thread-specific in real MSVCRT, but we use a simple global)
 		// Initialized with a proper random seed based on current time
 		private uint _randomSeed;
@@ -49,6 +57,11 @@ namespace Win32Emu.Win32.Modules
 		private readonly int _daylight;
 		private readonly int _timezone;
 		private readonly int _dstbias;
+		
+		// Cached pointers for timezone variables (to avoid memory leak from repeated allocations)
+		private uint _daylightPtr;
+		private uint _timezonePtr;
+		private uint _dstbiasPtr;
 		
 		/// <summary>
 		/// Stream buffering mode
@@ -99,6 +112,16 @@ namespace Win32Emu.Win32.Modules
 			{
 				_dstbias = -3600; // Default to -1 hour if no DST rules available
 			}
+			
+			// Allocate memory for timezone pointers once to avoid memory leaks
+			_daylightPtr = _env.HeapAlloc(0, 4);
+			_env.MemWrite32(_daylightPtr, (uint)_daylight);
+			
+			_timezonePtr = _env.HeapAlloc(0, 4);
+			_env.MemWrite32(_timezonePtr, (uint)_timezone);
+			
+			_dstbiasPtr = _env.HeapAlloc(0, 4);
+			_env.MemWrite32(_dstbiasPtr, (uint)_dstbias);
 		}
 
 		public string Name => "MSVCRT.DLL";
@@ -2339,8 +2362,8 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogDebug("[msvcrt] rand()");
 		
 		// MSVC algorithm: seed = seed * 214013 + 2531011; return (seed >> 16) & 0x7FFF;
-		_randomSeed = _randomSeed * 214013 + 2531011;
-		var result = (int)((_randomSeed >> 16) & 0x7FFF);
+		_randomSeed = _randomSeed * MSVC_RAND_MULTIPLIER + MSVC_RAND_INCREMENT;
+		var result = (int)((_randomSeed >> 16) & MSVC_RAND_MAX);
 		
 		_logger.LogDebug("[msvcrt] rand: returning {Result}", result);
 		return result;
@@ -2369,13 +2392,13 @@ namespace Win32Emu.Win32.Modules
 		if (pval == 0)
 		{
 			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
-			return 22; // EINVAL
+			return EINVAL;
 		}
 		
-		// Generate cryptographically secure random number using System.Random
-		// In a real implementation, this would use RtlGenRandom or similar
-		var random = new Random();
-		var value = (uint)random.Next();
+		// Generate cryptographically secure random number using System.Security.Cryptography
+		var bytes = new byte[4];
+		System.Security.Cryptography.RandomNumberGenerator.Fill(bytes);
+		var value = BitConverter.ToUInt32(bytes, 0);
 		_env.MemWrite32(pval, value);
 		
 		_logger.LogDebug("[msvcrt] rand_s: generated {Value}", value);
@@ -2465,7 +2488,7 @@ namespace Win32Emu.Win32.Modules
 	/// _lfind - Linear search for element in array
 	/// Performs a linear search for a key in an array
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(20, IsStub = true)]
 	private uint _lfind(uint key, uint base_, uint num, uint width, uint compare)
 	{
 		_logger.LogInformation("[msvcrt] _lfind(key=0x{Key:X8}, base=0x{Base:X8}, num=0x{Num:X8}, width={Width}, compare=0x{Compare:X8})", 
@@ -2503,7 +2526,7 @@ namespace Win32Emu.Win32.Modules
 	/// _lsearch - Linear search for element in array, add if not found
 	/// Performs a linear search for a key in an array, adds it if not found
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(20, IsStub = true)]
 	private uint _lsearch(uint key, uint base_, uint num, uint width, uint compare)
 	{
 		_logger.LogInformation("[msvcrt] _lsearch(key=0x{Key:X8}, base=0x{Base:X8}, num=0x{Num:X8}, width={Width}, compare=0x{Compare:X8})", 
@@ -2539,7 +2562,7 @@ namespace Win32Emu.Win32.Modules
 	/// bsearch - Binary search for element in sorted array
 	/// Performs a binary search for a key in a sorted array
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(20, IsStub = true)]
 	private uint bsearch(uint key, uint base_, uint nmemb, uint size, uint compar)
 	{
 		_logger.LogInformation("[msvcrt] bsearch(key=0x{Key:X8}, base=0x{Base:X8}, nmemb={Nmemb}, size={Size}, compar=0x{Compar:X8})", 
@@ -2582,10 +2605,8 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogDebug("[msvcrt] __p__daylight()");
 		
-		// Allocate memory for the daylight flag and return pointer
-		var ptr = _env.HeapAlloc(0, 4);
-		_env.MemWrite32(ptr, (uint)_daylight);
-		return ptr;
+		// Return cached pointer to avoid memory leaks
+		return _daylightPtr;
 	}
 
 	/// <summary>
@@ -2597,10 +2618,8 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogDebug("[msvcrt] __p__timezone()");
 		
-		// Allocate memory for the timezone offset and return pointer
-		var ptr = _env.HeapAlloc(0, 4);
-		_env.MemWrite32(ptr, (uint)_timezone);
-		return ptr;
+		// Return cached pointer to avoid memory leaks
+		return _timezonePtr;
 	}
 
 	/// <summary>
@@ -2612,10 +2631,8 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogDebug("[msvcrt] __p__dstbias()");
 		
-		// Allocate memory for the DST bias and return pointer
-		var ptr = _env.HeapAlloc(0, 4);
-		_env.MemWrite32(ptr, (uint)_dstbias);
-		return ptr;
+		// Return cached pointer to avoid memory leaks
+		return _dstbiasPtr;
 	}
 
 	/// <summary>
@@ -2746,15 +2763,16 @@ namespace Win32Emu.Win32.Modules
 		}
 		else if (radix == 16)
 		{
-			result = value < 0 ? "-" + ((uint)(-value)).ToString("x") : ((uint)value).ToString("x");
+			// For hex, octal, and binary, treat as unsigned for non-decimal bases
+			result = ((uint)value).ToString("x");
 		}
 		else if (radix == 8)
 		{
-			result = Convert.ToString(value < 0 ? (uint)value : (uint)value, 8);
+			result = Convert.ToString((uint)value, 8);
 		}
 		else if (radix == 2)
 		{
-			result = Convert.ToString(value < 0 ? (uint)value : (uint)value, 2);
+			result = Convert.ToString((uint)value, 2);
 		}
 		else
 		{
@@ -2762,7 +2780,7 @@ namespace Win32Emu.Win32.Modules
 			result = value.ToString();
 		}
 		
-		_env.WriteAnsiStringAt(buffer, result + '\0');
+		_env.WriteAnsiStringAt(buffer, result);
 		return buffer;
 	}
 
@@ -2803,7 +2821,7 @@ namespace Win32Emu.Win32.Modules
 			result = value.ToString();
 		}
 		
-		_env.WriteAnsiStringAt(buffer, result + '\0');
+		_env.WriteAnsiStringAt(buffer, result);
 		return buffer;
 	}
 
@@ -2828,15 +2846,21 @@ namespace Win32Emu.Win32.Modules
 		}
 		else if (radix == 16)
 		{
-			result = value < 0 ? "-" + ((ulong)(-value)).ToString("x") : ((ulong)value).ToString("x");
+			// For hex, octal, and binary, treat as unsigned for non-decimal bases
+			result = ((ulong)value).ToString("x");
 		}
-		else if (radix == 8)
+		else if (radix == 8 || radix == 2)
 		{
-			result = Convert.ToString(value < 0 ? (long)(ulong)value : value, 8);
-		}
-		else if (radix == 2)
-		{
-			result = Convert.ToString(value < 0 ? (long)(ulong)value : value, 2);
+			// Convert.ToString doesn't support ulong, so handle large values specially
+			if (value >= 0)
+			{
+				result = Convert.ToString(value, radix);
+			}
+			else
+			{
+				// For negative values in non-decimal bases, convert as unsigned
+				result = ConvertUInt64ToString((ulong)value, radix);
+			}
 		}
 		else
 		{
@@ -2844,7 +2868,7 @@ namespace Win32Emu.Win32.Modules
 			result = value.ToString();
 		}
 		
-		_env.WriteAnsiStringAt(buffer, result + '\0');
+		_env.WriteAnsiStringAt(buffer, result);
 		return buffer;
 	}
 
@@ -2871,13 +2895,10 @@ namespace Win32Emu.Win32.Modules
 		{
 			result = value.ToString("x");
 		}
-		else if (radix == 8)
+		else if (radix == 8 || radix == 2)
 		{
-			result = Convert.ToString((long)value, 8);
-		}
-		else if (radix == 2)
-		{
-			result = Convert.ToString((long)value, 2);
+			// Convert.ToString doesn't support ulong directly, handle manually
+			result = ConvertUInt64ToString(value, radix);
 		}
 		else
 		{
@@ -2885,8 +2906,28 @@ namespace Win32Emu.Win32.Modules
 			result = value.ToString();
 		}
 		
-		_env.WriteAnsiStringAt(buffer, result + '\0');
+		_env.WriteAnsiStringAt(buffer, result);
 		return buffer;
+	}
+	
+	/// <summary>
+	/// Helper method to convert ulong to string in specified radix
+	/// </summary>
+	private string ConvertUInt64ToString(ulong value, int radix)
+	{
+		if (value == 0)
+			return "0";
+			
+		var chars = "0123456789abcdefghijklmnopqrstuvwxyz";
+		var result = new StringBuilder();
+		
+		while (value > 0)
+		{
+			result.Insert(0, chars[(int)(value % (ulong)radix)]);
+			value /= (ulong)radix;
+		}
+		
+		return result.ToString();
 	}
 
 	/// <summary>
@@ -2947,8 +2988,9 @@ namespace Win32Emu.Win32.Modules
 		return str;
 	}
 
-	// Static storage for strtok state (not thread-safe, matches MSVC behavior)
-	private uint _strtokLastPtr = 0;
+	// Thread-local static storage for strtok state (per host thread)
+	[System.ThreadStatic]
+	private static uint _strtokLastPtr;
 
 	/// <summary>
 	/// strtok - Tokenize string using delimiters
