@@ -196,6 +196,80 @@ public class FpuInstructionTests : IDisposable
 
     #endregion
 
+    #region JitCpu FPU Method Tests
+
+    [Fact]
+    public void FpuGetSt_RetrievesCorrectValue()
+    {
+        // Arrange - push a specific double value onto FPU stack
+        // FLD qword ptr [address] - loads a double from memory
+        var memAddr = 0x00200000u;
+        var doubleBits = BitConverter.DoubleToInt64Bits(3.14159265);
+        _helper.Memory.Write64(memAddr, unchecked((ulong)doubleBits));
+        
+        // FLD qword ptr [address] - DD 05 + address
+        _helper.WriteCode(
+            0xDD, 0x05,  // FLD qword ptr [address]
+            (byte)(memAddr & 0xFF),
+            (byte)((memAddr >> 8) & 0xFF),
+            (byte)((memAddr >> 16) & 0xFF),
+            (byte)((memAddr >> 24) & 0xFF)
+        );
+        _helper.ExecuteInstruction();
+        
+        // Act - get the value from ST(0)
+        double st0 = _helper.Cpu.FpuGetSt(0);
+        
+        // Assert
+        Assert.Equal(3.14159265, st0, precision: 8);
+    }
+
+    [Fact]
+    public void FpuPop_RemovesValueFromStack()
+    {
+        // Arrange - push two values onto FPU stack
+        // FLD1 - loads 1.0
+        _helper.WriteCode(0xD9, 0xE8); // FLD1
+        _helper.ExecuteInstruction();
+        
+        // FLDZ - loads 0.0
+        _helper.WriteCode(0xD9, 0xEE); // FLDZ
+        _helper.ExecuteInstruction();
+        
+        // Stack is now: ST(0)=0.0, ST(1)=1.0
+        Assert.Equal(0.0, _helper.Cpu.FpuGetSt(0));
+        Assert.Equal(1.0, _helper.Cpu.FpuGetSt(1));
+        
+        // Act - pop the top value
+        double poppedValue = _helper.Cpu.FpuPop();
+        
+        // Assert
+        Assert.Equal(0.0, poppedValue);
+        // After pop, ST(0) should now be what was ST(1)
+        Assert.Equal(1.0, _helper.Cpu.FpuGetSt(0));
+    }
+
+    [Fact]
+    public void FpuReset_ClearsStackAndResetsState()
+    {
+        // Arrange - push values onto FPU stack
+        _helper.WriteCode(0xD9, 0xE8); // FLD1
+        _helper.ExecuteInstruction();
+        
+        // Verify there's a value on the stack
+        Assert.Equal(1.0, _helper.Cpu.FpuGetSt(0));
+        
+        // Act - reset FPU
+        _helper.Cpu.FpuReset();
+        
+        // Assert - stack should be cleared (all zeros)
+        Assert.Equal(0.0, _helper.Cpu.FpuGetSt(0));
+        Assert.Equal(0.0, _helper.Cpu.FpuGetSt(1));
+        Assert.Equal(0.0, _helper.Cpu.FpuGetSt(7));
+    }
+
+    #endregion
+
     public void Dispose()
     {
         _helper?.Dispose();
