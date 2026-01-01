@@ -3,7 +3,7 @@ using Win32Emu.Tests.Emulator.TestInfrastructure;
 namespace Win32Emu.Tests.Emulator;
 
 /// <summary>
-/// Three-way conformance tests comparing Unicorn, IcedCpu, and JitCpu
+/// Two-way conformance tests comparing Unicorn and JitCpu
 /// Covers the Pentium instruction set including x87 FPU and MMX
 /// </summary>
 [Trait("Category", "ConformanceTests")]

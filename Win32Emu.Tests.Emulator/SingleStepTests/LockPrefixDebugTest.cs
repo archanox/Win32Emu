@@ -1,6 +1,6 @@
 using Xunit;
 using Xunit.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Iced.Intel;
 
@@ -21,7 +21,7 @@ public void TestInvalidLockWithRegisterDestination()
 // Test that LOCK prefix with register destination generates an exception
 // According to x86 spec, LOCK requires memory destination
 var memory = new VirtualMemory();
-var cpu = new IcedCpu(memory, decoderOptions: DecoderOptions.NoInvalidCheck, bitness: 16);
+var cpu = new JitCpu(memory, null, DecoderOptions.NoInvalidCheck, false, 0x400000, 0, 0x100000, bitness: 16);
 
 // Set up initial state including exception handler
 cpu.SetRegister("EAX", 0x12345678);
@@ -79,7 +79,7 @@ public void TestValidLockWithMemoryDestination()
 {
 // Test that LOCK prefix with memory destination is allowed
 var memory = new VirtualMemory();
-var cpu = new IcedCpu(memory, decoderOptions: DecoderOptions.NoInvalidCheck, bitness: 16);
+var cpu = new JitCpu(memory, null, DecoderOptions.NoInvalidCheck, false, 0x400000, 0, 0x100000, bitness: 16);
 
 // Set up initial state
 cpu.SetRegister("EBX", 0x0100);

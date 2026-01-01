@@ -1,6 +1,6 @@
 using Xunit;
 using Win32Emu.Debugging;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -183,7 +183,7 @@ public class InteractiveDebuggerTests
     {
         // Arrange
         var vm = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(vm, null);
+        var cpu = new JitCpu(vm, null);
         cpu.SetEip(0x401000);
         
         var debugger = new InteractiveDebugger(cpu, vm);

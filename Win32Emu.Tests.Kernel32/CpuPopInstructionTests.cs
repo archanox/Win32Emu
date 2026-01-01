@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -15,7 +15,7 @@ public class CpuPopInstructionTests
     {
         // Arrange
         var memory = new VirtualMemory(2 * 1024 * 1024); // 2MB to accommodate addresses
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up stack with a value
         cpu.SetRegister("ESP", 0x00100000);
@@ -39,7 +39,7 @@ public class CpuPopInstructionTests
     {
         // Arrange
         var memory = new VirtualMemory(4 * 1024 * 1024); // 4MB to accommodate addresses
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up stack with a value to pop
         cpu.SetRegister("ESP", 0x00100000);
@@ -69,7 +69,7 @@ public class CpuPopInstructionTests
     {
         // Arrange
         var memory = new VirtualMemory(2 * 1024 * 1024); // 2MB to accommodate addresses
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up stack with a value to pop
         cpu.SetRegister("ESP", 0x00100000);
@@ -98,7 +98,7 @@ public class CpuPopInstructionTests
     {
         // Arrange
         var memory = new VirtualMemory(4 * 1024 * 1024); // 4MB to accommodate addresses
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up a program with push and pop operations
         cpu.SetRegister("ESP", 0x00100000);

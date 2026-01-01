@@ -1,7 +1,7 @@
 using Xunit;
 using Xunit.Abstractions;
 using Win32Emu.Tests.Emulator.SingleStepTests;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator;
@@ -32,7 +32,7 @@ public class TestActualWrite
         
         // Create CPU and memory
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory, bitness: 16);
+        var cpu = new JitCpu(memory, null, Iced.Intel.DecoderOptions.None, false, 0x400000, 0, 0x100000, bitness: 16);
         
         // Set initial state
         var regs = test.InitialState.Registers;

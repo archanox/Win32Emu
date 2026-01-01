@@ -1,6 +1,6 @@
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Jit;
-using Win32Emu.Cpu.Iced;
+
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -43,11 +43,11 @@ public class AsyncJitIntegrationTests
 	}
 	
 	[Fact]
-	public async Task IcedCpu_WithAsyncDispatcher_ShouldMaintainBackwardCompatibility()
+	public async Task JitCpu_WithAsyncDispatcher_ShouldMaintainBackwardCompatibility()
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new IcedCpu(mem, NullLogger.Instance);
+		var cpu = new JitCpu(mem, NullLogger.Instance);
 		var dispatcher = new Win32Dispatcher(NullLogger.Instance);
 		
 		cpu.SetEip(0x1000);
@@ -136,7 +136,7 @@ public class AsyncJitIntegrationTests
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var icedCpu = new IcedCpu(mem, NullLogger.Instance);
+		var icedCpu = new JitCpu(mem, NullLogger.Instance);
 		var jitCpu = new JitCpu(mem, NullLogger.Instance);
 		
 		// Set same initial state
@@ -167,11 +167,11 @@ public class AsyncJitIntegrationTests
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var icedCpu = new IcedCpu(mem);
+		var icedCpu = new JitCpu(mem);
 		var jitCpu = new JitCpu(mem);
 		
 		// Assert - Check SupportsJit property
-		Assert.False(icedCpu.SupportsJit, "IcedCpu should not report JIT support");
+		Assert.False(icedCpu.SupportsJit, "JitCpu should not report JIT support");
 		Assert.True(jitCpu.SupportsJit, "JitCpu should report JIT support");
 	}
 }

@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 

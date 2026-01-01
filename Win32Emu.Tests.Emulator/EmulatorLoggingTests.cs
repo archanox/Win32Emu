@@ -80,8 +80,8 @@ public class EmulatorLoggingTests
         Assert.Contains(logMessages, msg => msg.Contains("[Loader] Host OS Architecture:") || msg.Contains("[Loader] Host Architecture:"));
         Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator:"));
         
-        // Verify default CPU emulator is logged (IcedCpu is the default)
-        Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator: IcedCpu"));
+        // Verify default CPU emulator is logged (JitCpu is the default)
+        Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator: JitCpu"));
     }
 
     [Fact]

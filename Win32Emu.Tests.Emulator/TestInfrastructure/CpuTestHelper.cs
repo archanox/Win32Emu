@@ -1,5 +1,5 @@
 using Win32Emu.Cpu;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator.TestInfrastructure;
@@ -9,7 +9,7 @@ namespace Win32Emu.Tests.Emulator.TestInfrastructure;
 /// </summary>
 public class CpuTestHelper : IDisposable
 {
-    public IcedCpu Cpu { get; }
+    public JitCpu Cpu { get; }
     public VirtualMemory Memory { get; }
     
     private const uint CodeBaseAddress = 0x00400000;
@@ -19,7 +19,7 @@ public class CpuTestHelper : IDisposable
     public CpuTestHelper()
     {
         Memory = new VirtualMemory();
-        Cpu = new IcedCpu(Memory);
+        Cpu = new JitCpu(Memory);
         
         // Initialize stack pointer
         Cpu.SetRegister("ESP", StackBaseAddress + 0x8000);

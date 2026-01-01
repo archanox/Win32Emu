@@ -16,7 +16,7 @@ public class StackLayoutTests
 	{
 		// Arrange: Create a minimal CPU and memory environment
 		var memory = new VirtualMemory(0x10000000); // 256MB
-		var cpu = new Win32Emu.Cpu.Iced.IcedCpu(memory);
+		var cpu = new Win32Emu.Cpu.Jit.JitCpu(memory);
 		
 		// Set up initial stack pointer
 		const uint initialEsp = 0x001FF000;
@@ -70,7 +70,7 @@ public class StackLayoutTests
 	{
 		// Arrange
 		var memory = new VirtualMemory(0x10000000);
-		var cpu = new Win32Emu.Cpu.Iced.IcedCpu(memory);
+		var cpu = new Win32Emu.Cpu.Jit.JitCpu(memory);
 		
 		const uint initialEsp = 0x001FF000;
 		cpu.SetRegister("ESP", initialEsp);

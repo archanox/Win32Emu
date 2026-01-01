@@ -1,6 +1,6 @@
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Xunit;
 
@@ -13,7 +13,7 @@ public class Ole32ModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm);
         var ole32Module = new Ole32Module(env, 0x00400000);
 
@@ -34,7 +34,7 @@ public class Ole32ModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm);
         var ole32Module = new Ole32Module(env, 0x00400000);
 
@@ -59,7 +59,7 @@ public class Ole32ModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm);
         var ole32Module = new Ole32Module(env, 0x00400000);
 
@@ -83,7 +83,7 @@ public class Ole32ModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm);
         var ole32Module = new Ole32Module(env, 0x00400000);
 
@@ -103,7 +103,7 @@ public class Ole32ModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm);
         var ole32Module = new Ole32Module(env, 0x00400000);
 

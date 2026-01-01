@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Xunit;
 
@@ -11,11 +11,11 @@ namespace Win32Emu.Tests.Kernel32;
 public class EbpInitializationTests
 {
     [Fact]
-    public void IcedCpu_WithInitializedEBP_ShouldAllowFrameRelativeAccess()
+    public void JitCpu_WithInitializedEBP_ShouldAllowFrameRelativeAccess()
     {
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Simulate the fix: initialize EBP to same value as ESP
         cpu.SetRegister("ESP", 0x00200000);
@@ -43,11 +43,11 @@ public class EbpInitializationTests
     }
     
     [Fact]
-    public void IcedCpu_WithUninitializedEBP_ShouldThrowOnFrameRelativeAccess()
+    public void JitCpu_WithUninitializedEBP_ShouldThrowOnFrameRelativeAccess()
     {
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Simulate the bug: EBP is 0 (uninitialized)
         cpu.SetRegister("ESP", 0x00200000);

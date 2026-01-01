@@ -1,6 +1,6 @@
 using Xunit;
 using Xunit.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator;
@@ -28,7 +28,7 @@ public class ConditionalJumpTests
 		memory.Write8(0x1000, 0x74);
 		memory.Write8(0x1001, 0x05);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EFLAGS", 0x00000000); // ZF=0, jump should not be taken
 		
@@ -53,7 +53,7 @@ public class ConditionalJumpTests
 		memory.Write8(0x1000, 0x74);
 		memory.Write8(0x1001, 0x05);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EFLAGS", 0x00000040); // ZF=1, jump should be taken
 		
@@ -77,7 +77,7 @@ public class ConditionalJumpTests
 		memory.Write8(0x1000, 0xE2);
 		memory.Write8(0x1001, 0xF6); // -10 in signed byte
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("ECX", 0x00000001); // Will become 0 after decrement
 		
@@ -103,7 +103,7 @@ public class ConditionalJumpTests
 		memory.Write8(0x1000, 0xE2);
 		memory.Write8(0x1001, 0xF6); // -10 in signed byte
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("ECX", 0x00000002); // Will become 1 after decrement
 		

@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Xunit.Abstractions;
@@ -94,7 +94,7 @@ public class StackCorruptionDetectionTests
         // gets corrupted to point to an unmapped import address
         
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         var stackBase = 0x00100000u;
         cpu.SetRegister("ESP", stackBase);
@@ -152,7 +152,7 @@ public class StackCorruptionDetectionTests
         // to detect if the return address on the stack was corrupted
         
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         var stackBase = 0x00100000u;
         cpu.SetRegister("ESP", stackBase);
@@ -192,7 +192,7 @@ public class StackCorruptionDetectionTests
         // This test simulates what happens when an API call corrupts the stack
         
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         var stackBase = 0x00100000u;
         cpu.SetRegister("ESP", stackBase);
