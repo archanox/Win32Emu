@@ -136,11 +136,11 @@ public class AsyncJitIntegrationTests
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var icedCpu = new JitCpu(mem, NullLogger.Instance);
-		var jitCpu = new JitCpu(mem, NullLogger.Instance);
+		var jitCpu1 = new JitCpu(mem, NullLogger.Instance);
+		var jitCpu2 = new JitCpu(mem, NullLogger.Instance);
 		
 		// Set same initial state
-		foreach (var cpu in new ICpu[] { icedCpu, jitCpu })
+		foreach (var cpu in new ICpu[] { jitCpu1, jitCpu2 })
 		{
 			cpu.SetEip(0x1000);
 			cpu.SetRegister("EAX", 42);
@@ -151,15 +151,15 @@ public class AsyncJitIntegrationTests
 		mem.Write8(0x1000, 0x90);
 		
 		// Act - Execute on both backends
-		var icedResult = await icedCpu.SingleStepAsync(mem);
-		jitCpu.SetEip(0x1000); // Reset for JIT
-		var jitResult = await jitCpu.SingleStepAsync(mem);
+		var result1 = await jitCpu1.SingleStepAsync(mem);
+		jitCpu2.SetEip(0x1000); // Reset for second execution
+		var result2 = await jitCpu2.SingleStepAsync(mem);
 		
 		// Assert - Both should produce same result
-		Assert.Equal(icedResult.IsCall, jitResult.IsCall);
-		Assert.Equal(icedResult.CallTarget, jitResult.CallTarget);
-		Assert.Equal(0x1001u, icedCpu.GetEip()); // NOP advances by 1
-		Assert.Equal(0x1001u, jitCpu.GetEip());
+		Assert.Equal(result1.IsCall, result2.IsCall);
+		Assert.Equal(result1.CallTarget, result2.CallTarget);
+		Assert.Equal(0x1001u, jitCpu1.GetEip()); // NOP advances by 1
+		Assert.Equal(0x1001u, jitCpu2.GetEip());
 	}
 	
 	[Fact]
@@ -167,11 +167,9 @@ public class AsyncJitIntegrationTests
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var icedCpu = new JitCpu(mem);
 		var jitCpu = new JitCpu(mem);
 		
 		// Assert - Check SupportsJit property
-		Assert.False(icedCpu.SupportsJit, "JitCpu should not report JIT support");
 		Assert.True(jitCpu.SupportsJit, "JitCpu should report JIT support");
 	}
 }
