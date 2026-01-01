@@ -562,7 +562,8 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Int1:
 				// INT1 (0xF1) - Single-step interrupt / ICEBP
 				_logger.LogWarning("[JitCpu] INT1 single-step interrupt at 0x{OldEip:X8}", oldEip);
-				// For now, just continue execution (EIP already advanced)
+				// Advance EIP past the INT1 instruction to continue execution correctly
+				_eip = oldEip + (uint)insn.Length;
 				break;
 			case Mnemonic.Call:
 				_esp -= 4;
@@ -1767,7 +1768,9 @@ public class JitCpu : IAsyncCpu
 				_eax = (_eax & 0xFFFFFF00) | al;
 				
 				// Update flags: SF, ZF, PF
-				UpdateLogicResultFlags(al);
+				UpdateLogicResultFlags(al, 0x80);
+				// OF is undefined in Intel docs, but on 80386 it is set when the result overflows from positive to negative
+				SetFlagVal(Of, ((oldAl & 0x80) == 0) && ((al & 0x80) != 0));
 				break;
 			}
 			case Mnemonic.Das: // Decimal Adjust After Subtraction
@@ -1807,7 +1810,9 @@ public class JitCpu : IAsyncCpu
 				_eax = (_eax & 0xFFFFFF00) | al;
 				
 				// Update flags: SF, ZF, PF
-				UpdateLogicResultFlags(al);
+				UpdateLogicResultFlags(al, 0x80);
+				// OF is set when the adjustment causes a transition from negative (old AL) to positive (new AL)
+				SetFlagVal(Of, ((oldAl & 0x80) != 0) && ((al & 0x80) == 0));
 				break;
 			}
 			case Mnemonic.Aam: // ASCII Adjust After Multiply
@@ -1828,24 +1833,16 @@ public class JitCpu : IAsyncCpu
 				_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
 				
 				// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
-				UpdateLogicResultFlags(al);
+				UpdateLogicResultFlags(al, 0x80);
 				break;
 			}
 			case Mnemonic.Aad: // ASCII Adjust Before Division
 			{
 				// AAD - Converts unpacked BCD in AX to binary
 				// Formula: AL = AH * base + AL, AH = 0
-				byte base_;
 				// If the instruction has no immediate operand, use default base 10.
 				// If immediate is present (even if 0), use it as the base.
-				if (insn.OpCount == 0)
-				{
-					base_ = 10;
-				}
-				else
-				{
-					base_ = insn.Immediate8;
-				}
+				var base_ = insn.OpCount == 0 ? (byte)10 : insn.Immediate8;
 
 				var al = (byte)(_eax & 0xFF);
 				var ah = (byte)((_eax >> 8) & 0xFF);
@@ -1856,7 +1853,7 @@ public class JitCpu : IAsyncCpu
 				_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
 				
 				// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
-				UpdateLogicResultFlags(al);
+				UpdateLogicResultFlags(al, 0x80);
 				break;
 			}
 			case Mnemonic.Cbw: // Convert Byte to Word
