@@ -559,6 +559,12 @@ public class JitCpu : IAsyncCpu
 					_logger.LogWarning("[JitCpu] Unhandled interrupt INT {InsnImmediate8:X2} at 0x{OldEip:X8}", insn.Immediate8, oldEip);
 				}
 				break;
+			case Mnemonic.Int1:
+				// INT1 (0xF1) - Single-step interrupt / ICEBP
+				_logger.LogWarning("[JitCpu] INT1 single-step interrupt at 0x{OldEip:X8}", oldEip);
+				// Advance EIP past the INT1 instruction to continue execution correctly
+				_eip = oldEip + (uint)insn.Length;
+				break;
 			case Mnemonic.Call:
 				_esp -= 4;
 				mem.Write32(_esp, _eip);
@@ -712,6 +718,9 @@ public class JitCpu : IAsyncCpu
 				break;
 			case Mnemonic.Cdq:
 				ExecCdq();
+				break;
+			case Mnemonic.Cwd:
+				ExecCwd();
 				break;
 			case Mnemonic.Bswap:
 				ExecBswap(insn);
@@ -1722,6 +1731,131 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Aas: // ASCII Adjust After Subtraction
 				ExecAas();
 				break;
+			case Mnemonic.Daa: // Decimal Adjust After Addition
+			{
+				var oldAl = (byte)(_eax & 0xFF);
+				var oldCf = GetFlag(Cf);
+				var oldAf = GetFlag(Af);
+				var al = oldAl;
+				
+				// CF is initially cleared per Intel spec
+				ClearFlag(Cf);
+				
+				// Step 1: Check low nibble
+				if (((al & 0x0F) > 9) || oldAf)
+				{
+					// Perform addition and check for carry (overflow)
+					var newAl = (byte)(al + 6);
+					var carry = (newAl < al);  // Overflow: result wrapped around
+					al = newAl;
+					
+					// CF = OLD_CF OR Carry
+					SetFlagVal(Cf, oldCf || carry);
+					SetFlag(Af);
+				}
+				else
+				{
+					ClearFlag(Af);
+				}
+				
+				// Step 2: Check high nibble
+				if ((oldAl > 0x99) || oldCf)
+				{
+					al += 0x60;
+					SetFlag(Cf);
+				}
+				
+				_eax = (_eax & 0xFFFFFF00) | al;
+				
+				// Update flags: SF, ZF, PF
+				UpdateLogicResultFlags(al, 0x80);
+				// OF is undefined in Intel docs, but on 80386 it is set when the result overflows from positive to negative
+				SetFlagVal(Of, ((oldAl & 0x80) == 0) && ((al & 0x80) != 0));
+				break;
+			}
+			case Mnemonic.Das: // Decimal Adjust After Subtraction
+			{
+				var oldAl = (byte)(_eax & 0xFF);
+				var oldCf = GetFlag(Cf);
+				var oldAf = GetFlag(Af);
+				var al = oldAl;
+				
+				// CF is initially cleared per Intel spec
+				ClearFlag(Cf);
+				
+				// Step 1: Check low nibble
+				if (((al & 0x0F) > 9) || oldAf)
+				{
+					// Perform subtraction and check for borrow (underflow)
+					var newAl = (byte)(al - 6);
+					var borrow = (newAl > al);  // Underflow: result wrapped around
+					al = newAl;
+					
+					// CF = OLD_CF OR Borrow
+					SetFlagVal(Cf, oldCf || borrow);
+					SetFlag(Af);
+				}
+				else
+				{
+					ClearFlag(Af);
+				}
+				
+				// Step 2: Check high nibble
+				if ((oldAl > 0x99) || oldCf)
+				{
+					al -= 0x60;
+					SetFlag(Cf);
+				}
+				
+				_eax = (_eax & 0xFFFFFF00) | al;
+				
+				// Update flags: SF, ZF, PF
+				UpdateLogicResultFlags(al, 0x80);
+				// OF is set when the adjustment causes a transition from negative (old AL) to positive (new AL)
+				SetFlagVal(Of, ((oldAl & 0x80) != 0) && ((al & 0x80) == 0));
+				break;
+			}
+			case Mnemonic.Aam: // ASCII Adjust After Multiply
+			{
+				// AAM - Converts binary in AL to unpacked BCD in AX
+				// Formula: AH = AL / base, AL = AL % base
+				var base_ = insn.Immediate8;
+				if (base_ == 0)
+				{
+					base_ = 10; // Default base is 10
+				}
+
+				var al = (byte)(_eax & 0xFF);
+				
+				var ah = (byte)(al / base_);
+				al = (byte)(al % base_);
+				
+				_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+				
+				// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
+				UpdateLogicResultFlags(al, 0x80);
+				break;
+			}
+			case Mnemonic.Aad: // ASCII Adjust Before Division
+			{
+				// AAD - Converts unpacked BCD in AX to binary
+				// Formula: AL = AH * base + AL, AH = 0
+				// If the instruction has no immediate operand, use default base 10.
+				// If immediate is present (even if 0), use it as the base.
+				var base_ = insn.OpCount == 0 ? (byte)10 : insn.Immediate8;
+
+				var al = (byte)(_eax & 0xFF);
+				var ah = (byte)((_eax >> 8) & 0xFF);
+				
+				al = (byte)(ah * base_ + al);
+				ah = 0;
+				
+				_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+				
+				// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
+				UpdateLogicResultFlags(al, 0x80);
+				break;
+			}
 			case Mnemonic.Cbw: // Convert Byte to Word
 				ExecCbw();
 				break;
@@ -6215,6 +6349,19 @@ public class JitCpu : IAsyncCpu
 		var ax = (ushort)(_eax & 0xFFFF);
 		var sign = (ax & 0x8000) != 0;
 		_eax = sign ? (0xFFFF0000 | ax) : ax;
+	}
+	
+	private void ExecCwd()
+	{
+		// CWD: Convert Word to Doubleword (16-bit mode)
+		// Sign-extend AX into DX:AX
+		// If bit 15 of AX is 0 (positive), DX = 0x0000
+		// If bit 15 of AX is 1 (negative), DX = 0xFFFF
+		// Preserves the high 16 bits of EDX
+		var ax = (ushort)(_eax & 0xFFFF);
+		var sign = (ax & 0x8000) != 0;
+		var dx = sign ? (ushort)0xFFFF : (ushort)0x0000;
+		_edx = (_edx & 0xFFFF0000) | dx;
 	}
 	
 	private void ExecMovx(Instruction insn, bool signExtend)
