@@ -10,6 +10,13 @@ using Win32Emu.Threading;
 
 namespace Win32Emu.Cpu.Iced;
 
+/// <summary>
+/// DEPRECATED: This CPU emulator is being phased out in favor of JitCpu.
+/// Please use <see cref="Win32Emu.Cpu.Jit.JitCpu"/> instead.
+/// This class will be marked as obsolete in the next release and removed in a future release.
+/// JitCpu provides better performance through JIT compilation and has the same functionality.
+/// </summary>
+[Obsolete("IcedCpu is deprecated. Use JitCpu instead, which provides better performance and the same functionality. This class will be removed in a future release.")]
 public class IcedCpu : IAsyncCpu
 {
 	private readonly VirtualMemory _mem;

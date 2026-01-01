@@ -1422,7 +1422,7 @@ namespace Win32Emu.Win32.Modules
 	
 	/// <summary>
 	/// Helper method to access FPU stack and convert ST(0) to long integer
-	/// Accesses public FPU methods on concrete CPU implementations
+	/// Accesses public FPU methods on JitCpu
 	/// </summary>
 	private long AccessFpuAndConvert()
 	{
@@ -1432,25 +1432,16 @@ namespace Win32Emu.Win32.Modules
 			throw new InvalidOperationException("CPU instance is not available - this should never happen");
 		}
 		
-		double st0;
-		
-		// Access FPU state through concrete CPU implementations
-		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
-		{
-			st0 = icedCpu.FpuGetSt(0);
-			icedCpu.FpuPop();
-		}
-		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
-		{
-			st0 = jitCpu.FpuGetSt(0);
-			jitCpu.FpuPop();
-		}
-		else
+		// Access FPU state through JitCpu
+		if (_cpu is not Cpu.Jit.JitCpu jitCpu)
 		{
 			_logger.LogWarning("[msvcrt] __ftol: Unsupported CPU type {CpuType}, returning 0", 
 				_cpu.GetType().Name);
 			return 0;
 		}
+		
+		double st0 = jitCpu.FpuGetSt(0);
+		jitCpu.FpuPop();
 		
 		var result = (long)st0;
 		
@@ -1506,16 +1497,11 @@ namespace Win32Emu.Win32.Modules
 			return;
 		}
 		
-		// Access FPU state through concrete CPU implementations
-		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
+		// Access FPU state through JitCpu
+		if (_cpu is Cpu.Jit.JitCpu jitCpu)
 		{
 			// Reset FPU by calling the FINIT instruction behavior
 			// This sets control word to 0x037F, clears status word, and sets tag word to 0xFFFF
-			icedCpu.FpuReset();
-		}
-		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
-		{
-			// Reset FPU by calling the FINIT instruction behavior
 			jitCpu.FpuReset();
 		}
 		else
@@ -2183,22 +2169,16 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[msvcrt] sin()");
 		
 		// Read and log the FPU stack value (stub - doesn't compute result)
-		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
-		{
-			var angle = icedCpu.FpuGetSt(0);
-			_logger.LogInformation("[msvcrt] sin: angle={Angle}", angle);
-			// Cannot set ST(0) as FpuSetSt is not public
-			// The calling code expects ST(0) to contain sin(angle)
-		}
-		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
+		if (_cpu is Cpu.Jit.JitCpu jitCpu)
 		{
 			var angle = jitCpu.FpuGetSt(0);
 			_logger.LogInformation("[msvcrt] sin: angle={Angle}", angle);
 			// Cannot set ST(0) as FpuSetSt is not public
+			// The calling code expects ST(0) to contain sin(angle)
 		}
 		else
 		{
-			_logger.LogWarning("[msvcrt] sin: Unsupported CPU type {CpuType}, no-op", _cpu.GetType().Name);
+			_logger.LogWarning("[msvcrt] sin: Unsupported CPU type {CpuType}, no-op", _cpu?.GetType().Name ?? "null");
 		}
 	}
 
@@ -2214,22 +2194,16 @@ namespace Win32Emu.Win32.Modules
 		_logger.LogInformation("[msvcrt] sqrt()");
 		
 		// Read and log the FPU stack value (stub - doesn't compute result)
-		if (_cpu is Cpu.Iced.IcedCpu icedCpu)
-		{
-			var value = icedCpu.FpuGetSt(0);
-			_logger.LogInformation("[msvcrt] sqrt: value={Value}", value);
-			// Cannot set ST(0) as FpuSetSt is not public
-			// The calling code expects ST(0) to contain sqrt(value)
-		}
-		else if (_cpu is Cpu.Jit.JitCpu jitCpu)
+		if (_cpu is Cpu.Jit.JitCpu jitCpu)
 		{
 			var value = jitCpu.FpuGetSt(0);
 			_logger.LogInformation("[msvcrt] sqrt: value={Value}", value);
 			// Cannot set ST(0) as FpuSetSt is not public
+			// The calling code expects ST(0) to contain sqrt(value)
 		}
 		else
 		{
-			_logger.LogWarning("[msvcrt] sqrt: Unsupported CPU type {CpuType}, no-op", _cpu.GetType().Name);
+			_logger.LogWarning("[msvcrt] sqrt: Unsupported CPU type {CpuType}, no-op", _cpu?.GetType().Name ?? "null");
 		}
 	}
 
