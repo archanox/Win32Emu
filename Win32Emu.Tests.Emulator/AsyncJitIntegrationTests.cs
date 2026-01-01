@@ -1,6 +1,6 @@
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Jit;
-using Win32Emu.Cpu.Iced;
+
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -43,11 +43,11 @@ public class AsyncJitIntegrationTests
 	}
 	
 	[Fact]
-	public async Task IcedCpu_WithAsyncDispatcher_ShouldMaintainBackwardCompatibility()
+	public async Task JitCpu_WithAsyncDispatcher_ShouldMaintainBackwardCompatibility()
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new IcedCpu(mem, NullLogger.Instance);
+		var cpu = new JitCpu(mem, NullLogger.Instance);
 		var dispatcher = new Win32Dispatcher(NullLogger.Instance);
 		
 		cpu.SetEip(0x1000);
@@ -132,46 +132,13 @@ public class AsyncJitIntegrationTests
 	}
 	
 	[Fact]
-	public async Task DifferentCpuBackends_ShouldProduceSimilarResults()
-	{
-		// Arrange
-		var mem = new VirtualMemory(1024 * 1024);
-		var icedCpu = new IcedCpu(mem, NullLogger.Instance);
-		var jitCpu = new JitCpu(mem, NullLogger.Instance);
-		
-		// Set same initial state
-		foreach (var cpu in new ICpu[] { icedCpu, jitCpu })
-		{
-			cpu.SetEip(0x1000);
-			cpu.SetRegister("EAX", 42);
-			cpu.SetRegister("ESP", 0x00200000);
-		}
-		
-		// Write a simple instruction (NOP)
-		mem.Write8(0x1000, 0x90);
-		
-		// Act - Execute on both backends
-		var icedResult = await icedCpu.SingleStepAsync(mem);
-		jitCpu.SetEip(0x1000); // Reset for JIT
-		var jitResult = await jitCpu.SingleStepAsync(mem);
-		
-		// Assert - Both should produce same result
-		Assert.Equal(icedResult.IsCall, jitResult.IsCall);
-		Assert.Equal(icedResult.CallTarget, jitResult.CallTarget);
-		Assert.Equal(0x1001u, icedCpu.GetEip()); // NOP advances by 1
-		Assert.Equal(0x1001u, jitCpu.GetEip());
-	}
-	
-	[Fact]
 	public void JitCpu_ShouldReportCorrectCapabilities()
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var icedCpu = new IcedCpu(mem);
 		var jitCpu = new JitCpu(mem);
 		
 		// Assert - Check SupportsJit property
-		Assert.False(icedCpu.SupportsJit, "IcedCpu should not report JIT support");
 		Assert.True(jitCpu.SupportsJit, "JitCpu should report JIT support");
 	}
 }

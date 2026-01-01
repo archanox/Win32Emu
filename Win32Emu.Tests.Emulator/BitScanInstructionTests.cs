@@ -1,5 +1,4 @@
 using Xunit;
-using Win32Emu.Cpu.Iced;
 using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
@@ -26,7 +25,7 @@ public class BitScanInstructionTests
 		memory.Write8(0x1001, 0xBC);
 		memory.Write8(0x1002, 0xC3);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EAX", 0xFFFFFFFF); // Initial value
 		cpu.SetRegister("EBX", source);
@@ -89,7 +88,7 @@ public class BitScanInstructionTests
 		memory.Write8(0x1001, 0xBD);
 		memory.Write8(0x1002, 0xC3);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EAX", 0xFFFFFFFF); // Initial value
 		cpu.SetRegister("EBX", source);
@@ -145,7 +144,7 @@ public class BitScanInstructionTests
 		memory.Write8(0x1001, 0xBC);
 		memory.Write8(0x1002, 0xC3);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EAX", 0x12345678); // Initial value
 		cpu.SetRegister("EBX", 0x00000000); // Source is zero
@@ -197,7 +196,7 @@ public class BitScanInstructionTests
 		memory.Write8(0x1001, 0xBD);
 		memory.Write8(0x1002, 0xC3);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EAX", 0x12345678); // Initial value
 		cpu.SetRegister("EBX", 0x00000000); // Source is zero

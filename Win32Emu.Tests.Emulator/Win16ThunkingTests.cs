@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
@@ -18,7 +18,7 @@ public class Win16ThunkingTests
 	{
 		// Arrange
 		var vm = new VirtualMemory(32 * 1024 * 1024);
-		var cpu = new IcedCpu(vm);
+		var cpu = new JitCpu(vm);
 		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 		var kernel32 = new Kernel32Module(env, 0x10000000, null, NullLogger.Instance);
 		var win16Kernel = new Win16KernelModule(kernel32, NullLogger.Instance);
@@ -36,7 +36,7 @@ public class Win16ThunkingTests
 	{
 		// Arrange
 		var vm = new VirtualMemory(32 * 1024 * 1024);
-		var cpu = new IcedCpu(vm);
+		var cpu = new JitCpu(vm);
 		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 		var user32 = new User32Module(env, 0x10000000, null, NullLogger.Instance);
 		var win16User = new Win16UserModule(user32, NullLogger.Instance);
@@ -58,7 +58,7 @@ public class Win16ThunkingTests
 	{
 		// Arrange
 		var vm = new VirtualMemory(32 * 1024 * 1024);
-		var cpu = new IcedCpu(vm);
+		var cpu = new JitCpu(vm);
 		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 		var gdi32 = new Gdi32Module(env, 0x10000000, null, NullLogger.Instance);
 		var win16Gdi = new Win16GdiModule(gdi32, NullLogger.Instance);
@@ -82,7 +82,7 @@ public class Win16ThunkingTests
 	{
 		// Arrange
 		var vm = new VirtualMemory(32 * 1024 * 1024);
-		var cpu = new IcedCpu(vm);
+		var cpu = new JitCpu(vm);
 		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 		var user32 = new User32Module(env, 0x10000000, null, NullLogger.Instance);
 		var win16Keyboard = new Win16KeyboardModule(user32, NullLogger.Instance);
@@ -104,7 +104,7 @@ public class Win16ThunkingTests
 	{
 		// Arrange
 		var vm = new VirtualMemory(32 * 1024 * 1024);
-		var cpu = new IcedCpu(vm);
+		var cpu = new JitCpu(vm);
 		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 		var kernel32 = new Kernel32Module(env, 0x10000000, null, NullLogger.Instance);
 		var win16System = new Win16SystemModule(kernel32, NullLogger.Instance);
@@ -122,7 +122,7 @@ public class Win16ThunkingTests
 	{
 		// Arrange
 		var vm = new VirtualMemory(32 * 1024 * 1024);
-		var cpu = new IcedCpu(vm);
+		var cpu = new JitCpu(vm);
 		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 		var winmm = new WinMmModule(env, 0x10000000, null, NullLogger.Instance);
 		var win16Sound = new Win16SoundModule(winmm, NullLogger.Instance);
@@ -145,7 +145,7 @@ public class Win16ThunkingTests
 	{
 		// Arrange
 		var vm = new VirtualMemory(32 * 1024 * 1024);
-		var cpu = new IcedCpu(vm);
+		var cpu = new JitCpu(vm);
 		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 		var kernel32 = new Kernel32Module(env, 0x10000000, null, NullLogger.Instance);
 		var win16Kernel = new Win16KernelModule(kernel32, NullLogger.Instance);

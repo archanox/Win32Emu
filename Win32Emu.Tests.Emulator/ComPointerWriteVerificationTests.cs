@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
@@ -29,7 +29,7 @@ public class ComPointerWriteVerificationTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var ddraw = new DDrawModule(env, 0x00400000, null, NullLogger.Instance);
 
@@ -70,7 +70,7 @@ public class ComPointerWriteVerificationTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var ddraw = new DDrawModule(env, 0x00400000, null, NullLogger.Instance);
 
@@ -95,7 +95,7 @@ public class ComPointerWriteVerificationTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dinput = new DInputModule(env, 0x00400000, null, NullLogger.Instance);
 
@@ -137,7 +137,7 @@ public class ComPointerWriteVerificationTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dinput = new DInputModule(env, 0x00400000, null, NullLogger.Instance);
 
@@ -163,7 +163,7 @@ public class ComPointerWriteVerificationTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var ddraw = new DDrawModule(env, 0x00400000, null, NullLogger.Instance);
 
@@ -203,7 +203,7 @@ public class ComPointerWriteVerificationTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dinput = new DInputModule(env, 0x00400000, null, NullLogger.Instance);
 

@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -38,7 +38,7 @@ public class SingleStepTestRunner
 			// Create CPU instance for 16-bit real mode (SingleStepTests are from real 80386 hardware in real mode)
 			// Use NoInvalidCheck to allow LOCK prefix on instructions where it's semantically invalid but was
 			// accepted by real 80386 hardware (e.g., LOCK on register-to-register operations)
-			var cpu = new IcedCpu(memory, decoderOptions: DecoderOptions.NoInvalidCheck, bitness: 16);
+			var cpu = new JitCpu(memory, null, DecoderOptions.NoInvalidCheck, false, 0x400000, 0, 0x100000, bitness: 16);
 			
 			// Apply initial state
 			ApplyInitialState(cpu, memory, testCase);
@@ -102,7 +102,7 @@ public class SingleStepTestRunner
 	/// <summary>
 	/// Apply initial CPU and memory state from test case
 	/// </summary>
-	private void ApplyInitialState(IcedCpu cpu, VirtualMemory memory, MooTestCase testCase)
+	private void ApplyInitialState(JitCpu cpu, VirtualMemory memory, MooTestCase testCase)
 	{
 		var initialState = testCase.InitialState;
 		
@@ -154,7 +154,7 @@ public class SingleStepTestRunner
 	/// <summary>
 	/// Validate CPU and memory state against expected final state
 	/// </summary>
-	private bool ValidateFinalState(IcedCpu cpu, VirtualMemory memory, CpuTestState expectedState, TestResult result)
+	private bool ValidateFinalState(JitCpu cpu, VirtualMemory memory, CpuTestState expectedState, TestResult result)
 	{
 		var isValid = true;
 		var regs = expectedState.Registers;
@@ -201,13 +201,13 @@ public class SingleStepTestRunner
 		return isValid;
 	}
 	
-	private bool ValidateRegister(IcedCpu cpu, string name, uint expected, TestResult result)
+	private bool ValidateRegister(JitCpu cpu, string name, uint expected, TestResult result)
 	{
 		var actual = cpu.GetRegister(name);
 		return ValidateRegister(cpu, name, actual, expected, result);
 	}
 	
-	private bool ValidateRegister(IcedCpu cpu, string name, uint actual, uint expected, TestResult result)
+	private bool ValidateRegister(JitCpu cpu, string name, uint actual, uint expected, TestResult result)
 	{
 		if (actual != expected)
 		{

@@ -1,6 +1,6 @@
 using Xunit;
 using Win32Emu.Tests.Infrastructure;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -48,7 +48,7 @@ public class SyntheticExportIntegrationTests : IDisposable
         
         // Verify the stub can be looked up in the import map (synthetic exports are now in the import map)
         // We can verify this by checking if calling it works through the syscall mechanism
-        var cpu = new IcedCpu(_testEnv.Memory, NullLogger.Instance);
+        var cpu = new JitCpu(_testEnv.Memory, NullLogger.Instance);
         
         // Set up a simple stack for the call
         const uint stackBase = 0x00200000;

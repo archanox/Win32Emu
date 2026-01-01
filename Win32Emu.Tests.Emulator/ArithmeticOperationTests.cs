@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -45,7 +45,7 @@ public class ArithmeticOperationTests
         
         // Test with actual CPU emulation to see if instructions execute correctly
         var vm = new VirtualMemory(MEMORY_SIZE);
-        var cpu = new IcedCpu(vm, NullLogger<IcedCpu>.Instance, Iced.Intel.DecoderOptions.None, false, CODE_BASE_ADDRESS, STACK_LIMIT, STACK_BASE);
+        var cpu = new JitCpu(vm, NullLogger<JitCpu>.Instance, Iced.Intel.DecoderOptions.None, false, CODE_BASE_ADDRESS, STACK_LIMIT, STACK_BASE);
         
         // Set up: EIP at code base address and EAX = file size (1MB = 0x100000)
         cpu.SetEip(CODE_BASE_ADDRESS);

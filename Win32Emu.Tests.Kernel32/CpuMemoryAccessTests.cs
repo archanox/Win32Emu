@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -15,7 +15,7 @@ public class CpuMemoryAccessTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024); // 1MB memory
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up a scenario that could cause address 0xFFFFFFFD
         // This could happen with EBP pointing to a small value and accessing [EBP-3]
@@ -42,7 +42,7 @@ public class CpuMemoryAccessTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024); // 1MB memory
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up a valid scenario with negative displacement
         cpu.SetRegister("EBP", 0x00100000); // Valid base pointer in middle of memory
@@ -71,7 +71,7 @@ public class CpuMemoryAccessTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Test scenarios where address calculation wraps around due to pointer underflow
         // Only operations that extend BEYOND 0x100000000 should throw
@@ -138,7 +138,7 @@ public class CpuMemoryAccessTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up register values that will cause boundary crossing
         cpu.SetRegister("EBP", 0x00000001);
@@ -165,7 +165,7 @@ public class CpuMemoryAccessTests
     {
         // This test simulates more realistic conditions that might occur in a real program
         var memory = new VirtualMemory(); // Default size like in real usage
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Simulate typical program initialization from Program.cs
         var imageBase = 0x00400000u;
@@ -213,7 +213,7 @@ public class CpuMemoryAccessTests
     {
         // This test reproduces the exact error from the stack trace
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up conditions matching the stack trace
         cpu.SetEip(0x0F000512); // EIP from the error
@@ -260,7 +260,7 @@ public class CpuMemoryAccessTests
     {
         // This test demonstrates a boundary crossing scenario that can occur in real programs
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         Console.WriteLine("=== Boundary Crossing Scenario ===");
         cpu.SetRegister("EBP", 0x00000001); // Small frame pointer value
@@ -290,7 +290,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Calculate displacement to reach the target address from EBX=0
         int displacement = (int)address;
@@ -329,7 +329,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set unique values for all registers
         cpu.SetRegister("EAX", 0x11111111);
@@ -365,7 +365,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory(1024 * 1024); // 1MB memory (max valid address: 0x000FFFFF)
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up registers that will cause out-of-bounds calculation
         cpu.SetRegister("EBX", 0x20000000); // Large base pointer (512 MB, well beyond 1MB limit)
@@ -396,7 +396,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory(1024 * 1024); // 1MB memory
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up a scenario where LEA calculates a large out-of-bounds address
         cpu.SetRegister("EBP", 0x80808080);
@@ -429,7 +429,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory(16 * 1024 * 1024); // 16MB to accommodate both addresses
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up the scenario from metrics.exe
         cpu.SetRegister("EAX", 0xffffffeb); // -21 as unsigned 32-bit
@@ -468,7 +468,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         cpu.SetRegister("EAX", 0); // value % 10 = 0
         cpu.SetRegister("EDX", 0x30); // '0' character
@@ -498,7 +498,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         cpu.SetRegister("EAX", 5); // digit value
         cpu.SetEip(0x00401000);
@@ -528,7 +528,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         cpu.SetRegister("EAX", 0x35); // '5' character
         cpu.SetRegister("EDI", 0x001000); // buffer address
@@ -558,7 +558,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         cpu.SetRegister("EBX", 5); // digit value
         cpu.SetEip(0x00401000);
@@ -587,7 +587,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         cpu.SetRegister("EAX", 0); // AL = 0 (digit value 0)
         cpu.SetEip(0x00401000);
@@ -616,7 +616,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         cpu.SetRegister("EAX", 5); // AL = 5
         cpu.SetEip(0x00401000);
@@ -646,7 +646,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up registers similar to the error condition
         cpu.SetRegister("EBP", 0x001FFE31); // Unaligned EBP (odd address)
@@ -701,7 +701,7 @@ public class CpuMemoryAccessTests
         
         // Arrange
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set ESP to a very small value
         cpu.SetRegister("ESP", 0x00000002);
@@ -722,7 +722,7 @@ public class CpuMemoryAccessTests
     {
         // Test that we can detect ESP corruption before it causes a crash
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set ESP to a suspiciously low value (but not so low that it underflows immediately)
         cpu.SetRegister("ESP", 0x00000100);

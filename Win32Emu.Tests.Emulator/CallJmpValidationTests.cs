@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Xunit.Abstractions;
 
@@ -18,7 +18,7 @@ public class CallJmpValidationTests
 		var output = new TestOutputHelper();
 		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, logger);
+		var cpu = new JitCpu(memory, logger);
 		
 		var originalEip = 0x00400000u;
 		var originalEsp = 0x00100000u;
@@ -51,7 +51,7 @@ public class CallJmpValidationTests
 		var output = new TestOutputHelper();
 		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, logger);
+		var cpu = new JitCpu(memory, logger);
 		
 		var originalEip = 0x00400000u;
 		var originalEsp = 0x00100000u;
@@ -87,7 +87,7 @@ public class CallJmpValidationTests
 		var output = new TestOutputHelper();
 		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, logger);
+		var cpu = new JitCpu(memory, logger);
 		
 		var originalEip = 0x00400000u;
 		var originalEsp = 0x00100000u;
@@ -121,7 +121,7 @@ public class CallJmpValidationTests
 		var output = new TestOutputHelper();
 		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, logger);
+		var cpu = new JitCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("EAX", 0x00003000); // Suspiciously low address
@@ -151,7 +151,7 @@ public class CallJmpValidationTests
 		var output = new TestOutputHelper();
 		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, logger);
+		var cpu = new JitCpu(memory, logger);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ECX", 0x00450000);
@@ -184,7 +184,7 @@ public class CallJmpValidationTests
 		var output = new TestOutputHelper();
 		var logger = new TestLogger(output);
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, logger);
+		var cpu = new JitCpu(memory, logger);
 		
 		var originalEip = 0x00400000u;
 		var originalEsp = 0x00100000u;

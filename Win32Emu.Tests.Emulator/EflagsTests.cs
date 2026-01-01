@@ -1,6 +1,6 @@
 using Xunit;
 using Xunit.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator;
@@ -26,7 +26,7 @@ public class EflagsTests
 		memory.Write8(0x1000, 0x01); // ADD EAX, EBX (01 D8)
 		memory.Write8(0x1001, 0xD8);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EAX", 0xFFFFFFFF);
 		cpu.SetRegister("EBX", 0x00000001);
@@ -65,7 +65,7 @@ public class EflagsTests
 		memory.Write8(0x1000, 0x01); // ADD EAX, EBX (01 D8)
 		memory.Write8(0x1001, 0xD8);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EAX", 0x7FFFFFFF);
 		cpu.SetRegister("EBX", 0x00000001);
@@ -96,7 +96,7 @@ public class EflagsTests
 		var memory = new VirtualMemory();
 		memory.Write8(0x1000, 0x90); // NOP
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EFLAGS", 0xFFFC0846); // Set some flags
 		
@@ -120,7 +120,7 @@ public class EflagsTests
 		memory.Write8(0x1000, 0x01);
 		memory.Write8(0x1001, 0xD8);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("EAX", 0x00000001);
 		cpu.SetRegister("EBX", 0x00000001);
@@ -166,7 +166,7 @@ public class EflagsTests
 			memory.Write8(eip + 1, 0xD5); // ModR/M byte (CH, DL)
 		}
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(eip);
 		cpu.SetRegister("ECX", initialEcx);
 		cpu.SetRegister("EDX", initialEdx);

@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator;
@@ -16,7 +16,7 @@ public class EipAdvancementTests
 		var memory = new VirtualMemory();
 		memory.Write8(0x1000, 0x90); // NOP instruction (1 byte)
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		
 		// Act
@@ -36,7 +36,7 @@ public class EipAdvancementTests
 		memory.Write8(0x1000, 0x00);
 		memory.Write8(0x1001, 0xD1);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		cpu.SetRegister("ECX", 0x0BA34F00);
 		cpu.SetRegister("EDX", 0x00000040);
@@ -58,7 +58,7 @@ public class EipAdvancementTests
 		memory.Write8(0x1000, 0xEB);
 		memory.Write8(0x1001, 0x05);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x1000);
 		
 		// Act
@@ -85,7 +85,7 @@ public class EipAdvancementTests
 		memory.Write8(0x3A94, 0x60);  // disp8 = 0x60
 		
 		// Set up initial state
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x3A92);
 		cpu.SetRegister("EBP", 0x1000);
 		cpu.SetRegister("EBX", 0x12);

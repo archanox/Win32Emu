@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using Xunit;
 using Win32Emu.Cpu;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Win32;
@@ -22,7 +22,7 @@ public class RegisterPreservationTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024); // 1MB
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         
         // Set registers to known values
         cpu.SetRegister("EBX", 0x11111111);
@@ -47,7 +47,7 @@ public class RegisterPreservationTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         
         var saved = new SavedCalleeSavedRegisters
         {
@@ -78,7 +78,7 @@ public class RegisterPreservationTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         
         // Save state with invalid EBP (import hook address)
         var saved = new SavedCalleeSavedRegisters
@@ -366,7 +366,7 @@ public class RegisterPreservationTests
         
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         
         cpu.SetRegister("EBX", 0x11111111);
         cpu.SetRegister("ESI", 0x22222222);
@@ -392,7 +392,7 @@ public class RegisterPreservationTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         
         // Set up a valid stack frame
         var esp = 0x00100000u;
@@ -419,7 +419,7 @@ public class RegisterPreservationTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         
         var esp = 0x00100000u;
         cpu.SetRegister("ESP", esp);

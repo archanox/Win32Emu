@@ -227,7 +227,7 @@ public class IgnitionTeaserTests
     }
 
     [Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
-    public void IgnitionTeaser_ShouldLoadAndRun_WithIcedCpu()
+    public void IgnitionTeaser_ShouldLoadAndRun_WithJitCpu()
     {
         // Arrange
         // Find the repository root by looking for the .sln file
@@ -247,7 +247,7 @@ public class IgnitionTeaserTests
         
         var exePath = Path.Combine(repoRoot!, "EXEs", "ign_teas", "IGN_TEAS.EXE");
         
-        _output.WriteLine("=== Ignition Teaser Demo Test (IcedCpu) ===");
+        _output.WriteLine("=== Ignition Teaser Demo Test (JitCpu) ===");
         _output.WriteLine($"Current directory: {currentDir}");
         _output.WriteLine($"Repository root: {repoRoot}");
         _output.WriteLine($"Testing executable: {exePath}");
@@ -270,10 +270,10 @@ public class IgnitionTeaserTests
         {
             using var emulator = new Win32Emu.Emulator(testHost, logger);
             
-            _output.WriteLine("Loading executable with IcedCpu backend (Software renderer)...");
+            _output.WriteLine("Loading executable with JitCpu backend (Software renderer)...");
             emulator.LoadExecutable(exePath, debugMode: true, reservedMemoryMb: 256);
             
-            _output.WriteLine("Starting emulation with debug mode and IcedCpu...");
+            _output.WriteLine("Starting emulation with debug mode and JitCpu...");
             _output.WriteLine("");
             
             // Set a timeout for the test run
@@ -395,7 +395,7 @@ public class IgnitionTeaserTests
         Assert.Empty(testHost.ErrorMessages); // No error messages should be logged
         
         _output.WriteLine("✓ Test passed - executable loaded and ran without errors");
-        _output.WriteLine("  This test verifies IcedCpu can execute IGN_TEAS.EXE startup sequence");
+        _output.WriteLine("  This test verifies JitCpu can execute IGN_TEAS.EXE startup sequence");
     }
 
     [Fact(Skip = "Very verbose - enable manually to see detailed debugging output")]
