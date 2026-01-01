@@ -8,6 +8,7 @@ namespace Win32Emu.Tests.Emulator.TestInfrastructure;
 /// <summary>
 /// Helper class for two-way testing: comparing Unicorn and JitCpu implementations
 /// Ensures both emulators behave identically for the Pentium instruction set
+/// Note: Kept the legacy name "ThreeWayTestHelper" for backwards compatibility (previously compared Unicorn, IcedCpu, and JitCpu)
 /// </summary>
 public class ThreeWayTestHelper : IDisposable
 {

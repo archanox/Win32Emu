@@ -122,8 +122,8 @@ public class ComVtablePopulationTests
 	[Fact]
 	public void FunctionPointerValidation_IsImplemented()
 	{
-		// This test verifies that function pointer validation exists in JitCpu
-		// The ValidateIndirectTarget method should be called for indirect calls
+		// This test verifies that JitCpu implements function pointer validation
+		// The ValidateIndirectTarget method should be invoked for indirect CALL instructions
 		
 		var memory = new VirtualMemory();
 		var logger = new TestLogger(_output);

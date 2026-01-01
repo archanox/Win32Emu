@@ -304,7 +304,6 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 
         // Create DIDATAFORMAT structure at 0x0040A480 (as seen in problem statement)
