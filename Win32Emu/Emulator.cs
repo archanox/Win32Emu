@@ -314,7 +314,8 @@ public sealed class Emulator : IDisposable
     /// <param name="virtualFileSystem">Optional custom virtual file system for file operations</param>
     /// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
     /// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation)</param>
-    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true, bool forceInterpreterMode = false)
+    /// <param name="enableInstructionAnalyzer">Enable instruction analyzer for debugging (requires forceInterpreterMode in WASM)</param>
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true, bool forceInterpreterMode = false, bool enableInstructionAnalyzer = false)
     {
         // Use a synthetic path for internal tracking
         var syntheticPath = $"C:\\WASM\\{executableName}";
@@ -328,7 +329,7 @@ public sealed class Emulator : IDisposable
             reservedMemoryMb: reservedMemoryMb, 
             gdbServerMode: false, 
             gdbServerPort: 1234, 
-            enableInstructionAnalyzer: false, 
+            enableInstructionAnalyzer: enableInstructionAnalyzer, 
             enableLegacyInstructionDecoding: false, 
             forceInterpreterMode: forceInterpreterMode,
             virtualDiskPath: null,
