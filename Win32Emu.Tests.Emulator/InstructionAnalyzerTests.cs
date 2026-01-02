@@ -1,10 +1,16 @@
 using Iced.Intel;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Xunit;
 
 namespace Win32Emu.Tests.Emulator;
 
+/// <summary>
+/// Tests for instruction analysis capabilities in JitCpu when running in interpreter mode.
+/// These tests verify that JitCpu can provide instruction-level debugging information
+/// similar to the deprecated IcedCpu, fulfilling the requirement in ICEDCPU_DEPRECATION.md
+/// to implement instruction analysis in JitCpu's interpreter mode.
+/// </summary>
 public class InstructionAnalyzerTests
 {
 	[Fact]
@@ -12,7 +18,8 @@ public class InstructionAnalyzerTests
 	{
 		// Arrange
 		var memory = new VirtualMemory(0x10000);
-		var cpu = new IcedCpu(memory, enableInstructionAnalyzer: true);
+		// Force interpreter mode and enable instruction analyzer
+		var cpu = new JitCpu(memory, logger: null, enableInstructionAnalyzer: true, forceInterpreterMode: true);
 		
 		// Write a simple MOV instruction: mov eax, ebx
 		memory.Write8(0x1000, 0x89); // opcode
@@ -33,7 +40,8 @@ public class InstructionAnalyzerTests
 	{
 		// Arrange
 		var memory = new VirtualMemory(0x10000);
-		var cpu = new IcedCpu(memory, enableInstructionAnalyzer: true);
+		// Force interpreter mode and enable instruction analyzer
+		var cpu = new JitCpu(memory, logger: null, enableInstructionAnalyzer: true, forceInterpreterMode: true);
 		
 		// Write: mov eax, ebx (89 D8)
 		memory.Write8(0x1000, 0x89);
@@ -59,7 +67,8 @@ public class InstructionAnalyzerTests
 	{
 		// Arrange
 		var memory = new VirtualMemory(0x10000);
-		var cpu = new IcedCpu(memory, enableInstructionAnalyzer: true);
+		// Force interpreter mode and enable instruction analyzer
+		var cpu = new JitCpu(memory, logger: null, enableInstructionAnalyzer: true, forceInterpreterMode: true);
 		
 		// Write: mov eax, [ebx] (8B 03)
 		memory.Write8(0x1000, 0x8B);
@@ -84,7 +93,8 @@ public class InstructionAnalyzerTests
 	{
 		// Arrange
 		var memory = new VirtualMemory(0x10000);
-		var cpu = new IcedCpu(memory, enableInstructionAnalyzer: false);
+		// Force interpreter mode but don't enable instruction analyzer
+		var cpu = new JitCpu(memory, logger: null, enableInstructionAnalyzer: false, forceInterpreterMode: true);
 		
 		// Write a simple instruction
 		memory.Write8(0x1000, 0x90); // NOP
@@ -105,7 +115,7 @@ public class InstructionAnalyzerTests
 		var options = DecoderOptions.MPX | DecoderOptions.Cyrix;
 		
 		// Act - Should not throw
-		var cpu = new IcedCpu(memory, decoderOptions: options);
+		var cpu = new JitCpu(memory, logger: null, decoderOptions: options, forceInterpreterMode: true);
 		
 		// Assert
 		Assert.NotNull(cpu);
@@ -116,8 +126,8 @@ public class InstructionAnalyzerTests
 	{
 		// Arrange
 		var memory = new VirtualMemory(0x10000);
-		var cpuWithAnalyzer = new IcedCpu(memory, enableInstructionAnalyzer: true);
-		var cpuWithoutAnalyzer = new IcedCpu(memory, enableInstructionAnalyzer: false);
+		var cpuWithAnalyzer = new JitCpu(memory, logger: null, enableInstructionAnalyzer: true, forceInterpreterMode: true);
+		var cpuWithoutAnalyzer = new JitCpu(memory, logger: null, enableInstructionAnalyzer: false, forceInterpreterMode: true);
 		
 		// Act
 		var analyzerEnabled = cpuWithAnalyzer.GetInstructionAnalyzer();
@@ -133,7 +143,8 @@ public class InstructionAnalyzerTests
 	{
 		// Arrange
 		var memory = new VirtualMemory(0x00500000);  // Larger memory to accommodate address
-		var cpu = new IcedCpu(memory, enableInstructionAnalyzer: true);
+		// Force interpreter mode and enable instruction analyzer
+		var cpu = new JitCpu(memory, logger: null, enableInstructionAnalyzer: true, forceInterpreterMode: true);
 		
 		// Write: nop (90)
 		memory.Write8(0x00401000, 0x90);

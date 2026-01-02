@@ -291,6 +291,46 @@ public class JitCpu : IAsyncCpu
 		return _analyzer.AnalyzeInstruction(insn);
 	}
 
+	/// <summary>
+	/// Decodes and formats the instruction at the current EIP for debugging purposes.
+	/// Available in interpreter mode when instruction analyzer is enabled.
+	/// </summary>
+	public string FormatCurrentInstruction()
+	{
+		if (_analyzer == null)
+		{
+			return "Instruction analyzer not enabled";
+		}
+
+		var insn = DecodeCurrentInstruction();
+		return _analyzer.FormatInstructionWithAddress(insn);
+	}
+
+	/// <summary>
+	/// Decodes and analyzes the instruction at the current EIP.
+	/// Available in interpreter mode when instruction analyzer is enabled.
+	/// </summary>
+	public InstructionAnalysis? AnalyzeCurrentInstruction()
+	{
+		if (_analyzer == null)
+		{
+			return null;
+		}
+
+		var insn = DecodeCurrentInstruction();
+		return _analyzer.AnalyzeInstruction(insn);
+	}
+
+	/// <summary>
+	/// Decodes the instruction at the current EIP.
+	/// </summary>
+	private Instruction DecodeCurrentInstruction()
+	{
+		_reader.Reset(_eip);
+		_decoder.IP = _eip;
+		return _decoder.Decode();
+	}
+
 	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)
 	{
 		// In WASM environment or when interpreter mode is forced, JIT compilation is not available/desired
