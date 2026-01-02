@@ -295,11 +295,12 @@ public class JitCpu : IAsyncCpu
 	/// Decodes and formats the instruction at the current EIP for debugging purposes.
 	/// Available in interpreter mode when instruction analyzer is enabled.
 	/// </summary>
+	/// <exception cref="InvalidOperationException">Thrown when instruction analyzer is not enabled.</exception>
 	public string FormatCurrentInstruction()
 	{
 		if (_analyzer == null)
 		{
-			return "Instruction analyzer not enabled";
+			throw new InvalidOperationException("Instruction analyzer is not enabled. Enable it in the constructor with enableInstructionAnalyzer: true.");
 		}
 
 		var insn = DecodeCurrentInstruction();
@@ -309,7 +310,9 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Decodes and analyzes the instruction at the current EIP.
 	/// Available in interpreter mode when instruction analyzer is enabled.
+	/// Returns null if instruction analyzer is not enabled.
 	/// </summary>
+	/// <returns>Instruction analysis if analyzer is enabled, null otherwise.</returns>
 	public InstructionAnalysis? AnalyzeCurrentInstruction()
 	{
 		if (_analyzer == null)
@@ -324,6 +327,12 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Decodes the instruction at the current EIP.
 	/// </summary>
+	/// <returns>The decoded instruction.</returns>
+	/// <remarks>
+	/// If the decoder encounters invalid opcodes or corrupted memory at the current EIP,
+	/// the returned instruction may have IsInvalid set to true. The decoder will attempt
+	/// to decode as much as possible without throwing exceptions.
+	/// </remarks>
 	private Instruction DecodeCurrentInstruction()
 	{
 		_reader.Reset(_eip);

@@ -108,6 +108,23 @@ public class InstructionAnalyzerTests
 	}
 
 	[Fact]
+	public void InstructionAnalyzer_FormatCurrentInstruction_ThrowsWhenNotEnabled()
+	{
+		// Arrange
+		var memory = new VirtualMemory(0x10000);
+		// Force interpreter mode but don't enable instruction analyzer
+		var cpu = new JitCpu(memory, logger: null, enableInstructionAnalyzer: false, forceInterpreterMode: true);
+		
+		// Write a simple instruction
+		memory.Write8(0x1000, 0x90); // NOP
+		cpu.SetEip(0x1000);
+		
+		// Act & Assert
+		var ex = Assert.Throws<InvalidOperationException>(() => cpu.FormatCurrentInstruction());
+		Assert.Contains("Instruction analyzer is not enabled", ex.Message);
+	}
+
+	[Fact]
 	public void DecoderOptions_CanBeSet()
 	{
 		// Arrange - Test that decoder options can be passed without error
