@@ -2,7 +2,7 @@ using Iced.Intel;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
-namespace Win32Emu.Cpu.Iced;
+namespace Win32Emu.Cpu;
 
 /// <summary>
 /// Provides detailed analysis of x86 instructions using the iced library's InstructionInfo API.

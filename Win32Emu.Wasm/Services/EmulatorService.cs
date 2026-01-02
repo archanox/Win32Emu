@@ -63,7 +63,7 @@ public class EmulatorService : IDisposable
 	/// <summary>
 	/// Gets whether cache is enabled and loaded
 	/// </summary>
-	public bool IsCacheEnabled => _emulator?.Cpu is Win32Emu.Cpu.Iced.IcedCpu icedCpu && icedCpu.IsCacheEnabled;
+	public bool IsCacheEnabled => _emulator?.Cpu is Win32Emu.Cpu.Jit.JitCpu jitCpu && jitCpu.SupportsJit;
 	
 	/// <summary>
 	/// Gets the current CPU backend name
@@ -76,7 +76,6 @@ public class EmulatorService : IDisposable
 			return _emulator.Cpu switch
 			{
 				Win32Emu.Cpu.Jit.JitCpu => "JitCpu (Interpreter in WASM)",
-				Win32Emu.Cpu.Iced.IcedCpu => "IcedCpu (Interpreter)",
 				_ => _emulator.Cpu.GetType().Name
 			};
 		}
