@@ -225,13 +225,7 @@ if (cpu.GetInstructionAnalyzer() != null)
 
 **AnalyzeCurrentInstruction() - No breaking change:**
 - Both IcedCpu and JitCpu return `null` when analyzer is disabled
-- This method maintains backward compatibility 
-    forceInterpreterMode: true
-);
-var analysis = cpu.AnalyzeCurrentInstruction();
-```
-
-The API is identical - only the CPU type and constructor parameters change.
+- This method maintains backward compatibility
 
 ## Limitations
 
