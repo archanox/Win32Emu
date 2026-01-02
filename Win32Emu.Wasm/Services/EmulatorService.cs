@@ -108,6 +108,7 @@ public class EmulatorService : IDisposable
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
 	/// <param name="useCache">Enable cache loading from wwwroot/cache/ directory</param>
 	/// <param name="enableInstructionAnalyzer">Enable instruction analyzer for debugging (runs in interpreter mode)</param>
+	/// <param name="enableLegacyInstructionDecoding">Enable legacy instruction decoding (MPX, Cyrix, ALTINST, etc.)</param>
 	/// <returns>True if loading succeeded</returns>
 	public async Task<bool> LoadExecutableAsync(
 		byte[] executableBytes, 
@@ -115,7 +116,8 @@ public class EmulatorService : IDisposable
 		Dictionary<string, byte[]>? additionalFiles = null,
 		bool force32BitStackOps = true,
 		bool useCache = true,
-		bool enableInstructionAnalyzer = false)
+		bool enableInstructionAnalyzer = false,
+		bool enableLegacyInstructionDecoding = false)
 	{
 		try
 		{
@@ -231,7 +233,8 @@ public class EmulatorService : IDisposable
 			// with the browser VFS for file operations
 			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
 			// When enableInstructionAnalyzer is true, instruction analysis features are available
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer);
+			// When enableLegacyInstructionDecoding is true, legacy instruction sets are supported (MPX, Cyrix, etc.)
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer, enableLegacyInstructionDecoding);
 			
 			// Load cache if enabled - JitCpu uses RTL-based cache
 			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
