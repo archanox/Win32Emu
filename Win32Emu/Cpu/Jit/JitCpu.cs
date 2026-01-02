@@ -38,6 +38,15 @@ public class JitCpu : IAsyncCpu
 	private const byte DOS_INTERRUPT = 0x21;
 	private const byte SYSCALL_INTERRUPT = 0x80;
 	
+	// Sign bit masks for different operand sizes
+	private const uint SIGN_BIT_MASK_8BIT = 0x80;
+	private const uint SIGN_BIT_MASK_16BIT = 0x8000;
+	private const uint SIGN_BIT_MASK_32BIT = 0x80000000;
+	
+	// Maximum values for different operand sizes (used for carry flag detection)
+	private const uint MAX_VALUE_8BIT = 0xFF;
+	private const uint MAX_VALUE_16BIT = 0xFFFF;
+	
 	// MMX state - shares physical registers with FPU (MM0-MM7 alias to ST(0)-ST(7))
 	// Each MMX register is 64 bits
 	// NOTE: In real hardware, MMX and FPU share the same physical registers. This implementation
@@ -2859,9 +2868,9 @@ public class JitCpu : IAsyncCpu
 		int opSize = GetOpSizeBits(insn, 0);
 		uint signBitMask = opSize switch
 		{
-			8 => 0x80,
-			16 => 0x8000,
-			_ => 0x80000000
+			8 => SIGN_BIT_MASK_8BIT,
+			16 => SIGN_BIT_MASK_16BIT,
+			_ => SIGN_BIT_MASK_32BIT
 		};
 		SetFlagsAdd(a, b, r, signBitMask);
 	}
@@ -2877,9 +2886,9 @@ public class JitCpu : IAsyncCpu
 		int opSize = GetOpSizeBits(insn, 0);
 		uint signBitMask = opSize switch
 		{
-			8 => 0x80,
-			16 => 0x8000,
-			_ => 0x80000000
+			8 => SIGN_BIT_MASK_8BIT,
+			16 => SIGN_BIT_MASK_16BIT,
+			_ => SIGN_BIT_MASK_32BIT
 		};
 		SetFlagsSub(a, b, r, signBitMask);
 	}
@@ -4537,7 +4546,7 @@ public class JitCpu : IAsyncCpu
 	
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
-		SetFlagsAdd(a, b, r, 0x80000000);
+		SetFlagsAdd(a, b, r, SIGN_BIT_MASK_32BIT);
 	}
 
 	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
@@ -4548,8 +4557,8 @@ public class JitCpu : IAsyncCpu
 		// For 32-bit: carry if result wrapped (r < a works due to uint overflow)
 		bool carry = signBitMask switch
 		{
-			0x80 => (a + b) > 0xFF,        // 8-bit
-			0x8000 => (a + b) > 0xFFFF,    // 16-bit
+			SIGN_BIT_MASK_8BIT => (a + b) > MAX_VALUE_8BIT,        // 8-bit
+			SIGN_BIT_MASK_16BIT => (a + b) > MAX_VALUE_16BIT,    // 16-bit
 			_ => r < a                      // 32-bit
 		};
 		SetFlagVal(Cf, carry);
@@ -4560,7 +4569,7 @@ public class JitCpu : IAsyncCpu
 	
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
-		SetFlagsSub(a, b, r, 0x80000000);
+		SetFlagsSub(a, b, r, SIGN_BIT_MASK_32BIT);
 	}
 
 	private void SetFlagsSub(uint a, uint b, uint r, uint signBitMask)
@@ -4573,7 +4582,7 @@ public class JitCpu : IAsyncCpu
 	
 	private void UpdateLogicResultFlags(uint r)
 	{
-		UpdateLogicResultFlags(r, 0x80000000);
+		UpdateLogicResultFlags(r, SIGN_BIT_MASK_32BIT);
 	}
 
 	private void UpdateLogicResultFlags(uint r, uint signBitMask)
