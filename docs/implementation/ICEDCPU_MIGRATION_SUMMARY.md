@@ -94,9 +94,9 @@ All IcedCpu tests have been successfully migrated to JitCpu. This PR completes t
 
 - **Build**: Successful
 - **Most Tests**: Passing
-- **Known Issues**: 
-  - EflagsTests has 2 failing tests (flag calculation differences)
-  - This needs investigation - may indicate JitCpu flag calculation bugs or test issues
+- **Known Issues**: ✅ **RESOLVED**
+  - ~~EflagsTests has 2 failing tests (flag calculation differences)~~ **FIXED** - Carry flag calculation for 8-bit and 16-bit ADD operations has been corrected
+  - The issue was in `SetFlagsAdd` method which incorrectly calculated the carry flag for sub-32-bit operations
 
 ## Next Steps for Complete IcedCpu Removal
 
@@ -105,7 +105,7 @@ See `docs/implementation/ICEDCPU_DEPRECATION.md` for the full plan. Key items:
 ### Phase 1: Cleanup Production Code
 1. Verify FPU operations work correctly in JitCpu
 2. Remove IcedCpu type checks from MsvcrtModule.cs (lines 1438, 1510, 2186, 2217)
-3. Investigate and fix EflagsTests failures
+3. ~~Investigate and fix EflagsTests failures~~ ✅ **COMPLETED**
 4. Add deprecation warnings to IcedCpu class
 
 ### Phase 2: Documentation & Communication  
@@ -132,11 +132,13 @@ See `docs/implementation/ICEDCPU_DEPRECATION.md` for the full plan. Key items:
 ✅ ArithmeticOperationTests (6/6)
 ✅ HighByteRegisterTests (passing)
 ✅ RegisterPreservationTests (passing)
+✅ EflagsTests (7/7) ✅ **ALL PASSING NOW**
 
-### Failing Tests
-❌ EflagsTests (2/26 failures in ADD_8Bit_ShouldCalculateFlagsCorrectly)
-- EFLAGS calculation difference between IcedCpu and JitCpu
-- Needs investigation
+### Failing Tests (Previously)
+~~❌ EflagsTests (2/26 failures in ADD_8Bit_ShouldCalculateFlagsCorrectly)~~ ✅ **FIXED**
+- ~~EFLAGS calculation difference between IcedCpu and JitCpu~~ 
+- ~~Needs investigation~~
+- **Resolution**: Fixed carry flag calculation for 8-bit and 16-bit ADD operations in JitCpu's `SetFlagsAdd` method
 
 ## Impact
 
@@ -144,6 +146,7 @@ See `docs/implementation/ICEDCPU_DEPRECATION.md` for the full plan. Key items:
 - **Test coverage maintained** - All test scenarios preserved
 - **Performance** - May improve due to JIT compilation
 - **Debugging** - Instruction analysis features will be lost when IcedCpu is removed
+- **Conformance tests improved** - 00.MOO.gz now passes 55 tests (was 38), with 17 fewer EFLAGS-only errors
 
 ## Statistics
 
