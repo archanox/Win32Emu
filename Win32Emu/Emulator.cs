@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Win32Emu.Cpu;
-using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
 using Win32Emu.Diagnostics;
 using Win32Emu.Loader;

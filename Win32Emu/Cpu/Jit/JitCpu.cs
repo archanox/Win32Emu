@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Memory;
 using Win32Emu.Rtl;
 using Iced.Intel;
-using Win32Emu.Cpu.Iced;
 
 namespace Win32Emu.Cpu.Jit;
 

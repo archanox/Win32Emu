@@ -1,4 +1,4 @@
-namespace Win32Emu.Cpu.Iced
+namespace Win32Emu.Cpu
 {
 	/// <summary>
 	/// Contains detailed analysis of an instruction.

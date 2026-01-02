@@ -1,6 +1,5 @@
 using Xunit;
 using Xunit.Abstractions;
-using Win32Emu.Cpu.Iced;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator.SingleStepTests;
