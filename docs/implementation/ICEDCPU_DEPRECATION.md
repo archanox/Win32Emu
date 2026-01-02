@@ -69,7 +69,7 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
 **Implementation**: 
 - JitCpu now supports instruction analysis in interpreter mode
 - Tests updated to use `JitCpu` with `forceInterpreterMode: true` and `enableInstructionAnalyzer: true`
-- All 7 tests passing with JitCpu implementation
+- All 8 tests passing with JitCpu implementation
 
 **Available Features**:
 - `FormatCurrentInstruction()` - Formats instruction at current EIP with address
@@ -206,7 +206,7 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
    - ✅ **RESOLVED**: Implemented instruction analysis in JitCpu's interpreter mode
    - JitCpu now has `FormatCurrentInstruction()` and `AnalyzeCurrentInstruction()` methods
    - InstructionAnalyzerTests migrated to use JitCpu with `forceInterpreterMode: true`
-   - All 7 tests passing with JitCpu implementation
+   - All 8 tests passing with JitCpu implementation
 
 2. **FPU Operations**: Are JitCpu FPU operations fully tested?
    - Need: Comprehensive FPU testing with real-world applications
