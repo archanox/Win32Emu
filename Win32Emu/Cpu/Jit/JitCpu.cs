@@ -4542,7 +4542,17 @@ public class JitCpu : IAsyncCpu
 
 	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
 	{
-		SetFlagVal(Cf, r < a);
+		// Calculate carry flag based on operation size
+		// For 8-bit: carry if (a + b) > 0xFF
+		// For 16-bit: carry if (a + b) > 0xFFFF  
+		// For 32-bit: carry if result wrapped (r < a works due to uint overflow)
+		bool carry = signBitMask switch
+		{
+			0x80 => (a + b) > 0xFF,        // 8-bit
+			0x8000 => (a + b) > 0xFFFF,    // 16-bit
+			_ => r < a                      // 32-bit
+		};
+		SetFlagVal(Cf, carry);
 		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r, signBitMask);
