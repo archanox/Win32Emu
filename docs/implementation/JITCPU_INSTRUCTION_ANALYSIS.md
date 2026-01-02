@@ -175,6 +175,7 @@ If you're currently using IcedCpu for instruction analysis:
 ```csharp
 var cpu = new IcedCpu(memory, enableInstructionAnalyzer: true);
 var analysis = cpu.AnalyzeCurrentInstruction();
+var formatted = cpu.FormatCurrentInstruction();
 ```
 
 **After:**
@@ -183,6 +184,48 @@ var cpu = new JitCpu(
     memory, 
     logger: null, 
     enableInstructionAnalyzer: true, 
+    forceInterpreterMode: true
+);
+var analysis = cpu.AnalyzeCurrentInstruction();
+var formatted = cpu.FormatCurrentInstruction();
+```
+
+### Breaking Changes
+
+**FormatCurrentInstruction() behavior change:**
+- **IcedCpu**: Returns string "Instruction analyzer not enabled" when analyzer is disabled
+- **JitCpu**: Throws `InvalidOperationException` when analyzer is disabled
+
+**Rationale**: This change makes JitCpu's API consistent with other analyzer-related methods (`FormatInstruction`, `AnalyzeInstruction`) which throw exceptions when the analyzer is not enabled. This provides better error detection at development time.
+
+**Migration code:**
+```csharp
+// If you were relying on the string return value:
+// Old IcedCpu code:
+string result = cpu.FormatCurrentInstruction();
+if (result == "Instruction analyzer not enabled") { /* handle */ }
+
+// New JitCpu code:
+try 
+{
+    string result = cpu.FormatCurrentInstruction();
+    // use result
+}
+catch (InvalidOperationException)
+{
+    // Analyzer not enabled
+}
+
+// Or better - check analyzer availability first:
+if (cpu.GetInstructionAnalyzer() != null)
+{
+    string result = cpu.FormatCurrentInstruction();
+}
+```
+
+**AnalyzeCurrentInstruction() - No breaking change:**
+- Both IcedCpu and JitCpu return `null` when analyzer is disabled
+- This method maintains backward compatibility 
     forceInterpreterMode: true
 );
 var analysis = cpu.AnalyzeCurrentInstruction();
