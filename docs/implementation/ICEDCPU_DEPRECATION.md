@@ -64,16 +64,25 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
 #### 3. InstructionAnalyzerTests.cs
 **Location**: `Win32Emu.Tests.Emulator/InstructionAnalyzerTests.cs`
 
-**Current State**: Still uses IcedCpu because it tests IcedCpu-specific features
+**Current State**: ✅ Migrated to JitCpu with interpreter mode
 
-**Reason**: Tests instruction analysis features that are specific to IcedCpu:
-- `AnalyzeCurrentInstruction()` - Not available in JitCpu (JIT compilation prevents detailed analysis)
-- `FormatCurrentInstruction()` - Instruction formatting for debugging
+**Implementation**: 
+- JitCpu now supports instruction analysis in interpreter mode
+- Tests updated to use `JitCpu` with `forceInterpreterMode: true` and `enableInstructionAnalyzer: true`
+- All 7 tests passing with JitCpu implementation
 
-**Action Required**: 
-- Option 1: Keep these tests with IcedCpu as they test IcedCpu-specific debugging features
-- Option 2: Remove tests if IcedCpu is completely removed (instruction analysis won't be available)
-- Option 3: Implement minimal analysis in JitCpu for debugging purposes
+**Available Features**:
+- `FormatCurrentInstruction()` - Formats instruction at current EIP with address
+- `AnalyzeCurrentInstruction()` - Provides detailed analysis including:
+  - Read and written registers
+  - Memory accesses with segment, base, index, scale, displacement
+  - Instruction mnemonic and length
+  - OpCode information
+
+**Action Completed**: 
+- ✅ Implemented Option 3: Added instruction analysis to JitCpu for debugging purposes
+- ✅ InstructionAnalyzerTests migrated from IcedCpu to JitCpu
+- No dependency on IcedCpu remaining for these tests
 
 ## Dependencies to Remove
 
@@ -93,23 +102,26 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
 ## Breaking Changes
 
 ### API Changes
-1. **InstructionAnalyzer Methods Removed**
-   - `AnalyzeCurrentInstruction()` - Used for instruction-level debugging
-   - `FormatCurrentInstruction()` - Used for instruction formatting
-   - **Impact**: Debugging tools that rely on instruction analysis will need updates
+1. **InstructionAnalyzer Methods** - ✅ No longer breaking!
+   - `AnalyzeCurrentInstruction()` - Now available in JitCpu interpreter mode
+   - `FormatCurrentInstruction()` - Now available in JitCpu interpreter mode
+   - **Migration**: Use JitCpu with `enableInstructionAnalyzer: true` and `forceInterpreterMode: true`
+   - **Impact**: Minimal - debugging tools can continue to use instruction analysis via JitCpu
 
 2. **Type Checks**
    - Code that checks `if (cpu is IcedCpu)` will no longer work
    - **Impact**: Any external code or plugins checking CPU type
+   - **Migration**: Use feature checks instead of type checks, or check for JitCpu
 
 ### Feature Changes
-1. **Instruction Analysis**
-   - **Lost**: Detailed instruction-level analysis for debugging
-   - **Alternative**: Use JitCpu's interpreter mode with logging
+1. **Instruction Analysis** - ✅ Available in JitCpu
+   - **Available**: Instruction-level analysis in JitCpu's interpreter mode
+   - **How to use**: Create JitCpu with `enableInstructionAnalyzer: true` and `forceInterpreterMode: true`
+   - **Features**: Same analysis capabilities as IcedCpu (register tracking, memory access detection, formatting)
 
-2. **Debugging Capabilities**
-   - **Lost**: Instruction-by-instruction analysis
-   - **Alternative**: Use JIT cache inspection and disassembly tools
+2. **Debugging Capabilities** - ✅ Maintained in JitCpu
+   - **Available**: Instruction-by-instruction analysis via JitCpu interpreter mode
+   - **Alternative options**: JIT cache inspection, disassembly tools, enhanced logging
 
 ## Migration Steps
 
@@ -158,9 +170,10 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
 - CPU state management (save/restore)
 - Debugging with GDB server
 - Interactive debugger
+- ✅ Instruction-level analysis (via JitCpu interpreter mode)
 
 ### What Changes
-- Instruction-level analysis no longer available
+- ✅ Instruction-level analysis now requires `forceInterpreterMode: true` in JitCpu
 - Cannot switch between IcedCpu and JitCpu at runtime
 - Slightly different performance characteristics
 
@@ -173,7 +186,7 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
 ### For Developers
 1. Update any code that directly creates IcedCpu instances to use JitCpu
 2. Remove any type checks for IcedCpu
-3. If using instruction analysis, consider alternative debugging approaches
+3. ✅ If using instruction analysis, use JitCpu with `enableInstructionAnalyzer: true` and `forceInterpreterMode: true`
 
 ### For Contributors
 1. New CPU-related tests should use JitCpu
@@ -190,13 +203,22 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
 ## Questions & Decisions Needed
 
 1. **InstructionAnalyzerTests**: Keep with IcedCpu or remove entirely?
-   - Recommendation: Keep IcedCpu just for these tests until we decide on debugging strategy
+   - ✅ **RESOLVED**: Implemented instruction analysis in JitCpu's interpreter mode
+   - JitCpu now has `FormatCurrentInstruction()` and `AnalyzeCurrentInstruction()` methods
+   - InstructionAnalyzerTests migrated to use JitCpu with `forceInterpreterMode: true`
+   - All 7 tests passing with JitCpu implementation
 
 2. **FPU Operations**: Are JitCpu FPU operations fully tested?
    - Need: Comprehensive FPU testing with real-world applications
 
 3. **Debugging Tools**: What replaces instruction-level analysis?
-   - Consider: JIT cache inspection, disassembly output, enhanced logging
+   - ✅ **RESOLVED**: Instruction analysis available in JitCpu's interpreter mode
+   - When `enableInstructionAnalyzer: true` and `forceInterpreterMode: true`, JitCpu provides:
+     - Instruction formatting with `FormatCurrentInstruction()`
+     - Detailed analysis with `AnalyzeCurrentInstruction()`
+     - Register read/write tracking
+     - Memory access detection
+   - Also consider: JIT cache inspection, disassembly output, enhanced logging
 
 ## References
 
@@ -207,5 +229,5 @@ var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, ...);
 
 ---
 
-**Last Updated**: 2026-01-01
-**Status**: In Progress - Test Migration Complete
+**Last Updated**: 2026-01-02
+**Status**: In Progress - Test Migration Complete, Instruction Analysis Implemented in JitCpu
