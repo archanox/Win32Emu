@@ -108,6 +108,14 @@
 							</label>
 						</div>
 						
+						<div class="form-check mb-2">
+							<input class="form-check-input" type="checkbox" id="enableInstructionAnalyzer" @bind="_enableInstructionAnalyzer" disabled="@_isRunning" />
+							<label class="form-check-label" for="enableInstructionAnalyzer">
+								Enable Instruction Analyzer
+								<small class="text-muted d-block">Enable instruction-level analysis for debugging (FormatCurrentInstruction, AnalyzeCurrentInstruction)</small>
+							</label>
+						</div>
+						
 						@if (!_folderMode)
 						{
 							<label for="fileInput" class="form-label">Select Executable</label>
@@ -448,6 +456,7 @@
 	private bool _force32BitStackOps = true; // Default to true for Win32 compatibility
 	private bool _useJitCpu = false; // Default to IcedCpu
 	private bool _useCache = true; // Default to using cache
+	private bool _enableInstructionAnalyzer = false; // Default to disabled
 	private string _loadedFileName = string.Empty;
 	private long _loadedFileSize = 0;
 	private byte[]? _executableData = null;
@@ -756,13 +765,15 @@
 			AddDebugOutput($"SIMD: {EmulatorService.GetSimdCapabilities()}");
 			AddDebugOutput($"CPU Backend: Unified JitCpu (Interpreter mode in WASM)");
 			AddDebugOutput($"Cache: {(_useCache ? "Enabled" : "Disabled")}");
+			AddDebugOutput($"Instruction Analyzer: {(_enableInstructionAnalyzer ? "Enabled" : "Disabled")}");
 			
 			var loadSuccess = await EmulatorService.LoadExecutableAsync(
 				_executableData, 
 				_loadedFileName,
 				_folderMode ? _loadedFiles : null,
 				_force32BitStackOps,
-				_useCache);
+				_useCache,
+				_enableInstructionAnalyzer);
 			
 			if (!loadSuccess)
 			{

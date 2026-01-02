@@ -107,13 +107,15 @@ public class EmulatorService : IDisposable
 	/// <param name="additionalFiles">Optional dictionary of additional files (path -> bytes) for the VFS</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
 	/// <param name="useCache">Enable cache loading from wwwroot/cache/ directory</param>
+	/// <param name="enableInstructionAnalyzer">Enable instruction analyzer for debugging (runs in interpreter mode)</param>
 	/// <returns>True if loading succeeded</returns>
 	public async Task<bool> LoadExecutableAsync(
 		byte[] executableBytes, 
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null,
 		bool force32BitStackOps = true,
-		bool useCache = true)
+		bool useCache = true,
+		bool enableInstructionAnalyzer = false)
 	{
 		try
 		{
@@ -228,7 +230,8 @@ public class EmulatorService : IDisposable
 			// Load the executable from bytes using the Emulator's built-in method
 			// with the browser VFS for file operations
 			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps);
+			// When enableInstructionAnalyzer is true, instruction analysis features are available
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer);
 			
 			// Load cache if enabled - JitCpu uses RTL-based cache
 			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
