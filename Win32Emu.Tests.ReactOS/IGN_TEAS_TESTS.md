@@ -41,7 +41,6 @@ The `ign_teas.exe` application uses a comprehensive set of Win32 APIs for graphi
 | `GetProcAddress` | Get function address | Wine + ReactOS |
 | `IsProcessorFeaturePresent` | Check CPU features | Wine + ReactOS |
 | `CreateFileA` | Open/create file | Wine + ReactOS |
-| `GetFileType` | Get file type | Wine + ReactOS |
 | `SetFilePointer` | Move file pointer | Wine + ReactOS |
 | `ReadFile` | Read from file | Wine + ReactOS |
 | `CloseHandle` | Close handle | Wine + ReactOS |

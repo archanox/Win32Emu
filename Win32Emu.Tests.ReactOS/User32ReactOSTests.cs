@@ -13,22 +13,24 @@ public class User32ReactOSTests : IDisposable
 {
 	private readonly ReactOSTestRunner _runner;
 	private readonly ILogger<User32ReactOSTests> _logger;
+	private readonly ILoggerFactory _loggerFactory;
 
 	public User32ReactOSTests()
 	{
-		// Create logger for test output
-		using var loggerFactory = LoggerFactory.Create(builder =>
+		// Create logger factory and logger for test output
+		_loggerFactory = LoggerFactory.Create(builder =>
 		{
 			builder.AddConsole();
 			builder.SetMinimumLevel(LogLevel.Information);
 		});
 
-		_logger = loggerFactory.CreateLogger<User32ReactOSTests>();
+		_logger = _loggerFactory.CreateLogger<User32ReactOSTests>();
 		_runner = new ReactOSTestRunner(logger: _logger);
 	}
 
 	public void Dispose()
 	{
+		_loggerFactory.Dispose();
 		GC.SuppressFinalize(this);
 	}
 
