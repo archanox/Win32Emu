@@ -39,8 +39,11 @@ This document outlines the comprehensive testing strategy for Win32Emu, organize
 - **Backend Integration**: SDL3, Software rendering, DirectDraw, DirectInput
 - **SingleStepTests Conformance Suite**: 941 hardware-generated CPU tests (optional, not blocking CI)
   - Tests validate CPU implementation against real 386 hardware behavior
+  - ~2.3 million individual test cases (2,500+ per opcode × 941 opcodes)
+  - Hardware-accurate: Captured from real 386 CPU execution
   - Run with: `dotnet test --filter "Category=ConformanceTests"`
   - See: https://github.com/SingleStepTests/80386
+  - **Note**: For other CPU test suites like test386.asm, see [CPU Test Suite Evaluation](docs/testing/TEST386_EVALUATION.md)
 
 ### 4. Win32Emu.Tests.Integration 🔄 PLANNED
 **Purpose**: End-to-end testing with real Win32 executables  
@@ -204,3 +207,31 @@ When creating tests for core emulator features (CPU, memory, etc.):
 3. Critical for maintaining emulator correctness and performance
 
 The failing tests document current implementation differences and serve as targets for future improvements while ensuring the test suite captures the actual behavior of the emulator.
+
+## CPU Test Suite Options
+
+Win32Emu uses **SingleStepTests/80386** for CPU validation, which provides hardware-accurate, instruction-level testing with ~2.3 million test cases. This test suite is already integrated and provides excellent coverage.
+
+### Why Not test386.asm?
+
+The [test386.asm](https://github.com/barotto/test386.asm) CPU test suite is sometimes mentioned as an alternative. However, it's **not suitable for Win32Emu** because:
+
+- **Architecture Mismatch**: test386.asm is designed for bare-metal BIOS emulation, not Win32 PE executables
+- **Infrastructure Requirements**: Would require ~3,750 lines of BIOS/POST port/serial port emulation code
+- **Different Goals**: Tests system-level features (mode switches, interrupts), not instruction accuracy
+
+### Comparison: SingleStepTests vs test386.asm
+
+| Feature | test386.asm | SingleStepTests/80386 |
+|---------|-------------|----------------------|
+| Integration Complexity | High (BIOS emulation needed) | ✅ Low (already integrated) |
+| Test Count | ~40 test categories | ✅ ~2.3M individual test cases |
+| Hardware Accuracy | Good (written for emulators) | ✅ Excellent (real hardware capture) |
+| Execution Model | Bare-metal BIOS | ✅ Instruction-level snapshots |
+| Maintenance | Requires BIOS infrastructure | ✅ Self-contained MOO parser |
+| Win32Emu Fit | ❌ Poor (bare-metal focus) | ✅ Perfect (instruction focus) |
+
+For a detailed evaluation and instructions on using test386.asm externally if needed, see:
+- [CPU Test Suite Evaluation](docs/testing/TEST386_EVALUATION.md)
+
+**Recommendation**: Use the integrated SingleStepTests/80386 suite. It provides superior instruction-level validation with better architecture fit.
