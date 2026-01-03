@@ -49,6 +49,11 @@ namespace Win32Emu.Win32.Modules
 		// Error codes
 		private const int EINVAL = 22;
 		
+		// Callback execution constants
+		private const uint CALLBACK_RETURN_ADDRESS = 0xDEADBEEF; // Return address marker for callback execution
+		private const int MAX_CALLBACK_STEPS = 100000; // Safety limit to prevent infinite loops in callbacks
+		private const int MINIMUM_VALID_EIP = 0x10000; // Minimum valid EIP (avoid NULL and low memory)
+		
 		// Random number generator state (thread-specific in real MSVCRT, but we use a simple global)
 		// Initialized with a proper random seed based on current time
 		private uint _randomSeed;
@@ -791,9 +796,46 @@ namespace Win32Emu.Win32.Modules
 			
 			// Call registered exit functions in reverse order (LIFO)
 			// This is what _cexit does - call exit handlers without terminating the process
-			// Note: For simplicity, we'll skip actually calling the handlers for now
-			// since that would require complex CPU manipulation
-			_logger.LogDebug("[msvcrt] Would call {Count} registered exit handlers", _exitFunctions.Count);
+			var handlerCount = _exitFunctions.Count;
+			_logger.LogDebug("[msvcrt] _cexit: Found {Count} registered exit handlers", handlerCount);
+			
+			if (handlerCount == 0)
+			{
+				// Nothing to do; just return without terminating the process
+				return;
+			}
+			
+			// Take a snapshot to ensure a stable iteration order and avoid mutating the collection
+			// Handlers must be called in reverse registration order (LIFO)
+			var handlers = _exitFunctions.ToArray();
+			var executedCount = 0;
+			var successCount = 0;
+			
+			for (var i = handlers.Length - 1; i >= 0; i--)
+			{
+				var funcPtr = handlers[i];
+				
+				if (funcPtr == 0)
+				{
+					_logger.LogDebug("[msvcrt] _cexit: Skipping NULL exit handler at index {Index}", i);
+					continue;
+				}
+				
+				executedCount++;
+				_logger.LogDebug("[msvcrt] _cexit: Calling exit handler #{Index} at 0x{FuncPtr:X8}", executedCount, funcPtr);
+				
+				if (ExecuteCallback(funcPtr, "_cexit"))
+				{
+					successCount++;
+					_logger.LogDebug("[msvcrt] _cexit: Exit handler #{Index} completed successfully", executedCount);
+				}
+				else
+				{
+					_logger.LogWarning("[msvcrt] _cexit: Exit handler #{Index} at 0x{FuncPtr:X8} failed to execute", executedCount, funcPtr);
+				}
+			}
+			
+			_logger.LogInformation("[msvcrt] _cexit: Executed {Success}/{Total} exit handlers successfully", successCount, executedCount);
 			
 			// Note: _cexit does NOT terminate the process, only calls cleanup handlers
 		}
@@ -3115,6 +3157,11 @@ namespace Win32Emu.Win32.Modules
 	/// Execute a callback function in the emulated code.
 	/// Similar to User32Module's callback execution but adapted for synchronous context.
 	/// This method sets up a call frame, executes the callback, and restores CPU state.
+	/// 
+	/// Note: The finally block always restores CPU state (EIP, ESP, EBP) to ensure
+	/// the caller's state is preserved even if the callback fails or throws an exception.
+	/// This is intentional - we return control to the Win32 API function that invoked
+	/// the callback, not to the address the callback would have returned to.
 	/// </summary>
 	/// <param name="funcPtr">Address of the function to call</param>
 	/// <param name="logContext">Context for logging (e.g., "_initterm")</param>
@@ -3140,9 +3187,6 @@ namespace Win32Emu.Win32.Modules
 		var savedEsp = _cpu.GetRegister("ESP");
 		var savedEbp = _cpu.GetRegister("EBP");
 
-		// Define return address marker (unique value to detect when callback returns)
-		const uint RETURN_ADDRESS = 0xDEADBEEF;
-
 		try
 		{
 			// Set up stack for cdecl/stdcall convention
@@ -3150,23 +3194,21 @@ namespace Win32Emu.Win32.Modules
 
 			// Push return address
 			esp -= 4;
-			_env.Memory.Write32(esp, RETURN_ADDRESS);
+			_env.Memory.Write32(esp, CALLBACK_RETURN_ADDRESS);
 
 			// Update CPU registers
 			_cpu.SetRegister("ESP", esp);
 			_cpu.SetEip(funcPtr);
 
 			// Execute callback - keep running until we hit the return address
-			const int MAX_STEPS = 100000; // Safety limit to prevent infinite loops
-			const int MINIMUM_VALID_EIP = 0x10000; // Minimum valid EIP (avoid NULL and low memory)
 			var steps = 0;
 
-			while (steps < MAX_STEPS)
+			while (steps < MAX_CALLBACK_STEPS)
 			{
 				var eip = _cpu.GetEip();
 
 				// Check if we've returned to our marker address
-				if (eip == RETURN_ADDRESS)
+				if (eip == CALLBACK_RETURN_ADDRESS)
 				{
 					_logger.LogDebug("[msvcrt] {LogContext}: Callback returned successfully after {Steps} steps", logContext, steps);
 					break;
@@ -3180,7 +3222,7 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// Check for other invalid low addresses
-				if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+				if (eip < MINIMUM_VALID_EIP && eip != CALLBACK_RETURN_ADDRESS)
 				{
 					_logger.LogError("[msvcrt] {LogContext}: Execution jumped to invalid low address 0x{Eip:X8} after {Steps} steps", logContext, eip, steps);
 					return false;
@@ -3189,20 +3231,20 @@ namespace Win32Emu.Win32.Modules
 				// Execute one instruction
 				var step = _cpu.SingleStep(_env.Memory);
 				
-				// Log if callback makes a syscall - this indicates we need more sophisticated handling
+				// Nested syscalls from within callbacks are not supported here
+				// Proper handling would require recursive syscall dispatching similar to User32Module.HandleComAndImportCalls
 				if (step.IsSyscall)
 				{
-					_logger.LogWarning("[msvcrt] {LogContext}: Callback attempted syscall at step {Steps} - nested syscalls not fully supported", logContext, steps);
-					// Note: Proper handling would require recursive syscall dispatching
-					// For now, continue execution and hope the syscall stub handles it
+					_logger.LogWarning("[msvcrt] {LogContext}: Callback attempted nested syscall at step {Steps} (EIP=0x{Eip:X8}) - aborting callback execution", logContext, steps, _cpu.GetEip());
+					return false;
 				}
 				
 				steps++;
 			}
 
-			if (steps >= MAX_STEPS)
+			if (steps >= MAX_CALLBACK_STEPS)
 			{
-				_logger.LogError("[msvcrt] {LogContext}: Callback execution exceeded maximum steps ({MaxSteps}), possible infinite loop at EIP=0x{Eip:X8}", logContext, MAX_STEPS, _cpu.GetEip());
+				_logger.LogError("[msvcrt] {LogContext}: Callback execution exceeded maximum steps ({MaxSteps}), possible infinite loop at EIP=0x{Eip:X8}", logContext, MAX_CALLBACK_STEPS, _cpu.GetEip());
 				return false;
 			}
 
@@ -3215,7 +3257,8 @@ namespace Win32Emu.Win32.Modules
 		}
 		finally
 		{
-			// Always restore CPU state
+			// Always restore CPU state to return control to the API function caller
+			// This ensures the Win32 API function's execution context is preserved
 			_cpu.SetEip(savedEip);
 			_cpu.SetRegister("ESP", savedEsp);
 			_cpu.SetRegister("EBP", savedEbp);
