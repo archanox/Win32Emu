@@ -42,10 +42,13 @@ public class Gdi32ReactOSTests : IDisposable
 	/// Run Gdi32 test suites (Wine and ReactOS API tests)
 	/// Wine tests are comprehensive integration tests from the Wine project
 	/// ReactOS API tests are focused unit tests from the ReactOS project
+	/// 
+	/// NOTE: These tests currently fail due to incomplete C runtime initialization.
+	/// Same issue as Kernel32 tests - requires _initterm callback execution.
 	/// </summary>
-	[Theory(Skip = "ReactOS/Wine tests may trigger emulator issues. Run manually to validate Gdi32 implementation. Tests are informational and failures don't block PRs.")]
-	[InlineData("gdi32_winetest.exe", "Gdi32 Wine Test")]
-	[InlineData("gdi32_apitest.exe", "Gdi32 API Test")]
+	[Theory]
+	[InlineData("gdi32_winetest.exe", "Gdi32 Wine Test", Skip = "Large Wine test suite - requires full C runtime initialization")]
+	[InlineData("gdi32_apitest.exe", "Gdi32 API Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
 	[Trait("Function", "Gdi32_Tests")]
 	public void Gdi32_ReactOSTests_ShouldExecute(string executable, string testName)
 	{
@@ -54,6 +57,13 @@ public class Gdi32ReactOSTests : IDisposable
 
 		// Output test results
 		_logger.LogInformation("{TestName} Results: {Summary}", testName, result.Summary);
+
+		// Log error details if present
+		if (result.IsError)
+		{
+			_logger.LogError("Test error: {ErrorMessage}", result.ErrorMessage);
+			_logger.LogDebug("Output captured: {Output}", result.Output ?? "(none)");
+		}
 
 		if (result.FailureMessages.Count > 0)
 		{
@@ -66,7 +76,7 @@ public class Gdi32ReactOSTests : IDisposable
 
 		// For now, we don't assert all passed since many APIs may not be implemented
 		// This test serves to run the suite and report results
-		Assert.False(result.IsError, result.ErrorMessage);
+		Assert.False(result.IsError, $"{result.ErrorMessage}\nOutput: {result.Output}");
 		
 		// Log the results for tracking
 		_logger.LogInformation(

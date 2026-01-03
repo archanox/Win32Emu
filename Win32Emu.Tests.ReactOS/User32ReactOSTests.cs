@@ -34,11 +34,18 @@ public class User32ReactOSTests : IDisposable
 		GC.SuppressFinalize(this);
 	}
 
-	[Theory(Skip = "ReactOS tests trigger memory corruption (EIP jumps to low memory range 0x0-0xFFFF). The fix (force32BitStackOps=true by default) has been applied and tests now fail fast instead of timing out, but remaining issues need investigation.")]
-	[InlineData("user32_apitest.exe", "User32 API Test")]
-	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test")]
-	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test")]
-	[InlineData("user32_winetest.exe", "User32 Wine Test")]
+	/// <summary>
+	/// Run User32 test suites (Wine and ReactOS API tests)
+	/// These tests run ReactOS test executables directly in Win32Emu
+	/// 
+	/// NOTE: These tests currently fail due to incomplete C runtime initialization.
+	/// Same issue as Kernel32 tests - requires _initterm callback execution.
+	/// </summary>
+	[Theory]
+	[InlineData("user32_apitest.exe", "User32 API Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
+	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
+	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
+	[InlineData("user32_winetest.exe", "User32 Wine Test", Skip = "Large Wine test suite - requires full C runtime initialization")]
 	[Trait("Function", "User32_Tests")]
 	public void User32_ReactOSTests_ShouldExecute(string executable, string testName)
 	{
@@ -47,6 +54,13 @@ public class User32ReactOSTests : IDisposable
 
 		// Output test results
 		_logger.LogInformation("{TestName} Results: {Summary}", testName, result.Summary);
+
+		// Log error details if present
+		if (result.IsError)
+		{
+			_logger.LogError("Test error: {ErrorMessage}", result.ErrorMessage);
+			_logger.LogDebug("Output captured: {Output}", result.Output ?? "(none)");
+		}
 
 		if (result.FailureMessages.Count > 0)
 		{
@@ -59,7 +73,7 @@ public class User32ReactOSTests : IDisposable
 
 		// For now, we don't assert all passed since many APIs may not be implemented
 		// This test serves to run the suite and report results
-		Assert.False(result.IsError, result.ErrorMessage);
+		Assert.False(result.IsError, $"{result.ErrorMessage}\nOutput: {result.Output}");
 		
 		// Log the results for tracking
 		_logger.LogInformation(
