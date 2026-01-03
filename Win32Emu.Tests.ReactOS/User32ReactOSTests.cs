@@ -33,12 +33,12 @@ public class User32ReactOSTests : IDisposable
 	}
 
 	[Theory(Skip = "ReactOS tests trigger memory corruption (EIP jumps to low memory range 0x0-0xFFFF). The fix (force32BitStackOps=true by default) has been applied and tests now fail fast instead of timing out, but remaining issues need investigation.")]
-	[InlineData("user32_apitest.exe", "User32 API Test", false)]
-	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test", true)]
-	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test", true)]
-	[InlineData("user32_winetest.exe", "User32 Wine Test", true)]
+	[InlineData("user32_apitest.exe", "User32 API Test")]
+	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test")]
+	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test")]
+	[InlineData("user32_winetest.exe", "User32 Wine Test")]
 	[Trait("Function", "User32_Tests")]
-	public void User32_ReactOSTests_ShouldExecute(string executable, string testName, bool isOptional)
+	public void User32_ReactOSTests_ShouldExecute(string executable, string testName)
 	{
 		// Run the specified User32 test suite
 		var result = _runner.Run(executable, timeout: 120);
