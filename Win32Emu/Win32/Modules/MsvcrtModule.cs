@@ -816,6 +816,9 @@ namespace Win32Emu.Win32.Modules
 			// Win32 executables use 32-bit pointers (4 bytes each)
 			const int POINTER_SIZE = 4;
 			
+			var initializerCount = 0;
+			var successCount = 0;
+			
 			// Iterate through the function pointer array
 			for (uint addr = start; addr < end; addr += POINTER_SIZE)
 			{
@@ -823,16 +826,23 @@ namespace Win32Emu.Win32.Modules
 				
 				if (funcPtr != 0)
 				{
-					_logger.LogDebug("[msvcrt] _initterm: Calling initializer at 0x{FuncPtr:X8}", funcPtr);
+					initializerCount++;
+					_logger.LogDebug("[msvcrt] _initterm: Calling initializer #{Index} at 0x{FuncPtr:X8}", initializerCount, funcPtr);
 					
-					// For now, we'll skip actually calling the initializers
-					// because calling them would require complex CPU state manipulation
-					// and could cause issues if they're not properly implemented
-					_logger.LogWarning("[msvcrt] _initterm: Initializer call skipped (not fully implemented)");
+					// Execute the initializer function
+					if (ExecuteCallback(funcPtr, "_initterm"))
+					{
+						successCount++;
+						_logger.LogDebug("[msvcrt] _initterm: Initializer #{Index} completed successfully", initializerCount);
+					}
+					else
+					{
+						_logger.LogWarning("[msvcrt] _initterm: Initializer #{Index} at 0x{FuncPtr:X8} failed to execute", initializerCount, funcPtr);
+					}
 				}
 			}
 			
-			_logger.LogInformation("[msvcrt] _initterm: Processed {Count} potential initializers", (end - start) / POINTER_SIZE);
+			_logger.LogInformation("[msvcrt] _initterm: Executed {Success}/{Total} initializers successfully", successCount, initializerCount);
 		}
 
 		[DllModuleExport(8)]
@@ -3098,6 +3108,108 @@ namespace Win32Emu.Win32.Modules
 			var b2 = _env.Memory.Read8(src + (uint)(i + 1));
 			_env.Memory.Write8(dst + (uint)i, b2);
 			_env.Memory.Write8(dst + (uint)(i + 1), b1);
+		}
+	}
+
+	/// <summary>
+	/// Execute a callback function in the emulated code.
+	/// Similar to User32Module's callback execution but adapted for synchronous context.
+	/// This method sets up a call frame, executes the callback, and restores CPU state.
+	/// </summary>
+	/// <param name="funcPtr">Address of the function to call</param>
+	/// <param name="logContext">Context for logging (e.g., "_initterm")</param>
+	/// <returns>True if execution was successful, false if there was an error</returns>
+	private bool ExecuteCallback(uint funcPtr, string logContext)
+	{
+		if (_cpu == null)
+		{
+			_logger.LogWarning("[msvcrt] {LogContext}: CPU not available", logContext);
+			return false;
+		}
+
+		if (funcPtr == 0)
+		{
+			_logger.LogWarning("[msvcrt] {LogContext}: Function pointer is NULL", logContext);
+			return false;
+		}
+
+		_logger.LogDebug("[msvcrt] {LogContext}: Executing callback at 0x{FuncPtr:X8}", logContext, funcPtr);
+
+		// Save current CPU state
+		var savedEip = _cpu.GetEip();
+		var savedEsp = _cpu.GetRegister("ESP");
+		var savedEbp = _cpu.GetRegister("EBP");
+
+		// Define return address marker (unique value to detect when callback returns)
+		const uint RETURN_ADDRESS = 0xDEADBEEF;
+
+		try
+		{
+			// Set up stack for cdecl/stdcall convention
+			var esp = savedEsp;
+
+			// Push return address
+			esp -= 4;
+			_env.Memory.Write32(esp, RETURN_ADDRESS);
+
+			// Update CPU registers
+			_cpu.SetRegister("ESP", esp);
+			_cpu.SetEip(funcPtr);
+
+			// Execute callback - keep running until we hit the return address
+			const int MAX_STEPS = 100000; // Safety limit to prevent infinite loops
+			const int MINIMUM_VALID_EIP = 0x10000; // Minimum valid EIP (avoid NULL and low memory)
+			var steps = 0;
+
+			while (steps < MAX_STEPS)
+			{
+				var eip = _cpu.GetEip();
+
+				// Check if we've returned to our marker address
+				if (eip == RETURN_ADDRESS)
+				{
+					_logger.LogDebug("[msvcrt] {LogContext}: Callback returned successfully after {Steps} steps", logContext, steps);
+					break;
+				}
+
+				// Check for invalid EIP (NULL pointer execution)
+				if (eip == 0x00000000)
+				{
+					_logger.LogError("[msvcrt] {LogContext}: Execution jumped to NULL address (0x00000000) after {Steps} steps", logContext, steps);
+					return false;
+				}
+
+				// Check for other invalid low addresses
+				if (eip < MINIMUM_VALID_EIP && eip != RETURN_ADDRESS)
+				{
+					_logger.LogError("[msvcrt] {LogContext}: Execution jumped to invalid low address 0x{Eip:X8} after {Steps} steps", logContext, eip, steps);
+					return false;
+				}
+
+				// Execute one instruction
+				_cpu.SingleStep(_env.Memory);
+				steps++;
+			}
+
+			if (steps >= MAX_STEPS)
+			{
+				_logger.LogError("[msvcrt] {LogContext}: Callback execution exceeded maximum steps ({MaxSteps}), possible infinite loop", logContext, MAX_STEPS);
+				return false;
+			}
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[msvcrt] {LogContext}: Exception during callback execution: {Message}", logContext, ex.Message);
+			return false;
+		}
+		finally
+		{
+			// Always restore CPU state
+			_cpu.SetEip(savedEip);
+			_cpu.SetRegister("ESP", savedEsp);
+			_cpu.SetRegister("EBP", savedEbp);
 		}
 	}
 }

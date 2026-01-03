@@ -44,12 +44,13 @@ public class Advapi32ReactOSTests : IDisposable
 	/// Wine tests are comprehensive integration tests from the Wine project
 	/// ReactOS API tests are focused unit tests from the ReactOS project
 	/// 
-	/// NOTE: These tests currently fail due to incomplete C runtime initialization.
-	/// Same issue as Kernel32 tests - requires _initterm callback execution.
+	/// NOTE: _initterm callback execution has been implemented using ExecuteCallback method.
+	/// This allows C runtime initializers to be called properly, initializing global state
+	/// and test framework structures.
 	/// </summary>
 	[Theory]
-	[InlineData("advapi32_winetest.exe", "Advapi32 Wine Test", Skip = "Large Wine test suite - requires full C runtime initialization")]
-	[InlineData("advapi32_apitest.exe", "Advapi32 API Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
+	[InlineData("advapi32_winetest.exe", "Advapi32 Wine Test", Skip = "Large Wine test suite - run manually for comprehensive validation")]
+	[InlineData("advapi32_apitest.exe", "Advapi32 API Test")]
 	[Trait("Function", "Advapi32_Tests")]
 	public void Advapi32_ReactOSTests_ShouldExecute(string executable, string testName)
 	{

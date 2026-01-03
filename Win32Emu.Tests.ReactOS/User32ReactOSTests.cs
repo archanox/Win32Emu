@@ -38,14 +38,15 @@ public class User32ReactOSTests : IDisposable
 	/// Run User32 test suites (Wine and ReactOS API tests)
 	/// These tests run ReactOS test executables directly in Win32Emu
 	/// 
-	/// NOTE: These tests currently fail due to incomplete C runtime initialization.
-	/// Same issue as Kernel32 tests - requires _initterm callback execution.
+	/// NOTE: _initterm callback execution has been implemented using ExecuteCallback method.
+	/// This allows C runtime initializers to be called properly, initializing global state
+	/// and test framework structures.
 	/// </summary>
 	[Theory]
-	[InlineData("user32_apitest.exe", "User32 API Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
-	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
-	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
-	[InlineData("user32_winetest.exe", "User32 Wine Test", Skip = "Large Wine test suite - requires full C runtime initialization")]
+	[InlineData("user32_apitest.exe", "User32 API Test")]
+	[InlineData("user32_dynamic_apitest.exe", "User32 Dynamic Test")]
+	[InlineData("user32_apitest_menuui.exe", "User32 Menu UI Test")]
+	[InlineData("user32_winetest.exe", "User32 Wine Test", Skip = "Large Wine test suite - run manually for comprehensive validation")]
 	[Trait("Function", "User32_Tests")]
 	public void User32_ReactOSTests_ShouldExecute(string executable, string testName)
 	{
