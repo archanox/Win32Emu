@@ -813,8 +813,11 @@ namespace Win32Emu.Win32.Modules
 				return;
 			}
 			
+			// Win32 executables use 32-bit pointers (4 bytes each)
+			const int POINTER_SIZE = 4;
+			
 			// Iterate through the function pointer array
-			for (uint addr = start; addr < end; addr += 4) // 4 bytes per pointer
+			for (uint addr = start; addr < end; addr += POINTER_SIZE)
 			{
 				var funcPtr = _env.Memory.Read32(addr);
 				
@@ -829,7 +832,7 @@ namespace Win32Emu.Win32.Modules
 				}
 			}
 			
-			_logger.LogInformation("[msvcrt] _initterm: Processed {Count} potential initializers", (end - start) / 4);
+			_logger.LogInformation("[msvcrt] _initterm: Processed {Count} potential initializers", (end - start) / POINTER_SIZE);
 		}
 
 		[DllModuleExport(8)]
@@ -949,7 +952,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[msvcrt] exit(code={Code})", code);
 			
-			// Call _cexit to run exit handlers (in practice, we skip them for now)
+			// Call _cexit to log exit handlers (actual handler execution not yet implemented)
 			_cexit();
 			
 			// Then terminate the process
