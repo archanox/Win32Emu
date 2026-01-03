@@ -105,6 +105,15 @@ dotnet test Win32Emu.Tests.Emulator --filter "FullyQualifiedName~BasicInstructio
 
 **A**: Point them to this document and [TEST386_EVALUATION.md](TEST386_EVALUATION.md). Win32Emu already has better CPU validation via SingleStepTests/80386.
 
+### Q: What about the PCjs CPU test files (cpuid.asm, id.asm, test386.asm)?
+
+**A**: These are DOS .COM programs that would require DOS executable loader support. Win32Emu already tests everything these files check:
+- **CPUID**: See `PentiumInstructionTests.cs` and `CpuIntrinsicsTests.cs`
+- **CPU identification**: Covered by existing CPUID tests
+- **Instruction testing**: SingleStepTests provides more comprehensive coverage
+
+See the "What About PCjs CPU Test Files?" section in [TEST386_EVALUATION.md](TEST386_EVALUATION.md) for detailed analysis.
+
 ### Q: How do I know if the CPU emulator is working correctly?
 
 **A**: Run the core tests and conformance tests:

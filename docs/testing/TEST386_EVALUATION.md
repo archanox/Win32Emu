@@ -279,9 +279,128 @@ Instead, Win32Emu uses:
 
 This approach provides **better coverage** with **less complexity** and aligns with Win32Emu's architecture and goals.
 
+## What About PCjs CPU Test Files?
+
+The user mentioned three test files from PCjs:
+1. https://www.pcjs.org/software/pcx86/test/cpu/cpuid.asm
+2. https://www.pcjs.org/software/pcx86/test/cpu/id.asm
+3. https://www.pcjs.org/software/pcx86/test/cpu/80386/test386.asm
+
+### Analysis of PCjs Test Files
+
+These are different from the barotto/test386.asm discussed above:
+
+#### cpuid.asm
+- **What it is**: DOS .COM program (org 0x100) for CPU identification
+- **Tests**: Identifies CPU type (8086/8088, NEC V20/V30, 80186, 80286, 80386+)
+- **Output**: Text output via DOS INT 21h
+- **Size**: Small (~2KB compiled)
+
+#### id.asm  
+- **What it is**: DOS .COM program for CPU identification with extended info
+- **Tests**: CPU type, MSW register, IDTR, CR0 register
+- **Output**: Text output via DOS INT 21h showing register values
+- **Size**: Small (~1-2KB compiled)
+
+#### test386.asm (PCjs version)
+- **What it is**: Dual-purpose - can run as ROM OR DOS .COM program
+- **Tests**: Comprehensive 386 instruction testing (similar to barotto version)
+- **Output**: Works as ROM (BIOS-style) or DOS program
+- **Size**: Larger program with extensive tests
+
+### Can These Be Integrated?
+
+#### Short Answer: Partially, but not worth it
+
+**cpuid.asm and id.asm:**
+- ✅ Could potentially run if Win32Emu adds DOS .COM support
+- ⚠️ Win32Emu has limited DOS INT 21h support (mainly for Win16 NE executables)
+- ❌ Win32Emu is focused on Win32 PE and Win16 NE, not DOS .COM programs
+- ✅ **But Win32Emu already tests CPUID**: See `PentiumInstructionTests.cs` and `CpuIntrinsicsTests.cs`
+
+**test386.asm (PCjs):**
+- ❌ As ROM: Same issues as barotto version (requires BIOS infrastructure)
+- ⚠️ As DOS .COM: Would need DOS .COM loader + extensive DOS API support
+- ✅ **But covered by SingleStepTests**: More comprehensive instruction-level testing
+
+### What Win32Emu Already Tests
+
+Win32Emu already has comprehensive CPU feature tests:
+
+**CPUID Testing** (what cpuid.asm tests):
+```csharp
+// Win32Emu.Tests.Emulator/PentiumInstructionTests.cs
+[Fact]
+public void CPUID_Function0_ShouldReturnVendorString()
+
+[Fact]
+public void CPUID_Function1_ShouldReturnFeatureFlags()
+
+// Win32Emu.Tests.Emulator/CpuIntrinsicsTests.cs
+[Fact]
+public void CPUID_Function0_ShouldReturnMaxFunction()
+
+[Fact]
+public void CPUID_Function1_ShouldReturnHostBasedFeatures()
+
+[Fact]
+public void CPUID_Function7_SubFunction0_ShouldReturnExtendedFeatures()
+
+[Fact]
+public void CPUID_UnsupportedFunction_ShouldReturnZeros()
+
+[Fact]
+public void CPUID_Function80000000_ShouldReturnMaxExtendedFunction()
+```
+
+**CPU Identification** (what id.asm tests):
+- Win32Emu reports accurate CPU features via CPUID
+- MSW/CR0 testing exists for protected mode operations
+- IDTR testing covered by descriptor table tests
+
+**Instruction Testing** (what test386.asm tests):
+- SingleStepTests/80386: ~2.3M hardware-accurate instruction tests
+- Win32Emu.Tests.Emulator: 135+ focused instruction tests
+- Covers all instructions that these test files would check
+
+### Recommendation
+
+**Do not integrate these PCjs test files** because:
+
+1. ✅ **CPUID functionality is already tested** in Win32Emu
+2. ✅ **Instruction testing is more comprehensive** via SingleStepTests
+3. ❌ **Would require DOS .COM loader** (not Win32Emu's focus)
+4. ❌ **Would require extensive DOS INT 21h API** implementation
+5. ❌ **Limited additional value** over existing tests
+
+### If You Still Want to Use Them
+
+You can run these tests **externally** with DOSBox or QEMU:
+
+**Using DOSBox:**
+```bash
+# Assemble with NASM (16-bit DOS output)
+nasm -f bin cpuid.asm -o cpuid.com
+nasm -f bin id.asm -o id.com
+
+# Run in DOSBox
+dosbox cpuid.com
+dosbox id.com
+```
+
+**Using QEMU with DOS:**
+```bash
+# Create a DOS disk image and add the .COM files
+# Run with FreeDOS or MS-DOS
+qemu-system-i386 -fda freedos.img
+```
+
+These tests are useful for validating CPU identification on real DOS systems, but Win32Emu's existing test infrastructure provides equivalent or better coverage for its Win32/Win16 emulation needs.
+
 ## References
 
-- [test386.asm Repository](https://github.com/barotto/test386.asm)
+- [test386.asm Repository (barotto)](https://github.com/barotto/test386.asm)
+- [PCjs CPU Tests](https://www.pcjs.org/software/pcx86/test/cpu/)
 - [SingleStepTests/80386 Repository](https://github.com/SingleStepTests/80386)
 - [Win32Emu Test Strategy](../../README.Tests.md)
 - [SingleStepTests Integration](../../Win32Emu.Tests.Emulator/SingleStepTests/README.md)
@@ -292,3 +411,5 @@ This approach provides **better coverage** with **less complexity** and aligns w
 - [CPU Conformance Tests](../../Win32Emu.Tests.Emulator/SingleStepTests/README.md)
 - [Test Strategy Overview](../../README.Tests.md)
 - [Win32Emu Architecture](../../README.md)
+- [PentiumInstructionTests.cs](../../Win32Emu.Tests.Emulator/PentiumInstructionTests.cs) - CPUID tests
+- [CpuIntrinsicsTests.cs](../../Win32Emu.Tests.Emulator/CpuIntrinsicsTests.cs) - CPU feature detection tests
