@@ -43,12 +43,13 @@ public class Gdi32ReactOSTests : IDisposable
 	/// Wine tests are comprehensive integration tests from the Wine project
 	/// ReactOS API tests are focused unit tests from the ReactOS project
 	/// 
-	/// NOTE: These tests currently fail due to incomplete C runtime initialization.
-	/// Same issue as Kernel32 tests - requires _initterm callback execution.
+	/// NOTE: _initterm callback execution has been implemented using ExecuteCallback method.
+	/// This allows C runtime initializers to be called properly, initializing global state
+	/// and test framework structures.
 	/// </summary>
 	[Theory]
-	[InlineData("gdi32_winetest.exe", "Gdi32 Wine Test", Skip = "Large Wine test suite - requires full C runtime initialization")]
-	[InlineData("gdi32_apitest.exe", "Gdi32 API Test", Skip = "Requires _initterm to call initializers - needs callback execution in sync context")]
+	[InlineData("gdi32_winetest.exe", "Gdi32 Wine Test", Skip = "Large Wine test suite - run manually for comprehensive validation")]
+	[InlineData("gdi32_apitest.exe", "Gdi32 API Test")]
 	[Trait("Function", "Gdi32_Tests")]
 	public void Gdi32_ReactOSTests_ShouldExecute(string executable, string testName)
 	{
