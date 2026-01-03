@@ -47,8 +47,8 @@ public class Kernel32ReactOSTests : IDisposable
 	/// Wine tests are comprehensive integration tests from the Wine project
 	/// ReactOS API tests are focused unit tests from the ReactOS project
 	/// </summary>
-	[Theory(Skip = "ReactOS/Wine tests may trigger emulator issues. Run manually to validate Kernel32 implementation. Tests are informational and failures don't block PRs.")]
-	[InlineData("kernel32_winetest.exe", "Kernel32 Wine Test")]
+	[Theory]
+	[InlineData("kernel32_winetest.exe", "Kernel32 Wine Test", Skip = "Large Wine test suite - run manually")]
 	[InlineData("kernel32_apitest.exe", "Kernel32 API Test")]
 	[Trait("Function", "Kernel32_Tests")]
 	public void Kernel32_ReactOSTests_ShouldExecute(string executable, string testName)
@@ -58,6 +58,13 @@ public class Kernel32ReactOSTests : IDisposable
 
 		// Output test results
 		_logger.LogInformation("{TestName} Results: {Summary}", testName, result.Summary);
+
+		// Log error details if present
+		if (result.IsError)
+		{
+			_logger.LogError("Test error: {ErrorMessage}", result.ErrorMessage);
+			_logger.LogDebug("Output captured: {Output}", result.Output ?? "(none)");
+		}
 
 		if (result.FailureMessages.Count > 0)
 		{
@@ -70,7 +77,7 @@ public class Kernel32ReactOSTests : IDisposable
 
 		// For now, we don't assert all passed since many APIs may not be implemented
 		// This test serves to run the suite and report results
-		Assert.False(result.IsError, result.ErrorMessage);
+		Assert.False(result.IsError, $"{result.ErrorMessage}\nOutput: {result.Output}");
 		
 		// Log the results for tracking
 		_logger.LogInformation(
