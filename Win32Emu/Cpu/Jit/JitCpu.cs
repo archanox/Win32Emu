@@ -548,7 +548,14 @@ public class JitCpu : IAsyncCpu
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		
+		// Update EIP - decoder has advanced by instruction length
 		_eip = (uint)_decoder.IP;
+		
+		// In 16-bit mode, wrap EIP to 16 bits
+		if (_bitness == 16)
+		{
+			_eip &= 0xFFFF;
+		}
 		
 		var isCall = insn.Mnemonic == Mnemonic.Call;
 		var isSyscall = false;
@@ -2794,6 +2801,10 @@ public class JitCpu : IAsyncCpu
 			Register.BX => _ebx & 0xFFFF,
 			Register.CX => _ecx & 0xFFFF,
 			Register.DX => _edx & 0xFFFF,
+			Register.SI => _esi & 0xFFFF,
+			Register.DI => _edi & 0xFFFF,
+			Register.BP => _ebp & 0xFFFF,
+			Register.SP => _esp & 0xFFFF,
 			Register.AL => _eax & 0xFF,
 			Register.BL => _ebx & 0xFF,
 			Register.CL => _ecx & 0xFF,
@@ -2830,6 +2841,10 @@ public class JitCpu : IAsyncCpu
 			case Register.BX: _ebx = (_ebx & 0xFFFF0000) | (value & 0xFFFF); break;
 			case Register.CX: _ecx = (_ecx & 0xFFFF0000) | (value & 0xFFFF); break;
 			case Register.DX: _edx = (_edx & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.SI: _esi = (_esi & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.DI: _edi = (_edi & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.BP: _ebp = (_ebp & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.SP: _esp = (_esp & 0xFFFF0000) | (value & 0xFFFF); break;
 			case Register.AL: _eax = (_eax & 0xFFFFFF00) | (value & 0xFF); break;
 			case Register.BL: _ebx = (_ebx & 0xFFFFFF00) | (value & 0xFF); break;
 			case Register.CL: _ecx = (_ecx & 0xFFFFFF00) | (value & 0xFF); break;
@@ -2845,13 +2860,25 @@ public class JitCpu : IAsyncCpu
 	{
 		// Full SIB (Scale-Index-Base) memory address calculation
 		// The Iced library parses the SIB byte and provides displacement, base, index, and scale
-		uint addr = insn.MemoryDisplacement32;
+		uint offset = 0;
+		
+		// In 16-bit mode, displacement is 16-bit and needs proper sign extension
+		if (_bitness == 16)
+		{
+			// Get 16-bit displacement and sign-extend if negative
+			ushort disp16 = (ushort)insn.MemoryDisplacement32;
+			offset = disp16;
+		}
+		else
+		{
+			offset = insn.MemoryDisplacement32;
+		}
 		
 		// Add base register if present
 		var baseReg = insn.MemoryBase;
 		if (baseReg != Register.None)
 		{
-			addr += GetRegisterByEnum(baseReg);
+			offset += GetRegisterByEnum(baseReg);
 		}
 		
 		// Add (index * scale) if index register is present
@@ -2859,12 +2886,40 @@ public class JitCpu : IAsyncCpu
 		if (indexReg != Register.None)
 		{
 			uint indexVal = GetRegisterByEnum(indexReg);
-			addr += indexVal * (uint)insn.MemoryIndexScale;
+			offset += indexVal * (uint)insn.MemoryIndexScale;
+		}
+		
+		// In 16-bit mode, wrap offset to 16 bits
+		if (_bitness == 16)
+		{
+			offset &= 0xFFFF;
+		}
+		
+		// Apply segment override to get physical address
+		// In 16-bit real mode, physical address = segment * 16 + offset
+		uint physicalAddr = offset;
+		if (_bitness == 16)
+		{
+			// Get segment register (defaults to DS, but can be overridden by instruction prefix)
+			var segReg = insn.MemorySegment;
+			uint segmentValue = segReg switch
+			{
+				Register.CS => _cs,
+				Register.DS => _ds,
+				Register.ES => _es,
+				Register.FS => _fs,
+				Register.GS => _gs,
+				Register.SS => _ss,
+				_ => _ds  // Default to DS
+			};
+			
+			// Calculate physical address: segment * 16 + offset
+			physicalAddr = (segmentValue << 4) + offset;
 		}
 		
 		// Check if address is within valid memory range
 		// Convert to ulong to avoid overflow issues when comparing with memory size
-		if (addr >= _mem.Size)
+		if (physicalAddr >= _mem.Size)
 		{
 			byte[]? instrBytes = null;
 			try
@@ -2875,11 +2930,11 @@ public class JitCpu : IAsyncCpu
 			{
 			}
 
-			Diagnostics.Diagnostics.LogCalcMemAddressFailure(addr, _mem.Size, _eip, _esp, _ebp, _eax, _ebx, _ecx, _edx, _esi, _edi, instrBytes);
-			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{_eip:X8})");
+			Diagnostics.Diagnostics.LogCalcMemAddressFailure(physicalAddr, _mem.Size, _eip, _esp, _ebp, _eax, _ebx, _ecx, _edx, _esi, _edi, instrBytes);
+			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{physicalAddr:X} (EIP=0x{_eip:X8})");
 		}
 		
-		return addr;
+		return physicalAddr;
 	}
 
 	private uint GetRegisterByEnum(Register reg)
@@ -2894,6 +2949,22 @@ public class JitCpu : IAsyncCpu
 			Register.EDI => _edi,
 			Register.EBP => _ebp,
 			Register.ESP => _esp,
+			// 16-bit registers
+			Register.AX => _eax & 0xFFFF,
+			Register.BX => _ebx & 0xFFFF,
+			Register.CX => _ecx & 0xFFFF,
+			Register.DX => _edx & 0xFFFF,
+			Register.SI => _esi & 0xFFFF,
+			Register.DI => _edi & 0xFFFF,
+			Register.BP => _ebp & 0xFFFF,
+			Register.SP => _esp & 0xFFFF,
+			// Segment registers
+			Register.CS => _cs,
+			Register.DS => _ds,
+			Register.ES => _es,
+			Register.FS => _fs,
+			Register.GS => _gs,
+			Register.SS => _ss,
 			_ => 0
 		};
 	}
@@ -7314,6 +7385,26 @@ public class JitCpu : IAsyncCpu
 		}
 		
 		public void Reset(uint ip) => _ptr = ip;
-		public override int ReadByte() => _cpu._mem.Read8(_ptr++);
+		
+		public override int ReadByte()
+		{
+			// In 16-bit real mode, convert IP to physical address: CS * 16 + IP
+			uint physicalAddr;
+			if (_cpu._bitness == 16)
+			{
+				// In 16-bit mode, _ptr is the IP (offset) and we need to add the segment base
+				uint ip16 = _ptr & 0xFFFF;
+				physicalAddr = ((uint)_cpu._cs << 4) + ip16;
+				// Increment IP and wrap to 16 bits
+				_ptr = (_ptr & 0xFFFF0000) | ((_ptr + 1) & 0xFFFF);
+			}
+			else
+			{
+				// In 32-bit mode, use flat address
+				physicalAddr = _ptr++;
+			}
+			
+			return _cpu._mem.Read8(physicalAddr);
+		}
 	}
 }
