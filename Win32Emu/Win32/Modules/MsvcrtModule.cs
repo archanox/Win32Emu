@@ -3187,13 +3187,22 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// Execute one instruction
-				_cpu.SingleStep(_env.Memory);
+				var step = _cpu.SingleStep(_env.Memory);
+				
+				// Log if callback makes a syscall - this indicates we need more sophisticated handling
+				if (step.IsSyscall)
+				{
+					_logger.LogWarning("[msvcrt] {LogContext}: Callback attempted syscall at step {Steps} - nested syscalls not fully supported", logContext, steps);
+					// Note: Proper handling would require recursive syscall dispatching
+					// For now, continue execution and hope the syscall stub handles it
+				}
+				
 				steps++;
 			}
 
 			if (steps >= MAX_STEPS)
 			{
-				_logger.LogError("[msvcrt] {LogContext}: Callback execution exceeded maximum steps ({MaxSteps}), possible infinite loop", logContext, MAX_STEPS);
+				_logger.LogError("[msvcrt] {LogContext}: Callback execution exceeded maximum steps ({MaxSteps}), possible infinite loop at EIP=0x{Eip:X8}", logContext, MAX_STEPS, _cpu.GetEip());
 				return false;
 			}
 
