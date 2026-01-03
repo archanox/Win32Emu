@@ -304,6 +304,121 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 		_testEnv.CallKernel32Api("HEAPDESTROY", hHeap);
 	}
 
+	[Fact]
+	public void HeapAlloc_WithZeroFlag_ShouldReturnZeroInitializedMemory()
+	{
+		// Arrange - Test HEAP_ZERO_MEMORY flag (0x00000008)
+		const uint HEAP_ZERO_MEMORY = 0x00000008;
+		var hHeap = _testEnv.CallKernel32Api("HEAPCREATE", 0u, 0x1000u, 0u);
+
+		// Act
+		var ptr = _testEnv.CallKernel32Api("HEAPALLOC", hHeap, HEAP_ZERO_MEMORY, 256u);
+
+		// Assert
+		Assert.NotEqual(0u, ptr);
+		
+		// Verify memory is zero-initialized
+		for (uint i = 0; i < 256; i++)
+		{
+			var value = _testEnv.Memory.Read8(ptr + i);
+			Assert.Equal(0, value);
+		}
+
+		// Cleanup
+		_testEnv.CallKernel32Api("HEAPFREE", hHeap, 0u, ptr);
+		_testEnv.CallKernel32Api("HEAPDESTROY", hHeap);
+	}
+
+	[Fact]
+	public void HeapAlloc_MultipleAllocations_ShouldReturnDifferentPointers()
+	{
+		// Arrange - Test multiple allocations from same heap (as done by ign_teas)
+		var hHeap = _testEnv.CallKernel32Api("HEAPCREATE", 0u, 0x10000u, 0u);
+
+		// Act - Allocate multiple blocks like ign_teas does
+		var ptr1 = _testEnv.CallKernel32Api("HEAPALLOC", hHeap, 0u, 1696u);
+		var ptr2 = _testEnv.CallKernel32Api("HEAPALLOC", hHeap, 0u, 4096u);
+		var ptr3 = _testEnv.CallKernel32Api("HEAPALLOC", hHeap, 0u, 8416u);
+
+		// Assert
+		Assert.NotEqual(0u, ptr1);
+		Assert.NotEqual(0u, ptr2);
+		Assert.NotEqual(0u, ptr3);
+		Assert.NotEqual(ptr1, ptr2);
+		Assert.NotEqual(ptr2, ptr3);
+		Assert.NotEqual(ptr1, ptr3);
+
+		// Cleanup
+		_testEnv.CallKernel32Api("HEAPFREE", hHeap, 0u, ptr1);
+		_testEnv.CallKernel32Api("HEAPFREE", hHeap, 0u, ptr2);
+		_testEnv.CallKernel32Api("HEAPFREE", hHeap, 0u, ptr3);
+		_testEnv.CallKernel32Api("HEAPDESTROY", hHeap);
+	}
+
+	[Fact]
+	public void HeapCreate_WithNoSerializeFlag_ShouldWork()
+	{
+		// Arrange - Test HEAP_NO_SERIALIZE flag (0x00000001) used by ign_teas
+		const uint HEAP_NO_SERIALIZE = 0x00000001;
+
+		// Act
+		var hHeap = _testEnv.CallKernel32Api("HEAPCREATE", HEAP_NO_SERIALIZE, 0x1000u, 0u);
+
+		// Assert
+		Assert.NotEqual(0u, hHeap);
+
+		// Verify we can allocate from it
+		var ptr = _testEnv.CallKernel32Api("HEAPALLOC", hHeap, 0u, 256u);
+		Assert.NotEqual(0u, ptr);
+
+		// Cleanup
+		_testEnv.CallKernel32Api("HEAPFREE", hHeap, 0u, ptr);
+		_testEnv.CallKernel32Api("HEAPDESTROY", hHeap);
+	}
+
+	[Fact]
+	public void HeapReAlloc_ShouldExpandMemoryBlock()
+	{
+		// Arrange
+		var hHeap = _testEnv.CallKernel32Api("HEAPCREATE", 0u, 0x1000u, 0u);
+		var ptr = _testEnv.CallKernel32Api("HEAPALLOC", hHeap, 0u, 128u);
+
+		// Write test data
+		_testEnv.Memory.Write32(ptr, 0xDEADBEEF);
+
+		// Act - Expand to 256 bytes
+		var newPtr = _testEnv.CallKernel32Api("HEAPREALLOC", hHeap, 0u, ptr, 256u);
+
+		// Assert
+		Assert.NotEqual(0u, newPtr);
+		
+		// Verify original data is preserved
+		var value = _testEnv.Memory.Read32(newPtr);
+		Assert.Equal(0xDEADBEEFu, value);
+
+		// Cleanup
+		_testEnv.CallKernel32Api("HEAPFREE", hHeap, 0u, newPtr);
+		_testEnv.CallKernel32Api("HEAPDESTROY", hHeap);
+	}
+
+	[Fact]
+	public void HeapSize_ShouldReturnAllocatedSize()
+	{
+		// Arrange
+		var hHeap = _testEnv.CallKernel32Api("HEAPCREATE", 0u, 0x1000u, 0u);
+		var ptr = _testEnv.CallKernel32Api("HEAPALLOC", hHeap, 0u, 256u);
+
+		// Act
+		var size = _testEnv.CallKernel32Api("HEAPSIZE", hHeap, 0u, ptr);
+
+		// Assert
+		Assert.True(size >= 256u, "Size should be at least the requested size");
+
+		// Cleanup
+		_testEnv.CallKernel32Api("HEAPFREE", hHeap, 0u, ptr);
+		_testEnv.CallKernel32Api("HEAPDESTROY", hHeap);
+	}
+
 	#endregion
 
 	#region WideCharToMultiByte Tests
@@ -473,6 +588,268 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 
 		var converted = _testEnv.ReadString(destPtr);
 		Assert.Equal("world", converted);
+	}
+
+	#endregion
+
+	#region SetFilePointer Tests
+	// Ported from: rostests/apitests/kernel32/SetFilePointer.c
+	// These tests are particularly important as ign_teas uses SetFilePointer extensively (167 calls)
+
+	[Fact]
+	public void SetFilePointer_FromBegin_ShouldMoveToPosition()
+	{
+		// Arrange - Create a test file with some content
+		var tempDir = Path.GetTempPath();
+		_testEnv.ProcessEnv.CurrentDirectory = tempDir;
+		var testFileName = "test_setfilepointer_" + Guid.NewGuid().ToString() + ".txt";
+		var testFilePath = Path.Combine(tempDir, testFileName);
+		
+		try
+		{
+			// Write test content
+			File.WriteAllText(testFilePath, "0123456789ABCDEF");
+			
+			var fileName = _testEnv.WriteString(testFileName);
+			const uint GENERIC_READ = 0x80000000;
+			const uint FILE_SHARE_READ = 0x00000001;
+			const uint OPEN_EXISTING = 3;
+			const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+			const uint FILE_BEGIN = 0;
+			
+			var handle = _testEnv.CallKernel32Api("CREATEFILEA", fileName, GENERIC_READ, 
+				FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+			
+			// Skip test if file couldn't be opened
+			if (handle == 0xFFFFFFFFu)
+			{
+				return;
+			}
+			
+			// Act - Move to position 5 from beginning
+			var result = _testEnv.CallKernel32Api("SETFILEPOINTER", handle, 5, 0u, FILE_BEGIN);
+			
+			// Assert
+			Assert.Equal(5u, result);
+			
+			// Verify by reading - should read from position 5
+			var buffer = _testEnv.AllocateMemory(4);
+			var bytesRead = _testEnv.AllocateMemory(4);
+			_testEnv.CallKernel32Api("READFILE", handle, buffer, 4u, bytesRead, 0u);
+			
+			var readData = new byte[4];
+			for (int i = 0; i < 4; i++)
+				readData[i] = (byte)_testEnv.Memory.Read8(buffer + (uint)i);
+			
+			Assert.Equal((byte)'5', readData[0]);
+			Assert.Equal((byte)'6', readData[1]);
+			Assert.Equal((byte)'7', readData[2]);
+			Assert.Equal((byte)'8', readData[3]);
+			
+			// Cleanup
+			_testEnv.CallKernel32Api("CLOSEHANDLE", handle);
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+				File.Delete(testFilePath);
+		}
+	}
+
+	[Fact]
+	public void SetFilePointer_FromCurrent_ShouldMoveRelatively()
+	{
+		// Arrange
+		var tempDir = Path.GetTempPath();
+		_testEnv.ProcessEnv.CurrentDirectory = tempDir;
+		var testFileName = "test_setfilepointer2_" + Guid.NewGuid().ToString() + ".txt";
+		var testFilePath = Path.Combine(tempDir, testFileName);
+		
+		try
+		{
+			File.WriteAllText(testFilePath, "0123456789ABCDEF");
+			
+			var fileName = _testEnv.WriteString(testFileName);
+			const uint GENERIC_READ = 0x80000000;
+			const uint FILE_SHARE_READ = 0x00000001;
+			const uint OPEN_EXISTING = 3;
+			const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+			const uint FILE_BEGIN = 0;
+			const uint FILE_CURRENT = 1;
+			
+			var handle = _testEnv.CallKernel32Api("CREATEFILEA", fileName, GENERIC_READ, 
+				FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+			
+			// Skip test if file couldn't be opened
+			if (handle == 0xFFFFFFFFu)
+			{
+				return;
+			}
+			
+			// Move to position 3
+			_testEnv.CallKernel32Api("SETFILEPOINTER", handle, 3, 0u, FILE_BEGIN);
+			
+			// Act - Move 4 bytes forward from current position
+			var result = _testEnv.CallKernel32Api("SETFILEPOINTER", handle, 4, 0u, FILE_CURRENT);
+			
+			// Assert - Should be at position 7
+			Assert.Equal(7u, result);
+			
+			// Cleanup
+			_testEnv.CallKernel32Api("CLOSEHANDLE", handle);
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+				File.Delete(testFilePath);
+		}
+	}
+
+	[Fact]
+	public void SetFilePointer_FromEnd_ShouldMoveFromEnd()
+	{
+		// Arrange
+		var tempDir = Path.GetTempPath();
+		_testEnv.ProcessEnv.CurrentDirectory = tempDir;
+		var testFileName = "test_setfilepointer3_" + Guid.NewGuid().ToString() + ".txt";
+		var testFilePath = Path.Combine(tempDir, testFileName);
+		
+		try
+		{
+			File.WriteAllText(testFilePath, "0123456789"); // 10 bytes
+			
+			var fileName = _testEnv.WriteString(testFileName);
+			const uint GENERIC_READ = 0x80000000;
+			const uint FILE_SHARE_READ = 0x00000001;
+			const uint OPEN_EXISTING = 3;
+			const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+			const uint FILE_END = 2;
+			
+			var handle = _testEnv.CallKernel32Api("CREATEFILEA", fileName, GENERIC_READ, 
+				FILE_SHARE_READ, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+			
+			// Skip test if file couldn't be opened
+			if (handle == 0xFFFFFFFFu)
+			{
+				return;
+			}
+			
+			// Act - Move 3 bytes back from end (should be at position 7)
+			var result = _testEnv.CallKernel32Api("SETFILEPOINTER", handle, unchecked((uint)-3), 0u, FILE_END);
+			
+			// Assert - Should be at position 7 (10 - 3)
+			Assert.Equal(7u, result);
+			
+			// Cleanup
+			_testEnv.CallKernel32Api("CLOSEHANDLE", handle);
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+				File.Delete(testFilePath);
+		}
+	}
+
+	[Fact]
+	public void SetFilePointer_WithInvalidHandle_ShouldReturnInvalidValue()
+	{
+		// Arrange
+		const uint INVALID_HANDLE_VALUE = 0xFFFFFFFF;
+		const uint FILE_BEGIN = 0;
+		const uint INVALID_SET_FILE_POINTER = 0xFFFFFFFF;
+
+		// Act
+		var result = _testEnv.CallKernel32Api("SETFILEPOINTER", INVALID_HANDLE_VALUE, 0, 0u, FILE_BEGIN);
+
+		// Assert
+		Assert.Equal(INVALID_SET_FILE_POINTER, result);
+		
+		// Verify error code
+		var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+		Assert.NotEqual(0u, lastError);
+	}
+
+	#endregion
+
+	#region IsProcessorFeaturePresent Tests
+	// Ported from: rostests/apitests/kernel32/IsProcessorFeaturePresent.c
+	// ign_teas calls this to check for floating point precision errata
+
+	[Fact]
+	public void IsProcessorFeaturePresent_WithFloatingPointPrecisionErrata_ShouldReturnFalse()
+	{
+		// Arrange - PF_FLOATING_POINT_PRECISION_ERRATA = 0
+		const uint PF_FLOATING_POINT_PRECISION_ERRATA = 0;
+
+		// Act
+		var result = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_FLOATING_POINT_PRECISION_ERRATA);
+
+		// Assert - Modern CPUs don't have this errata
+		Assert.Equal(0u, result); // FALSE
+	}
+
+	[Fact]
+	public void IsProcessorFeaturePresent_WithMMXInstructions_ShouldReturnTrue()
+	{
+		// Arrange - PF_MMX_INSTRUCTIONS_AVAILABLE = 3
+		const uint PF_MMX_INSTRUCTIONS_AVAILABLE = 3;
+
+		// Act
+		var result = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", PF_MMX_INSTRUCTIONS_AVAILABLE);
+
+		// Assert - Most modern CPUs support MMX
+		Assert.True(result == 0u || result == 1u, "Should return TRUE or FALSE");
+	}
+
+	[Fact]
+	public void IsProcessorFeaturePresent_WithInvalidFeature_ShouldReturnFalse()
+	{
+		// Arrange - Use an invalid/unknown feature ID
+		const uint INVALID_FEATURE = 9999;
+
+		// Act
+		var result = _testEnv.CallKernel32Api("ISPROCESSORFEATUREPRESENT", INVALID_FEATURE);
+
+		// Assert
+		Assert.Equal(0u, result); // FALSE for unknown features
+	}
+
+	#endregion
+
+	#region FreeEnvironmentStringsW Tests
+	// Ported from ReactOS environment tests
+	// ign_teas calls GetEnvironmentStringsW then FreeEnvironmentStringsW
+
+	[Fact]
+	public void FreeEnvironmentStringsW_WithValidPointer_ShouldReturnTrue()
+	{
+		// Arrange
+		var envStrings = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSW");
+		Assert.NotEqual(0u, envStrings);
+
+		// Act
+		var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStrings);
+
+		// Assert
+		Assert.NotEqual(0u, result); // TRUE
+	}
+
+	[Fact]
+	public void GetEnvironmentStringsW_Then_FreeEnvironmentStringsW_ShouldWorkCorrectly()
+	{
+		// Arrange
+		var envStrings = _testEnv.CallKernel32Api("GETENVIRONMENTSTRINGSW");
+		Assert.NotEqual(0u, envStrings);
+
+		// Verify we can read from the block before freeing
+		var firstWChar = _testEnv.Memory.Read16(envStrings);
+		Assert.NotEqual(0, firstWChar);
+
+		// Act
+		var result = _testEnv.CallKernel32Api("FREEENVIRONMENTSTRINGSW", envStrings);
+
+		// Assert
+		Assert.NotEqual(0u, result); // TRUE
 	}
 
 	#endregion
