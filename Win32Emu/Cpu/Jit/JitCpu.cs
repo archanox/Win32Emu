@@ -1964,6 +1964,14 @@ public class JitCpu : IAsyncCpu
 			SetFlagVal(Cf, carryOut);
 			SetFlagVal(Sf, (dest & 0x80000000) != 0);
 			SetFlagVal(Zf, dest == 0);
+			
+			// Set parity flag based on low byte
+			byte lo = (byte)dest;
+			int bits = lo ^ (lo >> 4);
+			bits &= 0xF;
+			bool even = (((0x6996 >> bits) & 1) == 0);
+			SetFlagVal(Pf, even);
+			
 			// OF is set only if count == 1
 			if (count == 1)
 			{
@@ -1983,6 +1991,14 @@ public class JitCpu : IAsyncCpu
 			SetFlagVal(Cf, carryOut);
 			SetFlagVal(Sf, (dest & 0x80000000) != 0);
 			SetFlagVal(Zf, dest == 0);
+			
+			// Set parity flag based on low byte
+			byte lo = (byte)dest;
+			int bits = lo ^ (lo >> 4);
+			bits &= 0xF;
+			bool even = (((0x6996 >> bits) & 1) == 0);
+			SetFlagVal(Pf, even);
+			
 			// OF is set only if count == 1
 			if (count == 1)
 			{
@@ -4701,7 +4717,15 @@ public class JitCpu : IAsyncCpu
 
 	private void UpdateLogicResultFlags(uint r, uint signBitMask)
 	{
-		SetFlagVal(Zf, r == 0);
+		// Mask result to appropriate size before checking zero flag
+		uint maskedResult = signBitMask switch
+		{
+			SIGN_BIT_MASK_8BIT => r & 0xFF,
+			SIGN_BIT_MASK_16BIT => r & 0xFFFF,
+			_ => r
+		};
+		
+		SetFlagVal(Zf, maskedResult == 0);
 		SetFlagVal(Sf, (r & signBitMask) != 0);
 		
 		byte lo = (byte)r;
