@@ -2699,7 +2699,7 @@ public class JitCpu : IAsyncCpu
 			OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,          // Sign-extend 8->32
 			OpKind.Immediate16 => (uint)insn.Immediate16,
 			OpKind.Immediate32 => insn.Immediate32,
-			OpKind.Memory => _mem.Read32(CalcMemAddress(insn, operandIndex)),
+			OpKind.Memory => ReadMemoryOperand(insn, operandIndex),
 			_ => 0u
 		};
 		
@@ -2722,7 +2722,51 @@ public class JitCpu : IAsyncCpu
 		}
 		else if (opKind == OpKind.Memory)
 		{
-			_mem.Write32(CalcMemAddress(insn, operandIndex), value);
+			WriteMemoryOperand(insn, operandIndex, value);
+		}
+	}
+	
+	private uint ReadMemoryOperand(Instruction insn, int operandIndex)
+	{
+		var addr = CalcMemAddress(insn, operandIndex);
+		var memSize = insn.MemorySize;
+		
+		// Determine size based on MemorySize enum
+		return memSize switch
+		{
+			MemorySize.UInt8 or MemorySize.Int8 => _mem.Read8(addr),
+			MemorySize.UInt16 or MemorySize.Int16 => _mem.Read16(addr),
+			MemorySize.UInt32 or MemorySize.Int32 => _mem.Read32(addr),
+			// For 64-bit, return lower 32 bits (32-bit emulator)
+			MemorySize.UInt64 or MemorySize.Int64 => _mem.Read32(addr),
+			// Default to 32-bit for other cases
+			_ => _mem.Read32(addr)
+		};
+	}
+	
+	private void WriteMemoryOperand(Instruction insn, int operandIndex, uint value)
+	{
+		var addr = CalcMemAddress(insn, operandIndex);
+		var memSize = insn.MemorySize;
+		
+		// Determine size based on MemorySize enum
+		switch (memSize)
+		{
+			case MemorySize.UInt8:
+			case MemorySize.Int8:
+				_mem.Write8(addr, (byte)value);
+				break;
+			case MemorySize.UInt16:
+			case MemorySize.Int16:
+				_mem.Write16(addr, (ushort)value);
+				break;
+			case MemorySize.UInt32:
+			case MemorySize.Int32:
+			case MemorySize.UInt64:
+			case MemorySize.Int64:
+			default:
+				_mem.Write32(addr, value);
+				break;
 		}
 	}
 
