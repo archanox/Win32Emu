@@ -802,7 +802,34 @@ namespace Win32Emu.Win32.Modules
 		private void _initterm(uint start, uint end)
 		{
 			_logger.LogInformation("[msvcrt] _initterm(start=0x{Start:X8}, end=0x{End:X8})", start, end);
-			// Call initializers between start and end (stub)
+			
+			// Call initializers between start and end
+			// The start and end pointers point to an array of function pointers
+			// Each non-NULL function pointer should be called with no arguments
+			
+			if (start == 0 || end == 0 || start >= end)
+			{
+				_logger.LogWarning("[msvcrt] _initterm: Invalid range");
+				return;
+			}
+			
+			// Iterate through the function pointer array
+			for (uint addr = start; addr < end; addr += 4) // 4 bytes per pointer
+			{
+				var funcPtr = _env.Memory.Read32(addr);
+				
+				if (funcPtr != 0)
+				{
+					_logger.LogDebug("[msvcrt] _initterm: Calling initializer at 0x{FuncPtr:X8}", funcPtr);
+					
+					// For now, we'll skip actually calling the initializers
+					// because calling them would require complex CPU state manipulation
+					// and could cause issues if they're not properly implemented
+					_logger.LogWarning("[msvcrt] _initterm: Initializer call skipped (not fully implemented)");
+				}
+			}
+			
+			_logger.LogInformation("[msvcrt] _initterm: Processed {Count} potential initializers", (end - start) / 4);
 		}
 
 		[DllModuleExport(8)]
