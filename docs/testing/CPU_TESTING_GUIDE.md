@@ -114,6 +114,14 @@ dotnet test Win32Emu.Tests.Emulator --filter "FullyQualifiedName~BasicInstructio
 
 See the "What About PCjs CPU Test Files?" section in [TEST386_EVALUATION.md](TEST386_EVALUATION.md) for detailed analysis.
 
+### Q: What about CPU tests from the OSDev community?
+
+**A**: OSDev community resources focus on bare-metal OS development (BIOS, ring 0, hardware initialization). Win32Emu focuses on user-mode Win32 applications:
+- **OSDev tests**: Bare-metal, privileged mode, hardware compatibility
+- **Win32Emu needs**: User-mode instructions, Win32 API, application compatibility
+
+SingleStepTests provides superior instruction-level validation (~2.3M hardware-captured tests) compared to manual bare-metal tests. See the "What About OSDev Community CPU Tests?" section in [TEST386_EVALUATION.md](TEST386_EVALUATION.md).
+
 ### Q: How do I know if the CPU emulator is working correctly?
 
 **A**: Run the core tests and conformance tests:
