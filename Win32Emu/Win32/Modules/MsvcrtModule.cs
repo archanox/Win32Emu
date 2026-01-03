@@ -788,7 +788,14 @@ namespace Win32Emu.Win32.Modules
 		private void _cexit()
 		{
 			_logger.LogInformation("[msvcrt] _cexit()");
-			// Clean up without terminating (stub)
+			
+			// Call registered exit functions in reverse order (LIFO)
+			// This is what _cexit does - call exit handlers without terminating the process
+			// Note: For simplicity, we'll skip actually calling the handlers for now
+			// since that would require complex CPU manipulation
+			_logger.LogDebug("[msvcrt] Would call {Count} registered exit handlers", _exitFunctions.Count);
+			
+			// Note: _cexit does NOT terminate the process, only calls cleanup handlers
 		}
 
 		[DllModuleExport(8)]
@@ -914,7 +921,13 @@ namespace Win32Emu.Win32.Modules
 		private void exit(int code)
 		{
 			_logger.LogInformation("[msvcrt] exit(code={Code})", code);
-			// Exit process (stub - should exit)
+			
+			// Call _cexit to run exit handlers (in practice, we skip them for now)
+			_cexit();
+			
+			// Then terminate the process
+			_logger.LogInformation("[msvcrt] Terminating process with exit code {Code}", code);
+			_env.RequestExit();
 		}
 
 		[DllModuleExport(12)]
