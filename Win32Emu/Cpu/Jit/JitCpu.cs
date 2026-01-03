@@ -2829,6 +2829,13 @@ public class JitCpu : IAsyncCpu
 			Register.BH => (_ebx >> 8) & 0xFF,
 			Register.CH => (_ecx >> 8) & 0xFF,
 			Register.DH => (_edx >> 8) & 0xFF,
+			// Segment registers
+			Register.CS => _cs,
+			Register.DS => _ds,
+			Register.ES => _es,
+			Register.FS => _fs,
+			Register.GS => _gs,
+			Register.SS => _ss,
 			_ => 0
 		};
 	}
@@ -2869,6 +2876,13 @@ public class JitCpu : IAsyncCpu
 			case Register.BH: _ebx = (_ebx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
 			case Register.CH: _ecx = (_ecx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
 			case Register.DH: _edx = (_edx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
+			// Segment registers
+			case Register.CS: _cs = (ushort)value; break;
+			case Register.DS: _ds = (ushort)value; break;
+			case Register.ES: _es = (ushort)value; break;
+			case Register.FS: _fs = (ushort)value; break;
+			case Register.GS: _gs = (ushort)value; break;
+			case Register.SS: _ss = (ushort)value; break;
 		}
 	}
 
@@ -3357,14 +3371,36 @@ public class JitCpu : IAsyncCpu
 	private void ExecPush(Instruction insn, VirtualMemory mem)
 	{
 		uint value = GetOperandValue(insn, 0);
-		_esp -= 4;
-		mem.Write32(_esp, value);
+		
+		// In 16-bit mode, PUSH uses 2 bytes; in 32-bit mode, 4 bytes
+		if (_bitness == 16)
+		{
+			_esp = (_esp - 2) & 0xFFFF;  // Decrement and wrap to 16 bits
+			mem.Write16(_esp, (ushort)value);
+		}
+		else
+		{
+			_esp -= 4;
+			mem.Write32(_esp, value);
+		}
 	}
 	
 	private void ExecPop(Instruction insn, VirtualMemory mem)
 	{
-		uint value = mem.Read32(_esp);
-		_esp += 4;
+		uint value;
+		
+		// In 16-bit mode, POP uses 2 bytes; in 32-bit mode, 4 bytes
+		if (_bitness == 16)
+		{
+			value = mem.Read16(_esp);
+			_esp = (_esp + 2) & 0xFFFF;  // Increment and wrap to 16 bits
+		}
+		else
+		{
+			value = mem.Read32(_esp);
+			_esp += 4;
+		}
+		
 		SetOperandValue(insn, 0, value);
 	}
 	
