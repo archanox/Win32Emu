@@ -1962,15 +1962,9 @@ public class JitCpu : IAsyncCpu
 			
 			// Set flags
 			SetFlagVal(Cf, carryOut);
-			SetFlagVal(Sf, (dest & 0x80000000) != 0);
-			SetFlagVal(Zf, dest == 0);
 			
-			// Set parity flag based on low byte
-			byte lo = (byte)dest;
-			int bits = lo ^ (lo >> 4);
-			bits &= 0xF;
-			bool even = (((0x6996 >> bits) & 1) == 0);
-			SetFlagVal(Pf, even);
+			// Use UpdateLogicResultFlags for SF, ZF, and PF
+			UpdateLogicResultFlags(dest, SIGN_BIT_MASK_32BIT);
 			
 			// OF is set only if count == 1
 			if (count == 1)
@@ -1989,15 +1983,9 @@ public class JitCpu : IAsyncCpu
 			
 			// Set flags
 			SetFlagVal(Cf, carryOut);
-			SetFlagVal(Sf, (dest & 0x80000000) != 0);
-			SetFlagVal(Zf, dest == 0);
 			
-			// Set parity flag based on low byte
-			byte lo = (byte)dest;
-			int bits = lo ^ (lo >> 4);
-			bits &= 0xF;
-			bool even = (((0x6996 >> bits) & 1) == 0);
-			SetFlagVal(Pf, even);
+			// Use UpdateLogicResultFlags for SF, ZF, and PF
+			UpdateLogicResultFlags(dest, SIGN_BIT_MASK_32BIT);
 			
 			// OF is set only if count == 1
 			if (count == 1)
@@ -2892,10 +2880,10 @@ public class JitCpu : IAsyncCpu
 		// The Iced library parses the SIB byte and provides displacement, base, index, and scale
 		uint offset = 0;
 		
-		// In 16-bit mode, displacement is 16-bit and needs proper sign extension
+		// In 16-bit mode, displacement is 16-bit; use the lower 16 bits of the decoded displacement
 		if (_bitness == 16)
 		{
-			// Get 16-bit displacement and sign-extend if negative
+			// Get 16-bit displacement (lower 16 bits of the 32-bit MemoryDisplacement32 value)
 			ushort disp16 = (ushort)insn.MemoryDisplacement32;
 			offset = disp16;
 		}
@@ -2944,6 +2932,9 @@ public class JitCpu : IAsyncCpu
 			};
 			
 			// Calculate physical address: segment * 16 + offset
+			// Note: In 16-bit real mode, this can produce addresses beyond 1MB (0x100000).
+			// Real 8086 CPUs wrap at 1MB boundary, but later CPUs with A20 line enabled
+			// can address beyond 1MB. This emulator allows addresses beyond 1MB (A20 enabled behavior).
 			physicalAddr = (segmentValue << 4) + offset;
 		}
 		
@@ -3375,7 +3366,8 @@ public class JitCpu : IAsyncCpu
 		// In 16-bit mode, PUSH uses 2 bytes; in 32-bit mode, 4 bytes
 		if (_bitness == 16)
 		{
-			_esp = (_esp - 2) & 0xFFFF;  // Decrement and wrap to 16 bits
+			// Preserve upper 16 bits of ESP, only modify lower 16 bits
+			_esp = (_esp & 0xFFFF0000) | ((_esp - 2) & 0xFFFF);
 			mem.Write16(_esp, (ushort)value);
 		}
 		else
@@ -3393,7 +3385,8 @@ public class JitCpu : IAsyncCpu
 		if (_bitness == 16)
 		{
 			value = mem.Read16(_esp);
-			_esp = (_esp + 2) & 0xFFFF;  // Increment and wrap to 16 bits
+			// Preserve upper 16 bits of ESP, only modify lower 16 bits
+			_esp = (_esp & 0xFFFF0000) | ((_esp + 2) & 0xFFFF);
 		}
 		else
 		{
