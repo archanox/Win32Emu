@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
@@ -242,8 +243,8 @@ public class VfsPersistenceService : IDisposable
 /// </summary>
 public class VfsStateMetadata
 {
-	public string Id { get; set; } = string.Empty;
-	public string ExecutableName { get; set; } = string.Empty;
+	public required string Id { get; set; }
+	public required string ExecutableName { get; set; }
 	public long Timestamp { get; set; }
 	public int FileCount { get; set; }
 
@@ -255,8 +256,13 @@ public class VfsStateMetadata
 /// </summary>
 public class StorageUsageInfo
 {
+	[JsonPropertyName("usage")]
 	public long Usage { get; set; }
+	
+	[JsonPropertyName("quota")]
 	public long Quota { get; set; }
+	
+	[JsonPropertyName("usagePercent")]
 	public double UsagePercent { get; set; }
 
 	public string FormatUsage() => FormatBytes(Usage);

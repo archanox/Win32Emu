@@ -1193,8 +1193,9 @@
 		
 		// Save VFS state to IndexedDB
 		window.saveVfsState = async function(stateName, executableName, filesJson) {
+			let db;
 			try {
-				const db = await window.openVfsDatabase();
+				db = await window.openVfsDatabase();
 				
 				// Parse files from JSON
 				const filesDict = JSON.parse(filesJson);
@@ -1223,21 +1224,21 @@
 						console.error('Failed to save VFS state:', request.error);
 						reject(request.error);
 					};
-					
-					transaction.oncomplete = () => {
-						db.close();
-					};
+				}).finally(() => {
+					if (db) db.close();
 				});
 			} catch (err) {
 				console.error('Error saving VFS state:', err);
+				if (db) db.close();
 				return false;
 			}
 		};
 		
 		// Load VFS state from IndexedDB
 		window.loadVfsState = async function(stateName) {
+			let db;
 			try {
-				const db = await window.openVfsDatabase();
+				db = await window.openVfsDatabase();
 				
 				const transaction = db.transaction([STORE_NAME], 'readonly');
 				const objectStore = transaction.objectStore(STORE_NAME);
@@ -1260,21 +1261,21 @@
 						console.error('Failed to load VFS state:', request.error);
 						reject(request.error);
 					};
-					
-					transaction.oncomplete = () => {
-						db.close();
-					};
+				}).finally(() => {
+					if (db) db.close();
 				});
 			} catch (err) {
 				console.error('Error loading VFS state:', err);
+				if (db) db.close();
 				return null;
 			}
 		};
 		
 		// List all saved VFS states
 		window.listVfsStates = async function() {
+			let db;
 			try {
-				const db = await window.openVfsDatabase();
+				db = await window.openVfsDatabase();
 				
 				const transaction = db.transaction([STORE_NAME], 'readonly');
 				const objectStore = transaction.objectStore(STORE_NAME);
@@ -1298,21 +1299,21 @@
 						console.error('Failed to list VFS states:', request.error);
 						reject(request.error);
 					};
-					
-					transaction.oncomplete = () => {
-						db.close();
-					};
+				}).finally(() => {
+					if (db) db.close();
 				});
 			} catch (err) {
 				console.error('Error listing VFS states:', err);
+				if (db) db.close();
 				return '[]';
 			}
 		};
 		
 		// Delete VFS state from IndexedDB
 		window.deleteVfsState = async function(stateName) {
+			let db;
 			try {
-				const db = await window.openVfsDatabase();
+				db = await window.openVfsDatabase();
 				
 				const transaction = db.transaction([STORE_NAME], 'readwrite');
 				const objectStore = transaction.objectStore(STORE_NAME);
@@ -1328,21 +1329,21 @@
 						console.error('Failed to delete VFS state:', request.error);
 						reject(request.error);
 					};
-					
-					transaction.oncomplete = () => {
-						db.close();
-					};
+				}).finally(() => {
+					if (db) db.close();
 				});
 			} catch (err) {
 				console.error('Error deleting VFS state:', err);
+				if (db) db.close();
 				return false;
 			}
 		};
 		
 		// Clear all VFS states from IndexedDB
 		window.clearAllVfsStates = async function() {
+			let db;
 			try {
-				const db = await window.openVfsDatabase();
+				db = await window.openVfsDatabase();
 				
 				const transaction = db.transaction([STORE_NAME], 'readwrite');
 				const objectStore = transaction.objectStore(STORE_NAME);
@@ -1358,13 +1359,12 @@
 						console.error('Failed to clear VFS states:', request.error);
 						reject(request.error);
 					};
-					
-					transaction.oncomplete = () => {
-						db.close();
-					};
+				}).finally(() => {
+					if (db) db.close();
 				});
 			} catch (err) {
 				console.error('Error clearing VFS states:', err);
+				if (db) db.close();
 				return false;
 			}
 		};
