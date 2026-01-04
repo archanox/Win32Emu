@@ -9,6 +9,7 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".editorconfig" />
+    <File Path="global.json" />
   </Folder>
   <Folder Name="/Solution Items/Decomp/" />
   <Folder Name="/Solution Items/Decomp/ign_teas/">
@@ -130,6 +131,7 @@
     <Configuration Solution="Release|x64" Project="Release|Any CPU" />
     <Configuration Solution="Release|x86" Project="Release|Any CPU" />
   </Project>
+  <Project Path="Win32Emu.Tools.ApiAnalyzer/Win32Emu.Tools.ApiAnalyzer.csproj" />
   <Project Path="Win32Emu.Tools.ApiStatusGenerator/Win32Emu.Tools.ApiStatusGenerator.csproj">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
@@ -150,6 +152,7 @@
   </Project>
   <Project Path="Win32Emu.Tools.NativeDllAnalyzer/Win32Emu.Tools.NativeDllAnalyzer.csproj" />
   <Project Path="Win32Emu.Tools.PeAnalyzer.Wasm/Win32Emu.Tools.PeAnalyzer.Wasm.csproj" />
+  <Project Path="Win32Emu.Tools.PeAnalyzer/Win32Emu.Tools.PeAnalyzer.csproj" />
   <Project Path="Win32Emu.Tools.TestGenerator/Win32Emu.Tools.TestGenerator.csproj" />
   <Project Path="Win32Emu.Tools.TestReporter/Win32Emu.Tools.TestReporter.csproj" />
   <Project Path="Win32Emu.Tools.WasmCacheGenerator/Win32Emu.Tools.WasmCacheGenerator.csproj" />
