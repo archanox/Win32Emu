@@ -59,7 +59,7 @@ To enable full web-based emulation, the following work is needed:
    - Browser-based VFS (`BrowserVirtualFileSystem`) for in-memory file storage
    - Case-insensitive file access (Windows compatibility)
    - File/folder upload support via HTML5 File API
-   - Future: IndexedDB for persistent storage
+   - ✅ IndexedDB persistence for saving/loading VFS states
 
 ## Building
 

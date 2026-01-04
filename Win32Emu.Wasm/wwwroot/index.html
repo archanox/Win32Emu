@@ -1155,6 +1155,237 @@
 				console.error(`Error downloading file ${fileName}:`, err);
 			}
 		};
+		
+		// ===========================================
+		// IndexedDB Persistence for VFS
+		// ===========================================
+		const DB_NAME = 'Win32EmuVFS';
+		const DB_VERSION = 1;
+		const STORE_NAME = 'vfs_states';
+		
+		// Open IndexedDB database
+		window.openVfsDatabase = function() {
+			return new Promise((resolve, reject) => {
+				const request = indexedDB.open(DB_NAME, DB_VERSION);
+				
+				request.onerror = () => {
+					console.error('Failed to open IndexedDB:', request.error);
+					reject(request.error);
+				};
+				
+				request.onsuccess = () => {
+					resolve(request.result);
+				};
+				
+				request.onupgradeneeded = (event) => {
+					const db = event.target.result;
+					
+					// Create object store if it doesn't exist
+					if (!db.objectStoreNames.contains(STORE_NAME)) {
+						const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+						objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+						objectStore.createIndex('executableName', 'executableName', { unique: false });
+						console.log('Created IndexedDB object store:', STORE_NAME);
+					}
+				};
+			});
+		};
+		
+		// Save VFS state to IndexedDB
+		window.saveVfsState = async function(stateName, executableName, filesJson) {
+			try {
+				const db = await window.openVfsDatabase();
+				
+				// Parse files from JSON
+				const filesDict = JSON.parse(filesJson);
+				
+				// Create state object
+				const state = {
+					id: stateName,
+					executableName: executableName || 'Unknown',
+					timestamp: Date.now(),
+					fileCount: Object.keys(filesDict).length,
+					files: filesDict
+				};
+				
+				// Save to IndexedDB
+				const transaction = db.transaction([STORE_NAME], 'readwrite');
+				const objectStore = transaction.objectStore(STORE_NAME);
+				const request = objectStore.put(state);
+				
+				return new Promise((resolve, reject) => {
+					request.onsuccess = () => {
+						console.log(`Saved VFS state: ${stateName} (${state.fileCount} files)`);
+						resolve(true);
+					};
+					
+					request.onerror = () => {
+						console.error('Failed to save VFS state:', request.error);
+						reject(request.error);
+					};
+					
+					transaction.oncomplete = () => {
+						db.close();
+					};
+				});
+			} catch (err) {
+				console.error('Error saving VFS state:', err);
+				return false;
+			}
+		};
+		
+		// Load VFS state from IndexedDB
+		window.loadVfsState = async function(stateName) {
+			try {
+				const db = await window.openVfsDatabase();
+				
+				const transaction = db.transaction([STORE_NAME], 'readonly');
+				const objectStore = transaction.objectStore(STORE_NAME);
+				const request = objectStore.get(stateName);
+				
+				return new Promise((resolve, reject) => {
+					request.onsuccess = () => {
+						const state = request.result;
+						if (state) {
+							console.log(`Loaded VFS state: ${stateName} (${state.fileCount} files)`);
+							// Return JSON string of files dictionary
+							resolve(JSON.stringify(state.files));
+						} else {
+							console.log(`VFS state not found: ${stateName}`);
+							resolve(null);
+						}
+					};
+					
+					request.onerror = () => {
+						console.error('Failed to load VFS state:', request.error);
+						reject(request.error);
+					};
+					
+					transaction.oncomplete = () => {
+						db.close();
+					};
+				});
+			} catch (err) {
+				console.error('Error loading VFS state:', err);
+				return null;
+			}
+		};
+		
+		// List all saved VFS states
+		window.listVfsStates = async function() {
+			try {
+				const db = await window.openVfsDatabase();
+				
+				const transaction = db.transaction([STORE_NAME], 'readonly');
+				const objectStore = transaction.objectStore(STORE_NAME);
+				const request = objectStore.getAll();
+				
+				return new Promise((resolve, reject) => {
+					request.onsuccess = () => {
+						const states = request.result;
+						// Return metadata only (exclude files for performance)
+						const metadata = states.map(state => ({
+							id: state.id,
+							executableName: state.executableName,
+							timestamp: state.timestamp,
+							fileCount: state.fileCount
+						}));
+						console.log(`Found ${metadata.length} saved VFS states`);
+						resolve(JSON.stringify(metadata));
+					};
+					
+					request.onerror = () => {
+						console.error('Failed to list VFS states:', request.error);
+						reject(request.error);
+					};
+					
+					transaction.oncomplete = () => {
+						db.close();
+					};
+				});
+			} catch (err) {
+				console.error('Error listing VFS states:', err);
+				return '[]';
+			}
+		};
+		
+		// Delete VFS state from IndexedDB
+		window.deleteVfsState = async function(stateName) {
+			try {
+				const db = await window.openVfsDatabase();
+				
+				const transaction = db.transaction([STORE_NAME], 'readwrite');
+				const objectStore = transaction.objectStore(STORE_NAME);
+				const request = objectStore.delete(stateName);
+				
+				return new Promise((resolve, reject) => {
+					request.onsuccess = () => {
+						console.log(`Deleted VFS state: ${stateName}`);
+						resolve(true);
+					};
+					
+					request.onerror = () => {
+						console.error('Failed to delete VFS state:', request.error);
+						reject(request.error);
+					};
+					
+					transaction.oncomplete = () => {
+						db.close();
+					};
+				});
+			} catch (err) {
+				console.error('Error deleting VFS state:', err);
+				return false;
+			}
+		};
+		
+		// Clear all VFS states from IndexedDB
+		window.clearAllVfsStates = async function() {
+			try {
+				const db = await window.openVfsDatabase();
+				
+				const transaction = db.transaction([STORE_NAME], 'readwrite');
+				const objectStore = transaction.objectStore(STORE_NAME);
+				const request = objectStore.clear();
+				
+				return new Promise((resolve, reject) => {
+					request.onsuccess = () => {
+						console.log('Cleared all VFS states');
+						resolve(true);
+					};
+					
+					request.onerror = () => {
+						console.error('Failed to clear VFS states:', request.error);
+						reject(request.error);
+					};
+					
+					transaction.oncomplete = () => {
+						db.close();
+					};
+				});
+			} catch (err) {
+				console.error('Error clearing VFS states:', err);
+				return false;
+			}
+		};
+		
+		// Get storage usage estimate
+		window.getVfsStorageUsage = async function() {
+			try {
+				if (navigator.storage && navigator.storage.estimate) {
+					const estimate = await navigator.storage.estimate();
+					return JSON.stringify({
+						usage: estimate.usage || 0,
+						quota: estimate.quota || 0,
+						usagePercent: estimate.quota ? (estimate.usage / estimate.quota * 100).toFixed(2) : 0
+					});
+				}
+				return JSON.stringify({ usage: 0, quota: 0, usagePercent: 0 });
+			} catch (err) {
+				console.error('Error getting storage usage:', err);
+				return JSON.stringify({ usage: 0, quota: 0, usagePercent: 0 });
+			}
+		};
 	</script>
 	
 	<script src="_framework/blazor.webassembly.js"></script>

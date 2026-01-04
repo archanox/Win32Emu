@@ -31,6 +31,9 @@ builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.
 // Register the EmulatorService for dependency injection
 builder.Services.AddScoped<EmulatorService>();
 
+// Register the VFS Persistence Service for IndexedDB storage
+builder.Services.AddScoped<VfsPersistenceService>();
+
 var host = builder.Build();
 
 // Log startup information

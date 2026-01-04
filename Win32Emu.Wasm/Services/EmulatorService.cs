@@ -428,6 +428,28 @@ public class EmulatorService : IDisposable
 		return _browserVfs?.Files;
 	}
 	
+	/// <summary>
+	/// Load VFS files from a saved state.
+	/// This replaces the current VFS contents with the loaded state.
+	/// </summary>
+	/// <param name="files">Dictionary of VFS files to load</param>
+	public void LoadVfsFiles(Dictionary<string, byte[]> files)
+	{
+		if (_browserVfs == null)
+		{
+			EmitDebugOutput("Cannot load VFS files: VFS not initialized");
+			return;
+		}
+
+		EmitDebugOutput($"Loading {files.Count} files into VFS...");
+		
+		// Clear existing VFS and load new files
+		_browserVfs.Clear();
+		_browserVfs.AddFiles(files);
+		
+		EmitDebugOutput($"VFS loaded with {files.Count} files");
+	}
+	
 	private void EmitStdOutput(string message)
 	{
 		OnStdOutput?.Invoke(this, message);
