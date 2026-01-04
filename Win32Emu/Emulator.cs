@@ -74,9 +74,10 @@ public sealed class Emulator : IDisposable
     
     // Max iterations without a syscall (Win32 API call) before treating as stuck
     // WASM: Increased to 5M to allow ign_teas texture loading loop to complete (needs ~260K+ iterations)
-    // Games may have long-running initialization loops that don't call Win32 APIs
+    // Native: Increased to 500M to allow setup.exe CharNextA path parsing loop to complete (needs ~100M+ iterations)
+    // Games and installers may have long-running initialization loops that don't call Win32 APIs
     private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 5000000;      // WASM: 5M (~5-50 seconds)
-    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 100000000;  // Native: 100M instructions
+    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 500000000;  // Native: 500M instructions (~5-10 seconds on modern CPUs)
     
     // Max consecutive heap executions before stopping emulation
     // If we've been executing in heap memory for more than 10 iterations,
