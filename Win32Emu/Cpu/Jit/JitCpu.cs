@@ -96,6 +96,11 @@ public class JitCpu : IAsyncCpu
 	// RTL-based JIT cache for persistent storage with readable C# output
 	// Note: Only used when not in WASM environment
 	private readonly RtlJitCache? _rtlJitCache;
+	
+	// Metadata-only cache for block boundaries and analysis info
+	// Works in all modes including WASM/interpreter - speeds up block discovery
+	private readonly JitCache? _metadataCache;
+	
 	private string? _currentExecutablePath;
 	
 	// Decoder for analyzing x86 instructions before compilation
@@ -170,6 +175,11 @@ public class JitCpu : IAsyncCpu
 		{
 			_logger.LogInformation("[JitCpu] Interpreter mode forced - JIT compilation disabled");
 		}
+		
+		// Initialize metadata cache for all modes (including WASM/interpreter)
+		// This cache stores block boundaries and analysis info to speed up block discovery
+		_metadataCache = new JitCache(cacheDirectory, logger);
+		_logger.LogInformation("[JitCpu] Metadata cache initialized for block analysis acceleration");
 		
 		// Initialize instruction analyzer if requested
 		if (enableInstructionAnalyzer)
@@ -386,31 +396,30 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task LoadCacheAsync()
 	{
-		// In WASM environment or when interpreter mode is forced, JIT cache is not available
-		if (_isWasmEnvironment || _forceInterpreterMode)
-		{
-			_logger.LogInformation("[JitCpu] JIT cache not available (WASM environment or interpreter mode forced)");
-			return;
-		}
-		
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
 			_logger.LogError("[JitCpu] Cannot load cache: executable path not set");
 			return;
 		}
 		
-		if (_rtlJitCache == null)
+		// Load RTL JIT cache (compiled assemblies) in native mode
+		if (!_isWasmEnvironment && !_forceInterpreterMode && _rtlJitCache != null)
 		{
-			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
-			return;
+			_rtlJitCache.LoadCachedAssemblies(_currentExecutablePath);
+			var rtlStats = _rtlJitCache.GetStatistics();
+			_logger.LogInformation("[JitCpu] RTL cache loaded: {TotalBlocks} blocks from {SourceDir}",
+				rtlStats.TotalBlocks, rtlStats.SourceDirectory);
 		}
 		
-		_rtlJitCache.LoadCachedAssemblies(_currentExecutablePath);
-		var stats = _rtlJitCache.GetStatistics();
-		_logger.LogInformation("[JitCpu] RTL cache loaded: {TotalBlocks} blocks from {SourceDir}",
-			stats.TotalBlocks, stats.SourceDirectory);
-		
-		await Task.CompletedTask;
+		// Load metadata cache (block boundaries, analysis info) for all modes
+		// This works in WASM/interpreter mode and speeds up block discovery
+		if (_metadataCache != null)
+		{
+			await _metadataCache.LoadCacheAsync(_currentExecutablePath);
+			var metadataStats = _metadataCache.GetStatistics();
+			_logger.LogInformation("[JitCpu] Metadata cache loaded: {TotalBlocks} blocks, {TotalInstructions} instructions",
+				metadataStats.TotalBlocks, metadataStats.TotalInstructions);
+		}
 	}
 	
 	/// <summary>
@@ -418,29 +427,26 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task SaveCacheAsync()
 	{
-		// In WASM environment or when interpreter mode is forced, JIT cache is not available
-		if (_isWasmEnvironment || _forceInterpreterMode)
-		{
-			_logger.LogInformation("[JitCpu] JIT cache not available (WASM environment or interpreter mode forced)");
-			return;
-		}
-		
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
 			_logger.LogError("[JitCpu] Cannot save cache: executable path not set");
 			return;
 		}
 		
-		if (_rtlJitCache == null)
+		// Save RTL JIT cache (compiled assemblies) in native mode
+		if (!_isWasmEnvironment && !_forceInterpreterMode && _rtlJitCache != null)
 		{
-			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
-			return;
+			_rtlJitCache.SaveCacheMetadata(_currentExecutablePath);
+			_logger.LogInformation("[JitCpu] RTL cache saved with C# source files");
 		}
 		
-		_rtlJitCache.SaveCacheMetadata(_currentExecutablePath);
-		_logger.LogInformation("[JitCpu] RTL cache saved with C# source files");
-		
-		await Task.CompletedTask;
+		// Save metadata cache (block boundaries, analysis info) for all modes
+		if (_metadataCache != null)
+		{
+			await _metadataCache.SaveCacheAsync(_currentExecutablePath);
+			var stats = _metadataCache.GetStatistics();
+			_logger.LogInformation("[JitCpu] Metadata cache saved: {TotalBlocks} blocks", stats.TotalBlocks);
+		}
 	}
 	
 	/// <summary>
@@ -484,14 +490,15 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public RtlCacheStatistics GetCacheStatistics()
 	{
-		// In WASM environment or interpreter mode, return empty statistics
+		// In WASM environment or interpreter mode, return metadata cache statistics
 		if (_isWasmEnvironment || _forceInterpreterMode || _rtlJitCache == null)
 		{
+			var metadataStats = _metadataCache?.GetStatistics();
 			return new RtlCacheStatistics
 			{
-				TotalBlocks = 0,
-				CacheDirectory = "N/A (WASM/Interpreter)",
-				SourceDirectory = "N/A (WASM/Interpreter)"
+				TotalBlocks = metadataStats?.TotalBlocks ?? 0,
+				CacheDirectory = metadataStats?.CacheDirectory ?? "N/A",
+				SourceDirectory = "N/A (Metadata only - Interpreter mode)"
 			};
 		}
 		
@@ -507,6 +514,10 @@ public class JitCpu : IAsyncCpu
 		{
 			_rtlJitCache.PurgeCache();
 		}
+		
+		// Also purge metadata cache
+		_metadataCache?.PurgeCache();
+		
 		_compiledBlocks.Clear();
 	}
 
@@ -1548,7 +1559,47 @@ public class JitCpu : IAsyncCpu
 			}
 		}
 		
+		// Store block metadata in cache for faster future lookups (works in all modes)
+		if (_metadataCache != null && instructions.Count > 0)
+		{
+			var blockLength = (int)(_decoder.IP - startEip);
+			var codeBytes = new byte[blockLength];
+			_mem.ReadBytes(startEip, codeBytes);
+			
+			var metadata = new BlockMetadata
+			{
+				StartAddress = startEip,
+				InstructionCount = instructions.Count,
+				ByteLength = blockLength,
+				CodeHash = JitCache.ComputeCodeHash(codeBytes),
+				FirstCompiled = DateTime.UtcNow,
+				ExecutionCount = 0,
+				EndsWithCall = instructions[^1].Mnemonic == Mnemonic.Call,
+				EndsWithReturn = instructions[^1].Mnemonic == Mnemonic.Ret,
+				DirectTarget = GetDirectTarget(instructions[^1])
+			};
+			
+			_metadataCache.AddBlockMetadata(startEip, metadata);
+		}
+		
 		return instructions;
+	}
+	
+	/// <summary>
+	/// Gets the direct target address from a branch instruction, if available
+	/// </summary>
+	private uint? GetDirectTarget(Instruction insn)
+	{
+		if (insn.Op0Kind == OpKind.NearBranch32)
+		{
+			return (uint)insn.NearBranch32;
+		}
+		else if (insn.Op0Kind == OpKind.NearBranch16)
+		{
+			return (uint)insn.NearBranch16;
+		}
+		
+		return null;
 	}
 
 	private static bool IsConditionalJump(Mnemonic mnemonic)
