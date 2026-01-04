@@ -2,7 +2,7 @@ using Win32Emu.Cpu;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Microsoft.Extensions.Logging;
 using Xunit;
 

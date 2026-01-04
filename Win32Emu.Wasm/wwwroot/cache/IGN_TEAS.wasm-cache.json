@@ -1,0 +1,18 @@
+{
+  "Version": 1,
+  "ExecutablePath": "IGN_TEAS.EXE",
+  "Timestamp": "2025-12-30T07:10:14.018305Z",
+  "Blocks": [
+    {
+      "StartAddress": 4263888,
+      "InstructionCount": 6,
+      "ByteLength": 12,
+      "CodeHash": "0F6B7B0EE4E770F7DEB35D3D7F4083DEB50C3AE77EA32AB5A767981BCA0BD6B2",
+      "FirstCompiled": "2025-12-30T07:10:14.0170918Z",
+      "ExecutionCount": 0,
+      "EndsWithCall": false,
+      "EndsWithReturn": true,
+      "DirectTarget": null
+    }
+  ]
+}

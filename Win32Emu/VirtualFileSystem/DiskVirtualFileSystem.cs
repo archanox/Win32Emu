@@ -636,7 +636,9 @@ public class DiskVirtualFileSystem : IVirtualFileSystem, IDisposable
 			}
 
 			var files = _fileSystem.GetFiles(normalizedDir, pattern, SearchOption.TopDirectoryOnly);
-			var fileNames = files.Select(f => Path.GetFileName(f)).ToArray();
+			// Use a method group (Path.GetFileName) instead of a lambda to avoid an extra delegate allocation
+			// when projecting full paths to file names.
+			var fileNames = files.Select(Path.GetFileName).ToArray();
 
 			_logger.LogDebug("[DiskVFS] Found {Count} files in {Directory} matching {Pattern}", 
 				fileNames.Length, directory, pattern);

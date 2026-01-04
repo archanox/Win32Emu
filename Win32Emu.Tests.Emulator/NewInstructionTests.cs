@@ -328,6 +328,57 @@ public class NewInstructionTests : IDisposable
 
     #endregion
 
+    #region Control Flow Tests
+
+    [Fact]
+    public void RETF_ShouldPopEIPAndCS()
+    {
+        // Arrange: RETF pops both EIP and CS from stack
+        // In 32-bit protected mode with flat memory model, CS is ignored
+        var stackAddr = 0x00100000u + 0x8000;
+        _helper.SetReg("ESP", stackAddr);
+        
+        // Setup stack with return address and CS
+        _helper.Memory.Write32(stackAddr, 0x00403000); // Return EIP
+        _helper.Memory.Write32(stackAddr + 4, 0x00000023); // Return CS (ignored in flat memory)
+        
+        // RETF (0xCB)
+        _helper.WriteCode(0xCB);
+        
+        // Act
+        _helper.ExecuteInstruction();
+        
+        // Assert - EIP restored, ESP adjusted for both pops
+        Assert.Equal(0x00403000u, _helper.Cpu.GetEip());
+        Assert.Equal(stackAddr + 8, _helper.GetReg("ESP")); // ESP += 8 (4 for EIP + 4 for CS)
+    }
+
+    [Fact]
+    public void RETF_WithImmediate_ShouldPopEIPAndCSAndCleanupStack()
+    {
+        // Arrange: RETF with immediate pops EIP, CS, and cleans up additional bytes
+        var stackAddr = 0x00100000u + 0x8000;
+        _helper.SetReg("ESP", stackAddr);
+        
+        // Setup stack with return address, CS, and some parameters
+        _helper.Memory.Write32(stackAddr, 0x00403000); // Return EIP
+        _helper.Memory.Write32(stackAddr + 4, 0x00000023); // Return CS
+        _helper.Memory.Write32(stackAddr + 8, 0x11111111); // Parameter 1 (to be cleaned up)
+        _helper.Memory.Write32(stackAddr + 12, 0x22222222); // Parameter 2 (to be cleaned up)
+        
+        // RETF 8 (0xCA 0x08 0x00) - far return with 8 bytes cleanup
+        _helper.WriteCode(0xCA, 0x08, 0x00);
+        
+        // Act
+        _helper.ExecuteInstruction();
+        
+        // Assert - EIP restored, ESP adjusted for pops + cleanup
+        Assert.Equal(0x00403000u, _helper.Cpu.GetEip());
+        Assert.Equal(stackAddr + 16, _helper.GetReg("ESP")); // ESP += 16 (4 for EIP + 4 for CS + 8 cleanup)
+    }
+
+    #endregion
+
     public void Dispose()
     {
         _helper?.Dispose();

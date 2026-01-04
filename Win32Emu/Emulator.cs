@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Win32Emu.Cpu;
-using Win32Emu.Cpu.Iced;
 using Win32Emu.Debugging;
 using Win32Emu.Diagnostics;
 using Win32Emu.Loader;
@@ -74,8 +73,9 @@ public sealed class Emulator : IDisposable
     private const ulong MAX_SAME_EIP_ITERATIONS_NATIVE = 50000000; // Native: 50M iterations
     
     // Max iterations without a syscall (Win32 API call) before treating as stuck
-    // Reduced from 1M to 200K for faster detection of infinite loops in WASM
-    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 200000;       // WASM: 200K (~0.2-2 seconds)
+    // WASM: Increased to 5M to allow ign_teas texture loading loop to complete (needs ~260K+ iterations)
+    // Games may have long-running initialization loops that don't call Win32 APIs
+    private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_WASM = 5000000;      // WASM: 5M (~5-50 seconds)
     private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 100000000;  // Native: 100M instructions
     
     // Max consecutive heap executions before stopping emulation
@@ -97,6 +97,65 @@ public sealed class Emulator : IDisposable
     private uint? _traceTriggerEndAddress = null;
     private string? _traceTriggerDll = null;
     private string? _traceTriggerFunction = null;
+    
+    // DOS interrupt constants
+    private const byte DOS_INTERRUPT = 0x21;
+    private const byte SYSCALL_INTERRUPT = 0x80;
+    private const byte DOS_SPACE_CHAR = 0x20;
+    private const byte DOS_STRING_TERMINATOR = 0x24; // '$' character
+    private const byte DOS_NO_INPUT = 0x00;
+    private const byte DOS_INPUT_READY = 0xFF;
+    private const byte DOS_DRIVE_C = 0x02; // 0=default, 1=A, 2=B, 3=C
+    private const ushort DOS_VERSION_MAJOR = 6;
+    private const ushort DOS_VERSION_MINOR = 22;
+    private const ushort DOS_VERSION_6_22 = 0x1606; // 6.22 in DOS format (AL=minor, AH=major)
+    private const ushort DOS_PARAGRAPH_SIZE = 16; // DOS memory paragraphs are 16 bytes
+    private const ushort DOS_STDOUT_HANDLE = 1;
+    private const ushort DOS_STDERR_HANDLE = 2;
+    private const ushort DOS_DUMMY_FILE_HANDLE = 0x0005;
+    private const ushort DOS_FILE_ATTR_ARCHIVE = 0x0020;
+    private const uint DOS_ERROR_INVALID_FUNCTION = 0xFFFFFFFF;
+    private const int MAX_DOS_STRING_LENGTH = 1024;
+    private const int MAX_NULL_TERMINATED_STRING_LENGTH = 256;
+    private const int DOS_MAX_CURRENT_DIR_LENGTH = 63;
+    
+    /// <summary>
+    /// DOS INT 21h function numbers
+    /// </summary>
+    private enum DosFunction : byte
+    {
+        Terminate = 0x00,
+        CharInputWithEcho = 0x01,
+        CharOutput = 0x02,
+        DirectConsoleIO = 0x06,
+        DirectCharInputNoEcho = 0x07,
+        CharInputNoEcho = 0x08,
+        WriteString = 0x09,
+        BufferedInput = 0x0A,
+        CheckStdinStatus = 0x0B,
+        GetCurrentDrive = 0x19,
+        SetInterruptVector = 0x25,
+        GetSystemDate = 0x2A,
+        SetSystemDate = 0x2B,
+        GetSystemTime = 0x2C,
+        SetSystemTime = 0x2D,
+        GetDosVersion = 0x30,
+        GetSetCtrlBreak = 0x33,
+        GetInterruptVector = 0x35,
+        CreateFile = 0x3C,
+        OpenFile = 0x3D,
+        CloseFile = 0x3E,
+        ReadFile = 0x3F,
+        WriteFile = 0x40,
+        SeekFile = 0x42,
+        GetSetFileAttributes = 0x43,
+        GetCurrentDirectory = 0x47,
+        AllocateMemory = 0x48,
+        FreeMemory = 0x49,
+        ResizeMemory = 0x4A,
+        TerminateWithReturnCode = 0x4C,
+        GetReturnCode = 0x4D
+    }
     
     /// <summary>
     /// Enable instruction-level tracing for the next N instructions.
@@ -187,6 +246,11 @@ public sealed class Emulator : IDisposable
     public LoadedImage? LoadedImage => _image;
     
     /// <summary>
+    /// Gets the current CPU backend instance (JitCpu with JIT/interpreter support)
+    /// </summary>
+    public IAsyncCpu? Cpu => _cpu;
+    
+    /// <summary>
     /// Post a message to the Win32 message queue (for GUI-to-emulator communication)
     /// </summary>
     public bool PostMessage(uint hwnd, uint message, uint wParam, uint lParam)
@@ -248,7 +312,10 @@ public sealed class Emulator : IDisposable
     /// <param name="reservedMemoryMb">Reserved memory in megabytes</param>
     /// <param name="virtualFileSystem">Optional custom virtual file system for file operations</param>
     /// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
-    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true)
+    /// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation)</param>
+    /// <param name="enableInstructionAnalyzer">Enable instruction analyzer for debugging (requires forceInterpreterMode in WASM)</param>
+    /// <param name="enableLegacyInstructionDecoding">Enable legacy instruction decoding (MPX, Cyrix, ALTINST, etc.)</param>
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true, bool forceInterpreterMode = false, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false)
     {
         // Use a synthetic path for internal tracking
         var syntheticPath = $"C:\\WASM\\{executableName}";
@@ -262,16 +329,16 @@ public sealed class Emulator : IDisposable
             reservedMemoryMb: reservedMemoryMb, 
             gdbServerMode: false, 
             gdbServerPort: 1234, 
-            enableInstructionAnalyzer: false, 
-            enableLegacyInstructionDecoding: false, 
-            useJitCpu: false, 
+            enableInstructionAnalyzer: enableInstructionAnalyzer, 
+            enableLegacyInstructionDecoding: enableLegacyInstructionDecoding, 
+            forceInterpreterMode: forceInterpreterMode,
             virtualDiskPath: null,
             preloadedBytes: executableBytes,
             customVirtualFileSystem: virtualFileSystem,
             force32BitStackOps: force32BitStackOps);
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool useJitCpu = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null, bool force32BitStackOps = true)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool forceInterpreterMode = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null, bool force32BitStackOps = true)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -414,7 +481,7 @@ public sealed class Emulator : IDisposable
             LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
         }
 
-        _env = new ProcessEnvironment(_vm, CalculateHeapBase(), _host, _logger, _backendFactory);
+        _env = new ProcessEnvironment(_vm, CalculateHeapBase(_image), _host, _logger, _backendFactory);
         
         // Initialize virtual file system - prioritize custom VFS, then disk path
         if (customVirtualFileSystem != null)
@@ -468,28 +535,40 @@ public sealed class Emulator : IDisposable
         var stackBase = 0x00100000u + stackReserve;
         var stackLimit = 0x00100000u; // Bottom of stack (lowest valid address)
 
-        // Create CPU based on backend preference
-        if (useJitCpu)
+        // Create unified CPU backend (JitCpu with interpreter mode)
+        // JitCpu uses JIT compilation when available (native platforms) and falls back to
+        // interpreter mode in WASM or when forceInterpreterMode is true
+        var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps, forceInterpreterMode: forceInterpreterMode);
+        _cpu = jitCpu;
+        
+        _logger.LogInformation("[Loader] Unified JitCpu backend enabled (JIT compilation: {JitEnabled}, Interpreter mode: {InterpreterEnabled})", 
+            jitCpu.SupportsJit, !jitCpu.SupportsJit);
+        
+        // Initialize JIT cache for pre-compiled blocks (only when JIT is supported)
+        if (jitCpu.SupportsJit)
         {
-            _cpu = new Cpu.Jit.JitCpu(_vm, _logger);
-            LogDebug("[Loader] JIT CPU backend enabled (async-capable)");
-        }
-        else
-        {
-            _cpu = new IcedCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps);
-            if (enableInstructionAnalyzer)
+            jitCpu.SetExecutablePath(path);
+            _logger.LogInformation("[Loader] JIT cache: Set executable path to {Path}", path);
+            
+            // Load existing cache using async API and wait for completion
+            // We still wait synchronously here to ensure cache loading completes before execution
+            try
             {
-                LogDebug("[Loader] Instruction analyzer enabled");
+                Task.Run(() => jitCpu.LoadCacheAsync()).GetAwaiter().GetResult();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Loader] Failed to load JIT cache (non-fatal)");
             }
         }
         
-        // Log the actual CPU backend being used (after initialization and potential fallback)
-        var actualCpuBackend = _cpu switch
+        if (enableInstructionAnalyzer)
         {
-            Cpu.Jit.JitCpu => "JitCpu",
-            IcedCpu => "IcedCpu",
-            _ => "Unknown"
-        };
+            LogDebug("[Loader] Instruction analyzer requested");
+        }
+        
+        // Log the actual CPU backend being used (after initialization and potential fallback)
+        var actualCpuBackend = _cpu?.GetType().Name ?? "None";
         _logger.LogInformation("[Loader] Selected CPU Emulator: {CpuBackend}", actualCpuBackend);
         
         _cpu.SetEip(_image.EntryPointAddress);
@@ -515,7 +594,7 @@ public sealed class Emulator : IDisposable
         _cpu.SetRegister("EBP", initialEsp); // Initialize frame pointer to match stack pointer
         
         // Store heap base for use in checks
-        _heapBase = CalculateHeapBase();
+        _heapBase = CalculateHeapBase(_image);
         
         // Store memory layout in ProcessEnvironment for use by Win32 modules
         _env.StackBase = _stackBase;
@@ -768,6 +847,15 @@ public sealed class Emulator : IDisposable
         _logger.LogDebug("[Emulator] Env ExecutablePath: {EnvPath}", _env.ExecutablePath);
         _logger.LogDebug("[Emulator] Extracted names: {ImageName} / {EnvName}", exeNameFromImage, exeNameFromEnv);
         
+        // ign_teas.exe: Enable debug environment variable by default
+        // This prevents log spam from GetEnvironmentVariable when the debug code checks for IGN_TEAS_DEBUG
+        if (exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromEnv == "IGN_TEAS.EXE" || 
+            exeNameFromImage.Contains("IGN_TEAS") || exeNameFromEnv.Contains("IGN_TEAS"))
+        {
+            _env.SetEnvironmentVariable("IGN_TEAS_DEBUG", "1");
+            _logger.LogInformation("[Emulator] IGN_TEAS.EXE detected - enabled IGN_TEAS_DEBUG environment variable");
+        }
+        
         // BasicDD.exe: Fix stack misalignment in FUN_00401310
         // The function's epilogue does ADD ESP,0x8C but should do ADD ESP,0x94 due to
         // CRT stack management bug where 5 parameters are pushed to WinMain but only
@@ -867,6 +955,20 @@ public sealed class Emulator : IDisposable
         {
             // Stop event processing thread
             StopEventProcessing();
+            
+            // Save JIT cache if using JitCpu
+            if (_cpu is Cpu.Jit.JitCpu jitCpu)
+            {
+                try
+                {
+                    await jitCpu.SaveCacheAsync().ConfigureAwait(false);
+                    _logger.LogInformation("[Emulator] JIT cache saved successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "[Emulator] Failed to save JIT cache (non-fatal)");
+                }
+            }
             
             // Always print exit message and summary, even if there was an exception
             string exitMessage;
@@ -1022,7 +1124,15 @@ public sealed class Emulator : IDisposable
                 {
                     _logger.LogError("[Emulator] INFINITE LOOP DETECTED: {Iterations} iterations without a syscall. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}. Stopping emulation.", 
                         iterationsSinceLastSyscall, progressEip, progressEsp);
+                    _logger.LogError("[Emulator] This may indicate: 1) Tight CPU-bound loop, 2) Busy-wait polling, 3) Data processing loop. Check decompilation at EIP address.");
                     break;
+                }
+                
+                // Warn about long-running loops without syscalls (diagnostic for games like ign_teas)
+                if (PlatformHelpers.IsWasm && iterationsSinceLastSyscall % 1000000 == 0 && iterationsSinceLastSyscall > 0)
+                {
+                    _logger.LogWarning("[Emulator] Long-running loop: {Iterations} iterations without syscall at EIP=0x{Eip:X8}. Game may be in tight data processing loop.", 
+                        iterationsSinceLastSyscall, progressEip);
                 }
                 
                 lastProgressEip = progressEip;
@@ -1082,10 +1192,24 @@ public sealed class Emulator : IDisposable
             scheduler?.ProcessWaitTimeouts();
 
             // Check if we have any runnable threads
+            // However, if threads are blocked waiting for messages and we have timers or the event processing
+            // loop running, we should continue execution to allow timers to fire and wake up blocked threads
             if (scheduler != null && !scheduler.HasRunningThreads())
             {
-                LogDebug("[Emulator] No more runnable threads, stopping execution");
-                break;
+                // Check if there are any waiting threads that might be woken up by events/timers
+                var hasWaitingThreads = scheduler.GetAllThreads().Any(t => t.State == Threading.ThreadState.Waiting);
+                
+                if (!hasWaitingThreads)
+                {
+                    // No threads at all - stop execution
+                    LogDebug("[Emulator] No more runnable threads, stopping execution");
+                    break;
+                }
+                
+                // We have waiting threads - give the event processing loop a chance to post messages/fire timers
+                // by yielding briefly. This prevents busy-waiting when all threads are blocked.
+                await Task.Delay(1).ConfigureAwait(false);
+                continue;
             }
 
             // Check if we should context switch
@@ -1247,6 +1371,9 @@ public sealed class Emulator : IDisposable
                 throw; // Re-throw to stop emulation
             }
             
+            // IGN_TEAS diagnostic logging removed - issue was diagnosed as WASM performance bottleneck
+            // See docs/investigation/IGN_TEAS_FINDINGS_REPORT.md for analysis
+            
             // Instruction-level tracing for debugging
             if (_instructionTraceCount > 0)
             {
@@ -1327,7 +1454,7 @@ public sealed class Emulator : IDisposable
             
             // Validate EIP after execution to catch bad jumps/returns early
             var eipAfterStep = _cpu.GetEip();
-            if (eipAfterStep < 0x00010000)
+            if (eipAfterStep < MemoryRegions.MinValidUserAddress)
             {
                 // EIP in low memory range (0x0-0xFFFF) is highly suspicious
                 // This usually indicates a corrupted return address or bad function pointer
@@ -1354,6 +1481,13 @@ public sealed class Emulator : IDisposable
                 await HandleSyscallAsync().ConfigureAwait(false);
                 iterationsSinceLastSyscall = 0; // Reset counter on syscall
                 continue; // Continue to next iteration, let CPU execute RET
+            }
+
+            // Check for DOS interrupt (INT 21h from Win16 NE executables)
+            if (step.IsDosInterrupt)
+            {
+                await HandleDosInterruptAsync().ConfigureAwait(false);
+                continue; // Continue to next iteration
             }
             
             // Check for thread exit (return address is 0xFFFFFFFF)
@@ -1392,6 +1526,11 @@ public sealed class Emulator : IDisposable
                     _logger,
                     "COM vtable",
                     _image).ConfigureAwait(false);
+                
+                // Reset syscall counter - COM vtable calls (DirectDraw, DirectInput, DirectSound) are
+                // equivalent to Win32 API calls and should prevent false infinite loop detection.
+                // Without this, games that heavily use COM APIs would be falsely detected as stuck.
+                iterationsSinceLastSyscall = 0;
                 
                 var espAfter = _cpu.GetRegister("ESP");
                 var eipAfter = _cpu.GetEip();
@@ -1650,6 +1789,14 @@ public sealed class Emulator : IDisposable
                         i++;
                         continue;
                     }
+                }
+
+                // Check for DOS interrupt (INT 21h from Win16 NE executables)
+                if (step.IsDosInterrupt)
+                {
+                    HandleDosInterruptAsync().GetAwaiter().GetResult();
+                    i++;
+                    continue;
                 }
 
                 // Check for COM vtable method calls
@@ -2111,7 +2258,7 @@ public sealed class Emulator : IDisposable
         var esp = _cpu.GetRegister("ESP");
         
         // Validate ESP is in a reasonable range before attempting to read from stack
-        if (esp < 0x00010000)
+        if (esp < MemoryRegions.MinValidUserAddress)
         {
             _logger.LogError("[Syscall] ESP=0x{Esp:X8} is suspiciously low (< 0x10000). Skipping syscall.", esp);
             _cpu.SetRegister("EAX", 0); // Return 0 as error
@@ -2255,7 +2402,7 @@ public sealed class Emulator : IDisposable
                 
                 // Validate ESP is in a reasonable range (not extremely small)
                 var restoredEsp = _cpu.GetRegister("ESP");
-                if (restoredEsp < 0x00010000)
+                if (restoredEsp < MemoryRegions.MinValidUserAddress)
                 {
                     _logger.LogError("[Syscall] ESP=0x{Esp:X8} after syscall return is suspiciously low. This indicates possible stack corruption.", restoredEsp);
                 }
@@ -2263,6 +2410,40 @@ public sealed class Emulator : IDisposable
                 // Log CPU state after syscall for debugging
                 var eax = _cpu.GetRegister("EAX");
                 _logger.LogDebug("[Syscall] CPU state after {Dll}!{Name}: EAX=0x{Eax:X8} ESP=0x{Esp:X8}", dll, name, eax, restoredEsp);
+                
+                // Enhanced diagnostics: Validate stack contents after syscall to catch potential corruption early
+                // This helps diagnose issues where a function returns successfully but leaves corrupted data on the stack
+                // that will cause problems later when the caller tries to use it
+                if (_logger.IsEnabled(LogLevel.Debug))
+                {
+                    try
+                    {
+                        // Check the stack region that will be used after RET cleanup
+                        // After the import stub executes RET with cleanup, ESP will advance past the arguments
+                        var futureEsp = restoredEsp + 4 + (uint)argBytes; // After dispatcher RET + import stub RET cleanup
+                        
+                        // Read a few DWORDs from the future stack position to check for suspicious values
+                        var stackDump = new System.Text.StringBuilder();
+                        stackDump.Append($"\n[Syscall] Stack validation after {dll}!{name}:");
+                        
+                        for (int offset = -8; offset <= 16; offset += 4)
+                        {
+                            var addr = (uint)(futureEsp + offset);
+                            if (addr >= MemoryRegions.MinValidUserAddress && addr < _vm!.Size - 4) // Validate address is in reasonable range
+                            {
+                                var val = _vm!.Read32(addr);
+                                var marker = offset == 0 ? " <-- Future ESP" : "";
+                                stackDump.Append($"\n  [ESP+{offset:+0;-#}] = 0x{addr:X8}: 0x{val:X8}{marker}");
+                            }
+                        }
+                        
+                        _logger.LogDebug(stackDump.ToString());
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "[Syscall] Failed to perform stack validation");
+                    }
+                }
             }
             else
             {
@@ -2299,6 +2480,416 @@ public sealed class Emulator : IDisposable
         // This is safe on desktop/server runtimes in these specific contexts where
         // there's no synchronization context that could cause deadlock
         return HandleSyscallAsync().GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Handles DOS interrupt (INT 21h) for Win16 NE executables and DOS programs.
+    /// </summary>
+    private async Task HandleDosInterruptAsync(CancellationToken cancellationToken = default)
+    {
+        // DOS services are accessed via INT 21h with function number in AH
+        var ah = (_cpu!.GetRegister("EAX") >> 8) & 0xFF;
+        var al = _cpu.GetRegister("EAX") & 0xFF;
+        var bx = _cpu.GetRegister("EBX") & 0xFFFF;
+        var cx = _cpu.GetRegister("ECX") & 0xFFFF;
+        var dx = _cpu.GetRegister("EDX") & 0xFFFF;
+
+        _logger.LogDebug("[DOS INT 21h] Function AH=0x{Ah:X2}, AL=0x{Al:X2}", ah, al);
+
+        // Implement common DOS functions
+        switch ((DosFunction)ah)
+        {
+            case DosFunction.Terminate:
+                _logger.LogInformation("[DOS INT 21h] Program termination requested (AH=0x00)");
+                _stopRequested = true;
+                break;
+
+            case DosFunction.CharInputWithEcho:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Read character from stdin (AH=0x01)");
+                    // Return a dummy character (space) for now
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_SPACE_CHAR);
+                }
+                break;
+
+            case DosFunction.CharOutput:
+                {
+                    var dl = (_cpu.GetRegister("EDX") & 0xFF);
+                    var ch = (char)dl;
+                    _env!.WriteToStdOutput(ch.ToString());
+                    _logger.LogDebug("[DOS INT 21h] Print character: '{Char}' (0x{Dl:X2})", ch, dl);
+                }
+                break;
+
+            case DosFunction.DirectConsoleIO:
+                {
+                    var dl = (_cpu.GetRegister("EDX") & 0xFF);
+                    if (dl == DOS_INPUT_READY)
+                    {
+                        // Input - return dummy character or 0 if no input available
+                        _logger.LogDebug("[DOS INT 21h] Direct console input (AH=0x06)");
+                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_NO_INPUT);
+                    }
+                    else
+                    {
+                        // Output
+                        var ch = (char)dl;
+                        _env!.WriteToStdOutput(ch.ToString());
+                        _logger.LogDebug("[DOS INT 21h] Direct console output: '{Char}'", ch);
+                    }
+                }
+                break;
+
+            case DosFunction.DirectCharInputNoEcho:
+            case DosFunction.CharInputNoEcho:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Read character without echo (AH=0x{Ah:X2})", ah);
+                    // Return a dummy character (space)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_SPACE_CHAR);
+                }
+                break;
+
+            case DosFunction.WriteString:
+                {
+                    try
+                    {
+                        var sb = new System.Text.StringBuilder();
+                        var offset = 0u;
+                        while (true)
+                        {
+                            var ch = (char)_vm!.Read8(dx + offset);
+                            if (ch == (char)DOS_STRING_TERMINATOR) break;
+                            if (offset > MAX_DOS_STRING_LENGTH) break; // Safety limit
+                            sb.Append(ch);
+                            offset++;
+                        }
+                        var text = sb.ToString();
+                        _env!.WriteToStdOutput(text);
+                        _logger.LogDebug("[DOS INT 21h] Print string: {Text}", text);
+                        // Return DL (last character) in AL
+                        _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_STRING_TERMINATOR);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[DOS INT 21h] Failed to read string at address 0x{Address:X8}", dx);
+                    }
+                }
+                break;
+
+            case DosFunction.BufferedInput:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Buffered input (AH=0x0A) - not fully implemented");
+                    // DS:DX points to buffer: first byte = max chars, second byte = actual chars read
+                    // For now, just return empty input
+                    if (dx != 0)
+                    {
+                        _vm!.Write8(dx + 1, 0); // No characters read
+                    }
+                }
+                break;
+
+            case DosFunction.CheckStdinStatus:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Check stdin status (AH=0x0B)");
+                    // Return 0 = no character available, 0xFF = character available
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_NO_INPUT);
+                }
+                break;
+
+            case DosFunction.GetCurrentDrive:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get current drive (AH=0x19)");
+                    // Return drive 2 (C:) - drives are 0=A, 1=B, 2=C, etc.
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | DOS_DRIVE_C);
+                }
+                break;
+
+            case DosFunction.SetInterruptVector:
+                _logger.LogDebug("[DOS INT 21h] Set interrupt vector AL=0x{Al:X2} (ignored)", al);
+                break;
+
+            case DosFunction.GetSystemDate:
+                {
+                    var now = DateTime.Now;
+                    _logger.LogDebug("[DOS INT 21h] Get system date (AH=0x2A): {Date}", now.ToShortDateString());
+                    // CX = year, DH = month, DL = day, AL = day of week (0=Sunday)
+                    _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | (uint)now.Year);
+                    _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFF0000) | ((uint)now.Month << 8) | (uint)now.Day);
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | (uint)now.DayOfWeek);
+                }
+                break;
+
+            case DosFunction.SetSystemDate:
+                {
+                    var year = cx;
+                    var month = (dx >> 8) & 0xFF;
+                    var day = dx & 0xFF;
+                    _logger.LogDebug("[DOS INT 21h] Set system date (AH=0x2B): {Year}-{Month:D2}-{Day:D2} (ignored)", year, month, day);
+                    // Return AL=0 for success (but we don't actually set it)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00);
+                }
+                break;
+
+            case DosFunction.GetSystemTime:
+                {
+                    var now = DateTime.Now;
+                    _logger.LogDebug("[DOS INT 21h] Get system time (AH=0x2C): {Time}", now.ToLongTimeString());
+                    // CH = hour, CL = minute, DH = second, DL = hundredths
+                    _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | ((uint)now.Hour << 8) | (uint)now.Minute);
+                    _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFF0000) | ((uint)now.Second << 8) | (uint)(now.Millisecond / 10));
+                }
+                break;
+
+            case DosFunction.SetSystemTime:
+                {
+                    var hour = (cx >> 8) & 0xFF;
+                    var minute = cx & 0xFF;
+                    var second = (dx >> 8) & 0xFF;
+                    _logger.LogDebug("[DOS INT 21h] Set system time (AH=0x2D): {Hour:D2}:{Minute:D2}:{Second:D2} (ignored)", hour, minute, second);
+                    // Return AL=0 for success
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFFFF00) | 0x00);
+                }
+                break;
+
+            case DosFunction.GetDosVersion:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get DOS version (AH=0x30)");
+                    // Return version 6.22 (DOS 6.22): AL=major (6), AH=minor (22)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_VERSION_6_22);
+                    // BH = 0xFF (DOS is in HMA), BL:CX = 0 (serial number)
+                    _cpu.SetRegister("EBX", (_cpu.GetRegister("EBX") & 0xFFFF0000) | 0xFF00);
+                    _cpu.SetRegister("ECX", 0);
+                }
+                break;
+
+            case DosFunction.GetSetCtrlBreak:
+                {
+                    if (al == 0x00)
+                    {
+                        // Get Ctrl-Break flag
+                        _logger.LogDebug("[DOS INT 21h] Get Ctrl-Break flag (AH=0x33, AL=0x00)");
+                        _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFFFF00) | 0x01); // Enabled
+                    }
+                    else if (al == 0x01)
+                    {
+                        // Set Ctrl-Break flag
+                        _logger.LogDebug("[DOS INT 21h] Set Ctrl-Break flag (AH=0x33, AL=0x01, DL={Dl})", dx & 0xFF);
+                    }
+                }
+                break;
+
+            case DosFunction.GetInterruptVector:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get interrupt vector AL=0x{Al:X2} (returning dummy)", al);
+                    _cpu.SetRegister("EBX", 0x0000);
+                    // ES segment register not accessible through ICpu interface, so we skip setting it
+                }
+                break;
+
+            case DosFunction.CreateFile:
+                {
+                    var filename = ReadNullTerminatedString(dx);
+                    _logger.LogDebug("[DOS INT 21h] Create file: {Filename} (AH=0x3C)", filename);
+                    // Return dummy file handle in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_DUMMY_FILE_HANDLE);
+                }
+                break;
+
+            case DosFunction.OpenFile:
+                {
+                    var filename = ReadNullTerminatedString(dx);
+                    var accessMode = al & 0x03; // 0=read, 1=write, 2=read/write
+                    _logger.LogDebug("[DOS INT 21h] Open file: {Filename}, mode={Mode} (AH=0x3D)", filename, accessMode);
+                    // Return dummy file handle in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_DUMMY_FILE_HANDLE);
+                }
+                break;
+
+            case DosFunction.CloseFile:
+                {
+                    var handle = bx;
+                    _logger.LogDebug("[DOS INT 21h] Close file handle: 0x{Handle:X4} (AH=0x3E)", handle);
+                    // Return success (carry flag clear, but we can't set it)
+                }
+                break;
+
+            case DosFunction.ReadFile:
+                {
+                    var handle = bx;
+                    var count = cx;
+                    var buffer = dx;
+                    _logger.LogDebug("[DOS INT 21h] Read from file handle 0x{Handle:X4}, {Count} bytes to 0x{Buffer:X8} (AH=0x3F)", handle, count, buffer);
+                    // Return 0 bytes read (EOF)
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | 0x0000);
+                }
+                break;
+
+            case DosFunction.WriteFile:
+                {
+                    var handle = bx;
+                    var count = cx;
+                    var buffer = dx;
+                    _logger.LogDebug("[DOS INT 21h] Write to handle 0x{Handle:X4}, {Count} bytes from 0x{Buffer:X8} (AH=0x40)", handle, count, buffer);
+                    
+                    // If handle is stdout (1) or stderr (2), write to console
+                    if (handle == DOS_STDOUT_HANDLE || handle == DOS_STDERR_HANDLE)
+                    {
+                        try
+                        {
+                            var data = new byte[count];
+                            for (var i = 0; i < count; i++)
+                            {
+                                data[i] = _vm!.Read8(buffer + (uint)i);
+                            }
+                            var text = System.Text.Encoding.ASCII.GetString(data);
+                            _env!.WriteToStdOutput(text);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "[DOS INT 21h] Failed to write to console");
+                        }
+                    }
+                    
+                    // Return bytes written in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (uint)count);
+                }
+                break;
+
+            case DosFunction.SeekFile:
+                {
+                    var handle = bx;
+                    var method = al; // 0=from start, 1=from current, 2=from end
+                    var offset = ((uint)cx << 16) | dx;
+                    _logger.LogDebug("[DOS INT 21h] Seek in file handle 0x{Handle:X4}, method={Method}, offset=0x{Offset:X8} (AH=0x42)", handle, method, offset);
+                    // Return new position in DX:AX (just return the offset)
+                    _cpu.SetRegister("EDX", (_cpu.GetRegister("EDX") & 0xFFFF0000) | ((offset >> 16) & 0xFFFF));
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (offset & 0xFFFF));
+                }
+                break;
+
+            case DosFunction.GetSetFileAttributes:
+                {
+                    var filename = ReadNullTerminatedString(dx);
+                    if (al == 0x00)
+                    {
+                        // Get attributes
+                        _logger.LogDebug("[DOS INT 21h] Get file attributes: {Filename} (AH=0x43, AL=0x00)", filename);
+                        // Return normal file attribute in CX
+                        _cpu.SetRegister("ECX", (_cpu.GetRegister("ECX") & 0xFFFF0000) | DOS_FILE_ATTR_ARCHIVE);
+                    }
+                    else if (al == 0x01)
+                    {
+                        // Set attributes
+                        _logger.LogDebug("[DOS INT 21h] Set file attributes: {Filename}, attrs=0x{Attrs:X4} (AH=0x43, AL=0x01)", filename, cx);
+                    }
+                }
+                break;
+
+            case DosFunction.GetCurrentDirectory:
+                {
+                    var drive = dx & 0xFF; // 0=default, 1=A, 2=B, 3=C, etc.
+                    var buffer = (_cpu.GetRegister("ESI") & 0xFFFF); // DS:SI points to buffer
+                    _logger.LogDebug("[DOS INT 21h] Get current directory, drive={Drive} (AH=0x47)", drive);
+                    
+                    // Write current directory to buffer (e.g., "WINDOWS\SYSTEM32")
+                    var path = _env!.CurrentDirectory.TrimStart('C', ':', '\\');
+                    if (string.IsNullOrEmpty(path)) path = "";
+                    
+                    try
+                    {
+                        for (var i = 0; i < path.Length && i < DOS_MAX_CURRENT_DIR_LENGTH; i++)
+                        {
+                            _vm!.Write8(buffer + (uint)i, (byte)path[i]);
+                        }
+                        _vm!.Write8(buffer + (uint)path.Length, 0); // Null terminator
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[DOS INT 21h] Failed to write current directory");
+                    }
+                }
+                break;
+
+            case DosFunction.AllocateMemory:
+                {
+                    var paragraphs = bx; // Size in 16-byte paragraphs
+                    var bytes = paragraphs * DOS_PARAGRAPH_SIZE;
+                    _logger.LogDebug("[DOS INT 21h] Allocate memory: {Paragraphs} paragraphs ({Bytes} bytes) (AH=0x48)", paragraphs, bytes);
+                    
+                    // Use SimpleAlloc to allocate memory
+                    var address = _env!.SimpleAlloc(bytes);
+                    var segment = address >> 4; // Convert to segment
+                    
+                    // Return segment in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | (segment & 0xFFFF));
+                }
+                break;
+
+            case DosFunction.FreeMemory:
+                {
+                    var segment = (_cpu.GetRegister("ES") & 0xFFFF); // ES = segment to free
+                    _logger.LogDebug("[DOS INT 21h] Free memory: segment=0x{Segment:X4} (AH=0x49)", segment);
+                    // We don't actually free it since we don't have a proper memory manager
+                }
+                break;
+
+            case DosFunction.ResizeMemory:
+                {
+                    var segment = (_cpu.GetRegister("ES") & 0xFFFF);
+                    var newParagraphs = bx;
+                    _logger.LogDebug("[DOS INT 21h] Resize memory: segment=0x{Segment:X4}, new size={NewSize} paragraphs (AH=0x4A)", segment, newParagraphs);
+                    // Return success
+                }
+                break;
+
+            case DosFunction.TerminateWithReturnCode:
+                {
+                    var exitCode = al;
+                    _logger.LogInformation("[DOS INT 21h] Program termination with exit code {ExitCode} (AH=0x4C)", exitCode);
+                    _stopRequested = true;
+                }
+                break;
+
+            case DosFunction.GetReturnCode:
+                {
+                    _logger.LogDebug("[DOS INT 21h] Get return code (AH=0x4D)");
+                    // Return 0 in AX
+                    _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | 0x0000);
+                }
+                break;
+
+            default:
+                _logger.LogWarning("[DOS INT 21h] Unimplemented function AH=0x{Ah:X2}", ah);
+                // Return error value in AX
+                _cpu.SetRegister("EAX", DOS_ERROR_INVALID_FUNCTION);
+                break;
+        }
+
+        await Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Helper method to read a null-terminated string from memory.
+    /// </summary>
+    private string ReadNullTerminatedString(uint address)
+    {
+        var sb = new System.Text.StringBuilder();
+        var offset = 0u;
+        try
+        {
+            while (offset < MAX_NULL_TERMINATED_STRING_LENGTH) // Safety limit
+            {
+                var ch = _vm!.Read8(address + offset);
+                if (ch == 0) break;
+                sb.Append((char)ch);
+                offset++;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[DOS INT 21h] Error reading null-terminated string from memory at 0x{Address:X8} (offset {Offset}). Returning partial string.", address, offset);
+        }
+        return sb.ToString();
     }
 
     private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
@@ -2343,16 +2934,27 @@ public sealed class Emulator : IDisposable
     /// </summary>
     
     /// <summary>
-    /// Returns the default heap base address for memory allocation.
-    /// The heap base is always set to 0x01000000 for compatibility.
+    /// Returns the heap base address for memory allocation.
+    /// The heap base is calculated as the image base address plus the image size,
+    /// aligned to a 64KB boundary (standard Windows allocation granularity).
+    /// This ensures the heap region starts after the loaded PE image to avoid
+    /// false positives in heap execution detection.
     /// The PE header's SizeOfHeapReserve value is available in LoadedImage but not used
     /// to determine heap placement - it's available for the memory allocator to manage heap growth.
     /// </summary>
+    /// <param name="image">The loaded image containing base address and size information</param>
     /// <returns>The heap base address to use for memory allocation</returns>
-    private static uint CalculateHeapBase()
+    private static uint CalculateHeapBase(LoadedImage image)
     {
-        const uint DEFAULT_HEAP_BASE = 0x01000000;
-        return DEFAULT_HEAP_BASE;
+        // Calculate heap base as image base + image size
+        var heapBase = image.BaseAddress + image.ImageSize;
+        
+        // Align to 64KB boundary (0x10000) - standard Windows allocation granularity
+        // This ensures proper alignment for VirtualAlloc and similar operations
+        const uint ALLOCATION_GRANULARITY = 0x10000;
+        heapBase = (heapBase + ALLOCATION_GRANULARITY - 1) & ~(ALLOCATION_GRANULARITY - 1);
+        
+        return heapBase;
     }
     
     // Constants for memory validation
@@ -2495,6 +3097,9 @@ public sealed class Emulator : IDisposable
         // Create cancellation token source for event processing
         _eventProcessingCts = new CancellationTokenSource();
 
+        // Capture the cancellation token to avoid race conditions when StopEventProcessing() sets _eventProcessingCts to null
+        var cancellationToken = _eventProcessingCts.Token;
+
         // Start the event processing task
         _eventProcessingTask = Task.Run(async () =>
         {
@@ -2502,7 +3107,7 @@ public sealed class Emulator : IDisposable
 
             try
             {
-                while (!_eventProcessingCts.Token.IsCancellationRequested && !_stopRequested)
+                while (!cancellationToken.IsCancellationRequested && !_stopRequested)
                 {
                     // Process events from all subscribed rendering and input backends
                     // This includes GLFW window events which are critical for window responsiveness
@@ -2515,8 +3120,21 @@ public sealed class Emulator : IDisposable
                         _logger.LogError(ex, "[EventProcessing] Error processing backend events");
                     }
 
+                    // Process Win32 timers (SetTimer API)
+                    try
+                    {
+                        if (_dispatcher != null && _dispatcher.TryGetModule("USER32.DLL", out var user32Module) && user32Module is User32Module user32)
+                        {
+                            await user32.ProcessTimersAsync(cancellationToken);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[EventProcessing] Error processing timers");
+                    }
+
                     // Small delay to avoid busy-waiting (60 FPS event processing)
-                    await Task.Delay(16, _eventProcessingCts.Token);
+                    await Task.Delay(16, cancellationToken);
                 }
             }
             catch (OperationCanceledException)
@@ -2530,7 +3148,7 @@ public sealed class Emulator : IDisposable
             }
 
             LogDebug("[EventProcessing] UI event processing loop stopped");
-        }, _eventProcessingCts.Token);
+        }, cancellationToken);
     }
 
     /// <summary>

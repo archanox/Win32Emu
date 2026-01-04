@@ -108,12 +108,44 @@ namespace Win32Emu.Win32.Modules
 					returnValue = JoyGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "JOYGETDEVCAPSW":
+					returnValue = JoyGetDevCapsW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "JOYGETPOS":
+					returnValue = JoyGetPos(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "JOYGETTHRESHOLD":
+					returnValue = JoyGetThreshold(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "JOYRELEASECAPTURE":
+					returnValue = JoyReleaseCapture(a.UInt32(0));
+					return true;
+
+				case "JOYSETCAPTURE":
+					returnValue = JoySetCapture(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "JOYSETTHRESHOLD":
+					returnValue = JoySetThreshold(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				case "MCISENDSTRINGA":
 					returnValue = MciSendStringA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
 				case "MCISENDCOMMANDA":
 					returnValue = MciSendCommandA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "MCIGETDEVICEIDA":
+					returnValue = MciGetDeviceIDA(a.LpcStr(0));
+					return true;
+
+				case "MCISENDCOMMANDW":
+					returnValue = MciSendCommandW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
 				case "MMIOOPENA":
@@ -160,6 +192,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MmioWrite(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "MMIOINSTALLIOPROCA":
+					returnValue = MmioInstallIOProcA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MMIOSETBUFFER":
+					returnValue = MmioSetBuffer(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
 				case "MIXEROPEN":
 					returnValue = MixerOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
 					return true;
@@ -176,6 +216,30 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MixerGetControlDetailsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
+				case "MIXERGETCONTROLDETAILSW":
+					returnValue = MixerGetControlDetailsW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETDEVCAPSA":
+					returnValue = MixerGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETDEVCAPSW":
+					returnValue = MixerGetDevCapsW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETLINECONTROLSW":
+					returnValue = MixerGetLineControlsW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETLINEINFOW":
+					returnValue = MixerGetLineInfoW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIXERGETNUMDEVS":
+					returnValue = MixerGetNumDevs();
+					return true;
+
 				case "MIXERSETCONTROLDETAILS":
 					returnValue = MixerSetControlDetails(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
@@ -186,6 +250,14 @@ namespace Win32Emu.Win32.Modules
 
 				case "WAVEOUTGETDEVCAPSA":
 					returnValue = WaveOutGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEOUTGETDEVCAPSW":
+					returnValue = WaveOutGetDevCapsW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEOUTGETERRORTEXTA":
+					returnValue = WaveOutGetErrorTextA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
 				case "WAVEOUTMESSAGE":
@@ -242,6 +314,14 @@ namespace Win32Emu.Win32.Modules
 
 				case "WAVEINGETDEVCAPSA":
 					returnValue = WaveInGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEINGETDEVCAPSW":
+					returnValue = WaveInGetDevCapsW(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "WAVEINGETERRORTEXTA":
+					returnValue = WaveInGetErrorTextA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 					return true;
 
 				case "WAVEINMESSAGE":
@@ -312,12 +392,40 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MidiOutGetNumDevs();
 					return true;
 
+				case "MIDIOUTGETDEVCAPSA":
+					returnValue = MidiOutGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIOUTOPEN":
+					returnValue = MidiOutOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
+				case "MIDIOUTCLOSE":
+					returnValue = MidiOutClose(a.UInt32(0));
+					return true;
+
+				case "MIDIOUTGETVOLUME":
+					returnValue = MidiOutGetVolume(a.UInt32(0), a.UInt32(1));
+					return true;
+
+				case "MIDIOUTLONGMSG":
+					returnValue = MidiOutLongMsg(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIOUTGETID":
+					returnValue = MidiOutGetID(a.UInt32(0), a.UInt32(1));
+					return true;
+
 				case "SNDPLAYSOUND":
 					returnValue = SndPlaySound(a.LpcStr(0), a.UInt32(1));
 					return true;
 
 				case "SNDPLAYSOUNDA":
 					returnValue = SndPlaySoundA(a.LpcStr(0), a.UInt32(1));
+					return true;
+
+				case "SNDPLAYSOUNDW":
+					returnValue = SndPlaySoundW(a.LpcWStr(0), a.UInt32(1));
 					return true;
 
 				case "PLAYSOUND":
@@ -389,6 +497,43 @@ namespace Win32Emu.Win32.Modules
 
 				case "MIDISTREAMSTOP":
 					returnValue = MidiStreamStop(a.UInt32(0));
+					return true;
+
+				case "MIDISTREAMPOSITION":
+					returnValue = MidiStreamPosition(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				// MIDI Input functions
+				case "MIDIINGETNUMDEVS":
+					returnValue = MidiInGetNumDevs();
+					return true;
+
+				case "MIDIINGETDEVCAPSA":
+					returnValue = MidiInGetDevCapsA(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIINOPEN":
+					returnValue = MidiInOpen(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.UInt32(4));
+					return true;
+
+				case "MIDIINCLOSE":
+					returnValue = MidiInClose(a.UInt32(0));
+					return true;
+
+				case "MIDIINPREPAREHEADER":
+					returnValue = MidiInPrepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIINUNPREPAREHEADER":
+					returnValue = MidiInUnprepareHeader(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIINADDBUFFER":
+					returnValue = MidiInAddBuffer(a.UInt32(0), a.UInt32(1), a.UInt32(2));
+					return true;
+
+				case "MIDIINRESET":
+					returnValue = MidiInReset(a.UInt32(0));
 					return true;
 
 				default:
@@ -788,7 +933,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]      UINT     fuCreate
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint MmioCreateChunk(uint hmmio, uint pmmcki, uint fuCreate)
 		{
 			_logger.LogInformation("[WinMM] mmioCreateChunk(hmmio=0x{Hmmio:X8}, pmmcki=0x{Pmmcki:X8}, fuCreate=0x{FuCreate:X8})",
@@ -819,7 +964,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] LONG   cch
 		/// );
 		/// </summary>
-		[DllModuleExport(1, IsStub = true)]
+		[DllModuleExport(1)]
 		private uint MmioWrite(uint hmmio, uint pch, uint cch)
 		{
 			_logger.LogInformation("[WinMM] mmioWrite(hmmio=0x{Hmmio:X8}, pch=0x{Pch:X8}, cch={Cch})",
@@ -868,33 +1013,19 @@ namespace Win32Emu.Win32.Modules
 			if (_env.AudioBackend == null && _env.BackendFactory != null)
 			{
 				_env.AudioBackend = _env.BackendFactory.CreateAudioBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
 				if (PlatformHelpers.IsWasm)
 				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.AudioBackend.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[WinMM] Audio backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[WinMM] Audio backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[WinMM] Audio backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[WinMM] Audio backend initialization started asynchronously (WASM mode)");
+					_logger.LogError("[WinMM] mixerOpen called on WASM before backend initialized - backend should be initialized before calling");
+					return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
 				}
-				else
+				
+				var success = _env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
+				if (!success)
 				{
-					_env.AudioBackend.InitializeAsync().GetAwaiter().GetResult();
+					_logger.LogError("[WinMM] Failed to initialize audio backend");
+					return (uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM;
 				}
+				_logger.LogInformation("[WinMM] Audio backend initialized successfully");
 			}
 
 			// Create a handle for this mixer device
@@ -1614,7 +1745,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] UINT      cbmh
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiOutPrepareHeader(uint hmo, uint pmh, uint cbmh)
 		{
 			_logger.LogInformation("[WinMM] midiOutPrepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
@@ -1636,7 +1767,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDIOUT hmo
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiOutReset(uint hmo)
 		{
 			_logger.LogInformation("[WinMM] midiOutReset(hmo=0x{Hmo:X8})", hmo);
@@ -1650,7 +1781,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] DWORD    dwVolume
 		/// );
 		/// </summary>
-		[DllModuleExport(8, IsStub = true)]
+		[DllModuleExport(8)]
 		private uint MidiOutSetVolume(uint hmo, uint dwVolume)
 		{
 			_logger.LogInformation("[WinMM] midiOutSetVolume(hmo=0x{Hmo:X8}, dwVolume=0x{DwVolume:X8})",
@@ -1665,7 +1796,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] DWORD    dwMsg
 		/// );
 		/// </summary>
-		[DllModuleExport(8, IsStub = true)]
+		[DllModuleExport(8)]
 		private uint MidiOutShortMsg(uint hmo, uint dwMsg)
 		{
 			_logger.LogInformation("[WinMM] midiOutShortMsg(hmo=0x{Hmo:X8}, dwMsg=0x{DwMsg:X8})",
@@ -1681,7 +1812,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] UINT      cbmh
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiOutUnprepareHeader(uint hmo, uint pmh, uint cbmh)
 		{
 			_logger.LogInformation("[WinMM] midiOutUnprepareHeader(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
@@ -1717,7 +1848,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamClose(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamClose(hms=0x{Hms:X8})", hms);
@@ -1741,7 +1872,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]  DWORD       fdwOpen
 		/// );
 		/// </summary>
-		[DllModuleExport(24, IsStub = true)]
+		[DllModuleExport(24)]
 		private uint MidiStreamOpen(uint phms, uint puDeviceID, uint cMidi, uint dwCallback, uint dwInstance, uint fdwOpen)
 		{
 			_logger.LogInformation("[WinMM] midiStreamOpen(phms=0x{Phms:X8}, puDeviceID=0x{PuDeviceID:X8}, cMidi={CMidi}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
@@ -1778,7 +1909,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] UINT      cbmh
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiStreamOut(uint hms, uint pmh, uint cbmh)
 		{
 			_logger.LogInformation("[WinMM] midiStreamOut(hms=0x{Hms:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
@@ -1805,7 +1936,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamPause(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamPause(hms=0x{Hms:X8})", hms);
@@ -1827,7 +1958,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in]      DWORD     dwProperty
 		/// );
 		/// </summary>
-		[DllModuleExport(12, IsStub = true)]
+		[DllModuleExport(12)]
 		private uint MidiStreamProperty(uint hms, uint lppropdata, uint dwProperty)
 		{
 			_logger.LogInformation("[WinMM] midiStreamProperty(hms=0x{Hms:X8}, lppropdata=0x{Lppropdata:X8}, dwProperty=0x{DwProperty:X8})",
@@ -1848,7 +1979,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamRestart(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamRestart(hms=0x{Hms:X8})", hms);
@@ -1868,7 +1999,7 @@ namespace Win32Emu.Win32.Modules
 		///   [in] HMIDISTRM hms
 		/// );
 		/// </summary>
-		[DllModuleExport(4, IsStub = true)]
+		[DllModuleExport(4)]
 		private uint MidiStreamStop(uint hms)
 		{
 			_logger.LogInformation("[WinMM] midiStreamStop(hms=0x{Hms:X8})", hms);
@@ -2287,6 +2418,428 @@ namespace Win32Emu.Win32.Modules
 			_cpu.SetRegister("EBP", savedEbp);
 
 			_logger.LogInformation("[WinMM] CallTimeProcAsync: Completed {Status}", executionSuccessful ? "successfully" : "with errors");
+		}
+
+		// ============================================================================
+		// Joystick Functions
+		// ============================================================================
+
+		[DllModuleExport(12)]
+		private uint JoyGetDevCapsW(uint uJoyID, uint pjc, uint cbjc)
+		{
+			_logger.LogInformation("[WinMM] joyGetDevCapsW(uJoyID={UJoyID}, pjc=0x{Pjc:X8}, cbjc={Cbjc})",
+				uJoyID, pjc, cbjc);
+			// Return error - no joystick present
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NODRIVER;
+		}
+
+		[DllModuleExport(8)]
+		private uint JoyGetPos(uint uJoyID, uint pji)
+		{
+			_logger.LogInformation("[WinMM] joyGetPos(uJoyID={UJoyID}, pji=0x{Pji:X8})", uJoyID, pji);
+			// Return error - no joystick present
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(8)]
+		private uint JoyGetThreshold(uint uJoyID, uint puThreshold)
+		{
+			_logger.LogInformation("[WinMM] joyGetThreshold(uJoyID={UJoyID}, puThreshold=0x{PuThreshold:X8})",
+				uJoyID, puThreshold);
+			// Return error - no joystick present
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(4)]
+		private uint JoyReleaseCapture(uint uJoyID)
+		{
+			_logger.LogInformation("[WinMM] joyReleaseCapture(uJoyID={UJoyID})", uJoyID);
+			// Return success - stub
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		[DllModuleExport(16)]
+		private uint JoySetCapture(uint hwnd, uint uJoyID, uint uPeriod, uint fChanged)
+		{
+			_logger.LogInformation("[WinMM] joySetCapture(hwnd=0x{Hwnd:X8}, uJoyID={UJoyID}, uPeriod={UPeriod}, fChanged={FChanged})",
+				hwnd, uJoyID, uPeriod, fChanged);
+			// Return error - no joystick present
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(8)]
+		private uint JoySetThreshold(uint uJoyID, uint uThreshold)
+		{
+			_logger.LogInformation("[WinMM] joySetThreshold(uJoyID={UJoyID}, uThreshold={UThreshold})",
+				uJoyID, uThreshold);
+			// Return error - no joystick present
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		// ============================================================================
+		// MCI Functions
+		// ============================================================================
+
+		[DllModuleExport(4)]
+		private uint MciGetDeviceIDA(in LpcStr pszDevice)
+		{
+			var deviceName = pszDevice.ToString() ?? string.Empty;
+			_logger.LogInformation("[WinMM] mciGetDeviceIDA(pszDevice=\"{DeviceName}\")", deviceName);
+			// Return 0 (no device)
+			return 0;
+		}
+
+		[DllModuleExport(16)]
+		private uint MciSendCommandW(uint mciId, uint uMsg, uint dwParam1, uint dwParam2)
+		{
+			_logger.LogInformation("[WinMM] mciSendCommandW(mciId={MciId}, uMsg=0x{UMsg:X8}, dwParam1=0x{DwParam1:X8}, dwParam2=0x{DwParam2:X8})",
+				mciId, uMsg, dwParam1, dwParam2);
+			// Return error - not implemented
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NODRIVER;
+		}
+
+		// ============================================================================
+		// MIDI In Functions
+		// ============================================================================
+
+		[DllModuleExport(0)]
+		private uint MidiInGetNumDevs()
+		{
+			_logger.LogInformation("[WinMM] midiInGetNumDevs()");
+			// Return 0 devices
+			return 0;
+		}
+
+		[DllModuleExport(12)]
+		private uint MidiInGetDevCapsA(uint uDeviceID, uint pmic, uint cbmic)
+		{
+			_logger.LogInformation("[WinMM] midiInGetDevCapsA(uDeviceID={UDeviceID}, pmic=0x{Pmic:X8}, cbmic={Cbmic})",
+				uDeviceID, pmic, cbmic);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(20)]
+		private uint MidiInOpen(uint phmi, uint uDeviceID, uint dwCallback, uint dwInstance, uint fdwOpen)
+		{
+			_logger.LogInformation("[WinMM] midiInOpen(phmi=0x{Phmi:X8}, uDeviceID={UDeviceID}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
+				phmi, uDeviceID, dwCallback, dwInstance, fdwOpen);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(4)]
+		private uint MidiInClose(uint hmi)
+		{
+			_logger.LogInformation("[WinMM] midiInClose(hmi=0x{Hmi:X8})", hmi);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		[DllModuleExport(12)]
+		private uint MidiInPrepareHeader(uint hmi, uint pmh, uint cbmh)
+		{
+			_logger.LogInformation("[WinMM] midiInPrepareHeader(hmi=0x{Hmi:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
+				hmi, pmh, cbmh);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		[DllModuleExport(12)]
+		private uint MidiInUnprepareHeader(uint hmi, uint pmh, uint cbmh)
+		{
+			_logger.LogInformation("[WinMM] midiInUnprepareHeader(hmi=0x{Hmi:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
+				hmi, pmh, cbmh);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		[DllModuleExport(12)]
+		private uint MidiInAddBuffer(uint hmi, uint pmh, uint cbmh)
+		{
+			_logger.LogInformation("[WinMM] midiInAddBuffer(hmi=0x{Hmi:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
+				hmi, pmh, cbmh);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		[DllModuleExport(4)]
+		private uint MidiInReset(uint hmi)
+		{
+			_logger.LogInformation("[WinMM] midiInReset(hmi=0x{Hmi:X8})", hmi);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		// ============================================================================
+		// MIDI Out Functions (additional)
+		// ============================================================================
+
+		[DllModuleExport(12)]
+		private uint MidiOutGetDevCapsA(uint uDeviceID, uint pmoc, uint cbmoc)
+		{
+			_logger.LogInformation("[WinMM] midiOutGetDevCapsA(uDeviceID={UDeviceID}, pmoc=0x{Pmoc:X8}, cbmoc={Cbmoc})",
+				uDeviceID, pmoc, cbmoc);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(20)]
+		private uint MidiOutOpen(uint phmo, uint uDeviceID, uint dwCallback, uint dwInstance, uint fdwOpen)
+		{
+			_logger.LogInformation("[WinMM] midiOutOpen(phmo=0x{Phmo:X8}, uDeviceID={UDeviceID}, dwCallback=0x{DwCallback:X8}, dwInstance=0x{DwInstance:X8}, fdwOpen=0x{FdwOpen:X8})",
+				phmo, uDeviceID, dwCallback, dwInstance, fdwOpen);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(4)]
+		private uint MidiOutClose(uint hmo)
+		{
+			_logger.LogInformation("[WinMM] midiOutClose(hmo=0x{Hmo:X8})", hmo);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		[DllModuleExport(8)]
+		private uint MidiOutGetVolume(uint hmo, uint pdwVolume)
+		{
+			_logger.LogInformation("[WinMM] midiOutGetVolume(hmo=0x{Hmo:X8}, pdwVolume=0x{PdwVolume:X8})",
+				hmo, pdwVolume);
+			// Return full volume
+			if (pdwVolume != 0)
+			{
+				_env.MemWrite32(pdwVolume, 0xFFFFFFFF);
+			}
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		[DllModuleExport(12)]
+		private uint MidiOutLongMsg(uint hmo, uint pmh, uint cbmh)
+		{
+			_logger.LogInformation("[WinMM] midiOutLongMsg(hmo=0x{Hmo:X8}, pmh=0x{Pmh:X8}, cbmh={Cbmh})",
+				hmo, pmh, cbmh);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		[DllModuleExport(8)]
+		private uint MidiOutGetID(uint hmo, uint puDeviceID)
+		{
+			_logger.LogInformation("[WinMM] midiOutGetID(hmo=0x{Hmo:X8}, puDeviceID=0x{PuDeviceID:X8})",
+				hmo, puDeviceID);
+			// Return error - invalid handle
+			return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+		}
+
+		// ============================================================================
+		// MIDI Stream Functions (additional)
+		// ============================================================================
+
+		[DllModuleExport(12)]
+		private uint MidiStreamPosition(uint hms, uint pmmt, uint cbmmt)
+		{
+			_logger.LogInformation("[WinMM] midiStreamPosition(hms=0x{Hms:X8}, pmmt=0x{Pmmt:X8}, cbmmt={Cbmmt})",
+				hms, pmmt, cbmmt);
+
+			if (!_midiStreams.ContainsKey(hms))
+			{
+				return (uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE;
+			}
+
+			// Return position 0 (stub)
+			if (pmmt != 0 && cbmmt >= 8)
+			{
+				_env.MemWrite32(pmmt, 0); // ms
+				_env.MemWrite32(pmmt + 4, 0); // u.ticks or other union member
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		// ============================================================================
+		// Mixer Functions (additional)
+		// ============================================================================
+
+		[DllModuleExport(12)]
+		private uint MixerGetControlDetailsW(uint hmxobj, uint pmxcd, uint fdwDetails)
+		{
+			_logger.LogInformation("[WinMM] mixerGetControlDetailsW(hmxobj=0x{Hmxobj:X8}, pmxcd=0x{Pmxcd:X8}, fdwDetails=0x{FdwDetails:X8})",
+				hmxobj, pmxcd, fdwDetails);
+			// Return error - not implemented
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NODRIVER;
+		}
+
+		[DllModuleExport(12)]
+		private uint MixerGetDevCapsA(uint uMxId, uint pmxcaps, uint cbmxcaps)
+		{
+			_logger.LogInformation("[WinMM] mixerGetDevCapsA(uMxId={UMxId}, pmxcaps=0x{Pmxcaps:X8}, cbmxcaps={Cbmxcaps})",
+				uMxId, pmxcaps, cbmxcaps);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(12)]
+		private uint MixerGetDevCapsW(uint uMxId, uint pmxcaps, uint cbmxcaps)
+		{
+			_logger.LogInformation("[WinMM] mixerGetDevCapsW(uMxId={UMxId}, pmxcaps=0x{Pmxcaps:X8}, cbmxcaps={Cbmxcaps})",
+				uMxId, pmxcaps, cbmxcaps);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(12)]
+		private uint MixerGetLineControlsW(uint hmxobj, uint pmxlc, uint fdwControls)
+		{
+			_logger.LogInformation("[WinMM] mixerGetLineControlsW(hmxobj=0x{Hmxobj:X8}, pmxlc=0x{Pmxlc:X8}, fdwControls=0x{FdwControls:X8})",
+				hmxobj, pmxlc, fdwControls);
+			// Return error - not implemented
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NODRIVER;
+		}
+
+		[DllModuleExport(12)]
+		private uint MixerGetLineInfoW(uint hmxobj, uint pmxl, uint fdwInfo)
+		{
+			_logger.LogInformation("[WinMM] mixerGetLineInfoW(hmxobj=0x{Hmxobj:X8}, pmxl=0x{Pmxl:X8}, fdwInfo=0x{FdwInfo:X8})",
+				hmxobj, pmxl, fdwInfo);
+			// Return error - not implemented
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NODRIVER;
+		}
+
+		[DllModuleExport(0)]
+		private uint MixerGetNumDevs()
+		{
+			_logger.LogInformation("[WinMM] mixerGetNumDevs()");
+			// Return 0 devices
+			return 0;
+		}
+
+		// ============================================================================
+		// MMIO Functions (additional)
+		// ============================================================================
+
+		[DllModuleExport(12)]
+		private uint MmioInstallIOProcA(uint fccIOProc, uint pIOProc, uint dwFlags)
+		{
+			_logger.LogInformation("[WinMM] mmioInstallIOProcA(fccIOProc=0x{FccIOProc:X8}, pIOProc=0x{PIOProc:X8}, dwFlags=0x{DwFlags:X8})",
+				fccIOProc, pIOProc, dwFlags);
+			// Return NULL - not implemented
+			return 0;
+		}
+
+		[DllModuleExport(16)]
+		private uint MmioSetBuffer(uint hmmio, uint pchBuffer, uint cchBuffer, uint fuBuffer)
+		{
+			_logger.LogInformation("[WinMM] mmioSetBuffer(hmmio=0x{Hmmio:X8}, pchBuffer=0x{PchBuffer:X8}, cchBuffer={CchBuffer}, fuBuffer=0x{FuBuffer:X8})",
+				hmmio, pchBuffer, cchBuffer, fuBuffer);
+
+			if (!_mmioFiles.ContainsKey(hmmio))
+			{
+				_logger.LogWarning("[WinMM] mmioSetBuffer: Invalid handle 0x{Hmmio:X8}", hmmio);
+				return (uint)NativeTypes.MMIOError.MMIOERR_BASE;
+			}
+
+			// Return success - stub
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		// ============================================================================
+		// Sound Functions (additional)
+		// ============================================================================
+
+		[DllModuleExport(8)]
+		private uint SndPlaySoundW(in LpcWStr pszSound, uint fuSound)
+		{
+			var soundName = pszSound.ToString() ?? string.Empty;
+			_logger.LogInformation("[WinMM] sndPlaySoundW(pszSound=\"{SoundName}\", fuSound=0x{FuSound:X8})",
+				soundName, fuSound);
+			// Return success without playing - stub
+			return 1; // TRUE
+		}
+
+		// ============================================================================
+		// Wave Functions (additional)
+		// ============================================================================
+
+		[DllModuleExport(12)]
+		private uint WaveInGetDevCapsW(uint uDeviceID, uint pwic, uint cbwic)
+		{
+			_logger.LogInformation("[WinMM] waveInGetDevCapsW(uDeviceID={UDeviceID}, pwic=0x{Pwic:X8}, cbwic={Cbwic})",
+				uDeviceID, pwic, cbwic);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(12)]
+		private uint WaveInGetErrorTextA(uint mmrError, uint pszText, uint cchText)
+		{
+			_logger.LogInformation("[WinMM] waveInGetErrorTextA(mmrError={MmrError}, pszText=0x{PszText:X8}, cchText={CchText})",
+				mmrError, pszText, cchText);
+
+			if (pszText != 0 && cchText > 0)
+			{
+				var errorText = GetMMSysErrorText(mmrError);
+				_env.WriteAnsiStringAt(pszText, errorText);
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		[DllModuleExport(12)]
+		private uint WaveOutGetDevCapsW(uint uDeviceID, uint pwoc, uint cbwoc)
+		{
+			_logger.LogInformation("[WinMM] waveOutGetDevCapsW(uDeviceID={UDeviceID}, pwoc=0x{Pwoc:X8}, cbwoc={Cbwoc})",
+				uDeviceID, pwoc, cbwoc);
+			// Return error - no devices
+			return (uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID;
+		}
+
+		[DllModuleExport(12)]
+		private uint WaveOutGetErrorTextA(uint mmrError, uint pszText, uint cchText)
+		{
+			_logger.LogInformation("[WinMM] waveOutGetErrorTextA(mmrError={MmrError}, pszText=0x{PszText:X8}, cchText={CchText})",
+				mmrError, pszText, cchText);
+
+			if (pszText != 0 && cchText > 0)
+			{
+				var errorText = GetMMSysErrorText(mmrError);
+				_env.WriteAnsiStringAt(pszText, errorText);
+			}
+
+			return (uint)NativeTypes.MMSysError.MMSYSERR_NOERROR;
+		}
+
+		/// <summary>
+		/// Helper method to map MMSysError codes to descriptive error messages
+		/// </summary>
+		private static string GetMMSysErrorText(uint errorCode)
+		{
+			return errorCode switch
+			{
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOERROR => "No error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_ERROR => "Unspecified error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_BADDEVICEID => "Device ID out of range",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOTENABLED => "Driver failed enable",
+				(uint)NativeTypes.MMSysError.MMSYSERR_ALLOCATED => "Device already allocated",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALHANDLE => "Device handle is invalid",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NODRIVER => "No device driver present",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOMEM => "Memory allocation error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NOTSUPPORTED => "Function is not supported",
+				(uint)NativeTypes.MMSysError.MMSYSERR_BADERRNUM => "Error value out of range",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALFLAG => "Invalid flag passed",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALPARAM => "Invalid parameter passed",
+				(uint)NativeTypes.MMSysError.MMSYSERR_HANDLEBUSY => "Handle being used simultaneously",
+				(uint)NativeTypes.MMSysError.MMSYSERR_INVALIDALIAS => "Specified alias not found",
+				(uint)NativeTypes.MMSysError.MMSYSERR_BADDB => "Bad registry database",
+				(uint)NativeTypes.MMSysError.MMSYSERR_KEYNOTFOUND => "Registry key not found",
+				(uint)NativeTypes.MMSysError.MMSYSERR_READERROR => "Registry read error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_WRITEERROR => "Registry write error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_DELETEERROR => "Registry delete error",
+				(uint)NativeTypes.MMSysError.MMSYSERR_VALNOTFOUND => "Registry value not found",
+				(uint)NativeTypes.MMSysError.MMSYSERR_NODRIVERCB => "Driver does not call DriverCallback",
+				(uint)NativeTypes.MMSysError.MMSYSERR_MOREDATA => "More data to be returned",
+				_ => "Unknown error"
+			};
 		}
 
 		#endregion

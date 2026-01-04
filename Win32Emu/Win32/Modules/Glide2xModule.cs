@@ -45,7 +45,7 @@ namespace Win32Emu.Win32.Modules
 		public bool HasTexture;
 	}
 	
-	public class Glide2XModule : IWin32ModuleUnsafe
+	public class Glide2XModule : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -147,6 +147,42 @@ namespace Win32Emu.Win32.Modules
 
 		public string Name => "GLIDE2X.DLL";
 
+		public async Task<(bool success, uint returnValue)> TryInvokeAsync(
+			string export,
+			ICpu cpu,
+			VirtualMemory memory,
+			CancellationToken cancellationToken = default)
+		{
+			_currentMemory = memory; // Store for use in drawing functions
+			var a = new StackArgs(cpu, memory);
+
+			// Route APIs that need async initialization on all platforms
+			switch (export.ToUpperInvariant())
+			{
+				case "_GRSSTWINOPEN@28":
+					{
+						uint hwnd = a.UInt32(0);
+						uint resolution = a.UInt32(1);
+						uint refresh = a.UInt32(2);
+						uint colorFormat = a.UInt32(3);
+						uint origin = a.UInt32(4);
+						uint nColBuffers = a.UInt32(5);
+						uint nAuxBuffers = a.UInt32(6);
+						var result = await grSstWinOpenAsync(hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers, cancellationToken);
+						return (true, result);
+					}
+			}
+
+			// For all other APIs, use synchronous implementation
+			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
+			{
+				return (true, syncReturnValue);
+			}
+
+			// No async work performed; return failure immediately
+			return (false, 0);
+		}
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			returnValue = 0;
@@ -180,18 +216,7 @@ namespace Win32Emu.Win32.Modules
 						return true;
 					}
 
-				case "_GRSSTWINOPEN@28":
-					{
-						uint hwnd = a.UInt32(0);
-						uint resolution = a.UInt32(1);
-						uint refresh = a.UInt32(2);
-						uint colorFormat = a.UInt32(3);
-						uint origin = a.UInt32(4);
-						uint nColBuffers = a.UInt32(5);
-						uint nAuxBuffers = a.UInt32(6);
-						returnValue = grSstWinOpen(hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers); // Return TRUE for success
-						return true;
-					}
+				// _GRSSTWINOPEN@28 is handled by TryInvokeAsync to support async initialization on all platforms
 
 				case "_GRSSTWINCLOSE@0":
 					returnValue = grSstWinClose();
@@ -837,6 +862,17 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			_renderingBackend.ProcessEvents();
+			
+			// Post a WM_PAINT message to keep the message queue active
+			// This ensures GetMessageA doesn't block forever when there are no user interactions
+			// Find the first window and post a paint message to it
+			var windows = _env.GetAllWindowHandles().ToList();
+			if (windows.Count > 0)
+			{
+				var firstWindow = windows[0];
+				_env.PostMessage(firstWindow, (uint)Messaging.WM.PAINT, 0, 0);
+				_logger.LogTrace("[GLIDE2x] Posted WM_PAINT to window 0x{Hwnd:X8} to keep message loop active", firstWindow);
+			}
 			
 			// Begin next frame
 			if (_useHardwareAcceleration)
@@ -1485,8 +1521,12 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success (void function)
 		}
 
+		/// <summary>
+		/// Opens a Glide window for rendering. This method is always async to support proper
+		/// backend initialization on all platforms, avoiding .GetAwaiter().GetResult() pattern.
+		/// </summary>
 		[DllModuleExport(77, entryPoint: 0x00005080, Version = "2.61.00.0613", ExportName = "_grSstWinOpen@28")]
-		public uint grSstWinOpen(uint hwnd, uint resolution, uint refresh, uint colorFormat, uint origin, uint nColBuffers, uint nAuxBuffers)
+		private async Task<uint> grSstWinOpenAsync(uint hwnd, uint resolution, uint refresh, uint colorFormat, uint origin, uint nColBuffers, uint nAuxBuffers, CancellationToken cancellationToken = default)
 		{
 			_logger.LogInformation("[GLIDE2x] grSstWinOpen(hwnd=0x{Hwnd:X8}, resolution={Resolution}, refresh={Refresh}, colorFormat={ColorFormat}, origin={Origin}, nColBuffers={NColBuffers}, nAuxBuffers={NAuxBuffers})", 
 				hwnd, resolution, refresh, colorFormat, origin, nColBuffers, nAuxBuffers);
@@ -1516,38 +1556,14 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			// Initialize the rendering backend
-			if (!_renderingBackend.IsInitialized)
+			if (_renderingBackend != null && !_renderingBackend.IsInitialized)
 			{
 				var title = "Win32Emu - 3Dfx Glide";
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
-				if (PlatformHelpers.IsWasm)
+				
+				_logger.LogInformation("[GLIDE2x] Initializing rendering backend with {Width}x{Height}", _width, _height);
+				try
 				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _renderingBackend.InitializeAsync(_width, _height, title)
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[GLIDE2x] Rendering backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[GLIDE2x] Rendering backend initialized: {Width}x{Height} (WASM mode)", _width, _height);
-								// Subscribe to UI events
-								_env.SubscribeToUIEvents(_renderingBackend, null);
-							}
-							else
-							{
-								_logger.LogWarning("[GLIDE2x] Rendering backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[GLIDE2x] Rendering backend initialization started asynchronously (WASM mode)");
-				}
-				else
-				{
-					var success = _renderingBackend.InitializeAsync(_width, _height, title).GetAwaiter().GetResult();
-					
+					var success = await _renderingBackend.InitializeAsync(_width, _height, title).ConfigureAwait(false);
 					if (!success)
 					{
 						_logger.LogError("[GLIDE2x] Failed to initialize rendering backend");
@@ -1558,6 +1574,11 @@ namespace Win32Emu.Win32.Modules
 					
 					// Subscribe to UI events
 					_env.SubscribeToUIEvents(_renderingBackend, null);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[GLIDE2x] Rendering backend initialization failed");
+					return 0; // FALSE - failed
 				}
 			}
 			

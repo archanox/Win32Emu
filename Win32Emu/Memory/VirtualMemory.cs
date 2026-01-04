@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
@@ -110,14 +111,38 @@ public class VirtualMemory
     public ushort Read16(ulong addr)
     {
         EnsureRange(addr, 2);
-        return (ushort)(Read8(addr) | (Read8(addr + 1) << 8));
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 1 && _pages.TryGetValue(pageIndex, out var page))
+        {
+            // Data is within a single page - use BinaryPrimitives for efficient little-endian access
+            return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 2));
+        }
+        
+        // Slow path: Cross-page boundary or unallocated page
+        return (ushort)(ReadByteInternal(addr) | (ReadByteInternal(addr + 1) << 8));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public uint Read32(ulong addr)
     {
         EnsureRange(addr, 4);
-        var value = (uint)(Read16(addr) | (Read16(addr + 2) << 16));
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        // Use ternary for cleaner assignment to 'value'
+        uint value = offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page)
+            ? BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 4))
+            : (uint)(
+                ReadByteInternal(addr) |
+                (ReadByteInternal(addr + 1) << 8) |
+                (ReadByteInternal(addr + 2) << 16) |
+                (ReadByteInternal(addr + 3) << 24));
         
         // IAT protection: verify and fix corrupted entries
         if (_iatEntryMap != null && _iatEntryMap.TryGetValue((uint)addr, out var expectedValue))
@@ -146,31 +171,98 @@ public class VirtualMemory
     public void Write16(ulong addr, ushort value)
     {
         EnsureRange(addr, 2);
-        Write8(addr, (byte)(value & 0xFF));
-        Write8(addr + 1, (byte)(value >> 8));
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 1)
+        {
+            var page = GetOrCreatePage(pageIndex);
+            BinaryPrimitives.WriteUInt16LittleEndian(new Span<byte>(page, (int)offset, 2), value);
+            return;
+        }
+        
+        // Slow path: Cross-page boundary
+        WriteByteInternal(addr, (byte)value);
+        WriteByteInternal(addr + 1, (byte)(value >> 8));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write32(ulong addr, uint value)
     {
         EnsureRange(addr, 4);
-        Write16(addr, (ushort)(value & 0xFFFF));
-        Write16(addr + 2, (ushort)(value >> 16));
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 3)
+        {
+            var page = GetOrCreatePage(pageIndex);
+            BinaryPrimitives.WriteUInt32LittleEndian(new Span<byte>(page, (int)offset, 4), value);
+            return;
+        }
+        
+        // Slow path: Cross-page boundary
+        WriteByteInternal(addr, (byte)value);
+        WriteByteInternal(addr + 1, (byte)(value >> 8));
+        WriteByteInternal(addr + 2, (byte)(value >> 16));
+        WriteByteInternal(addr + 3, (byte)(value >> 24));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public ulong Read64(ulong addr)
     {
         EnsureRange(addr, 8);
-        return Read32(addr) | ((ulong)Read32(addr + 4) << 32);
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 7 && _pages.TryGetValue(pageIndex, out var page))
+        {
+            // Data is within a single page - use BinaryPrimitives for efficient little-endian access
+            return BinaryPrimitives.ReadUInt64LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 8));
+        }
+        
+        // Slow path: Cross-page boundary or unallocated page
+        return (ulong)(
+            ReadByteInternal(addr) |
+            ((ulong)ReadByteInternal(addr + 1) << 8) |
+            ((ulong)ReadByteInternal(addr + 2) << 16) |
+            ((ulong)ReadByteInternal(addr + 3) << 24) |
+            ((ulong)ReadByteInternal(addr + 4) << 32) |
+            ((ulong)ReadByteInternal(addr + 5) << 40) |
+            ((ulong)ReadByteInternal(addr + 6) << 48) |
+            ((ulong)ReadByteInternal(addr + 7) << 56));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]
     public void Write64(ulong addr, ulong value)
     {
         EnsureRange(addr, 8);
-        Write32(addr, (uint)(value & 0xFFFFFFFF));
-        Write32(addr + 4, (uint)(value >> 32));
+        
+        // Fast path: If within a single page, use direct span access
+        uint pageIndex = (uint)(addr >> PageSizeBits);
+        uint offset = (uint)(addr & PageMask);
+        
+        if (offset <= PageMask - 7)
+        {
+            var page = GetOrCreatePage(pageIndex);
+            BinaryPrimitives.WriteUInt64LittleEndian(new Span<byte>(page, (int)offset, 8), value);
+            return;
+        }
+        
+        // Slow path: Cross-page boundary
+        WriteByteInternal(addr, (byte)value);
+        WriteByteInternal(addr + 1, (byte)(value >> 8));
+        WriteByteInternal(addr + 2, (byte)(value >> 16));
+        WriteByteInternal(addr + 3, (byte)(value >> 24));
+        WriteByteInternal(addr + 4, (byte)(value >> 32));
+        WriteByteInternal(addr + 5, (byte)(value >> 40));
+        WriteByteInternal(addr + 6, (byte)(value >> 48));
+        WriteByteInternal(addr + 7, (byte)(value >> 56));
     }
 
     public void WriteBytes(ulong addr, ReadOnlySpan<byte> data)

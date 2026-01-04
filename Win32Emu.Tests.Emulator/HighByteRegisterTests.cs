@@ -1,6 +1,6 @@
 using Xunit;
 using Xunit.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator;
@@ -29,7 +29,7 @@ public class HighByteRegisterTests
 		memory.Write8(0x3A92, 0x00);
 		memory.Write8(0x3A93, 0xD5);
 		
-		var cpu = new IcedCpu(memory);
+		var cpu = new JitCpu(memory);
 		cpu.SetEip(0x3A92);
 		// Initial values from conformance test
 		cpu.SetRegister("ECX", 0x0BA34F00); // CH = 0x4F, CL = 0x00

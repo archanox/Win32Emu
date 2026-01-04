@@ -104,6 +104,14 @@ namespace Win32Emu.Win32.Modules
 			// which throws PlatformNotSupportedException on WASM
 			switch (export.ToUpperInvariant())
 			{
+				case "DIRECTDRAWCREATE":
+					// Route through sync version - no special async handling needed
+					return (true, DirectDrawCreate(a.UInt32(0), a.UInt32(1), a.UInt32(2)));
+				
+				case "DIRECTDRAWCREATEEX":
+					// Route through sync version - no special async handling needed
+					return (true, DirectDrawCreateEx(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3)));
+				
 				case "DIRECTDRAWENUMERATEA":
 					return (true, await DirectDrawEnumerateAAsync(a.UInt32(0), a.UInt32(1), cancellationToken).ConfigureAwait(false));
 				case "DIRECTDRAWENUMERATEEXA":
@@ -184,7 +192,7 @@ namespace Win32Emu.Win32.Modules
 				new("Compact", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Compact>(async (cpu, mem) => await Task.FromResult(DDraw_Compact(cpu, mem)))),
 				new("CreateClipper", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateClipper>(async (cpu, mem) => await Task.FromResult(DDraw_CreateClipper(cpu, mem)))),
 				new("CreatePalette", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreatePalette>(async (cpu, mem) => await Task.FromResult(DDraw_CreatePalette(cpu, mem)))),
-				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_CreateSurface(cpu, mem)))),
+				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await DDraw_CreateSurfaceAsync(cpu, mem))),
 				new("DuplicateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.DuplicateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_DuplicateSurface(cpu, mem)))),
 				new("EnumDisplayModes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumDisplayModes>(async (cpu, mem) => await Task.FromResult(DDraw_EnumDisplayModes(cpu, mem)))),
 				new("EnumSurfaces", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumSurfaces>(async (cpu, mem) => await Task.FromResult(DDraw_EnumSurfaces(cpu, mem)))),
@@ -273,7 +281,7 @@ namespace Win32Emu.Win32.Modules
 				new("Compact", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Compact>(async (cpu, mem) => await Task.FromResult(DDraw_Compact(cpu, mem)))),
 				new("CreateClipper", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateClipper>(async (cpu, mem) => await Task.FromResult(DDraw_CreateClipper(cpu, mem)))),
 				new("CreatePalette", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreatePalette>(async (cpu, mem) => await Task.FromResult(DDraw_CreatePalette(cpu, mem)))),
-				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_CreateSurface(cpu, mem)))),
+				new("CreateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.CreateSurface>(async (cpu, mem) => await DDraw_CreateSurfaceAsync(cpu, mem))),
 				new("DuplicateSurface", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.DuplicateSurface>(async (cpu, mem) => await Task.FromResult(DDraw_DuplicateSurface(cpu, mem)))),
 				new("EnumDisplayModes", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumDisplayModes>(async (cpu, mem) => await Task.FromResult(DDraw_EnumDisplayModes(cpu, mem)))),
 				new("EnumSurfaces", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.EnumSurfaces>(async (cpu, mem) => await Task.FromResult(DDraw_EnumSurfaces(cpu, mem)))),
@@ -330,6 +338,9 @@ namespace Win32Emu.Win32.Modules
 			
 			// Frame buffering for WASM mode to queue frames drawn before backend initialization completes
 			public Queue<PendingFrameData>? PendingFrames { get; set; }
+			
+			// Track frame updates for throttled logging (avoid spam at high frame rates)
+			public int FrameUpdateCount { get; set; }
 		}
 		
 		/// <summary>
@@ -826,7 +837,16 @@ namespace Win32Emu.Win32.Modules
 			return (uint)DDResult.DD_OK;
 		}
 
-		private uint DDraw_CreateSurface(ICpu cpu, VirtualMemory memory)
+		/// <summary>
+		/// Synchronous wrapper for DDraw_CreateSurfaceAsync.
+		/// This is kept for compatibility with non-WASM platforms.
+		/// On WASM, this should not be called - use DDraw_CreateSurfaceAsync instead.
+		/// </summary>
+
+		/// <summary>
+		/// Async implementation of CreateSurface that supports WASM.
+		/// </summary>
+		private async Task<uint> DDraw_CreateSurfaceAsync(ICpu cpu, VirtualMemory memory)
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
@@ -1066,6 +1086,16 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Created IDirectDrawSurface COM object at 0x{ComObjectAddr:X8} for surface 0x{SurfaceHandle:X8}", comObjectAddr, surfaceHandle);
+			
+			// Auto-initialize rendering backend when primary surface is created
+			// Some applications create primary surfaces without calling SetDisplayMode first
+			// This ensures the backend is initialized and ready to render
+			if (isPrimary && ddrawObj.RenderingBackend != null && !ddrawObj.RenderingBackend.IsInitialized)
+			{
+				_logger.LogInformation("[DDraw] Auto-initializing rendering backend for primary surface ({Width}x{Height})", surfaceWidth, surfaceHeight);
+				await InitializeRenderingBackendWithDimensionsAsync(ddrawObj, surfaceWidth, surfaceHeight, updateEnvironment: true);
+			}
+			
 			return (uint)DDResult.DD_OK;
 		}
 
@@ -1851,12 +1881,53 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_INVALIDOBJECT;
 			}
 
-			// If this is a primary surface, present the frame to the rendering backend
-			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
+			// Treat any surface with attached surfaces (backbuffers) as a primary surface for rendering purposes
+			// Some applications don't set DDSCAPS_PRIMARYSURFACE flag but still use the surface as primary
+			var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
+			
+			_logger.LogDebug("[DDraw] Flip: surface IsPrimary={IsPrimary}, AttachedSurfaces.Count={Count}, treating as primary={EffectivelyPrimary}", 
+				surface.IsPrimary, surface.AttachedSurfaces.Count, isEffectivelyPrimary);
+
+			// If this is a primary surface (or effectively acts as one), present the frame to the rendering backend
+			if (isEffectivelyPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj) && ddrawObj.RenderingBackend != null)
 			{
 				try
 				{
-					// If the surface is dirty (e.g., modified by BltFast), update the rendering backend
+					// For flipping chains, copy the backbuffer to the primary surface before displaying
+					// This is the standard DirectDraw page-flipping mechanism
+					if (surface.AttachedSurfaces.Count > 0)
+					{
+						// Get the first attached surface (backbuffer)
+						var backBufferHandle = surface.AttachedSurfaces[0];
+						if (_surfaces.TryGetValue(backBufferHandle, out var backBuffer) && backBuffer.Bits != null)
+						{
+							// Ensure primary surface has Bits allocated
+							if (surface.Bits == null)
+							{
+								_logger.LogInformation("[DDraw] Allocating Bits for primary surface 0x{SurfaceHandle:X8} (was null)", surface.Handle);
+								surface.Bits = new byte[surface.Pitch * surface.Height];
+							}
+							
+							_logger.LogDebug("[DDraw] Copying backbuffer (0x{BackBufferHandle:X8}) to primary surface (0x{PrimaryHandle:X8}) for flip", 
+								backBufferHandle, surface.Handle);
+							
+							// Copy backbuffer contents to primary surface
+							Array.Copy(backBuffer.Bits, surface.Bits, Math.Min(backBuffer.Bits.Length, surface.Bits.Length));
+							
+							// Mark primary surface as dirty so it gets updated
+							surface.IsTextureDirty = true;
+						}
+						else if (backBuffer == null)
+						{
+							_logger.LogWarning("[DDraw] Flip: backbuffer handle 0x{Handle:X8} not found in surfaces", backBufferHandle);
+						}
+						else if (backBuffer.Bits == null)
+						{
+							_logger.LogWarning("[DDraw] Flip: backbuffer 0x{Handle:X8} has null Bits", backBufferHandle);
+						}
+					}
+
+					// If the surface is dirty (e.g., modified by BltFast or copied from backbuffer), update the rendering backend
 					if (surface.IsTextureDirty)
 					{
 						_logger.LogDebug("[DDraw] Surface is dirty, updating rendering backend before flip");
@@ -2269,6 +2340,9 @@ namespace Win32Emu.Win32.Modules
 			// Mark destination surface as dirty
 			destSurface.IsTextureDirty = true;
 
+			// If we blitted to a primary surface, update the rendering backend to display the changes
+			TryUpdatePrimarySurfaceDisplay(destSurface, ddrawObj, "BltFast");
+
 			return (uint)DDResult.DD_OK;
 		}
 
@@ -2360,6 +2434,9 @@ namespace Win32Emu.Win32.Modules
 
 				// Mark destination surface as dirty
 				destSurface.IsTextureDirty = true;
+
+				// If we filled a primary surface, update the rendering backend to display the changes
+				TryUpdatePrimarySurfaceDisplay(destSurface, ddrawObj, "Color fill");
 
 				_logger.LogInformation("[DDraw] Performed color fill with color 0x{FillColor:X8}", fillColor);
 				return (uint)DDResult.DD_OK;
@@ -2477,6 +2554,9 @@ namespace Win32Emu.Win32.Modules
 
 			// Mark destination surface as dirty
 			destSurface.IsTextureDirty = true;
+
+			// If we blitted to a primary surface, update the rendering backend to display the changes
+			TryUpdatePrimarySurfaceDisplay(destSurface, ddrawObj2, "Blt");
 
 			_logger.LogInformation("[DDraw] Performed blit from source surface");
 
@@ -3174,154 +3254,6 @@ namespace Win32Emu.Win32.Modules
 			return (uint)DDResult.DD_OK;
 		}
 
-		private uint DDraw_SetDisplayMode(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
-		{
-			var args = new StackArgs(cpu, memory);
-			var thisPtr = args.UInt32(0);
-			var dwWidth = args.UInt32(1);
-			var dwHeight = args.UInt32(2);
-			var dwBPP = args.UInt32(3);
-
-			_logger.LogInformation("[DDraw COM] IDirectDraw::SetDisplayMode(this=0x{ThisPtr:X8}, width={DwWidth}, height={DwHeight}, bpp={DwBpp})", thisPtr, dwWidth, dwHeight, dwBPP);
-
-			// Validate parameters
-			if (dwWidth == 0 || dwHeight == 0)
-			{
-				_logger.LogError("[DDraw COM] SetDisplayMode: Invalid dimensions ({Width}x{Height})", dwWidth, dwHeight);
-				return (uint)DDResult.DDERR_INVALIDPARAMS;
-			}
-
-			if (dwBPP != 8 && dwBPP != 16 && dwBPP != 24 && dwBPP != 32)
-			{
-				_logger.LogWarning("[DDraw COM] SetDisplayMode: Unusual BPP value {Bpp}, accepting anyway", dwBPP);
-			}
-
-			// Look up the actual handle from the COM object address
-			if (!_comObjectToHandle.TryGetValue(thisPtr, out var actualHandle))
-			{
-				_logger.LogWarning("[DDraw] SetDisplayMode: Could not find DirectDraw handle for COM object 0x{ThisPtr:X8}, using captured handle 0x{Handle:X8}", thisPtr, ddrawHandle);
-				actualHandle = ddrawHandle;
-			}
-
-			// Store display mode settings
-			if (_ddrawObjects.TryGetValue(actualHandle, out var obj))
-			{
-				obj.Width = (int)dwWidth;
-				obj.Height = (int)dwHeight;
-				obj.BitsPerPixel = (int)dwBPP;
-
-				// Update ProcessEnvironment with display mode for GetSystemMetrics
-				_env.DisplayWidth = (int)dwWidth;
-				_env.DisplayHeight = (int)dwHeight;
-				_env.DisplayBitsPerPixel = (int)dwBPP;
-				_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
-
-				// Initialize rendering backend with the specified dimensions
-				if (obj.RenderingBackend == null)
-				{
-					if (_env.BackendFactory != null)
-					{
-						obj.RenderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
-						if (_env.Host != null)
-						{
-							_logger.LogInformation("[DDraw] Using Avalonia rendering backend for GUI integration");
-						}
-					}
-					else
-					{
-						_logger.LogWarning("[DDraw] BackendFactory not available, rendering backend not created");
-					}
-				}
-
-				// Initialize the window with the specified dimensions
-				var title = "Win32Emu DirectDraw";
-				if (obj.RenderingBackend?.IsInitialized == true)
-				{
-					// If already initialized, we would need to recreate with new dimensions
-					// For now, we'll just log this situation
-					_logger.LogInformation("[DDraw] Display mode changed to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
-				}
-				else if (obj.RenderingBackend != null)
-				{
-					// In WASM mode, we need to properly await initialization to prevent race conditions.
-					// Previous implementation used fire-and-forget, which caused frames to be lost
-					// if the application tried to draw before the backend was initialized.
-					// Using GetAwaiter().GetResult() is safe in WASM because the Task properly yields
-					// to the browser event loop through JavaScript interop (via JSRuntime.InvokeVoidAsync).
-					if (PlatformHelpers.IsWasm)
-					{
-						// Initialize frame buffering queue for WASM mode as an additional safety mechanism
-						// This ensures frames drawn during initialization (edge cases) are not lost
-						obj.PendingFrames = new Queue<PendingFrameData>();
-						_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
-						
-						_logger.LogInformation("[DDraw] Initializing rendering backend with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
-						try
-						{
-							var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
-							if (success)
-							{
-								_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height} (WASM mode)", dwWidth, dwHeight);
-							}
-							else
-							{
-								_logger.LogWarning("[DDraw] Rendering backend initialization returned false (WASM mode)");
-								return (uint)DDResult.DDERR_GENERIC;
-							}
-						}
-						catch (Exception ex)
-						{
-							_logger.LogError(ex, "[DDraw] Rendering backend initialization failed (WASM mode)");
-							return (uint)DDResult.DDERR_GENERIC;
-						}
-					}
-					else
-					{
-						var success = obj.RenderingBackend.InitializeAsync((int)dwWidth, (int)dwHeight, title).GetAwaiter().GetResult();
-						if (!success)
-						{
-							// In headless/nogui mode (Host == null), rendering backend initialization may fail
-							// due to lack of video device. This is expected and should not cause the application to crash.
-							// We log the failure but still return success to allow headless testing.
-							if (_env.Host == null)
-							{
-								_logger.LogWarning("[DDraw] Failed to initialize rendering backend in headless mode (expected - no video device)");
-								_logger.LogInformation("[DDraw] SetDisplayMode succeeded in headless mode (rendering disabled)");
-							}
-							else
-							{
-								// In GUI mode, initialization failure is an actual error
-								_logger.LogError("[DDraw] Failed to initialize rendering backend");
-								_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-								return (uint)DDResult.DDERR_GENERIC;
-							}
-						}
-						else
-						{
-							_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}", dwWidth, dwHeight);
-						}
-					}
-				}
-
-				// Subscribe to UI events from the rendering backend
-				// ProcessEnvironment now tracks subscriptions and prevents duplicates automatically
-				if (obj.RenderingBackend != null)
-				{
-					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
-					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
-				}
-
-				_logger.LogInformation("[DDraw COM] SetDisplayMode succeeded, returning DD_OK (0)");
-			}
-			else
-			{
-				_logger.LogError("[DDraw] SetDisplayMode: Could not find DirectDraw object with handle 0x{Handle:X8}", actualHandle);
-				_logger.LogError("[DDraw COM] SetDisplayMode failed, returning DDERR_GENERIC (1)");
-				return (uint)DDResult.DDERR_GENERIC;
-			}
-
-			return (uint)DDResult.DD_OK;
-		}
 
 		/// <summary>
 		/// Async version of SetDisplayMode that uses proper async/await for backend initialization.
@@ -3631,10 +3563,28 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
+		/// Helper method to update the rendering backend if the surface is primary.
+		/// This reduces code duplication across Blt operations.
+		/// </summary>
+		/// <param name="surface">The DirectDraw surface to check and potentially update</param>
+		/// <param name="ddrawObj">The DirectDraw object containing the rendering backend</param>
+		/// <param name="operationName">Name of the operation for logging purposes</param>
+		private void TryUpdatePrimarySurfaceDisplay(DirectDrawSurface surface, DirectDrawObject ddrawObj, string operationName)
+		{
+			if (!surface.IsPrimary)
+			{
+				return;
+			}
+
+			_logger.LogDebug("[DDraw] {Operation} to primary surface, updating rendering backend", operationName);
+			UpdateRenderingBackend(surface, ddrawObj);
+		}
+
+		/// <summary>
 		/// Updates the rendering backend with the current surface pixels.
 		/// This should be called when a surface has been modified and needs to be displayed.
 		/// <para>
-		/// <b>Note:</b> This method should only be called for primary surfaces.
+		/// <b>Note:</b> This method should be called for primary surfaces or surfaces that act as primary (have backbuffers attached).
 		/// </para>
 		/// <para>
 		/// In WASM mode, if the backend is not yet initialized, the frame will be buffered
@@ -3643,9 +3593,12 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		private void UpdateRenderingBackend(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
-			if (!surface.IsPrimary)
+			// Allow updates for primary surfaces or surfaces with attached backbuffers (acting as primary)
+			var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
+			if (!isEffectivelyPrimary)
 			{
-				_logger.LogError("[DDraw] UpdateRenderingBackend called for non-primary surface 0x{SurfaceHandle:X8}", surface.Handle);
+				_logger.LogError("[DDraw] UpdateRenderingBackend called for non-primary surface 0x{SurfaceHandle:X8} (IsPrimary={IsPrimary}, AttachedCount={Count})", 
+					surface.Handle, surface.IsPrimary, surface.AttachedSurfaces.Count);
 				return;
 			}
 
@@ -3712,10 +3665,20 @@ namespace Win32Emu.Win32.Modules
 				if (displayData != null)
 				{
 					var displayPitch = surface.Width * BytesPerPixelRgba; // RGBA format
-					_logger.LogDebug("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
-						surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length);
+					
+					// Throttle logging to avoid spam at high frame rates (log every 100th frame)
+					if (ddrawObj.FrameUpdateCount % 100 == 0 || ddrawObj.FrameUpdateCount < 5)
+					{
+						_logger.LogInformation("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, frameCount={FrameCount}", 
+							surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length, ddrawObj.FrameUpdateCount);
+					}
 					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
-					_logger.LogDebug("[DDraw] UpdateFrameBuffer result: {Result}", updateResult);
+					if (ddrawObj.FrameUpdateCount % 100 == 0 || ddrawObj.FrameUpdateCount < 5)
+					{
+						_logger.LogInformation("[DDraw] UpdateFrameBuffer result: {Result}, frameCount={FrameCount}", updateResult, ddrawObj.FrameUpdateCount);
+					}
+					
+					ddrawObj.FrameUpdateCount++;
 					
 					// Process any buffered frames after the first successful frame update
 					ProcessPendingFrames(ddrawObj);
@@ -3863,6 +3826,87 @@ namespace Win32Emu.Win32.Modules
 			
 			// Clear the queue to free memory
 			ddrawObj.PendingFrames = null;
+		}
+
+		/// <summary>
+		/// Synchronous wrapper for InitializeRenderingBackendWithDimensionsAsync.
+		/// This is kept for compatibility with non-WASM platforms.
+		/// On WASM, this should not be called - use InitializeRenderingBackendWithDimensionsAsync instead.
+		/// </summary>
+
+		/// <summary>
+		/// Initializes the rendering backend with the specified dimensions (async version).
+		/// This method handles backend initialization, frame buffering setup for WASM,
+		/// UI event subscription, and proper error handling.
+		/// </summary>
+		/// <param name="ddrawObj">The DirectDraw object containing the rendering backend</param>
+		/// <param name="width">Width for backend initialization</param>
+		/// <param name="height">Height for backend initialization</param>
+		/// <param name="updateEnvironment">Whether to update environment display variables (for auto-init from CreateSurface)</param>
+		private async Task InitializeRenderingBackendWithDimensionsAsync(DirectDrawObject ddrawObj, uint width, uint height, bool updateEnvironment = true)
+		{
+			// Validate dimensions
+			if (width <= 0 || height <= 0)
+			{
+				_logger.LogWarning("[DDraw] Cannot initialize rendering backend: invalid dimensions ({Width}x{Height})", width, height);
+				return;
+			}
+
+			// Ensure display mode dimensions are set
+			if (ddrawObj.Width <= 0 || ddrawObj.Height <= 0)
+			{
+				ddrawObj.Width = (int)width;
+				ddrawObj.Height = (int)height;
+				_logger.LogInformation("[DDraw] Set display mode dimensions: {Width}x{Height}", width, height);
+			}
+
+			// Keep emulator environment display metrics in sync for GetSystemMetrics and related APIs
+			if (updateEnvironment)
+			{
+				_env.DisplayWidth = ddrawObj.Width;
+				_env.DisplayHeight = ddrawObj.Height;
+				if (_env.DisplayBitsPerPixel <= 0)
+				{
+					// Default to 32bpp if no display format has been established yet
+					_env.DisplayBitsPerPixel = 32;
+				}
+			}
+
+			// Initialize frame buffering queue for WASM mode before backend initialization
+			if (PlatformHelpers.IsWasm)
+			{
+				ddrawObj.PendingFrames = new Queue<PendingFrameData>();
+				_logger.LogInformation("[DDraw] Initialized frame buffering for WASM mode");
+			}
+
+			// Initialize the rendering backend
+			var title = "Win32Emu DirectDraw";
+			try
+			{
+				var platformSuffix = PlatformHelpers.IsWasm ? " (WASM mode)" : "";
+				var success = await ddrawObj.RenderingBackend.InitializeAsync((int)width, (int)height, title);
+				if (success)
+				{
+					_logger.LogInformation("[DDraw] Rendering backend initialized successfully with {Width}x{Height}{Platform}", width, height, platformSuffix);
+					
+					// Subscribe to UI events from the rendering backend
+					_env.SubscribeToUIEvents(ddrawObj.RenderingBackend, null);
+					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
+					
+					// Process any frames that were buffered before initialization completed
+					// This is critical for WASM where async initialization may take time
+					ProcessPendingFrames(ddrawObj);
+				}
+				else
+				{
+					_logger.LogWarning("[DDraw] Rendering backend initialization returned false{Platform}", platformSuffix);
+				}
+			}
+			catch (Exception ex)
+			{
+				var platformSuffix = PlatformHelpers.IsWasm ? " (WASM mode)" : "";
+				_logger.LogError(ex, "[DDraw] Rendering backend initialization failed{Platform}", platformSuffix);
+			}
 		}
 
 		// IDirectDrawClipper interface methods

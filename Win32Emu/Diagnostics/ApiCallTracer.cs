@@ -256,7 +256,7 @@ public class ApiCallTracer : IDisposable
 		sb.AppendLine();
 
 		// DirectX/COM calls breakdown
-		var comCalls = _callStats.Where(kvp => kvp.Key.StartsWith("COM.")).ToList();
+		var comCalls = _callStats.Where(kvp => kvp.Key.StartsWith("COM."));
 		if (comCalls.Any())
 		{
 			sb.AppendLine("DirectX COM Calls:");
@@ -279,7 +279,21 @@ public class ApiCallTracer : IDisposable
 	/// </summary>
 	public List<ApiCallRecord> GetRecentCalls(int count = 100)
 	{
-		return _callQueue.Reverse().Take(count).Reverse().ToList();
+		if (count <= 0)
+		{
+			return new List<ApiCallRecord>(0);
+		}
+
+		var snapshot = _callQueue.ToArray();
+		if (snapshot.Length == 0)
+		{
+			return new List<ApiCallRecord>(0);
+		}
+
+		var takeCount = Math.Min(count, snapshot.Length);
+		var startIndex = snapshot.Length - takeCount;
+
+		return new ArraySegment<ApiCallRecord>(snapshot, startIndex, takeCount).ToList();
 	}
 
 	/// <summary>

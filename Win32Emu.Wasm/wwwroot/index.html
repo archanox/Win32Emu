@@ -233,6 +233,86 @@
 		window.lastError = null;
 		window.errorLog = [];
 		
+		// DirectDraw diagnostics tracking
+		window.ddrawDiagnostics = {
+			canvasUpdateCount: 0,
+			lastUpdateTime: null,
+			backendInitialized: false,
+			renderingError: false,
+			frameBufferSize: 0
+		};
+		
+		// Refresh DirectDraw diagnostics display
+		window.refreshDDrawDiagnostics = function() {
+			try {
+				const canvas = document.getElementById('emulatorCanvas');
+				
+				// Update canvas dimensions
+				const dimEl = document.getElementById('canvasDimensions');
+				if (dimEl && canvas) {
+					dimEl.textContent = `${canvas.width}x${canvas.height}`;
+				}
+				
+				// Update last update time
+				const lastUpdateEl = document.getElementById('lastCanvasUpdate');
+				if (lastUpdateEl) {
+					if (window.ddrawDiagnostics.lastUpdateTime) {
+						const elapsed = Date.now() - window.ddrawDiagnostics.lastUpdateTime;
+						lastUpdateEl.textContent = `${(elapsed / 1000).toFixed(1)}s ago`;
+					} else {
+						lastUpdateEl.textContent = 'Never';
+					}
+				}
+				
+				// Update count
+				const countEl = document.getElementById('canvasUpdateCount');
+				if (countEl) {
+					countEl.textContent = window.ddrawDiagnostics.canvasUpdateCount.toString();
+				}
+				
+				// Update canvas visibility
+				const visibleEl = document.getElementById('canvasVisible');
+				if (visibleEl && canvas) {
+					const rect = canvas.getBoundingClientRect();
+					const isVisible = rect.width > 0 && rect.height > 0;
+					visibleEl.textContent = isVisible ? 'Yes' : 'No';
+					visibleEl.style.color = isVisible ? 'green' : 'red';
+				}
+				
+				// Update backend status
+				const backendEl = document.getElementById('backendInitialized');
+				if (backendEl) {
+					backendEl.textContent = window.ddrawDiagnostics.backendInitialized ? 'Yes' : 'No';
+					backendEl.style.color = window.ddrawDiagnostics.backendInitialized ? 'green' : 'orange';
+				}
+				
+				// Update frame buffer size
+				const fbSizeEl = document.getElementById('frameBufferSize');
+				if (fbSizeEl) {
+					if (window.ddrawDiagnostics.frameBufferSize > 0) {
+						const kb = (window.ddrawDiagnostics.frameBufferSize / 1024).toFixed(1);
+						fbSizeEl.textContent = `${kb} KB`;
+					} else {
+						fbSizeEl.textContent = 'Not allocated';
+					}
+				}
+				
+				// Update error status
+				const errorEl = document.getElementById('renderingError');
+				if (errorEl) {
+					errorEl.textContent = window.ddrawDiagnostics.renderingError ? 'Yes' : 'No';
+					errorEl.style.color = window.ddrawDiagnostics.renderingError ? 'red' : 'green';
+				}
+				
+				// Optional: Enable console logging for diagnostics debugging
+				if (window.ddrawDiagnostics?.enableConsoleLogging) {
+					console.debug('[Diagnostics] DirectDraw stats refreshed:', window.ddrawDiagnostics);
+				}
+			} catch (e) {
+				console.error('[Diagnostics] Error refreshing DirectDraw diagnostics:', e);
+			}
+		};
+		
 		// Enhanced error display function
 		function displayErrorDetails(error) {
 			const detailsEl = document.getElementById('blazor-error-details');
@@ -414,22 +494,29 @@
 			
 			// Decode base64 data
 			const binaryString = atob(base64Data);
-			const len = binaryString.length;
-			const bytes = new Uint8ClampedArray(len);
-			for (let i = 0; i < len; i++) {
+			const frameBufferLength = binaryString.length;
+			const bytes = new Uint8ClampedArray(frameBufferLength);
+			for (let i = 0; i < frameBufferLength; i++) {
 				bytes[i] = binaryString.charCodeAt(i);
 			}
 			
 			// Validate data length matches expected size
 			const expectedLength = width * height * BYTES_PER_PIXEL;
-			if (len !== expectedLength) {
-				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${len} bytes`);
+			if (frameBufferLength !== expectedLength) {
+				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${frameBufferLength} bytes`);
 			}
 			
 			// Create ImageData and draw to canvas
 			const imageData = new ImageData(bytes, width, height);
 			ctx.putImageData(imageData, 0, 0);
-			console.log(`Canvas updated successfully: ${width}x${height}`);
+			
+			// Update diagnostics
+			window.ddrawDiagnostics.canvasUpdateCount++;
+			window.ddrawDiagnostics.lastUpdateTime = Date.now();
+			window.ddrawDiagnostics.backendInitialized = true;
+			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
+			
+			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
 		};
 		
 		// Wrapper function that stops emulator on error
@@ -459,6 +546,9 @@
 				
 				console.log(`[updateCanvas] SUCCESS`);
 			} catch (error) {
+				// Mark error state in diagnostics
+				window.ddrawDiagnostics.renderingError = true;
+				
 				// Stop the emulator on any error
 				const errorMsg = `Canvas update failed: ${error.message}\n\nStack: ${error.stack}`;
 				console.error("🛑 CRITICAL ERROR in updateCanvas:");
@@ -651,6 +741,15 @@
 			}
 		};
 		
+		// ===========================================
+		// Utility Functions for Blazor Interop
+		// ===========================================
+		
+		// Get window origin for HttpClient base address
+		window.getOrigin = () => {
+			return window.location.origin;
+		};
+		
 		// Folder selection helper
 		window.getFilesFromInput = async (inputId) => {
 			const input = document.getElementById(inputId);
@@ -718,6 +817,342 @@
 			} catch (err) {
 				console.error('Failed to copy to clipboard:', err);
 				return false;
+			}
+		};
+		
+		// Fetch binary data from URL (for loading sample executables)
+		window.fetchBinary = async (url) => {
+			try {
+				const response = await fetch(url);
+				if (!response.ok) {
+					console.error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+					return null;
+				}
+				const arrayBuffer = await response.arrayBuffer();
+				const uint8Array = new Uint8Array(arrayBuffer);
+				return uint8Array;
+			} catch (err) {
+				console.error(`Error fetching binary from ${url}:`, err);
+				return null;
+			}
+		};
+		
+		// Fetch all files from a sample folder
+		window.fetchSampleFolder = async (folderPath) => {
+			try {
+				// First, fetch the file list (we'll need to generate this)
+				// For now, hardcode the ign_teas file structure
+				const files = [
+					'IGN_TEAS.EXE',
+					'README.TXT',
+					'IGN_TEAS.EXE.i64',
+					'DATA/IGN.COL',
+					'DATA/IGN.PAN',
+					'DATA/IGN.PFM',
+					'DATA/IGN.PSQ',
+					'DATA/IGN.SHD',
+					'DATA/IGN0.PIC',
+					'DATA/IGN1.DPS',
+					'DATA/IGN1.PIC',
+					'DATA/IGN1.TEX',
+					'DATA/IGN2.DPS',
+					'DATA/IGN2.PIC',
+					'DATA/IGN2.TEX',
+					'DATA/IGN25.DPS',
+					'DATA/IGN3.DPS',
+					'DATA/IGN3.PIC',
+					'DATA/IGN3.TEX',
+					'DATA/IGN35.DPS',
+					'DATA/IGN4.DPS',
+					'DATA/IGN4.PIC',
+					'DATA/IGN4.TEX',
+					'DATA/IGN5.DPS',
+					'DATA/IGN5.TEX',
+					'DATA/IGN6.DPS',
+					'DATA/IGN6.TEX',
+					'DATA/IGN7.DPS',
+					'DATA/IGN7.TEX',
+					'DATA/IGN8.TEX'
+				];
+				
+				const result = [];
+				for (const file of files) {
+					const url = `${folderPath}/${file}`;
+					try {
+						const response = await fetch(url);
+						if (!response.ok) {
+							console.warn(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+							continue;
+						}
+						const arrayBuffer = await response.arrayBuffer();
+						const uint8Array = new Uint8Array(arrayBuffer);
+						
+						result.push({
+							name: file.split('/').pop(),
+							relativePath: file,
+							size: uint8Array.length,
+							content: Array.from(uint8Array)
+						});
+					} catch (err) {
+						console.warn(`Error fetching ${url}:`, err);
+					}
+				}
+				
+				console.log(`Fetched ${result.length} files from ${folderPath}`);
+				return result;
+			} catch (err) {
+				console.error(`Error fetching folder ${folderPath}:`, err);
+				return [];
+			}
+		};
+		
+		// ===========================================
+		// Input System - Keyboard and Mouse Event Handling
+		// ===========================================
+		
+		// Win32 Virtual Key Code mapping (DOM KeyboardEvent.code → VK_*)
+		// Reference: https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+		const VK_MAP = {
+			// Function keys
+			'F1': 0x70, 'F2': 0x71, 'F3': 0x72, 'F4': 0x73, 'F5': 0x74, 'F6': 0x75,
+			'F7': 0x76, 'F8': 0x77, 'F9': 0x78, 'F10': 0x79, 'F11': 0x7A, 'F12': 0x7B,
+			
+			// Number keys (top row)
+			'Digit0': 0x30, 'Digit1': 0x31, 'Digit2': 0x32, 'Digit3': 0x33, 'Digit4': 0x34,
+			'Digit5': 0x35, 'Digit6': 0x36, 'Digit7': 0x37, 'Digit8': 0x38, 'Digit9': 0x39,
+			
+			// Letter keys
+			'KeyA': 0x41, 'KeyB': 0x42, 'KeyC': 0x43, 'KeyD': 0x44, 'KeyE': 0x45, 'KeyF': 0x46,
+			'KeyG': 0x47, 'KeyH': 0x48, 'KeyI': 0x49, 'KeyJ': 0x4A, 'KeyK': 0x4B, 'KeyL': 0x4C,
+			'KeyM': 0x4D, 'KeyN': 0x4E, 'KeyO': 0x4F, 'KeyP': 0x50, 'KeyQ': 0x51, 'KeyR': 0x52,
+			'KeyS': 0x53, 'KeyT': 0x54, 'KeyU': 0x55, 'KeyV': 0x56, 'KeyW': 0x57, 'KeyX': 0x58,
+			'KeyY': 0x59, 'KeyZ': 0x5A,
+			
+			// Special keys
+			'Escape': 0x1B, 'Space': 0x20, 'Enter': 0x0D, 'Tab': 0x09, 'Backspace': 0x08,
+			'ShiftLeft': 0x10, 'ShiftRight': 0x10, 'ControlLeft': 0x11, 'ControlRight': 0x11,
+			'AltLeft': 0x12, 'AltRight': 0x12, 'CapsLock': 0x14,
+			
+			// Arrow keys
+			'ArrowLeft': 0x25, 'ArrowUp': 0x26, 'ArrowRight': 0x27, 'ArrowDown': 0x28,
+			
+			// Editing keys
+			'Insert': 0x2D, 'Delete': 0x2E, 'Home': 0x24, 'End': 0x23,
+			'PageUp': 0x21, 'PageDown': 0x22,
+			
+			// Numpad keys
+			'Numpad0': 0x60, 'Numpad1': 0x61, 'Numpad2': 0x62, 'Numpad3': 0x63, 'Numpad4': 0x64,
+			'Numpad5': 0x65, 'Numpad6': 0x66, 'Numpad7': 0x67, 'Numpad8': 0x68, 'Numpad9': 0x69,
+			'NumpadMultiply': 0x6A, 'NumpadAdd': 0x6B, 'NumpadSubtract': 0x6D,
+			'NumpadDecimal': 0x6E, 'NumpadDivide': 0x6F, 'NumpadEnter': 0x0D,
+			
+			// Punctuation and symbols
+			'Minus': 0xBD, 'Equal': 0xBB, 'BracketLeft': 0xDB, 'BracketRight': 0xDD,
+			'Backslash': 0xDC, 'Semicolon': 0xBA, 'Quote': 0xDE, 'Comma': 0xBC,
+			'Period': 0xBE, 'Slash': 0xBF, 'Backquote': 0xC0
+		};
+		
+		// Map DOM KeyboardEvent.code to Win32 VK code
+		function mapKeyCode(code) {
+			return VK_MAP[code] || 0;
+		}
+		
+		// Reference to the WasmInputBackend instance for DotNet invocation
+		let inputBackendRef = null;
+		
+		// Initialize input system
+		window.initializeInput = function(canvasId, dotNetRef) {
+			console.log(`Initializing input system for canvas: ${canvasId}`);
+			
+			// Store DotNet reference for later use
+			inputBackendRef = dotNetRef;
+			
+			const canvas = document.getElementById(canvasId);
+			if (!canvas) {
+				console.error(`Canvas not found: ${canvasId}`);
+				return false;
+			}
+			
+			// Make canvas focusable
+			canvas.tabIndex = 1;
+			canvas.style.outline = 'none';
+			
+			// Keyboard event handlers
+			canvas.addEventListener('keydown', (e) => {
+				e.preventDefault();
+				const vkCode = mapKeyCode(e.code);
+				if (vkCode > 0 && inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
+						.catch(err => console.error('OnKeyDown error:', err));
+				}
+			});
+			
+			canvas.addEventListener('keyup', (e) => {
+				e.preventDefault();
+				const vkCode = mapKeyCode(e.code);
+				if (vkCode > 0 && inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
+						.catch(err => console.error('OnKeyUp error:', err));
+				}
+			});
+			
+			// Mouse event handlers
+			canvas.addEventListener('mousemove', (e) => {
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseMove', x, y)
+						.catch(err => console.error('OnMouseMove error:', err));
+				}
+			});
+			
+			canvas.addEventListener('mousedown', (e) => {
+				e.preventDefault();
+				canvas.focus(); // Ensure canvas has focus for keyboard input
+				
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseDown', e.button, x, y)
+						.catch(err => console.error('OnMouseDown error:', err));
+				}
+			});
+			
+			canvas.addEventListener('mouseup', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((e.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseUp', e.button, x, y)
+						.catch(err => console.error('OnMouseUp error:', err));
+				}
+			});
+			
+			// Touch event handlers for mobile (simulating mouse events)
+			canvas.addEventListener('touchstart', (e) => {
+				e.preventDefault();
+				canvas.focus();
+				
+				const rect = canvas.getBoundingClientRect();
+				const touch = e.touches[0];
+				const x = Math.floor((touch.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((touch.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseDown', 0, x, y)
+						.catch(err => console.error('OnMouseDown (touch) error:', err));
+				}
+			});
+			
+			canvas.addEventListener('touchmove', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const touch = e.touches[0];
+				const x = Math.floor((touch.clientX - rect.left) * (canvas.width / rect.width));
+				const y = Math.floor((touch.clientY - rect.top) * (canvas.height / rect.height));
+				
+				if (inputBackendRef) {
+					inputBackendRef.invokeMethodAsync('OnMouseMove', x, y)
+						.catch(err => console.error('OnMouseMove (touch) error:', err));
+				}
+			});
+			
+			canvas.addEventListener('touchend', (e) => {
+			    e.preventDefault();
+			    if (e.changedTouches.length > 0) {
+			        const rect = canvas.getBoundingClientRect();
+			        const touch = e.changedTouches[0];
+			        const x = Math.floor((touch.clientX - rect.left) * (canvas.width / rect.width));
+			        const y = Math.floor((touch.clientY - rect.top) * (canvas.height / rect.height));
+
+			        if (inputBackendRef) {
+			            inputBackendRef.invokeMethodAsync('OnMouseUp', 0, x, y)
+			                .catch(err => console.error('OnMouseUp (touch) error:', err));
+			        }
+			    }
+			});
+			
+			// Auto-focus canvas when page loads
+			canvas.focus();
+			
+			console.log('Input system initialized successfully');
+			return true;
+		};
+		
+		// Send virtual key press (for on-screen keyboard buttons)
+		window.sendVirtualKey = function(vkCode, isDown) {
+			const backend = inputBackendRef;
+			if (!backend) {
+				return;
+			}
+			
+			if (isDown) {
+				backend.invokeMethodAsync('OnKeyDown', vkCode)
+					.catch(err => console.error('Virtual key down error:', err));
+			} else {
+				backend.invokeMethodAsync('OnKeyUp', vkCode)
+					.catch(err => console.error('Virtual key up error:', err));
+			}
+		};
+		
+		// Virtual key tap (down then up)
+		// Delay in milliseconds between key down and key up to simulate a realistic key press
+		const VIRTUAL_KEY_PRESS_DELAY_MS = 50;
+		
+		window.tapVirtualKey = function(vkCode) {
+			const backend = inputBackendRef;
+			if (!backend) {
+				return;
+			}
+			
+			backend.invokeMethodAsync('OnKeyDown', vkCode)
+				.then(() => {
+					setTimeout(() => {
+						// Capture backend reference again in case it changed
+						const currentBackend = inputBackendRef;
+						if (currentBackend) {
+							currentBackend.invokeMethodAsync('OnKeyUp', vkCode)
+								.catch(err => console.error('Virtual key up error:', err));
+						}
+					}, VIRTUAL_KEY_PRESS_DELAY_MS);
+				})
+				.catch(err => console.error('Virtual key down error:', err));
+		};
+		
+		// Download file from VFS
+		window.downloadFile = function(fileName, base64Data) {
+			try {
+				// Convert base64 to blob
+				const byteString = atob(base64Data);
+				const byteArray = new Uint8Array(byteString.length);
+				for (let i = 0; i < byteString.length; i++) {
+					byteArray[i] = byteString.charCodeAt(i);
+				}
+				const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+				
+				// Create download link
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = fileName;
+				document.body.appendChild(a);
+				a.click();
+				
+				// Cleanup
+				setTimeout(() => {
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+				}, 100);
+				
+				console.log(`Downloaded file: ${fileName}`);
+			} catch (err) {
+				console.error(`Error downloading file ${fileName}:`, err);
 			}
 		};
 	</script>

@@ -37,6 +37,27 @@ namespace Win32Emu.Win32.Modules
 
 		// DirectInput constants
 		private const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
+		private const uint DI_OK = 0; // Success return value
+		
+		// DirectInput keyboard constants
+		private const int DIKEYBOARD_MAX_KEYS = 256; // Number of keys in DirectInput keyboard
+		
+		// DirectInput mouse constants
+		private const int DIMOUSE_MAX_BUTTONS = 4; // Number of mouse buttons supported
+		private const uint DIMOUSE_X_OFFSET = 0; // X axis offset in DIMOUSESTATE
+		private const uint DIMOUSE_Y_OFFSET = 4; // Y axis offset in DIMOUSESTATE
+		private const uint DIMOUSE_Z_OFFSET = 8; // Z axis (wheel) offset in DIMOUSESTATE
+		private const uint DIMOUSE_BUTTON_OFFSET = 12; // First button offset in DIMOUSESTATE
+		
+		// DirectInput key/button state constants
+		private const uint DIKEY_PRESSED = 0x80; // Key/button is pressed
+		private const uint DIKEY_RELEASED = 0x00; // Key/button is released
+		
+		// DIDEVICEOBJECTDATA structure field offsets
+		private const uint DIDEVICEOBJECTDATA_DWOFS_OFFSET = 0;
+		private const uint DIDEVICEOBJECTDATA_DWDATA_OFFSET = 4;
+		private const uint DIDEVICEOBJECTDATA_DWTIMESTAMP_OFFSET = 8;
+		private const uint DIDEVICEOBJECTDATA_DWSEQUENCE_OFFSET = 12;
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -75,12 +96,18 @@ namespace Win32Emu.Win32.Modules
 		{
 			_currentCpu = cpu;
 			_currentMemory = memory;
+			var a = new StackArgs(cpu, memory);
 
-			// For DInput, the current APIs don't require callbacks that need async execution.
-			// The EnumDevices callbacks are handled via COM vtable dispatch.
-			// If future APIs require async callbacks, they would be added here.
+			// Route APIs through async paths to avoid .GetAwaiter().GetResult()
+			// which throws PlatformNotSupportedException on WASM
+			switch (export.ToUpperInvariant())
+			{
+				case "DIRECTINPUTCREATEA":
+				case "DIRECTINPUTCREATE":
+					return (true, await DirectInputCreateAAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3)).ConfigureAwait(false));
+			}
 			
-			// For all APIs, use synchronous implementation
+			// For all other APIs, use synchronous implementation
 			if (TryInvokeUnsafe(export, cpu, memory, out var syncReturnValue))
 			{
 				return (true, syncReturnValue);
@@ -93,6 +120,22 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1, entryPoint: 0x0000B006, Version = "4.90.0.3000")]
 		[DllModuleExport(1, entryPoint: 0x0000B126, Version = "5.1.2600.6532")]
 		private uint DirectInputCreateA(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
+		{
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DirectInputCreateAAsync, bypassing this method
+			if (PlatformHelpers.IsWasm)
+			{
+				_logger.LogError("[DInput] DirectInputCreateA called on WASM - should use async path");
+				return 0x80004003; // DIERR_INVALIDPARAM
+			}
+			
+			return DirectInputCreateAAsync(hinst, dwVersion, lplpDirectInput, pUnkOuter).GetAwaiter().GetResult();
+		}
+
+		/// <summary>
+		/// Async implementation of DirectInputCreateA.
+		/// </summary>
+		private async Task<uint> DirectInputCreateAAsync(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
 			// Fixed: Parameter order now matches MSDN documentation
 			// Win32 API: DirectInputCreate(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUT *lplpDirectInput, LPUNKNOWN punkOuter)
@@ -126,33 +169,13 @@ namespace Win32Emu.Win32.Modules
 			if (_env.InputBackend == null && _env.BackendFactory != null)
 			{
 				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
-				if (PlatformHelpers.IsWasm)
+				var success = await _env.InputBackend.InitializeAsync();
+				if (!success)
 				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.InputBackend.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[DInput] Input backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[DInput] Input backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[DInput] Input backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[DInput] Input backend initialization started asynchronously (WASM mode)");
+					_logger.LogError("[DInput] Failed to initialize input backend");
+					return 1; // DIERR_GENERIC
 				}
-				else
-				{
-					_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
-				}
+				_logger.LogInformation("[DInput] Input backend initialized successfully");
 			}
 
 // Create COM vtable for IDirectInput interface
@@ -192,99 +215,16 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint DirectInputCreate(uint hinst, uint dwVersion, uint lplpDirectInput, uint pUnkOuter)
 		{
-			// Fixed: Parameter order now matches MSDN documentation
-			// Win32 API: DirectInputCreate(HINSTANCE hinst, DWORD dwVersion, LPDIRECTINPUT *lplpDirectInput, LPUNKNOWN punkOuter)
-			_logger.LogInformation("[DInput] DirectInputCreate(hinst=0x{Hinst:X8}, dwVersion=0x{DwVersion:X8}, lplpDirectInput=0x{LplpDirectInput:X8}, pUnkOuter=0x{PUnkOuter:X8})", hinst, dwVersion, lplpDirectInput, pUnkOuter);
-
-			// Validate output pointer parameter
-			if (lplpDirectInput == 0)
+			// Sync wrapper for non-WASM runtimes that support .GetAwaiter().GetResult()
+			// On WASM, TryInvokeAsync routes directly to DirectInputCreateAAsync, bypassing this method
+			if (PlatformHelpers.IsWasm)
 			{
-				_logger.LogError("[DInput] DirectInputCreate: lplpDirectInput is NULL");
+				_logger.LogError("[DInput] DirectInputCreate called on WASM - should use async path");
 				return 0x80004003; // DIERR_INVALIDPARAM
 			}
-
-			// Detect if lplpDirectInput looks like a stack pointer (potential parameter handling bug)
-			// Check against actual stack range from PE headers
-			if (lplpDirectInput >= _env.StackLimit && lplpDirectInput < _env.StackBase)
-			{
-				_logger.LogWarning("[DInput] DirectInputCreate: lplpDirectInput=0x{LplpDirectInput:X8} appears to be a stack address (stack range: 0x{StackLimit:X8}-0x{StackBase:X8}) - this might indicate a parameter handling issue", 
-					lplpDirectInput, _env.StackLimit, _env.StackBase);
-			}
-
-			// Create DirectInput object with COM vtable (same as DirectInputCreateA)
-			var dinputHandle = _nextDInputHandle++;
-			var dinputObj = new DirectInputObject
-			{
-				Handle = dinputHandle,
-				Version = dwVersion
-			};
-			_dinputObjects[dinputHandle] = dinputObj;
-
-			// Initialize input backend if not already done
-			if (_env.InputBackend == null && _env.BackendFactory != null)
-			{
-				_env.InputBackend = _env.BackendFactory.CreateInputBackend(_logger);
-				// In WASM mode, we cannot block on async operations (Monitor.Wait is not supported).
-				// Fire-and-forget the initialization - the backend will self-mark as initialized.
-				if (PlatformHelpers.IsWasm)
-				{
-					// In WASM, continuations run on the synchronization context, so we don't specify TaskScheduler
-					_ = _env.InputBackend.InitializeAsync()
-						.ContinueWith(t =>
-						{
-							if (t.IsFaulted)
-							{
-								_logger.LogError(t.Exception?.GetBaseException(), "[DInput] Input backend initialization failed (WASM mode)");
-							}
-							else if (t.Result)
-							{
-								_logger.LogInformation("[DInput] Input backend initialized successfully (WASM mode)");
-							}
-							else
-							{
-								_logger.LogWarning("[DInput] Input backend initialization returned false (WASM mode)");
-							}
-						});
-					_logger.LogInformation("[DInput] Input backend initialization started asynchronously (WASM mode)");
-				}
-				else
-				{
-					_env.InputBackend.InitializeAsync().GetAwaiter().GetResult();
-				}
-			}
-
-			// Create COM vtable for IDirectInput interface
-			var vtableMethods = new List<KeyValuePair<string, Win32.COM.ComMethodInfo>>
-			{
-				new("QueryInterface", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.QueryInterface>((cpu, mem) => ComQueryInterface(cpu, mem))),
-				new("AddRef", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.AddRef>((cpu, mem) => ComAddRef(cpu, mem))),
-				new("Release", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Release>((cpu, mem) => ComRelease(cpu, mem))),
-				new("CreateDevice", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.CreateDevice>((cpu, mem) => DInput_CreateDevice(cpu, mem, dinputHandle))),
-				new("EnumDevices", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.EnumDevices>((cpu, mem) => DInput_EnumDevices(cpu, mem))),
-				new("GetDeviceStatus", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.GetDeviceStatus>((cpu, mem) => DInput_GetDeviceStatus(cpu, mem))),
-				new("RunControlPanel", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.RunControlPanel>((cpu, mem) => DInput_RunControlPanel(cpu, mem))),
-				new("Initialize", Win32.COM.ComVtableDispatcher.FromDelegate<Win32.COM.IDirectInput.Initialize>((cpu, mem) => DInput_Initialize(cpu, mem)))
-			};
-
-			// Create the COM object with vtable
-			var comObjectAddr = _env.ComDispatcher.CreateComObjectOrdered("IDirectInput", vtableMethods);
-
-			// Write COM object pointer to output parameter with verification
-			_logger.LogInformation("[DInput] Writing COM object 0x{ComObjectAddr:X8} to address 0x{Addr:X8}", comObjectAddr, lplpDirectInput);
-			_env.MemWrite32(lplpDirectInput, comObjectAddr);
 			
-			// Verify the write succeeded by reading back
-			var verification = _env.MemRead32(lplpDirectInput);
-			if (verification != comObjectAddr)
-			{
-				_logger.LogError("[DInput] Verification failed! Wrote 0x{Expected:X8} but read back 0x{Actual:X8} from address 0x{Addr:X8}", 
-					comObjectAddr, verification, lplpDirectInput);
-				return 1; // DIERR_GENERIC
-			}
-			_logger.LogInformation("[DInput] Verification: Read back 0x{Value:X8} from 0x{Addr:X8} - SUCCESS", verification, lplpDirectInput);
-
-			_logger.LogInformation("[DInput] Created IDirectInput COM object at 0x{ComObjectAddr:X8}", comObjectAddr);
-			return 0; // DI_OK
+			// DirectInputCreate and DirectInputCreateA are identical, so reuse the async implementation
+			return DirectInputCreateAAsync(hinst, dwVersion, lplpDirectInput, pUnkOuter).GetAwaiter().GetResult();
 		}
 
 		[DllModuleExport(2, entryPoint: 0x0000B060, Version = "4.90.0.3000")]
@@ -317,6 +257,26 @@ namespace Win32Emu.Win32.Modules
 			public uint CooperativeHwnd { get; set; } // Window handle for cooperative level
 			public uint CooperativeFlags { get; set; } // Cooperative level flags
 			public Dictionary<uint, uint> Properties { get; set; } = new(); // Device properties (GUID -> value)
+			
+			// Previous state for detecting changes (needed for buffered events)
+			public Dictionary<int, bool> PreviousKeyStates { get; set; } = new();
+			public Dictionary<int, bool> PreviousMouseButtons { get; set; } = new();
+			public int PreviousMouseX { get; set; }
+			public int PreviousMouseY { get; set; }
+			public int PreviousMouseZ { get; set; }
+			
+			// Buffered input events queue
+			public Queue<DeviceObjectData> EventQueue { get; set; } = new();
+			public uint EventSequence { get; set; } // Sequence counter for events
+		}
+		
+		// Structure representing a buffered input event (DIDEVICEOBJECTDATA)
+		private struct DeviceObjectData
+		{
+			public uint dwOfs;       // +0: Offset in data format
+			public uint dwData;      // +4: Value (key code, button state, etc.)
+			public uint dwTimeStamp; // +8: Timestamp
+			public uint dwSequence;  // +12: Sequence number
 		}
 
 		// COM interface methods for IDirectInput
@@ -753,24 +713,141 @@ namespace Win32Emu.Win32.Modules
 				return 0x80070057; // E_INVALIDARG
 			}
 
-			// For now, return 0 elements (no buffered events)
-			// In a full implementation, we would:
-			// 1. Check if there are buffered input events in the device's event queue
-			// 2. Validate that rgdod buffer size (requestedElementCount * DIDEVICEOBJECTDATA_SIZE) is valid
-			// 3. Fill the rgdod buffer with DIDEVICEOBJECTDATA structures:
-			//    - DWORD dwOfs       // +0: Offset in data format
-			//    - DWORD dwData      // +4: Value (key code, button state, etc.)
-			//    - DWORD dwTimeStamp // +8: Timestamp
-			//    - DWORD dwSequence  // +12: Sequence number
-			// 4. Update pdwInOut with the actual number of elements returned
-
-			// Return 0 elements for now
-			if (pdwInOut != 0)
+			// Poll input from backend and generate buffered events
+			if (_env.InputBackend != null && device.BackendDeviceId != 0 &&
+			    _env.InputBackend.PollDevice(device.BackendDeviceId, out var state) && state != null)
 			{
-				_env.MemWrite32(pdwInOut, 0);
+				var timestamp = (uint)Environment.TickCount;
+				
+				// Generate events based on device type
+				switch (device.DeviceType)
+				{
+					case IInputBackend.DeviceType.Keyboard:
+						// Check for key state changes
+						for (var i = 0; i < DIKEYBOARD_MAX_KEYS; i++)
+						{
+							var isPressed = state.KeyStates.TryGetValue(i, out var pressed) && pressed;
+							var wasPressed = device.PreviousKeyStates.TryGetValue(i, out var prevPressed) && prevPressed;
+							
+							if (isPressed != wasPressed)
+							{
+								// Key state changed, add event
+								device.EventQueue.Enqueue(new DeviceObjectData
+								{
+									dwOfs = (uint)i,  // Key offset
+									dwData = isPressed ? DIKEY_PRESSED : DIKEY_RELEASED,
+									dwTimeStamp = timestamp,
+									dwSequence = device.EventSequence++
+								});
+								
+								// Update previous state
+								device.PreviousKeyStates[i] = isPressed;
+							}
+						}
+						break;
+
+					case IInputBackend.DeviceType.Mouse:
+						// Check for mouse button changes
+						for (var i = 0; i < DIMOUSE_MAX_BUTTONS; i++)
+						{
+							var isPressed = state.MouseButtons.TryGetValue(i, out var pressed) && pressed;
+							var wasPressed = device.PreviousMouseButtons.TryGetValue(i, out var prevPressed) && prevPressed;
+							
+							if (isPressed != wasPressed)
+							{
+								device.EventQueue.Enqueue(new DeviceObjectData
+								{
+									dwOfs = DIMOUSE_BUTTON_OFFSET + (uint)i,
+									dwData = isPressed ? DIKEY_PRESSED : DIKEY_RELEASED,
+									dwTimeStamp = timestamp,
+									dwSequence = device.EventSequence++
+								});
+								
+								device.PreviousMouseButtons[i] = isPressed;
+							}
+						}
+						
+						// Check for mouse movement (X axis) - use relative delta
+						var deltaX = state.MouseX - device.PreviousMouseX;
+						if (deltaX != 0)
+						{
+							device.EventQueue.Enqueue(new DeviceObjectData
+							{
+								dwOfs = DIMOUSE_X_OFFSET,
+								dwData = (uint)deltaX,
+								dwTimeStamp = timestamp,
+								dwSequence = device.EventSequence++
+							});
+							device.PreviousMouseX = state.MouseX;
+						}
+						
+						// Check for mouse movement (Y axis) - use relative delta
+						var deltaY = state.MouseY - device.PreviousMouseY;
+						if (deltaY != 0)
+						{
+							device.EventQueue.Enqueue(new DeviceObjectData
+							{
+								dwOfs = DIMOUSE_Y_OFFSET,
+								dwData = (uint)deltaY,
+								dwTimeStamp = timestamp,
+								dwSequence = device.EventSequence++
+							});
+							device.PreviousMouseY = state.MouseY;
+						}
+						
+						// Check for mouse wheel (Z axis) - use relative delta
+						var deltaZ = state.MouseZ - device.PreviousMouseZ;
+						if (deltaZ != 0)
+						{
+							device.EventQueue.Enqueue(new DeviceObjectData
+							{
+								dwOfs = DIMOUSE_Z_OFFSET,
+								dwData = (uint)deltaZ,
+								dwTimeStamp = timestamp,
+								dwSequence = device.EventSequence++
+							});
+							device.PreviousMouseZ = state.MouseZ;
+						}
+						break;
+				}
 			}
 
-			return 0; // DI_OK
+			// Determine how many events to return
+			var eventsToReturn = Math.Min(requestedElementCount, (uint)device.EventQueue.Count);
+			
+			// If rgdod is NULL, just return the count
+			if (rgdod == 0)
+			{
+				if (pdwInOut != 0)
+				{
+					_env.MemWrite32(pdwInOut, (uint)device.EventQueue.Count);
+				}
+				_logger.LogInformation("[DInput COM]   Returning event count: {Count}", device.EventQueue.Count);
+				return DI_OK;
+			}
+			
+			// Write events to output buffer
+			for (var i = 0u; i < eventsToReturn; i++)
+			{
+				var evt = device.EventQueue.Dequeue();
+				var offset = rgdod + (i * DIDEVICEOBJECTDATA_SIZE);
+				
+				// Write DIDEVICEOBJECTDATA structure
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWOFS_OFFSET, evt.dwOfs);
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWDATA_OFFSET, evt.dwData);
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWTIMESTAMP_OFFSET, evt.dwTimeStamp);
+				_env.MemWrite32(offset + DIDEVICEOBJECTDATA_DWSEQUENCE_OFFSET, evt.dwSequence);
+			}
+
+			// Update output count
+			if (pdwInOut != 0)
+			{
+				_env.MemWrite32(pdwInOut, eventsToReturn);
+			}
+			
+			_logger.LogInformation("[DInput COM]   Returned {EventsReturned} events, {EventsRemaining} remaining", eventsToReturn, device.EventQueue.Count);
+
+			return DI_OK;
 		}
 
 		private uint DInputDevice_SetDataFormat(ICpu cpu, VirtualMemory memory)

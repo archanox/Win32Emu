@@ -39,7 +39,7 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 						return containingType.StartsWith("Win32Emu.Win32.Modules.") ||
 						       containingType == "Win32Emu.Win32.Kernel32Module";
 					})
-					.Select(sym =>
+					.SelectMany(sym =>
 					{
 						var containingType = sym.ContainingType;
 						
@@ -89,7 +89,37 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 						dllName ??= "UNKNOWN.DLL";
 						
 						var argBytes = sym.Parameters.Sum(p => GetParamSize(p.Type));
-						return new ExportEntry(dllName, sym.Name, argBytes);
+						
+						// Get all DllModuleExport attributes and create an entry for each export name
+						var exportAttrs = sym.GetAttributes()
+							.Where(attr => attr.AttributeClass?.Name == "DllModuleExportAttribute")
+							.ToList();
+						
+						// Create an entry for each export name (use ExportName if specified, otherwise method name)
+						var entries = new List<ExportEntry>();
+						foreach (var attr in exportAttrs)
+						{
+							string? exportName = null;
+							foreach (var named in attr.NamedArguments)
+							{
+								if (named.Key == "ExportName" && named.Value.Value != null)
+								{
+									exportName = (string)named.Value.Value;
+									break;
+								}
+							}
+							
+							// Use ExportName if specified, otherwise use the C# method name
+							entries.Add(new ExportEntry(dllName, exportName ?? sym.Name, argBytes));
+						}
+						
+						// If no attributes found (shouldn't happen), return the method name as fallback
+						if (entries.Count == 0)
+						{
+							entries.Add(new ExportEntry(dllName, sym.Name, argBytes));
+						}
+						
+						return entries;
 					})
 					.ToList();
 			});

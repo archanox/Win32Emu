@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -14,6 +14,17 @@ public sealed class ThreadingTests : IDisposable
     // Constants for CRITICAL_SECTION structure
     private const uint CRITICAL_SECTION_SIZE = 24;
     private const uint CRITICAL_SECTION_UNLOCKED = unchecked((uint)-1);
+    
+    // Thread access rights constants
+    private const uint THREAD_ALL_ACCESS = 0x1F03FF;
+    private const uint THREAD_QUERY_INFORMATION = 0x0040;
+    
+    // Thread creation flags
+    private const uint CREATE_SUSPENDED = 0x4;
+    
+    // Test constants
+    private const uint TEST_STACK_SIZE = 0x8000;
+    private const uint TEST_START_ADDRESS = 0x00401000;
 
     public ThreadingTests()
     {
@@ -509,6 +520,97 @@ public sealed class ThreadingTests : IDisposable
         Assert.Equal(initialValue, result); // Should return initial value
         var newValue = _testEnv.Memory.Read32(valueAddr);
         Assert.Equal(initialValue, newValue); // Should NOT have exchanged the value
+    }
+
+    [Fact]
+    public void OpenThread_WithCurrentThreadId_ShouldReturnValidHandle()
+    {
+        // Arrange
+        var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            0u,                  // bInheritHandle = FALSE
+            currentThreadId);    // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, threadHandle); // Should return a valid handle
+    }
+
+    [Fact]
+    public void OpenThread_WithInvalidThreadId_ShouldReturnNull()
+    {
+        // Arrange
+        const uint invalidThreadId = 9999u;
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            0u,                  // bInheritHandle = FALSE
+            invalidThreadId);    // dwThreadId
+
+        // Assert
+        Assert.Equal(0u, threadHandle); // Should return NULL for invalid thread ID
+    }
+
+    [Fact]
+    public void OpenThread_WithValidThreadId_ReturnsSameHandleAsOriginal()
+    {
+        // Arrange - Create a thread
+        var threadIdPtr = _testEnv.AllocateMemory(4);
+        
+        var originalHandle = _testEnv.CallKernel32Api("CREATETHREAD", 
+            0u,                  // lpThreadAttributes
+            TEST_STACK_SIZE,
+            TEST_START_ADDRESS,
+            0u,                  // parameter
+            CREATE_SUSPENDED,
+            threadIdPtr);
+        
+        var threadId = _testEnv.Memory.Read32(threadIdPtr);
+        
+        // Act - Open the same thread
+        var openedHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            0u,                  // bInheritHandle = FALSE
+            threadId);           // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, openedHandle);
+        Assert.Equal(originalHandle, openedHandle); // In the emulator, we return the same handle
+    }
+
+    [Fact]
+    public void OpenThread_WithDifferentAccessRights_ShouldSucceed()
+    {
+        // Arrange
+        var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_QUERY_INFORMATION,  // dwDesiredAccess (limited access)
+            0u,                         // bInheritHandle = FALSE
+            currentThreadId);           // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, threadHandle); // Should succeed even with limited access
+    }
+
+    [Fact]
+    public void OpenThread_WithInheritHandleTrue_ShouldSucceed()
+    {
+        // Arrange
+        var currentThreadId = _testEnv.CallKernel32Api("GETCURRENTTHREADID");
+        
+        // Act
+        var threadHandle = _testEnv.CallKernel32Api("OPENTHREAD", 
+            THREAD_ALL_ACCESS,  // dwDesiredAccess
+            1u,                  // bInheritHandle = TRUE
+            currentThreadId);    // dwThreadId
+
+        // Assert
+        Assert.NotEqual(0u, threadHandle); // Should succeed regardless of inherit flag
     }
 
     [Fact]

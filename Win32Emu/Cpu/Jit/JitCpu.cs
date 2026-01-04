@@ -23,12 +23,28 @@ public class JitCpu : IAsyncCpu
 	// CPU state - same as IcedCpu
 	private uint _eax, _ebx, _ecx, _edx, _esi, _edi, _ebp, _esp, _eip, _eflags;
 	
+	// Segment registers (stored as 16-bit values in lower 16 bits)
+	private ushort _cs, _ds, _es, _fs, _gs, _ss;
+	
 	// FPU state
 	private readonly double[] _fpu = new double[8];
 	private int _fpuTop = 0;
 	private ushort _fpuControlWord = 0x037F;
 	private ushort _fpuStatusWord = 0x0000;
 	private ushort _fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
+	
+	// Interrupt numbers
+	private const byte DOS_INTERRUPT = 0x21;
+	private const byte SYSCALL_INTERRUPT = 0x80;
+	
+	// Sign bit masks for different operand sizes
+	private const uint SIGN_BIT_MASK_8BIT = 0x80;
+	private const uint SIGN_BIT_MASK_16BIT = 0x8000;
+	private const uint SIGN_BIT_MASK_32BIT = 0x80000000;
+	
+	// Maximum values for different operand sizes (used for carry flag detection)
+	private const uint MAX_VALUE_8BIT = 0xFF;
+	private const uint MAX_VALUE_16BIT = 0xFFFF;
 	
 	// MMX state - shares physical registers with FPU (MM0-MM7 alias to ST(0)-ST(7))
 	// Each MMX register is 64 bits
@@ -37,38 +53,132 @@ public class JitCpu : IAsyncCpu
 	// format and MMX integer format. The tag word management ensures proper state transitions.
 	private readonly ulong[] _mmx = new ulong[8];
 	
+	// Control Registers (CR0-CR4) for protected mode and system control
+	private uint _cr0 = 0x00000010; // ET flag set by default (387 present)
+	private uint _cr2 = 0;
+	private uint _cr3 = 0;
+	private uint _cr4 = 0;
+	
+	// Debug Registers (DR0-DR7) for hardware breakpoints
+	private uint _dr0 = 0;
+	private uint _dr1 = 0;
+	private uint _dr2 = 0;
+	private uint _dr3 = 0;
+	private uint _dr6 = 0xFFFF0FF0; // Initial value per Intel specification
+	private uint _dr7 = 0x00000400; // Initial value per Intel specification
+	
+	// Default image base if not specified (typical default for Win32 executables)
+	private const uint DEFAULT_IMAGE_BASE = 0x00400000;
+	
+	// Default stack region bounds if not specified (typical range for Windows applications)
+	private const uint DEFAULT_STACK_LIMIT = 0x00100000;  // 1 MB (bottom of stack)
+	private const uint DEFAULT_STACK_BASE = 0x01000000;   // 16 MB (top of stack)
+	
+	// Image base from PE header (used for validation of indirect calls/jumps)
+	private readonly uint _imageBase;
+	
+	// Stack bounds from PE header (used for validation of indirect calls/jumps)
+	// Stack grows downward from _stackBase to _stackLimit
+	private readonly uint _stackLimit;
+	private readonly uint _stackBase;
+	
+	// CPU bitness mode (16 for real mode, 32 for protected mode)
+	private readonly int _bitness;
+	
+	// Force 32-bit operand size for stack operations in 32-bit mode
+	// When true, PUSH/POP/CALL/RET always use 32-bit operands in 32-bit mode,
+	// ignoring operand-size override prefix (0x66). Improves Win32 compatibility.
+	private readonly bool _force32BitStackOps;
+	
 	// JIT compilation infrastructure - now using RTL pipeline
 	private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
 	
 	// RTL-based JIT cache for persistent storage with readable C# output
-	private readonly RtlJitCache _rtlJitCache;
+	// Note: Only used when not in WASM environment
+	private readonly RtlJitCache? _rtlJitCache;
 	private string? _currentExecutablePath;
 	
 	// Decoder for analyzing x86 instructions before compilation
 	private readonly Decoder _decoder;
 	private readonly SimpleMemoryCodeReader _reader;
-
-	public JitCpu(VirtualMemory mem, ILogger? logger = null)
-	{
-		_mem = mem;
-		_logger = logger ?? NullLogger.Instance;
-		_reader = new SimpleMemoryCodeReader(this);
-		_decoder = Decoder.Create(32, _reader, DecoderOptions.None);
-		
-		// Initialize RTL-based JIT cache
-		_rtlJitCache = new RtlJitCache(null, logger);
-		
-		_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
-	}
 	
+	// WASM environment detection - JIT compilation not available in WASM
+	private readonly bool _isWasmEnvironment;
+	
+	// Force interpreter mode - allows disabling JIT compilation even on native platforms
+	private readonly bool _forceInterpreterMode;
+	
+	// Instruction analyzer for debugging support
+	private readonly InstructionAnalyzer? _analyzer;
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="JitCpu"/> class with default configuration.
+	/// </summary>
+	public JitCpu(VirtualMemory mem) : this(mem, null, null)
+	{
+	}
+
 	/// <summary>
 	/// Creates a new JitCpu instance with a custom cache directory
 	/// </summary>
-	public JitCpu(VirtualMemory mem, ILogger? logger, string cacheDirectory) : this(mem, logger)
+	public JitCpu(VirtualMemory mem, ILogger? logger, string? cacheDirectory) : this(mem, logger, DecoderOptions.None, false, DEFAULT_IMAGE_BASE, DEFAULT_STACK_LIMIT, DEFAULT_STACK_BASE, 32, true, false, cacheDirectory)
 	{
-		// Replace the default cache with one using the custom directory
-		_rtlJitCache = new RtlJitCache(cacheDirectory, logger);
 	}
+
+	/// <summary>
+	/// Initializes a new instance of the <see cref="JitCpu"/> class with full configuration options.
+	/// </summary>
+	/// <param name="mem">The virtual memory instance used by the CPU.</param>
+	/// <param name="logger">Optional logger for CPU events and diagnostics.</param>
+	/// <param name="decoderOptions">Options for the instruction decoder.</param>
+	/// <param name="enableInstructionAnalyzer">Whether to enable instruction analysis using <see cref="InstructionAnalyzer"/> for additional debugging and diagnostics.</param>
+	/// <param name="imageBase">The image base address for the emulated executable.</param>
+	/// <param name="stackLimit">The lower bound of the stack region.</param>
+	/// <param name="stackBase">The upper bound of the stack region.</param>
+	/// <param name="bitness">The CPU bitness mode (16 for real mode, 32 for protected mode). Defaults to 32-bit.</param>
+	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode. Defaults to true.</param>
+	/// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation). Defaults to false.</param>
+	/// <param name="cacheDirectory">Optional custom cache directory for JIT compilation. If null, uses default cache directory.</param>
+	public JitCpu(VirtualMemory mem, ILogger? logger, DecoderOptions decoderOptions = DecoderOptions.None, bool enableInstructionAnalyzer = false, uint imageBase = DEFAULT_IMAGE_BASE, uint stackLimit = DEFAULT_STACK_LIMIT, uint stackBase = DEFAULT_STACK_BASE, int bitness = 32, bool force32BitStackOps = true, bool forceInterpreterMode = false, string? cacheDirectory = null)
+	{
+		_mem = mem;
+		_logger = logger ?? NullLogger.Instance;
+		_imageBase = imageBase;
+		_stackLimit = stackLimit;
+		_stackBase = stackBase;
+		_bitness = bitness;
+		_force32BitStackOps = force32BitStackOps;
+		_forceInterpreterMode = forceInterpreterMode;
+		_reader = new SimpleMemoryCodeReader(this);
+		_decoder = Decoder.Create(bitness, _reader, decoderOptions);
+		
+		// Detect WASM environment
+		_isWasmEnvironment = RuntimeEnvironment.IsWasm;
+		
+		// Initialize RTL-based JIT cache only in native environments when JIT is enabled
+		// In WASM or when interpreter mode is forced, Roslyn compilation is not available/desired
+		if (!_isWasmEnvironment && !_forceInterpreterMode)
+		{
+			_rtlJitCache = new RtlJitCache(cacheDirectory, logger);
+			_logger.LogInformation("[JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation");
+		}
+		else if (_isWasmEnvironment)
+		{
+			_logger.LogInformation("[JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode");
+		}
+		else // _forceInterpreterMode is true
+		{
+			_logger.LogInformation("[JitCpu] Interpreter mode forced - JIT compilation disabled");
+		}
+		
+		// Initialize instruction analyzer if requested
+		if (enableInstructionAnalyzer)
+		{
+			_analyzer = new InstructionAnalyzer(logger);
+			_logger.LogInformation("[JitCpu] Instruction analyzer enabled");
+		}
+	}
+
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetEip(uint eip) => _eip = eip;
@@ -77,30 +187,74 @@ public class JitCpu : IAsyncCpu
 	public uint GetEip() => _eip;
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-	public uint GetRegister(string name) => name.ToUpperInvariant() switch
+	public uint GetRegister(string name)
 	{
-		"EAX" => _eax, "EBX" => _ebx, "ECX" => _ecx, "EDX" => _edx, 
-		"ESI" => _esi, "EDI" => _edi, "EBP" => _ebp, "ESP" => _esp, 
-		"EIP" => _eip, "EFLAGS" => _eflags,
-		_ => 0
-	};
+		// Optimized: Use OrdinalIgnoreCase comparison to avoid string allocation from ToUpperInvariant()
+		if (string.Equals(name, "EAX", StringComparison.OrdinalIgnoreCase)) return _eax;
+		if (string.Equals(name, "EBX", StringComparison.OrdinalIgnoreCase)) return _ebx;
+		if (string.Equals(name, "ECX", StringComparison.OrdinalIgnoreCase)) return _ecx;
+		if (string.Equals(name, "EDX", StringComparison.OrdinalIgnoreCase)) return _edx;
+		if (string.Equals(name, "ESI", StringComparison.OrdinalIgnoreCase)) return _esi;
+		if (string.Equals(name, "EDI", StringComparison.OrdinalIgnoreCase)) return _edi;
+		if (string.Equals(name, "EBP", StringComparison.OrdinalIgnoreCase)) return _ebp;
+		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) return _esp;
+		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) return _eip;
+		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) return _eflags;
+		// Segment registers
+		if (string.Equals(name, "CS", StringComparison.OrdinalIgnoreCase)) return _cs;
+		if (string.Equals(name, "DS", StringComparison.OrdinalIgnoreCase)) return _ds;
+		if (string.Equals(name, "ES", StringComparison.OrdinalIgnoreCase)) return _es;
+		if (string.Equals(name, "FS", StringComparison.OrdinalIgnoreCase)) return _fs;
+		if (string.Equals(name, "GS", StringComparison.OrdinalIgnoreCase)) return _gs;
+		if (string.Equals(name, "SS", StringComparison.OrdinalIgnoreCase)) return _ss;
+		// Control registers
+		if (string.Equals(name, "CR0", StringComparison.OrdinalIgnoreCase)) return _cr0;
+		if (string.Equals(name, "CR2", StringComparison.OrdinalIgnoreCase)) return _cr2;
+		if (string.Equals(name, "CR3", StringComparison.OrdinalIgnoreCase)) return _cr3;
+		if (string.Equals(name, "CR4", StringComparison.OrdinalIgnoreCase)) return _cr4;
+		// Debug registers
+		if (string.Equals(name, "DR0", StringComparison.OrdinalIgnoreCase)) return _dr0;
+		if (string.Equals(name, "DR1", StringComparison.OrdinalIgnoreCase)) return _dr1;
+		if (string.Equals(name, "DR2", StringComparison.OrdinalIgnoreCase)) return _dr2;
+		if (string.Equals(name, "DR3", StringComparison.OrdinalIgnoreCase)) return _dr3;
+		if (string.Equals(name, "DR6", StringComparison.OrdinalIgnoreCase)) return _dr6;
+		if (string.Equals(name, "DR7", StringComparison.OrdinalIgnoreCase)) return _dr7;
+		return 0;
+	}
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
 	public void SetRegister(string name, uint value, [CallerMemberName] string callerName = "")
 	{
-		switch (name.ToUpperInvariant())
-		{
-			case "EAX": _eax = value; break;
-			case "EBX": _ebx = value; break;
-			case "ECX": _ecx = value; break;
-			case "EDX": _edx = value; break;
-			case "ESI": _esi = value; break;
-			case "EDI": _edi = value; break;
-			case "EBP": _ebp = value; break;
-			case "ESP": _esp = value; break;
-			case "EIP": _eip = value; break;
-			case "EFLAGS": _eflags = value; break;
-		}
+		// Optimized: Use OrdinalIgnoreCase comparison to avoid string allocation from ToUpperInvariant()
+		if (string.Equals(name, "EAX", StringComparison.OrdinalIgnoreCase)) { _eax = value; return; }
+		if (string.Equals(name, "EBX", StringComparison.OrdinalIgnoreCase)) { _ebx = value; return; }
+		if (string.Equals(name, "ECX", StringComparison.OrdinalIgnoreCase)) { _ecx = value; return; }
+		if (string.Equals(name, "EDX", StringComparison.OrdinalIgnoreCase)) { _edx = value; return; }
+		if (string.Equals(name, "ESI", StringComparison.OrdinalIgnoreCase)) { _esi = value; return; }
+		if (string.Equals(name, "EDI", StringComparison.OrdinalIgnoreCase)) { _edi = value; return; }
+		if (string.Equals(name, "EBP", StringComparison.OrdinalIgnoreCase)) { _ebp = value; return; }
+		if (string.Equals(name, "ESP", StringComparison.OrdinalIgnoreCase)) { _esp = value; return; }
+		if (string.Equals(name, "EIP", StringComparison.OrdinalIgnoreCase)) { _eip = value; return; }
+		if (string.Equals(name, "EFLAGS", StringComparison.OrdinalIgnoreCase)) { _eflags = value; return; }
+		// Segment registers
+		if (string.Equals(name, "CS", StringComparison.OrdinalIgnoreCase)) { _cs = (ushort)value; return; }
+		if (string.Equals(name, "DS", StringComparison.OrdinalIgnoreCase)) { _ds = (ushort)value; return; }
+		if (string.Equals(name, "ES", StringComparison.OrdinalIgnoreCase)) { _es = (ushort)value; return; }
+		if (string.Equals(name, "FS", StringComparison.OrdinalIgnoreCase)) { _fs = (ushort)value; return; }
+		if (string.Equals(name, "GS", StringComparison.OrdinalIgnoreCase)) { _gs = (ushort)value; return; }
+		if (string.Equals(name, "SS", StringComparison.OrdinalIgnoreCase)) { _ss = (ushort)value; return; }
+		// Control registers
+		if (string.Equals(name, "CR0", StringComparison.OrdinalIgnoreCase)) { _cr0 = value; return; }
+		if (string.Equals(name, "CR2", StringComparison.OrdinalIgnoreCase)) { _cr2 = value; return; }
+		if (string.Equals(name, "CR3", StringComparison.OrdinalIgnoreCase)) { _cr3 = value; return; }
+		if (string.Equals(name, "CR4", StringComparison.OrdinalIgnoreCase)) { _cr4 = value; return; }
+		// Debug registers
+		if (string.Equals(name, "DR0", StringComparison.OrdinalIgnoreCase)) { _dr0 = value; return; }
+		if (string.Equals(name, "DR1", StringComparison.OrdinalIgnoreCase)) { _dr1 = value; return; }
+		if (string.Equals(name, "DR2", StringComparison.OrdinalIgnoreCase)) { _dr2 = value; return; }
+		if (string.Equals(name, "DR3", StringComparison.OrdinalIgnoreCase)) { _dr3 = value; return; }
+		if (string.Equals(name, "DR6", StringComparison.OrdinalIgnoreCase)) { _dr6 = value; return; }
+		if (string.Equals(name, "DR7", StringComparison.OrdinalIgnoreCase)) { _dr7 = value; return; }
 	}
 
 	public CpuStepResult SingleStep(VirtualMemory mem)
@@ -114,8 +268,95 @@ public class JitCpu : IAsyncCpu
 		return Task.FromResult(result);
 	}
 
+	/// <summary>
+	/// Gets the instruction analyzer instance if enabled, otherwise null
+	/// </summary>
+	public InstructionAnalyzer? GetInstructionAnalyzer() => _analyzer;
+
+	/// <summary>
+	/// Formats an instruction to a human-readable string for debugging
+	/// </summary>
+	public string FormatInstruction(in Instruction insn)
+	{
+		if (_analyzer == null)
+		{
+			throw new InvalidOperationException("Instruction analyzer is not enabled. Enable it in the constructor.");
+		}
+
+		return _analyzer.FormatInstructionWithAddress(insn);
+	}
+
+	/// <summary>
+	/// Gets detailed analysis of an instruction including read/written registers and memory
+	/// </summary>
+	public InstructionAnalysis AnalyzeInstruction(in Instruction insn)
+	{
+		if (_analyzer == null)
+		{
+			throw new InvalidOperationException("Instruction analyzer is not enabled. Enable it in the constructor.");
+		}
+
+		return _analyzer.AnalyzeInstruction(insn);
+	}
+
+	/// <summary>
+	/// Decodes and formats the instruction at the current EIP for debugging purposes.
+	/// Available in interpreter mode when instruction analyzer is enabled.
+	/// </summary>
+	/// <exception cref="InvalidOperationException">Thrown when instruction analyzer is not enabled.</exception>
+	public string FormatCurrentInstruction()
+	{
+		if (_analyzer == null)
+		{
+			throw new InvalidOperationException("Instruction analyzer is not enabled. Enable it in the constructor with enableInstructionAnalyzer: true.");
+		}
+
+		var insn = DecodeCurrentInstruction();
+		return _analyzer.FormatInstructionWithAddress(insn);
+	}
+
+	/// <summary>
+	/// Decodes and analyzes the instruction at the current EIP.
+	/// Available in interpreter mode when instruction analyzer is enabled.
+	/// Returns null if instruction analyzer is not enabled.
+	/// </summary>
+	/// <returns>Instruction analysis if analyzer is enabled, null otherwise.</returns>
+	public InstructionAnalysis? AnalyzeCurrentInstruction()
+	{
+		if (_analyzer == null)
+		{
+			return null;
+		}
+
+		var insn = DecodeCurrentInstruction();
+		return _analyzer.AnalyzeInstruction(insn);
+	}
+
+	/// <summary>
+	/// Decodes the instruction at the current EIP.
+	/// </summary>
+	/// <returns>The decoded instruction.</returns>
+	/// <remarks>
+	/// If the decoder encounters invalid opcodes or corrupted memory at the current EIP,
+	/// the returned instruction may have IsInvalid set to true. The decoder will attempt
+	/// to decode as much as possible without throwing exceptions.
+	/// </remarks>
+	private Instruction DecodeCurrentInstruction()
+	{
+		_reader.Reset(_eip);
+		_decoder.IP = _eip;
+		return _decoder.Decode();
+	}
+
 	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)
 	{
+		// In WASM environment or when interpreter mode is forced, JIT compilation is not available/desired
+		// Fall back to single instruction interpretation
+		if (_isWasmEnvironment || _forceInterpreterMode)
+		{
+			return await Task.FromResult(InterpretSingleInstruction(mem));
+		}
+		
 		var blockStart = _eip;
 		
 		if (!_compiledBlocks.TryGetValue(blockStart, out var compiledBlock))
@@ -129,7 +370,7 @@ public class JitCpu : IAsyncCpu
 		return result;
 	}
 
-	public bool SupportsJit => true;
+	public bool SupportsJit => !_isWasmEnvironment && !_forceInterpreterMode;
 
 	/// <summary>
 	/// Sets the current executable path for cache management
@@ -145,9 +386,22 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task LoadCacheAsync()
 	{
+		// In WASM environment or when interpreter mode is forced, JIT cache is not available
+		if (_isWasmEnvironment || _forceInterpreterMode)
+		{
+			_logger.LogInformation("[JitCpu] JIT cache not available (WASM environment or interpreter mode forced)");
+			return;
+		}
+		
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
 			_logger.LogError("[JitCpu] Cannot load cache: executable path not set");
+			return;
+		}
+		
+		if (_rtlJitCache == null)
+		{
+			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
 			return;
 		}
 		
@@ -164,9 +418,22 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task SaveCacheAsync()
 	{
+		// In WASM environment or when interpreter mode is forced, JIT cache is not available
+		if (_isWasmEnvironment || _forceInterpreterMode)
+		{
+			_logger.LogInformation("[JitCpu] JIT cache not available (WASM environment or interpreter mode forced)");
+			return;
+		}
+		
 		if (string.IsNullOrEmpty(_currentExecutablePath))
 		{
 			_logger.LogError("[JitCpu] Cannot save cache: executable path not set");
+			return;
+		}
+		
+		if (_rtlJitCache == null)
+		{
+			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
 			return;
 		}
 		
@@ -182,6 +449,19 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public async Task<int> PrecompileFromCacheAsync(VirtualMemory mem)
 	{
+		// In WASM environment or when interpreter mode is forced, JIT cache is not available
+		if (_isWasmEnvironment || _forceInterpreterMode)
+		{
+			_logger.LogInformation("[JitCpu] Precompilation not available (WASM environment or interpreter mode forced)");
+			return await Task.FromResult(0);
+		}
+		
+		if (_rtlJitCache == null)
+		{
+			_logger.LogError("[JitCpu] RTL JIT cache is not initialized");
+			return await Task.FromResult(0);
+		}
+		
 		// With RTL cache, blocks are already compiled and loaded from disk by LoadCacheAsync
 		// Return the count of blocks that are already loaded and ready to use
 		var stats = _rtlJitCache.GetStatistics();
@@ -204,6 +484,17 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public RtlCacheStatistics GetCacheStatistics()
 	{
+		// In WASM environment or interpreter mode, return empty statistics
+		if (_isWasmEnvironment || _forceInterpreterMode || _rtlJitCache == null)
+		{
+			return new RtlCacheStatistics
+			{
+				TotalBlocks = 0,
+				CacheDirectory = "N/A (WASM/Interpreter)",
+				SourceDirectory = "N/A (WASM/Interpreter)"
+			};
+		}
+		
 		return _rtlJitCache.GetStatistics();
 	}
 	
@@ -212,7 +503,10 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	public void PurgeCache()
 	{
-		_rtlJitCache.PurgeCache();
+		if (_rtlJitCache != null && !_isWasmEnvironment && !_forceInterpreterMode)
+		{
+			_rtlJitCache.PurgeCache();
+		}
 		_compiledBlocks.Clear();
 	}
 
@@ -254,10 +548,18 @@ public class JitCpu : IAsyncCpu
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		
+		// Update EIP - decoder has advanced by instruction length
 		_eip = (uint)_decoder.IP;
+		
+		// In 16-bit mode, wrap EIP to 16 bits
+		if (_bitness == 16)
+		{
+			_eip &= 0xFFFF;
+		}
 		
 		var isCall = insn.Mnemonic == Mnemonic.Call;
 		var isSyscall = false;
+		var isDosInterrupt = false;
 		uint callTarget = 0;
 		
 		if (isCall)
@@ -301,16 +603,31 @@ public class JitCpu : IAsyncCpu
 						_logger.LogWarning("[JitCpu] INT3 breakpoint at 0x{OldEip:X8}", oldEip);
 					}
 				}
-				else if (insn.Immediate8 == 0x80)
+				else if (insn.Immediate8 == SYSCALL_INTERRUPT)
 				{
 					// INT 0x80 - Syscall dispatcher
 					isSyscall = true;
 					_logger.LogDebug("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
 				}
+				else if (insn.Immediate8 == DOS_INTERRUPT)
+				{
+					// INT 0x21 - DOS services interrupt
+					// Used by Win16 NE executables and DOS programs
+					// Signal as a DOS interrupt
+					isDosInterrupt = true;
+					_logger.LogDebug("[JitCpu] INT 0x21 DOS services at 0x{OldEip:X8}, AH=0x{Ah:X2}", oldEip, (_eax >> 8) & 0xFF);
+				}
 				else
 				{
+					// Unhandled interrupt - just log warning
 					_logger.LogWarning("[JitCpu] Unhandled interrupt INT {InsnImmediate8:X2} at 0x{OldEip:X8}", insn.Immediate8, oldEip);
 				}
+				break;
+			case Mnemonic.Int1:
+				// INT1 (0xF1) - Single-step interrupt / ICEBP
+				_logger.LogWarning("[JitCpu] INT1 single-step interrupt at 0x{OldEip:X8}", oldEip);
+				// Advance EIP past the INT1 instruction to continue execution correctly
+				_eip = oldEip + (uint)insn.Length;
 				break;
 			case Mnemonic.Call:
 				_esp -= 4;
@@ -465,6 +782,9 @@ public class JitCpu : IAsyncCpu
 				break;
 			case Mnemonic.Cdq:
 				ExecCdq();
+				break;
+			case Mnemonic.Cwd:
+				ExecCwd();
 				break;
 			case Mnemonic.Bswap:
 				ExecBswap(insn);
@@ -1131,11 +1451,18 @@ public class JitCpu : IAsyncCpu
 				break;
 		}
 		
-		return new CpuStepResult(isCall, callTarget, isSyscall);
+		return new CpuStepResult(isCall, callTarget, isSyscall, isDosInterrupt);
 	}
 
 	private RtlCompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
 	{
+		// This should never be called in WASM environment or interpreter mode due to check in ExecuteBlockAsync
+		// But add safety check anyway
+		if (_isWasmEnvironment || _forceInterpreterMode || _rtlJitCache == null)
+		{
+			throw new NotSupportedException("JIT compilation is not available in WASM environment or when interpreter mode is forced");
+		}
+		
 		_logger.LogInformation("[JitCpu] Compiling block at EIP=0x{Eip:X8} using RTL pipeline", startEip);
 		
 		// Analyze the block to get x86 instructions
@@ -1468,6 +1795,131 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Aas: // ASCII Adjust After Subtraction
 				ExecAas();
 				break;
+			case Mnemonic.Daa: // Decimal Adjust After Addition
+			{
+				var oldAl = (byte)(_eax & 0xFF);
+				var oldCf = GetFlag(Cf);
+				var oldAf = GetFlag(Af);
+				var al = oldAl;
+				
+				// CF is initially cleared per Intel spec
+				ClearFlag(Cf);
+				
+				// Step 1: Check low nibble
+				if (((al & 0x0F) > 9) || oldAf)
+				{
+					// Perform addition and check for carry (overflow)
+					var newAl = (byte)(al + 6);
+					var carry = (newAl < al);  // Overflow: result wrapped around
+					al = newAl;
+					
+					// CF = OLD_CF OR Carry
+					SetFlagVal(Cf, oldCf || carry);
+					SetFlag(Af);
+				}
+				else
+				{
+					ClearFlag(Af);
+				}
+				
+				// Step 2: Check high nibble
+				if ((oldAl > 0x99) || oldCf)
+				{
+					al += 0x60;
+					SetFlag(Cf);
+				}
+				
+				_eax = (_eax & 0xFFFFFF00) | al;
+				
+				// Update flags: SF, ZF, PF
+				UpdateLogicResultFlags(al, 0x80);
+				// OF is undefined in Intel docs, but on 80386 it is set when the result overflows from positive to negative
+				SetFlagVal(Of, ((oldAl & 0x80) == 0) && ((al & 0x80) != 0));
+				break;
+			}
+			case Mnemonic.Das: // Decimal Adjust After Subtraction
+			{
+				var oldAl = (byte)(_eax & 0xFF);
+				var oldCf = GetFlag(Cf);
+				var oldAf = GetFlag(Af);
+				var al = oldAl;
+				
+				// CF is initially cleared per Intel spec
+				ClearFlag(Cf);
+				
+				// Step 1: Check low nibble
+				if (((al & 0x0F) > 9) || oldAf)
+				{
+					// Perform subtraction and check for borrow (underflow)
+					var newAl = (byte)(al - 6);
+					var borrow = (newAl > al);  // Underflow: result wrapped around
+					al = newAl;
+					
+					// CF = OLD_CF OR Borrow
+					SetFlagVal(Cf, oldCf || borrow);
+					SetFlag(Af);
+				}
+				else
+				{
+					ClearFlag(Af);
+				}
+				
+				// Step 2: Check high nibble
+				if ((oldAl > 0x99) || oldCf)
+				{
+					al -= 0x60;
+					SetFlag(Cf);
+				}
+				
+				_eax = (_eax & 0xFFFFFF00) | al;
+				
+				// Update flags: SF, ZF, PF
+				UpdateLogicResultFlags(al, 0x80);
+				// OF is set when the adjustment causes a transition from negative (old AL) to positive (new AL)
+				SetFlagVal(Of, ((oldAl & 0x80) != 0) && ((al & 0x80) == 0));
+				break;
+			}
+			case Mnemonic.Aam: // ASCII Adjust After Multiply
+			{
+				// AAM - Converts binary in AL to unpacked BCD in AX
+				// Formula: AH = AL / base, AL = AL % base
+				var base_ = insn.Immediate8;
+				if (base_ == 0)
+				{
+					base_ = 10; // Default base is 10
+				}
+
+				var al = (byte)(_eax & 0xFF);
+				
+				var ah = (byte)(al / base_);
+				al = (byte)(al % base_);
+				
+				_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+				
+				// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
+				UpdateLogicResultFlags(al, 0x80);
+				break;
+			}
+			case Mnemonic.Aad: // ASCII Adjust Before Division
+			{
+				// AAD - Converts unpacked BCD in AX to binary
+				// Formula: AL = AH * base + AL, AH = 0
+				// If the instruction has no immediate operand, use default base 10.
+				// If immediate is present (even if 0), use it as the base.
+				var base_ = insn.OpCount == 0 ? (byte)10 : insn.Immediate8;
+
+				var al = (byte)(_eax & 0xFF);
+				var ah = (byte)((_eax >> 8) & 0xFF);
+				
+				al = (byte)(ah * base_ + al);
+				ah = 0;
+				
+				_eax = (_eax & 0xFFFF0000) | ((uint)ah << 8) | al;
+				
+				// Update flags: SF, ZF, PF (OF, AF, CF are undefined)
+				UpdateLogicResultFlags(al, 0x80);
+				break;
+			}
 			case Mnemonic.Cbw: // Convert Byte to Word
 				ExecCbw();
 				break;
@@ -1510,8 +1962,10 @@ public class JitCpu : IAsyncCpu
 			
 			// Set flags
 			SetFlagVal(Cf, carryOut);
-			SetFlagVal(Sf, (dest & 0x80000000) != 0);
-			SetFlagVal(Zf, dest == 0);
+			
+			// Use UpdateLogicResultFlags for SF, ZF, and PF
+			UpdateLogicResultFlags(dest, SIGN_BIT_MASK_32BIT);
+			
 			// OF is set only if count == 1
 			if (count == 1)
 			{
@@ -1529,8 +1983,10 @@ public class JitCpu : IAsyncCpu
 			
 			// Set flags
 			SetFlagVal(Cf, carryOut);
-			SetFlagVal(Sf, (dest & 0x80000000) != 0);
-			SetFlagVal(Zf, dest == 0);
+			
+			// Use UpdateLogicResultFlags for SF, ZF, and PF
+			UpdateLogicResultFlags(dest, SIGN_BIT_MASK_32BIT);
+			
 			// OF is set only if count == 1
 			if (count == 1)
 			{
@@ -2254,7 +2710,7 @@ public class JitCpu : IAsyncCpu
 			OpKind.Immediate8to32 => (uint)(sbyte)insn.Immediate8,          // Sign-extend 8->32
 			OpKind.Immediate16 => (uint)insn.Immediate16,
 			OpKind.Immediate32 => insn.Immediate32,
-			OpKind.Memory => _mem.Read32(CalcMemAddress(insn, operandIndex)),
+			OpKind.Memory => ReadMemoryOperand(insn, operandIndex),
 			_ => 0u
 		};
 		
@@ -2277,7 +2733,51 @@ public class JitCpu : IAsyncCpu
 		}
 		else if (opKind == OpKind.Memory)
 		{
-			_mem.Write32(CalcMemAddress(insn, operandIndex), value);
+			WriteMemoryOperand(insn, operandIndex, value);
+		}
+	}
+	
+	private uint ReadMemoryOperand(Instruction insn, int operandIndex)
+	{
+		var addr = CalcMemAddress(insn, operandIndex);
+		var memSize = insn.MemorySize;
+		
+		// Determine size based on MemorySize enum
+		return memSize switch
+		{
+			MemorySize.UInt8 or MemorySize.Int8 => _mem.Read8(addr),
+			MemorySize.UInt16 or MemorySize.Int16 => _mem.Read16(addr),
+			MemorySize.UInt32 or MemorySize.Int32 => _mem.Read32(addr),
+			// For 64-bit, return lower 32 bits (32-bit emulator)
+			MemorySize.UInt64 or MemorySize.Int64 => _mem.Read32(addr),
+			// Default to 32-bit for other cases
+			_ => _mem.Read32(addr)
+		};
+	}
+	
+	private void WriteMemoryOperand(Instruction insn, int operandIndex, uint value)
+	{
+		var addr = CalcMemAddress(insn, operandIndex);
+		var memSize = insn.MemorySize;
+		
+		// Determine size based on MemorySize enum
+		switch (memSize)
+		{
+			case MemorySize.UInt8:
+			case MemorySize.Int8:
+				_mem.Write8(addr, (byte)value);
+				break;
+			case MemorySize.UInt16:
+			case MemorySize.Int16:
+				_mem.Write16(addr, (ushort)value);
+				break;
+			case MemorySize.UInt32:
+			case MemorySize.Int32:
+			case MemorySize.UInt64:
+			case MemorySize.Int64:
+			default:
+				_mem.Write32(addr, value);
+				break;
 		}
 	}
 
@@ -2305,6 +2805,10 @@ public class JitCpu : IAsyncCpu
 			Register.BX => _ebx & 0xFFFF,
 			Register.CX => _ecx & 0xFFFF,
 			Register.DX => _edx & 0xFFFF,
+			Register.SI => _esi & 0xFFFF,
+			Register.DI => _edi & 0xFFFF,
+			Register.BP => _ebp & 0xFFFF,
+			Register.SP => _esp & 0xFFFF,
 			Register.AL => _eax & 0xFF,
 			Register.BL => _ebx & 0xFF,
 			Register.CL => _ecx & 0xFF,
@@ -2313,6 +2817,13 @@ public class JitCpu : IAsyncCpu
 			Register.BH => (_ebx >> 8) & 0xFF,
 			Register.CH => (_ecx >> 8) & 0xFF,
 			Register.DH => (_edx >> 8) & 0xFF,
+			// Segment registers
+			Register.CS => _cs,
+			Register.DS => _ds,
+			Register.ES => _es,
+			Register.FS => _fs,
+			Register.GS => _gs,
+			Register.SS => _ss,
 			_ => 0
 		};
 	}
@@ -2341,6 +2852,10 @@ public class JitCpu : IAsyncCpu
 			case Register.BX: _ebx = (_ebx & 0xFFFF0000) | (value & 0xFFFF); break;
 			case Register.CX: _ecx = (_ecx & 0xFFFF0000) | (value & 0xFFFF); break;
 			case Register.DX: _edx = (_edx & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.SI: _esi = (_esi & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.DI: _edi = (_edi & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.BP: _ebp = (_ebp & 0xFFFF0000) | (value & 0xFFFF); break;
+			case Register.SP: _esp = (_esp & 0xFFFF0000) | (value & 0xFFFF); break;
 			case Register.AL: _eax = (_eax & 0xFFFFFF00) | (value & 0xFF); break;
 			case Register.BL: _ebx = (_ebx & 0xFFFFFF00) | (value & 0xFF); break;
 			case Register.CL: _ecx = (_ecx & 0xFFFFFF00) | (value & 0xFF); break;
@@ -2349,6 +2864,13 @@ public class JitCpu : IAsyncCpu
 			case Register.BH: _ebx = (_ebx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
 			case Register.CH: _ecx = (_ecx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
 			case Register.DH: _edx = (_edx & 0xFFFF00FF) | ((value & 0xFF) << 8); break;
+			// Segment registers
+			case Register.CS: _cs = (ushort)value; break;
+			case Register.DS: _ds = (ushort)value; break;
+			case Register.ES: _es = (ushort)value; break;
+			case Register.FS: _fs = (ushort)value; break;
+			case Register.GS: _gs = (ushort)value; break;
+			case Register.SS: _ss = (ushort)value; break;
 		}
 	}
 
@@ -2356,13 +2878,25 @@ public class JitCpu : IAsyncCpu
 	{
 		// Full SIB (Scale-Index-Base) memory address calculation
 		// The Iced library parses the SIB byte and provides displacement, base, index, and scale
-		uint addr = insn.MemoryDisplacement32;
+		uint offset = 0;
+		
+		// In 16-bit mode, displacement is 16-bit; use the lower 16 bits of the decoded displacement
+		if (_bitness == 16)
+		{
+			// Get 16-bit displacement (lower 16 bits of the 32-bit MemoryDisplacement32 value)
+			ushort disp16 = (ushort)insn.MemoryDisplacement32;
+			offset = disp16;
+		}
+		else
+		{
+			offset = insn.MemoryDisplacement32;
+		}
 		
 		// Add base register if present
 		var baseReg = insn.MemoryBase;
 		if (baseReg != Register.None)
 		{
-			addr += GetRegisterByEnum(baseReg);
+			offset += GetRegisterByEnum(baseReg);
 		}
 		
 		// Add (index * scale) if index register is present
@@ -2370,12 +2904,43 @@ public class JitCpu : IAsyncCpu
 		if (indexReg != Register.None)
 		{
 			uint indexVal = GetRegisterByEnum(indexReg);
-			addr += indexVal * (uint)insn.MemoryIndexScale;
+			offset += indexVal * (uint)insn.MemoryIndexScale;
+		}
+		
+		// In 16-bit mode, wrap offset to 16 bits
+		if (_bitness == 16)
+		{
+			offset &= 0xFFFF;
+		}
+		
+		// Apply segment override to get physical address
+		// In 16-bit real mode, physical address = segment * 16 + offset
+		uint physicalAddr = offset;
+		if (_bitness == 16)
+		{
+			// Get segment register (defaults to DS, but can be overridden by instruction prefix)
+			var segReg = insn.MemorySegment;
+			uint segmentValue = segReg switch
+			{
+				Register.CS => _cs,
+				Register.DS => _ds,
+				Register.ES => _es,
+				Register.FS => _fs,
+				Register.GS => _gs,
+				Register.SS => _ss,
+				_ => _ds  // Default to DS
+			};
+			
+			// Calculate physical address: segment * 16 + offset
+			// Note: In 16-bit real mode, this can produce addresses beyond 1MB (0x100000).
+			// Real 8086 CPUs wrap at 1MB boundary, but later CPUs with A20 line enabled
+			// can address beyond 1MB. This emulator allows addresses beyond 1MB (A20 enabled behavior).
+			physicalAddr = (segmentValue << 4) + offset;
 		}
 		
 		// Check if address is within valid memory range
 		// Convert to ulong to avoid overflow issues when comparing with memory size
-		if (addr >= _mem.Size)
+		if (physicalAddr >= _mem.Size)
 		{
 			byte[]? instrBytes = null;
 			try
@@ -2386,11 +2951,11 @@ public class JitCpu : IAsyncCpu
 			{
 			}
 
-			Diagnostics.Diagnostics.LogCalcMemAddressFailure(addr, _mem.Size, _eip, _esp, _ebp, _eax, _ebx, _ecx, _edx, _esi, _edi, instrBytes);
-			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{addr:X} (EIP=0x{_eip:X8})");
+			Diagnostics.Diagnostics.LogCalcMemAddressFailure(physicalAddr, _mem.Size, _eip, _esp, _ebp, _eax, _ebx, _ecx, _edx, _esi, _edi, instrBytes);
+			throw new IndexOutOfRangeException($"Calculated memory address out of range: 0x{physicalAddr:X} (EIP=0x{_eip:X8})");
 		}
 		
-		return addr;
+		return physicalAddr;
 	}
 
 	private uint GetRegisterByEnum(Register reg)
@@ -2405,6 +2970,22 @@ public class JitCpu : IAsyncCpu
 			Register.EDI => _edi,
 			Register.EBP => _ebp,
 			Register.ESP => _esp,
+			// 16-bit registers
+			Register.AX => _eax & 0xFFFF,
+			Register.BX => _ebx & 0xFFFF,
+			Register.CX => _ecx & 0xFFFF,
+			Register.DX => _edx & 0xFFFF,
+			Register.SI => _esi & 0xFFFF,
+			Register.DI => _edi & 0xFFFF,
+			Register.BP => _ebp & 0xFFFF,
+			Register.SP => _esp & 0xFFFF,
+			// Segment registers
+			Register.CS => _cs,
+			Register.DS => _ds,
+			Register.ES => _es,
+			Register.FS => _fs,
+			Register.GS => _gs,
+			Register.SS => _ss,
 			_ => 0
 		};
 	}
@@ -2422,9 +3003,9 @@ public class JitCpu : IAsyncCpu
 		int opSize = GetOpSizeBits(insn, 0);
 		uint signBitMask = opSize switch
 		{
-			8 => 0x80,
-			16 => 0x8000,
-			_ => 0x80000000
+			8 => SIGN_BIT_MASK_8BIT,
+			16 => SIGN_BIT_MASK_16BIT,
+			_ => SIGN_BIT_MASK_32BIT
 		};
 		SetFlagsAdd(a, b, r, signBitMask);
 	}
@@ -2440,9 +3021,9 @@ public class JitCpu : IAsyncCpu
 		int opSize = GetOpSizeBits(insn, 0);
 		uint signBitMask = opSize switch
 		{
-			8 => 0x80,
-			16 => 0x8000,
-			_ => 0x80000000
+			8 => SIGN_BIT_MASK_8BIT,
+			16 => SIGN_BIT_MASK_16BIT,
+			_ => SIGN_BIT_MASK_32BIT
 		};
 		SetFlagsSub(a, b, r, signBitMask);
 	}
@@ -2781,14 +3362,38 @@ public class JitCpu : IAsyncCpu
 	private void ExecPush(Instruction insn, VirtualMemory mem)
 	{
 		uint value = GetOperandValue(insn, 0);
-		_esp -= 4;
-		mem.Write32(_esp, value);
+		
+		// In 16-bit mode, PUSH uses 2 bytes; in 32-bit mode, 4 bytes
+		if (_bitness == 16)
+		{
+			// Preserve upper 16 bits of ESP, only modify lower 16 bits
+			_esp = (_esp & 0xFFFF0000) | ((_esp - 2) & 0xFFFF);
+			mem.Write16(_esp, (ushort)value);
+		}
+		else
+		{
+			_esp -= 4;
+			mem.Write32(_esp, value);
+		}
 	}
 	
 	private void ExecPop(Instruction insn, VirtualMemory mem)
 	{
-		uint value = mem.Read32(_esp);
-		_esp += 4;
+		uint value;
+		
+		// In 16-bit mode, POP uses 2 bytes; in 32-bit mode, 4 bytes
+		if (_bitness == 16)
+		{
+			value = mem.Read16(_esp);
+			// Preserve upper 16 bits of ESP, only modify lower 16 bits
+			_esp = (_esp & 0xFFFF0000) | ((_esp + 2) & 0xFFFF);
+		}
+		else
+		{
+			value = mem.Read32(_esp);
+			_esp += 4;
+		}
+		
 		SetOperandValue(insn, 0, value);
 	}
 	
@@ -4100,12 +4705,22 @@ public class JitCpu : IAsyncCpu
 	
 	private void SetFlagsAdd(uint a, uint b, uint r)
 	{
-		SetFlagsAdd(a, b, r, 0x80000000);
+		SetFlagsAdd(a, b, r, SIGN_BIT_MASK_32BIT);
 	}
 
 	private void SetFlagsAdd(uint a, uint b, uint r, uint signBitMask)
 	{
-		SetFlagVal(Cf, r < a);
+		// Calculate carry flag based on operation size
+		// For 8-bit: carry if (a + b) > 0xFF
+		// For 16-bit: carry if (a + b) > 0xFFFF  
+		// For 32-bit: carry if result wrapped (r < a works due to uint overflow)
+		bool carry = signBitMask switch
+		{
+			SIGN_BIT_MASK_8BIT => (a + b) > MAX_VALUE_8BIT,        // 8-bit
+			SIGN_BIT_MASK_16BIT => (a + b) > MAX_VALUE_16BIT,    // 16-bit
+			_ => r < a                      // 32-bit
+		};
+		SetFlagVal(Cf, carry);
 		SetFlagVal(Of, (~(a ^ b) & (a ^ r) & signBitMask) != 0);
 		SetFlagVal(Af, ((a ^ b ^ r) & 0x10) != 0);
 		UpdateLogicResultFlags(r, signBitMask);
@@ -4113,7 +4728,7 @@ public class JitCpu : IAsyncCpu
 	
 	private void SetFlagsSub(uint a, uint b, uint r)
 	{
-		SetFlagsSub(a, b, r, 0x80000000);
+		SetFlagsSub(a, b, r, SIGN_BIT_MASK_32BIT);
 	}
 
 	private void SetFlagsSub(uint a, uint b, uint r, uint signBitMask)
@@ -4126,12 +4741,20 @@ public class JitCpu : IAsyncCpu
 	
 	private void UpdateLogicResultFlags(uint r)
 	{
-		UpdateLogicResultFlags(r, 0x80000000);
+		UpdateLogicResultFlags(r, SIGN_BIT_MASK_32BIT);
 	}
 
 	private void UpdateLogicResultFlags(uint r, uint signBitMask)
 	{
-		SetFlagVal(Zf, r == 0);
+		// Mask result to appropriate size before checking zero flag
+		uint maskedResult = signBitMask switch
+		{
+			SIGN_BIT_MASK_8BIT => r & 0xFF,
+			SIGN_BIT_MASK_16BIT => r & 0xFFFF,
+			_ => r
+		};
+		
+		SetFlagVal(Zf, maskedResult == 0);
 		SetFlagVal(Sf, (r & signBitMask) != 0);
 		
 		byte lo = (byte)r;
@@ -5963,6 +6586,19 @@ public class JitCpu : IAsyncCpu
 		_eax = sign ? (0xFFFF0000 | ax) : ax;
 	}
 	
+	private void ExecCwd()
+	{
+		// CWD: Convert Word to Doubleword (16-bit mode)
+		// Sign-extend AX into DX:AX
+		// If bit 15 of AX is 0 (positive), DX = 0x0000
+		// If bit 15 of AX is 1 (negative), DX = 0xFFFF
+		// Preserves the high 16 bits of EDX
+		var ax = (ushort)(_eax & 0xFFFF);
+		var sign = (ax & 0x8000) != 0;
+		var dx = sign ? (ushort)0xFFFF : (ushort)0x0000;
+		_edx = (_edx & 0xFFFF0000) | dx;
+	}
+	
 	private void ExecMovx(Instruction insn, bool signExtend)
 	{
 		uint value;
@@ -6802,6 +7438,26 @@ public class JitCpu : IAsyncCpu
 		}
 		
 		public void Reset(uint ip) => _ptr = ip;
-		public override int ReadByte() => _cpu._mem.Read8(_ptr++);
+		
+		public override int ReadByte()
+		{
+			// In 16-bit real mode, convert IP to physical address: CS * 16 + IP
+			uint physicalAddr;
+			if (_cpu._bitness == 16)
+			{
+				// In 16-bit mode, _ptr is the IP (offset) and we need to add the segment base
+				uint ip16 = _ptr & 0xFFFF;
+				physicalAddr = ((uint)_cpu._cs << 4) + ip16;
+				// Increment IP and wrap to 16 bits
+				_ptr = (_ptr & 0xFFFF0000) | ((_ptr + 1) & 0xFFFF);
+			}
+			else
+			{
+				// In 32-bit mode, use flat address
+				physicalAddr = _ptr++;
+			}
+			
+			return _cpu._mem.Read8(physicalAddr);
+		}
 	}
 }

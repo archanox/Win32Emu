@@ -252,7 +252,7 @@ public class JitCacheTests
 		try
 		{
 			var mem = new VirtualMemory(1024 * 1024);
-			var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			var cpu = new JitCpu(mem, logger: null);
 			var execPath = "/test/program.exe";
 			
 			// Setup some simple code
@@ -297,7 +297,7 @@ public class JitCacheTests
 			var execPath = "/test/program.exe";
 			
 			// Create first CPU and save cache
-			var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			var cpu1 = new JitCpu(mem, logger: null);
 			cpu1.SetExecutablePath(execPath);
 			
 			// Write some code and compile it
@@ -313,7 +313,7 @@ public class JitCacheTests
 			var stats1 = cpu1.GetCacheStatistics();
 			
 			// Act - Create new CPU and load cache
-			var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			var cpu2 = new JitCpu(mem, logger: null);
 			cpu2.SetExecutablePath(execPath);
 			await cpu2.LoadCacheAsync();
 			
@@ -341,7 +341,7 @@ public class JitCacheTests
 		try
 		{
 			var mem = new VirtualMemory(1024 * 1024);
-			var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			var cpu = new JitCpu(mem, logger: null);
 			
 			// Act
 			var stats = cpu.GetCacheStatistics();
@@ -373,7 +373,7 @@ public class JitCacheTests
 			var execPath = "/test/program.exe";
 			
 			// Create first CPU, compile some blocks, and save cache
-			var cpu1 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			var cpu1 = new JitCpu(mem, logger: null);
 			cpu1.SetExecutablePath(execPath);
 			
 			// Write code at multiple locations
@@ -398,7 +398,7 @@ public class JitCacheTests
 			await cpu1.SaveCacheAsync();
 			
 			// Act - Create new CPU, load cache, and precompile
-			var cpu2 = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
+			var cpu2 = new JitCpu(mem, logger: null);
 			cpu2.SetExecutablePath(execPath);
 			await cpu2.LoadCacheAsync();
 			
@@ -417,4 +417,63 @@ public class JitCacheTests
 			}
 		}
 	}
+	
+	// TODO: This test needs to be refactored for JitCpu - JitCpu doesn't expose cache methods directly
+	/*
+	[Fact]
+	public async Task LoadCacheFromJson_ShouldLoadCacheWithoutFileSystem()
+	{
+		// Arrange
+		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
+		
+		try
+		{
+			// Create a cache and save it to get JSON
+			var cache1 = new JitCache(tempDir);
+			cache1.AddBlockMetadata(0x1000, new BlockMetadata
+			{
+				StartAddress = 0x1000,
+				InstructionCount = 5,
+				ByteLength = 15,
+				CodeHash = "ABC123",
+				FirstCompiled = DateTime.UtcNow
+			});
+			
+			cache1.AddBlockMetadata(0x2000, new BlockMetadata
+			{
+				StartAddress = 0x2000,
+				InstructionCount = 3,
+				ByteLength = 9,
+				CodeHash = "DEF456",
+				FirstCompiled = DateTime.UtcNow
+			});
+			
+			await cache1.SaveCacheAsync("/test/program.exe");
+			
+			// Read the saved JSON from any cache file in the directory
+			var cacheFiles = Directory.GetFiles(tempDir, "jit_cache_*.json");
+			Assert.NotEmpty(cacheFiles);
+			var cacheJson = await File.ReadAllTextAsync(cacheFiles[0]);
+			
+			// Act - Load cache from JSON into a new JitCpu instance
+			var mem = new VirtualMemory(1024 * 1024);
+			var icedCpu = new Win32Emu.Cpu.Jit.JitCpu(mem);
+			await icedCpu.LoadCacheFromJsonAsync(cacheJson);
+			
+			// Assert
+			Assert.True(icedCpu.IsCacheEnabled);
+			Assert.True(icedCpu.HasCachedBlock(0x1000));
+			Assert.True(icedCpu.HasCachedBlock(0x2000));
+			Assert.False(icedCpu.HasCachedBlock(0x3000));
+		}
+		finally
+		{
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
+	}
+	*/
 }

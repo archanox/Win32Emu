@@ -1,0 +1,11 @@
+{
+  "name": "win32emu-wasm-tests",
+  "version": "1.0.0",
+  "description": "Test scripts for Win32Emu WASM frontend",
+  "scripts": {
+    "test": "node test-directdraw-wasm.js"
+  },
+  "dependencies": {
+    "playwright": "^1.57.0"
+  }
+}

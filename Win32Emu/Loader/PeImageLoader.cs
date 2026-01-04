@@ -436,6 +436,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 		foreach (var module in imports)
 		{
 			var dll = module.Name ?? string.Empty;
+			logger?.LogInformation("[Loader] Processing imports from DLL: {DllName} ({SymbolCount} symbols)", dll, module.Symbols.Count());
 			foreach (var sym in module.Symbols)
 			{
 				// Get IAT entry RVA - this is required to write the import stub address
@@ -480,6 +481,10 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				
 				// Store IAT entry mapping for runtime verification
 				iatEntryMap[va] = synthetic;
+				
+				// Log the mapping for debugging
+				logger?.LogInformation("[Loader] Mapped import: {Dll}!{Name} -> IAT VA 0x{IatVa:X8} = synthetic 0x{Synthetic:X8}", 
+					dll.ToUpperInvariant(), sym.Name ?? $"Ordinal_{sym.Ordinal}", va, synthetic);
 				
 				// Verify the write was successful
 				var verifyValue = vm.Read32(va);
@@ -696,10 +701,11 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			else
 			{
 				// No decoration found - use default (stdcall with 0 args)
-				// WARNING: This default may be incorrect. Undecorated exports often use cdecl
+				// NOTE: This default may be incorrect. Undecorated exports often use cdecl
 				// (e.g., C runtime functions like malloc, printf). Manual configuration may be needed.
+				// This is expected behavior for C-compiled executables, so we log at Debug level to avoid log spam.
 				metadata[export.Name] = ExportMetadata.Default;
-				logger?.LogWarning("[Loader] Export '{Name}' has no decoration, using default {Convention} with {ArgBytes} bytes. This may be incorrect for cdecl functions.",
+				logger?.LogDebug("[Loader] Export '{Name}' has no decoration, using default {Convention} with {ArgBytes} bytes. This may be incorrect for cdecl functions.",
 					export.Name, ExportMetadata.Default.Convention, ExportMetadata.Default.StackArgBytes);
 			}
 		}
@@ -953,19 +959,33 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 
 		foreach (var section in pe.Sections)
 		{
-			var name = section.Name ?? string.Empty;
-			var rva = section.Rva;
-			var virtualSize = section.Contents?.GetVirtualSize() ?? 0;
-			// Note: WriteIntoArray() creates a copy to get the length. This is acceptable since
-			// it only happens once during PE load time (not performance-critical path).
-			// AsmResolver's PESection doesn't expose raw data size directly - must materialize contents.
-			var rawSize = (uint)(section.Contents?.WriteIntoArray().Length ?? 0);
-			var characteristics = (PeSectionCharacteristics)(uint)section.Characteristics;
+			try
+			{
+				var name = section.Name ?? string.Empty;
+				var rva = section.Rva;
+				var virtualSize = section.Contents?.GetVirtualSize() ?? 0;
+				// Note: WriteIntoArray() creates a copy to get the length. This is acceptable since
+				// it only happens once during PE load time (not performance-critical path).
+				// AsmResolver's PESection doesn't expose raw data size directly - must materialize contents.
+				var rawSize = (uint)(section.Contents?.WriteIntoArray().Length ?? 0);
+				var characteristics = (PeSectionCharacteristics)(uint)section.Characteristics;
 
-			sections.Add(new PeSection(name, rva, virtualSize, rawSize, characteristics));
+				sections.Add(new PeSection(name, rva, virtualSize, rawSize, characteristics));
 
-			logger?.LogDebug("[Loader] Section {Name}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawSize=0x{RawSize:X8}, Characteristics=0x{Chars:X8}",
-				name, rva, virtualSize, rawSize, (uint)characteristics);
+				logger?.LogDebug("[Loader] Section {Name}: RVA=0x{Rva:X8}, VirtualSize=0x{VSize:X8}, RawSize=0x{RawSize:X8}, Characteristics=0x{Chars:X8}",
+					name, rva, virtualSize, rawSize, (uint)characteristics);
+			}
+			catch (Exception ex) when (ex is System.IO.EndOfStreamException or ArgumentException)
+			{
+				// Skip corrupted sections that extend beyond file boundaries during info extraction
+				// This can happen with malformed PE files where section headers indicate
+				// sizes that don't match actual file data
+				// Note: The section loading code in the LoadFromImage method already handles this,
+				// but we need to also handle it here when extracting metadata
+				var sectionName = section.Name ?? string.Empty;
+				logger?.LogWarning("Skipping corrupted section {SectionName} at RVA {SectionRva:X8} during info extraction: {ErrorMessage}", 
+					sectionName, section.Rva, ex.Message);
+			}
 		}
 
 		logger?.LogInformation("[Loader] Extracted {Count} sections from PE file", sections.Count);

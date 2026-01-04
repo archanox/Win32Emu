@@ -1,6 +1,6 @@
 using UnicornEngine;
 using UnicornEngine.Const;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator.TestInfrastructure;
@@ -11,7 +11,7 @@ namespace Win32Emu.Tests.Emulator.TestInfrastructure;
 public class UnicornTestHelper : IDisposable
 {
     private readonly Unicorn _unicorn;
-    private readonly IcedCpu _win32EmuCpu;
+    private readonly JitCpu _win32EmuCpu;
     private readonly VirtualMemory _win32EmuMemory;
     
     private const long CodeBaseAddress = 0x00400000;
@@ -31,7 +31,7 @@ public class UnicornTestHelper : IDisposable
         
         // Initialize Win32Emu
         _win32EmuMemory = new VirtualMemory();
-        _win32EmuCpu = new IcedCpu(_win32EmuMemory);
+        _win32EmuCpu = new JitCpu(_win32EmuMemory);
         
         // Initialize stack pointers for both
         var initialEsp = (uint)(StackBaseAddress + 0x8000);

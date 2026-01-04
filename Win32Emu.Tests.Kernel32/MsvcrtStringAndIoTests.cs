@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32.Modules;
 using Microsoft.Extensions.Logging.Abstractions;
 
@@ -169,6 +169,224 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		// Assert
 		Assert.True(success, "setvbuf should handle no buffering mode");
 		Assert.Equal(0u, returnValue); // Success returns 0
+	}
+
+	[Fact]
+	public void Strnicmp_WithEqualStrings_ShouldReturnZero()
+	{
+		// Arrange - allocate two equal strings (case-insensitive)
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hello\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("HELLO\0");
+		var count = 5u;
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // Equal strings (case-insensitive) return 0
+	}
+
+	[Fact]
+	public void Strnicmp_WithFirstStringLess_ShouldReturnNegative()
+	{
+		// Arrange - str1 < str2 (case-insensitive)
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("abc\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("XYZ\0");
+		var count = 3u;
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		var result = unchecked((int)returnValue);
+		Assert.True(result < 0, "First string less than second (case-insensitive) should return negative value");
+	}
+
+	[Fact]
+	public void Strnicmp_WithFirstStringGreater_ShouldReturnPositive()
+	{
+		// Arrange - str1 > str2 (case-insensitive)
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("XYZ\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("abc\0");
+		var count = 3u;
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		var result = unchecked((int)returnValue);
+		Assert.True(result > 0, "First string greater than second (case-insensitive) should return positive value");
+	}
+
+	[Fact]
+	public void Strnicmp_WithPartialMatch_ShouldCompareUpToCount()
+	{
+		// Arrange - strings differ after count characters
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hello World\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("HELLO THERE\0");
+		var count = 5u; // Compare only first 5 characters
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // First 5 characters match (case-insensitive)
+	}
+
+	[Fact]
+	public void Strnicmp_WithCountLargerThanStrings_ShouldCompareFullStrings()
+	{
+		// Arrange - count is larger than string length
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hi\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("HI\0");
+		var count = 100u; // Much larger than string length
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // Strings are equal (case-insensitive)
+	}
+
+	[Fact]
+	public void Strnicmp_WithZeroCount_ShouldReturnZero()
+	{
+		// Arrange - count is 0
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("abc\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("xyz\0");
+		var count = 0u; // Compare 0 characters
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		Assert.Equal(0u, returnValue); // Comparing 0 characters always returns 0
+	}
+
+	[Fact]
+	public void Strnicmp_WithShorterFirstString_ShouldReturnNegative()
+	{
+		// Arrange - str1 is shorter than str2 within count boundary
+		var str1Ptr = _testEnv.ProcessEnv.WriteAnsiString("He\0");
+		var str2Ptr = _testEnv.ProcessEnv.WriteAnsiString("Hello\0");
+		var count = 5u; // Compare up to 5 characters, but str1 is only 2
+
+		// Act - call _strnicmp
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, str1Ptr, str2Ptr, count);
+		var success = _msvcrt.TryInvokeUnsafe("_strnicmp", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_strnicmp should be implemented");
+		var result = unchecked((int)returnValue);
+		Assert.True(result < 0, "Shorter string should be less than longer string when they match up to shorter length");
+	}
+
+	[Fact]
+	public void Ismbblead_WithShiftJisLeadByte_ShouldReturnNonZero()
+	{
+		// Arrange - test with a Shift-JIS lead byte in range 0x81-0x9F
+		var leadByte = 0x81u;
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, leadByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.NotEqual(0u, returnValue); // Non-zero indicates it's a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithShiftJisLeadByteUpperRange_ShouldReturnNonZero()
+	{
+		// Arrange - test with a Shift-JIS lead byte in range 0xE0-0xFC
+		var leadByte = 0xE0u;
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, leadByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.NotEqual(0u, returnValue); // Non-zero indicates it's a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithAsciiCharacter_ShouldReturnZero()
+	{
+		// Arrange - test with a standard ASCII character
+		var asciiByte = 0x41u; // 'A'
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, asciiByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.Equal(0u, returnValue); // Zero indicates it's not a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithNonLeadByte_ShouldReturnZero()
+	{
+		// Arrange - test with a byte that's not a lead byte (0x7F, 0xA0)
+		var nonLeadByte = 0x7Fu;
+
+		// Act - call _ismbblead
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, nonLeadByte);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+
+		// Assert
+		Assert.True(success, "_ismbblead should be implemented");
+		Assert.Equal(0u, returnValue); // Zero indicates it's not a lead byte
+	}
+
+	[Fact]
+	public void Ismbblead_WithBoundaryValues_ShouldReturnCorrectly()
+	{
+		// Test boundary values: 0x80, 0x9F, 0xDF, 0xFC, 0xFD
+		
+		// 0x80 - Not a lead byte (just before 0x81)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0x80u);
+		var success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+		Assert.True(success);
+		Assert.Equal(0u, returnValue);
+
+		// 0x9F - Lead byte (end of first range)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0x9Fu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.NotEqual(0u, returnValue);
+
+		// 0xDF - Not a lead byte (just before 0xE0)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0xDFu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.Equal(0u, returnValue);
+
+		// 0xFC - Lead byte (end of second range)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0xFCu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.NotEqual(0u, returnValue);
+
+		// 0xFD - Not a lead byte (after 0xFC)
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0xFDu);
+		success = _msvcrt.TryInvokeUnsafe("_ismbblead", _testEnv.Cpu, _testEnv.Memory, out returnValue);
+		Assert.True(success);
+		Assert.Equal(0u, returnValue);
 	}
 
 	public void Dispose()

@@ -41,6 +41,7 @@ namespace Win32Emu.Win32.Modules
 
 		// Timer tracking for SetTimer implementation
 		private readonly ConcurrentDictionary<uint, TimerInfo> _timers = new();
+		private readonly ConcurrentDictionary<uint, long> _timerLastFired = new();
 		private uint _nextTimerId = 1;
 
 		// Hook tracking for SetWindowsHookEx implementation
@@ -94,6 +95,11 @@ namespace Win32Emu.Win32.Modules
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
 			_standardControlHandler = new StandardControlHandler(env, null, _logger);
+			
+			// Register our SendMessageAsync method with ProcessEnvironment so it can deliver
+			// WM_CREATE and other creation messages synchronously to window procedures
+			_env.SetSendMessageDelegate((hwnd, msg, wParam, lParam) => 
+				SendMessageAsync(hwnd, msg, wParam, lParam, CancellationToken.None));
 		}
 
 		public void SetDispatcher(Win32Dispatcher dispatcher)
@@ -155,6 +161,26 @@ namespace Win32Emu.Win32.Modules
 						a.UInt32(9), // hMenu
 						a.UInt32(10), // hInstance
 						a.UInt32(11) // lpParam
+					);
+					return true;
+
+				case "CREATEWINDOWA":
+					// CreateWindowA is like CreateWindowExA but with dwExStyle = 0
+					// Note: This is implemented inline in TryInvokeUnsafe rather than as a separate
+					// method, so it doesn't require [DllModuleExport] attribute
+					returnValue = CreateWindowExA(
+						0, // dwExStyle (always 0 for CreateWindowA)
+						a.Lpstr(0), // lpClassName
+						a.Lpstr(1), // lpWindowName
+						a.UInt32(2), // dwStyle
+						a.Int32(3), // x
+						a.Int32(4), // y
+						a.Int32(5), // nWidth
+						a.Int32(6), // nHeight
+						a.UInt32(7), // hWndParent
+						a.UInt32(8), // hMenu
+						a.UInt32(9), // hInstance
+						a.UInt32(10) // lpParam
 					);
 					return true;
 
@@ -1009,6 +1035,10 @@ namespace Win32Emu.Win32.Modules
 					returnValue = InsertMenuA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.LpcStr(4));
 					return true;
 
+				case "INSERTMENUW":
+					returnValue = InsertMenuW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), a.LpcWStr(4));
+					return true;
+
 				case "INSERTMENUITEMA":
 					returnValue = InsertMenuItemA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
@@ -1737,6 +1767,15 @@ namespace Win32Emu.Win32.Modules
 
 				case "TRANSLATEMESSAGE":
 					return (true, await TranslateMessageAsync(a.UInt32(0), cancellationToken).ConfigureAwait(false));
+				
+				case "CREATEWINDOWEXA":
+					return (true, await CreateWindowExAsync(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3), 
+						a.Int32(4), a.Int32(5), a.Int32(6), a.Int32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), a.UInt32(11), cancellationToken).ConfigureAwait(false));
+				
+				case "CREATEWINDOWA":
+					// CreateWindowA is like CreateWindowExA but with dwExStyle = 0
+					return (true, await CreateWindowExAsync(0, a.UInt32(0), a.UInt32(1), a.UInt32(2), 
+						a.Int32(3), a.Int32(4), a.Int32(5), a.Int32(6), a.UInt32(7), a.UInt32(8), a.UInt32(9), a.UInt32(10), cancellationToken).ConfigureAwait(false));
 			}
 
 			// For all other APIs, use synchronous implementation
@@ -1771,6 +1810,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpWndClass == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL WNDCLASS pointer");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -1780,10 +1820,20 @@ namespace Win32Emu.Win32.Modules
 			if (wndClass.lpszClassName == 0)
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL class name");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
 			var className = _env.ReadAnsiString(wndClass.lpszClassName);
+			
+			// Check if class already exists
+			if (_env.IsWindowClassRegistered(className))
+			{
+				_logger.LogInformation("[User32] RegisterClassA: Class '{ClassName}' already registered", className);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_CLASS_ALREADY_EXISTS;
+				return 0;
+			}
+			
 			var menuName = wndClass.lpszMenuName != 0 ? _env.ReadAnsiString(wndClass.lpszMenuName) : null;
 
 			var classInfo = new ProcessEnvironment.WindowClassInfo(
@@ -1887,6 +1937,7 @@ namespace Win32Emu.Win32.Modules
 				if (atomClassName == null)
 				{
 					_logger.LogInformation("[User32] CreateWindowExA: Unknown atom 0x{ClassNamePtr:X4}", classNamePtr);
+					_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 					return 0;
 				}
 
@@ -1895,6 +1946,7 @@ namespace Win32Emu.Win32.Modules
 			else if (classNamePtr == 0)
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: NULL class name");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 			else
@@ -1909,6 +1961,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_env.IsWindowClassRegistered(className))
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: Window class '{ClassName}' not registered", className);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
@@ -1946,6 +1999,107 @@ namespace Win32Emu.Win32.Modules
 			else
 			{
 				_logger.LogInformation("[User32] CreateWindowExA: Failed to create window");
+			}
+
+			return hwnd;
+		}
+		
+		/// <summary>
+		/// Async version of CreateWindowExA for WASM platform.
+		/// Uses async message delivery and pumping to ensure WM_CREATE is processed.
+		/// </summary>
+		private async Task<uint> CreateWindowExAsync(
+			uint dwExStyle,
+			uint lpClassName,
+			uint lpWindowName,
+			uint dwStyle,
+			int x,
+			int y,
+			int nWidth,
+			int nHeight,
+			uint hWndParent,
+			uint hMenu,
+			uint hInstance,
+			uint lpParam,
+			CancellationToken cancellationToken = default)
+		{
+			var classNamePtr = lpClassName;
+			var windowNamePtr = lpWindowName;
+
+			string className;
+
+			// Check if lpClassName is an atom (HIWORD is 0) or a string pointer
+			if (classNamePtr != 0 && (classNamePtr & 0xFFFF0000) == 0)
+			{
+				// It's an atom - look up the class name
+				var atomClassName = _env.GetClassNameFromAtom(classNamePtr);
+				if (atomClassName == null)
+				{
+					_logger.LogInformation("[User32] CreateWindowExAsync: Unknown atom 0x{ClassNamePtr:X4}", classNamePtr);
+					_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+					return 0;
+				}
+
+				className = atomClassName;
+			}
+			else if (classNamePtr == 0)
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: NULL class name");
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+			else
+			{
+				// It's a string pointer
+				className = _env.ReadAnsiString(classNamePtr);
+			}
+
+			var windowName = windowNamePtr != 0 ? _env.ReadAnsiString(windowNamePtr) : "";
+
+			// Check if window class is registered
+			if (!_env.IsWindowClassRegistered(className))
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: Window class '{ClassName}' not registered", className);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+				return 0;
+			}
+
+			// Handle CW_USEDEFAULT for position and size
+			const int cwUsedefault = unchecked((int)0x80000000);
+			if (x == cwUsedefault)
+			{
+				x = 100;
+			}
+
+			if (y == cwUsedefault)
+			{
+				y = 100;
+			}
+
+			if (nWidth == cwUsedefault)
+			{
+				nWidth = 640;
+			}
+
+			if (nHeight == cwUsedefault)
+			{
+				nHeight = 480;
+			}
+
+			// Use the async version of CreateWindow which properly pumps messages on WASM
+			var hwnd = await _env.CreateWindowAsync(
+				className, windowName, dwStyle, dwExStyle,
+				x, y, nWidth, nHeight, hWndParent, hMenu, hInstance, lpParam,
+				cancellationToken
+			).ConfigureAwait(false);
+
+			if (hwnd != 0)
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: Created HWND=0x{Hwnd:X8} Class='{ClassName}' Title='{WindowName}'", hwnd, className, windowName);
+			}
+			else
+			{
+				_logger.LogInformation("[User32] CreateWindowExAsync: Failed to create window");
 			}
 
 			return hwnd;
@@ -3035,6 +3189,7 @@ namespace Win32Emu.Win32.Modules
 			if (!windowInfo.HasValue)
 			{
 				_logger.LogWarning("[User32] UpdateWindow: Window 0x{Hwnd:X8} not found", hwnd);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
 				return 0; // FALSE
 			}
 
@@ -3055,6 +3210,7 @@ namespace Win32Emu.Win32.Modules
 			if (!window.HasValue)
 			{
 				_logger.LogWarning("[User32] DestroyWindow: Window 0x{Hwnd:X8} not found", hwnd);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
 				return 0; // FALSE - window doesn't exist
 			}
 
@@ -3078,6 +3234,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogWarning("[User32] DestroyWindow: Failed to destroy window 0x{Hwnd:X8}", hwnd);
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
 			return 0; // FALSE
 		}
 
@@ -3103,12 +3260,18 @@ namespace Win32Emu.Win32.Modules
 				case SystemMetric.SM_CYSCREEN://1:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYSCREEN (1): {Height}", _env.DisplayHeight);
 					return _env.DisplayHeight; // SM_CYSCREEN - Screen height (use display mode height)
-				case SystemMetric.SM_CXMIN://4:
-					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (4): 640");
+				case (SystemMetric)2: // SM_CXVSCROLL
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXVSCROLL (2): 17");
+					return 17; // SM_CXVSCROLL - Width of vertical scrollbar
+				case (SystemMetric)3: // SM_CYHSCROLL
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYHSCROLL (3): 17");
+					return 17; // SM_CYHSCROLL - Height of horizontal scrollbar
+				case (SystemMetric)4: // SM_CYCAPTION
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CYCAPTION (4): 19");
+					return 19; // SM_CYCAPTION - Caption bar height (Windows 95/98 standard)
+				case (SystemMetric)5: // SM_CXMIN
+					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXMIN (5): 640");
 					return 640; // SM_CXMIN - Minimum window width
-				case SystemMetric.SM_CYMIN://5:
-					_logger.LogInformation("[User32] GetSystemMetrics: Returning SM_CXSCREEN (5): 480");
-					return 480; // SM_CYMIN - Minimum window height
 				default:
 					_logger.LogInformation("[User32] GetSystemMetrics: Returning {SystemMetric} ({SystemMetricValue}): 0", nIndex.ToString(), (int)nIndex);
 					return 0;
@@ -4367,8 +4530,9 @@ namespace Win32Emu.Win32.Modules
 					return handle;
 				}
 
-				_logger.LogWarning("[User32] LoadImageA: Bitmap \"{ImageName}\" not found in resources or files", imageName);
+				_logger.LogDebug("[User32] LoadImageA: Bitmap \"{ImageName}\" not found in resources or files", imageName);
 				// Error 1814 = ERROR_RESOURCE_NAME_NOT_FOUND
+				// This is expected behavior when a bitmap resource doesn't exist - Windows API also returns NULL
 				return 0;
 			}
 
@@ -5350,13 +5514,10 @@ namespace Win32Emu.Win32.Modules
 			);
 
 			_timers[timerId] = timerInfo;
+			_timerLastFired[timerId] = Environment.TickCount64;
 
 			_logger.LogInformation("[User32] SetTimer: Created timer ID={TimerId}, callback=0x{Callback:X8}",
 				timerId, lpTimerFunc);
-
-			// Note: The timer is now registered but won't fire automatically without a timer scheduler.
-			// Applications can query or manually trigger timers through other mechanisms.
-			// The CallTimerProcAsync method is ready to be invoked when the timer fires.
 
 			return timerId;
 		}
@@ -5393,6 +5554,57 @@ namespace Win32Emu.Win32.Modules
 				dwTime,
 				cancellationToken
 			).ConfigureAwait(false);
+		}
+
+		/// <summary>
+		/// Process all registered timers and fire those that have elapsed.
+		/// This should be called periodically from the event processing loop.
+		/// </summary>
+		public async Task ProcessTimersAsync(CancellationToken cancellationToken = default)
+		{
+			var currentTime = Environment.TickCount64;
+
+			foreach (var (timerId, timerInfo) in _timers)
+			{
+				// Get last fire time or 0 if never fired
+				var lastFired = _timerLastFired.GetOrAdd(timerId, 0);
+
+				// Check if timer should fire
+				var elapsed = currentTime - lastFired;
+				if (elapsed >= timerInfo.Elapse)
+				{
+					// Update last fired time
+					_timerLastFired[timerId] = currentTime;
+
+					// Fire the timer (post WM_TIMER message to the window)
+					if (timerInfo.HWnd != 0)
+					{
+						// Post WM_TIMER message to the window's message queue
+						PostMessageA(timerInfo.HWnd, 0x0113, timerId, 0);
+						_logger.LogDebug("[User32] ProcessTimers: Posted WM_TIMER for timer {TimerId} to window 0x{HWnd:X8}", timerId, timerInfo.HWnd);
+					}
+					else if (timerInfo.TimerProc != 0)
+					{
+						// Call timer callback directly
+						try
+						{
+							var dwTime = (uint)Environment.TickCount;
+							await CallTimerProcAsync(
+								timerInfo.TimerProc,
+								0, // No window
+								0x0113, // WM_TIMER
+								timerId,
+								dwTime,
+								cancellationToken
+							).ConfigureAwait(false);
+						}
+						catch (Exception ex)
+						{
+							_logger.LogError(ex, "[User32] ProcessTimers: Error calling timer callback for timer {TimerId}", timerId);
+						}
+					}
+				}
+			}
 		}
 
 		[DllModuleExport(0)]
@@ -6411,6 +6623,7 @@ namespace Win32Emu.Win32.Modules
 			// Remove the timer from tracking if it exists
 			if (_timers.TryRemove(uIDEvent, out _))
 			{
+				_timerLastFired.TryRemove(uIDEvent, out _);
 				_logger.LogInformation("[User32] KillTimer: Removed timer {TimerId}", uIDEvent);
 			}
 			else
@@ -7948,6 +8161,18 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
+		/// Inserts a new menu item into a menu, moving other items down the menu (Unicode version).
+		/// </summary>
+		[DllModuleExport(20, IsStub = true)]
+		private uint InsertMenuW(uint hMenu, uint uPosition, uint uFlags, uint uIDNewItem, in LpcWStr lpNewItem)
+		{
+			var itemName = lpNewItem.Read(_env.Memory) ?? "";
+			_logger.LogInformation("[User32] InsertMenuW(hMenu=0x{HMenu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X8}, uIDNewItem={UIDNewItem}, lpNewItem='{LpNewItem}')",
+				hMenu, uPosition, uFlags, uIDNewItem, itemName);
+			return 1;
+		}
+
+		/// <summary>
 		/// Inserts a new menu item at the specified position in a menu.
 		/// </summary>
 		[DllModuleExport(16, IsStub = true)]
@@ -9368,7 +9593,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Stub implementation
 		}
 
-		[DllModuleExport(20, IsStub = true)]
+		[DllModuleExport(20)]
 		private uint PeekMessageW(uint lpMsg, uint hWnd, uint wMsgFilterMin, uint wMsgFilterMax, uint wRemoveMsg)
 		{
 			_logger.LogInformation("[User32] PeekMessageW(lpMsg={Lpmsg}, hWnd={Hwnd}, wMsgFilterMin={Wmsgfiltermin}, wMsgFilterMax={Wmsgfiltermax}, wRemoveMsg={Wremovemsg})", lpMsg, hWnd, wMsgFilterMin, wMsgFilterMax, wRemoveMsg);
@@ -9382,7 +9607,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Stub implementation
 		}
 
-		[DllModuleExport(16, IsStub = true)]
+		[DllModuleExport(16)]
 		private uint PostThreadMessageW(uint idThread, uint Msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] PostThreadMessageW(idThread={Idthread}, Msg={Msg}, wParam={Wparam}, lParam={Lparam})", idThread, Msg, wParam, lParam);

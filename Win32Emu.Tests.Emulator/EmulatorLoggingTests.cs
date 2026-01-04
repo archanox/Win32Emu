@@ -80,8 +80,8 @@ public class EmulatorLoggingTests
         Assert.Contains(logMessages, msg => msg.Contains("[Loader] Host OS Architecture:") || msg.Contains("[Loader] Host Architecture:"));
         Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator:"));
         
-        // Verify default CPU emulator is logged (IcedCpu is the default)
-        Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator: IcedCpu"));
+        // Verify default CPU emulator is logged (JitCpu is the default)
+        Assert.Contains(logMessages, msg => msg.Contains("[Loader] Selected CPU Emulator: JitCpu"));
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class EmulatorLoggingTests
 
         // Act
         using var emulator = new Win32Emu.Emulator(logger: logger);
-        emulator.LoadExecutable(exePath, debugMode: false, reservedMemoryMb: 256, useJitCpu: true);
+        emulator.LoadExecutable(exePath, debugMode: false, reservedMemoryMb: 256);
 
         // Assert
         _output.WriteLine("=== Captured Log Messages ===");

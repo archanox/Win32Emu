@@ -114,6 +114,22 @@ jobs:
       - name: Install .NET WASM workload
         run: dotnet workload install wasm-tools
 
+      - name: Build WASM Cache Generator
+        run: >
+          dotnet build
+          Win32Emu.Tools.WasmCacheGenerator/Win32Emu.Tools.WasmCacheGenerator.csproj
+          --configuration Release
+
+      - name: Generate WASM cache for ign_teas
+        run: |
+          echo "Generating WASM cache for ign_teas executable..."
+          dotnet run --project Win32Emu.Tools.WasmCacheGenerator \
+            --configuration Release --no-build -- \
+            EXEs/ign_teas/IGN_TEAS.EXE \
+            --output Win32Emu.Wasm/wwwroot/cache/IGN_TEAS.wasm-cache.json \
+            --max-blocks 5000 \
+            || echo "Note: Cache generation failed, will skip for now"
+
       - name: Build PE Analyzer WASM
         run: >
           dotnet publish
@@ -136,7 +152,7 @@ jobs:
       - name: Copy Emulator WASM
         run: |
           mkdir -p pages/emulator
-          cp -r Win32Emu.Wasm/bin/Release/net9.0/publish/wwwroot/* pages/emulator/
+          cp -r Win32Emu.Wasm/bin/Release/net10.0/publish/wwwroot/* pages/emulator/
 
       - name: Create main index page
         run: |
@@ -277,6 +293,11 @@ jobs:
           </body>
           </html>
           EOF
+
+      - name: Create .nojekyll file
+        run: |
+          touch pages/.nojekyll
+          echo "Created .nojekyll file to prevent Jekyll processing"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4

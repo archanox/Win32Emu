@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Logging;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Xunit.Abstractions;
 
@@ -25,7 +25,7 @@ public class ImportCallDiagnosticTests
         // to verify basic CPU behavior is correct
 
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
 
         // Setup code at 0x00400000
         var codeBase = 0x00400000u;
@@ -87,7 +87,7 @@ public class ImportCallDiagnosticTests
         // 3. Execution should continue normally
 
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
 
         var codeBase = 0x00400000u;
         var stackBase = 0x00100000u;
@@ -148,7 +148,7 @@ public class ImportCallDiagnosticTests
         // after LoadCursorA that causes the infinite loop
 
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
 
         var codeBase = 0x00400000u;
         var stackBase = 0x00100000u;
@@ -239,7 +239,7 @@ public class ImportCallDiagnosticTests
         // This prevents the cascading stack corruption described in the issue
 
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
 
         var codeBase = 0x00400000u;
         var stackBase = 0x00100000u;
@@ -270,7 +270,7 @@ public class ImportCallDiagnosticTests
         // and doesn't continue to cause cascading corruption
 
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
 
         var codeBase = 0x00400000u;
         var stackBase = 0x00100000u;

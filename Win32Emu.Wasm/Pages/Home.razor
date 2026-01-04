@@ -41,15 +41,13 @@
 								style="max-width: 100%; height: auto; image-rendering: pixelated;">
 						</canvas>
 						
-						<!-- Windows and dialogs overlay -->
-						@if (_activeWindows.Count > 0 || _activeDialog != null || _activeMessageBox != null)
+						<!-- Dialogs and message boxes overlay -->
+						<!-- Note: WindowComponent overlays are NOT rendered because regular windows (CreateWindowEx)
+						     render their content directly on the canvas via DirectDraw/GDI. Only dialogs and message boxes
+						     need HTML overlays since they use Win32 controls that aren't rendered via DirectDraw. -->
+						@if (_activeDialog != null || _activeMessageBox != null)
 						{
 							<div class="win32-overlay">
-								@foreach (var windowInfo in _activeWindows.Values)
-								{
-									<WindowComponent Info="windowInfo" OnClose="() => HandleWindowClose(windowInfo.Handle)" />
-								}
-								
 								@if (_activeDialog != null)
 								{
 									<DialogComponent Info="_activeDialog" OnResult="HandleDialogResult" />
@@ -64,6 +62,9 @@
 					</div>
 				</div>
 			</div>
+			
+			<!-- Virtual Keyboard for Mobile -->
+			<VirtualKeyboard />
 		</div>
 
 		<div class="col-md-4">
@@ -88,6 +89,38 @@
 							<label class="form-check-label" for="force32BitStackOps">
 								Force 32-bit Stack Operations
 								<small class="text-muted d-block">Improves Win32 compatibility by forcing PUSH/POP/CALL/RET to use 32-bit operands in 32-bit mode</small>
+							</label>
+						</div>
+						
+						<div class="form-check mb-2">
+							<input class="form-check-input" type="checkbox" id="useJitCpu" @bind="_useJitCpu" disabled="@_isRunning" />
+							<label class="form-check-label" for="useJitCpu">
+								Use JIT CPU
+								<small class="text-muted d-block">Enable JIT CPU backend (runs in interpreter mode in WASM, same performance as IcedCpu)</small>
+							</label>
+						</div>
+						
+						<div class="form-check mb-2">
+							<input class="form-check-input" type="checkbox" id="useCache" @bind="_useCache" disabled="@_isRunning" />
+							<label class="form-check-label" for="useCache">
+								Use Pre-compiled Cache
+								<small class="text-muted d-block">Load pre-analyzed block metadata for faster startup (only for IcedCpu)</small>
+							</label>
+						</div>
+						
+						<div class="form-check mb-2">
+							<input class="form-check-input" type="checkbox" id="enableInstructionAnalyzer" @bind="_enableInstructionAnalyzer" disabled="@_isRunning" />
+							<label class="form-check-label" for="enableInstructionAnalyzer">
+								Enable Instruction Analyzer
+								<small class="text-muted d-block">Enable instruction-level analysis for debugging (FormatCurrentInstruction, AnalyzeCurrentInstruction)</small>
+							</label>
+						</div>
+						
+						<div class="form-check mb-2">
+							<input class="form-check-input" type="checkbox" id="enableLegacyInstructionDecoding" @bind="_enableLegacyInstructionDecoding" disabled="@_isRunning" />
+							<label class="form-check-label" for="enableLegacyInstructionDecoding">
+								Enable Legacy Instruction Decoding
+								<small class="text-muted d-block">Support for older instruction sets (MPX, Cyrix, ALTINST, etc.)</small>
 							</label>
 						</div>
 						
@@ -168,6 +201,48 @@
 				</div>
 			</div>
 
+			<!-- Sample Executables -->
+			<div class="card mb-3">
+				<div class="card-header">
+					<strong>📦 Sample Executables</strong>
+				</div>
+				<div class="card-body">
+					<p class="small text-muted">
+						Try these DirectDraw examples to test the emulator:
+					</p>
+					<div class="d-grid gap-2">
+						<button class="btn btn-outline-primary btn-sm" 
+								@onclick="@(() => LoadSampleExecutable("simple_ddraw.exe"))"
+								disabled="@_isRunning">
+							<i class="bi bi-file-earmark-code"></i> Simple DirectDraw
+							<br />
+							<small class="text-muted">Basic DirectDraw test with animated pattern</small>
+						</button>
+						<button class="btn btn-outline-primary btn-sm" 
+								@onclick="@(() => LoadSampleExecutable("hugi.exe"))"
+								disabled="@_isRunning">
+							<i class="bi bi-file-earmark-code"></i> Hugi DirectDraw Example
+							<br />
+							<small class="text-muted">Advanced example from Hugi 16 article</small>
+						</button>
+						<button class="btn btn-outline-primary btn-sm" 
+								@onclick="@(() => LoadSampleFolder("dd_image", "dd_image.exe"))"
+								disabled="@_isRunning">
+							<i class="bi bi-file-earmark-code"></i> DD Image Example
+							<br />
+							<small class="text-muted">DirectDraw image blitting test from uwin</small>
+						</button>
+						<button class="btn btn-outline-success btn-sm" 
+								@onclick="@(() => LoadSampleFolder("ign_teas", "IGN_TEAS.EXE"))"
+								disabled="@_isRunning">
+							<i class="bi bi-controller"></i> IGN_TEAS Game
+							<br />
+							<small class="text-muted">Classic Windows game with DirectDraw rendering</small>
+						</button>
+					</div>
+				</div>
+			</div>
+
 			<!-- Status Info -->
 			<div class="card mb-3">
 				<div class="card-header">
@@ -186,6 +261,14 @@
 						<div class="d-flex justify-content-between mb-2">
 							<span>Audio:</span>
 							<strong>@(_audioEnabled ? "Enabled" : "Disabled")</strong>
+						</div>
+						<div class="d-flex justify-content-between mb-2">
+							<span>CPU Backend:</span>
+							<strong>@EmulatorService.CpuBackend</strong>
+						</div>
+						<div class="d-flex justify-content-between mb-2">
+							<span>Cache:</span>
+							<strong>@(EmulatorService.IsCacheEnabled ? "Loaded" : "Disabled")</strong>
 						</div>
 						<div class="d-flex justify-content-between">
 							<span>VFS Files:</span>
@@ -238,6 +321,13 @@
 			</div>
 		</div>
 	</div>
+	
+	<!-- Virtual File System Browser -->
+	<div class="row mt-3">
+		<div class="col-12">
+			<VirtualFileSystemBrowser Files="@_vfsFiles" OnRefresh="@RefreshVfsFiles" />
+		</div>
+	</div>
 
 	<!-- Note about current implementation -->
 	<div class="row mt-3">
@@ -277,6 +367,93 @@
 			</div>
 		</div>
 	</div>
+	
+	<!-- DirectDraw Diagnostics Panel -->
+	<div class="row mt-3">
+		<div class="col-12">
+			<div class="card">
+				<div class="card-header">
+					<strong>🎨 DirectDraw Diagnostics</strong>
+					<button class="btn btn-sm btn-outline-primary float-end" @onclick="RefreshDDrawStats">
+						<i class="bi bi-arrow-clockwise"></i> Refresh
+					</button>
+				</div>
+				<div class="card-body">
+					<div class="row">
+						<div class="col-md-6">
+							<h6>Canvas Status</h6>
+							<table class="table table-sm">
+								<tbody>
+									<tr>
+										<td>Canvas ID:</td>
+										<td><code>emulatorCanvas</code></td>
+									</tr>
+									<tr>
+										<td>Dimensions:</td>
+										<td><strong id="canvasDimensions">640x480</strong></td>
+									</tr>
+									<tr>
+										<td>Last Update:</td>
+										<td><strong id="lastCanvasUpdate">Never</strong></td>
+									</tr>
+									<tr>
+										<td>Update Count:</td>
+										<td><strong id="canvasUpdateCount">0</strong></td>
+									</tr>
+									<tr>
+										<td>Canvas Visible:</td>
+										<td><strong id="canvasVisible">Unknown</strong></td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+						<div class="col-md-6">
+							<h6>Rendering Backend</h6>
+							<table class="table table-sm">
+								<tbody>
+									<tr>
+										<td>Initialized:</td>
+										<td><strong id="backendInitialized">Unknown</strong></td>
+									</tr>
+									<tr>
+										<td>Frame Buffer Size:</td>
+										<td><strong id="frameBufferSize">Unknown</strong></td>
+									</tr>
+									<tr>
+										<td>Pixel Format:</td>
+										<td><strong id="pixelFormat">RGBA32</strong></td>
+									</tr>
+									<tr>
+										<td>Error Occurred:</td>
+										<td><strong id="renderingError">No</strong></td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+					<div class="row mt-3">
+						<div class="col-12">
+							<h6>DirectDraw Calls Log</h6>
+							<div class="alert alert-info">
+								<small>
+									Recent DirectDraw API calls will appear here. Look for:
+									<ul class="mb-0">
+										<li><code>DirectDrawCreate</code> - DirectDraw initialization</li>
+										<li><code>SetCooperativeLevel</code> - Window mode setup</li>
+										<li><code>SetDisplayMode</code> - Resolution and color depth</li>
+										<li><code>CreateSurface</code> - Surface creation</li>
+										<li><code>Lock/Unlock</code> - Drawing operations</li>
+										<li><code>UpdateFrameBuffer</code> - Canvas updates</li>
+									</ul>
+								</small>
+							</div>
+							<pre id="ddrawCallsLog" class="log-panel" style="height: 150px; overflow-y: auto; background-color: #f8f9fa; padding: 10px;">@_ddrawCallsLog</pre>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 </div>
 
 @code {
@@ -285,6 +462,10 @@
 	private bool _audioEnabled = false;
 	private bool _folderMode = false;
 	private bool _force32BitStackOps = true; // Default to true for Win32 compatibility
+	private bool _useJitCpu = false; // Default to IcedCpu
+	private bool _useCache = true; // Default to using cache
+	private bool _enableInstructionAnalyzer = false; // Default to disabled
+	private bool _enableLegacyInstructionDecoding = false; // Default to disabled
 	private string _loadedFileName = string.Empty;
 	private long _loadedFileSize = 0;
 	private byte[]? _executableData = null;
@@ -308,12 +489,19 @@
 	private const int LogRotationBufferMargin = 1000;
 	private const string LogTruncationPrefix = "... (older logs truncated) ...\n";
 	
+	// DirectDraw diagnostics
+	private string _ddrawCallsLog = "Waiting for DirectDraw calls...\n";
+	private const int MAX_DDRAW_LOG_LINES = 50;
+	
 	// Windows and dialogs state
 	private readonly Dictionary<uint, WindowCreateInfo> _activeWindows = new();
 	private DialogCreateInfo? _activeDialog = null;
 	private Win32Emu.Wasm.Services.WasmEmulatorHost.DialogCreateEventArgs? _activeDialogEventArgs = null;
 	private MessageBoxInfo? _activeMessageBox = null;
 	private Win32Emu.Wasm.Services.WasmEmulatorHost.MessageBoxEventArgs? _activeMessageBoxEventArgs = null;
+	
+	// Virtual File System state
+	private IReadOnlyDictionary<string, byte[]>? _vfsFiles = null;
 	
 	// Track the currently subscribed host to avoid double subscriptions and enable proper cleanup
 	private Win32Emu.Wasm.Services.WasmEmulatorHost? _subscribedHost = null;
@@ -338,6 +526,20 @@
 	{
 		try
 		{
+			// Filter for DirectDraw-related messages for diagnostics panel
+			if (e.Message.Contains("DDraw", StringComparison.OrdinalIgnoreCase) || 
+				e.Message.Contains("DirectDraw", StringComparison.OrdinalIgnoreCase) || 
+				e.Message.Contains("SetDisplayMode", StringComparison.OrdinalIgnoreCase) || 
+				e.Message.Contains("CreateSurface", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("updateCanvas", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("Canvas updated", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("Lock", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("Unlock", StringComparison.OrdinalIgnoreCase) ||
+				e.Message.Contains("UpdateFrameBuffer", StringComparison.OrdinalIgnoreCase))
+			{
+				AddDDrawLog(e.Message);
+			}
+			
 			await InvokeAsync(() =>
 			{
 				var formattedMessage = e.ToFormattedString() + "\n";
@@ -570,12 +772,19 @@
 			// Load the executable using the real emulator
 			AddDebugOutput($"Loading PE executable: {_loadedFileName}");
 			AddDebugOutput($"SIMD: {EmulatorService.GetSimdCapabilities()}");
+			AddDebugOutput($"CPU Backend: Unified JitCpu (Interpreter mode in WASM)");
+			AddDebugOutput($"Cache: {(_useCache ? "Enabled" : "Disabled")}");
+			AddDebugOutput($"Instruction Analyzer: {(_enableInstructionAnalyzer ? "Enabled" : "Disabled")}");
+			AddDebugOutput($"Legacy Instruction Decoding: {(_enableLegacyInstructionDecoding ? "Enabled" : "Disabled")}");
 			
 			var loadSuccess = await EmulatorService.LoadExecutableAsync(
 				_executableData, 
 				_loadedFileName,
 				_folderMode ? _loadedFiles : null,
-				_force32BitStackOps);
+				_force32BitStackOps,
+				_useCache,
+				_enableInstructionAnalyzer,
+				_enableLegacyInstructionDecoding);
 			
 			if (!loadSuccess)
 			{
@@ -603,6 +812,9 @@
 				{
 					_instructionsExecuted = (long)EmulatorService.InstructionsExecuted;
 					_fps = 60; // TODO: Get actual FPS from emulator
+					
+					// Refresh VFS files to show any new files created by the emulator
+					_vfsFiles = EmulatorService.GetVfsFiles();
 					
 					await InvokeAsync(StateHasChanged);
 					await Task.Delay(100); // Update UI at 10 FPS
@@ -740,6 +952,114 @@
 			len = len / 1024;
 		}
 		return $"{len:0.##} {sizes[order]}";
+	}
+
+	/// <summary>
+	/// Load a sample executable from the wwwroot/samples directory
+	/// </summary>
+	private async Task LoadSampleExecutable(string fileName)
+	{
+		try
+		{
+			AddDebugOutput($"Loading sample: {fileName}");
+			
+			// Fetch the sample executable from wwwroot/samples as a byte array
+			var bytes = await JS.InvokeAsync<byte[]>("fetchBinary", $"samples/{fileName}");
+			if (bytes == null || bytes.Length == 0)
+			{
+				AddDebugOutput($"Failed to download sample: {fileName}");
+				return;
+			}
+			
+			_executableData = bytes;
+			_loadedFileName = fileName;
+			_loadedFileSize = bytes.Length;
+			_executableLoaded = true;
+			_folderMode = false;
+			_loadedFiles.Clear();
+			_discoveredExecutables.Clear();
+			
+			AddDebugOutput($"Sample loaded: {fileName} ({FormatFileSize(_loadedFileSize)})");
+			Logger.LogInformation("Sample executable loaded: {FileName} ({Size} bytes)", fileName, _loadedFileSize);
+			
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			AddDebugOutput($"Error loading sample: {ex.Message}");
+			Logger.LogError(ex, "Error loading sample executable");
+		}
+	}
+
+	/// <summary>
+	/// Load a sample folder (executable + data files) from the wwwroot/samples directory
+	/// </summary>
+	private async Task LoadSampleFolder(string folderPath, string executableName)
+	{
+		try
+		{
+			AddDebugOutput($"Loading sample folder: {folderPath}");
+			
+			// Fetch all files from the folder
+			var fileDataList = await JS.InvokeAsync<List<SampleFileData>>("fetchSampleFolder", $"samples/{folderPath}");
+			if (fileDataList == null || fileDataList.Count == 0)
+			{
+				AddDebugOutput($"Failed to download sample folder: {folderPath}");
+				return;
+			}
+			
+			_loadedFiles.Clear();
+			_discoveredExecutables.Clear();
+			long totalSize = 0;
+			
+			foreach (var fileData in fileDataList)
+			{
+				var bytes = fileData.Content.ToArray();
+				_loadedFiles[fileData.RelativePath] = bytes;
+				totalSize += fileData.Size;
+				
+				if (fileData.Name.Equals(executableName, StringComparison.OrdinalIgnoreCase))
+				{
+					_executableData = bytes;
+					_loadedFileName = fileData.Name;
+					_loadedFileSize = fileData.Size;
+				}
+				
+				if (fileData.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+				{
+					_discoveredExecutables.Add(new ExecutableInfo
+					{
+						Name = fileData.Name,
+						RelativePath = fileData.RelativePath,
+						Size = fileData.Size
+					});
+				}
+			}
+			
+			_executableLoaded = true;
+			_folderMode = true;
+			
+			AddDebugOutput($"Sample folder loaded: {fileDataList.Count} files, {FormatFileSize(totalSize)}");
+			Logger.LogInformation("Sample folder loaded: {Folder} with {FileCount} files", folderPath, fileDataList.Count);
+			
+			StateHasChanged();
+		}
+		catch (Exception ex)
+		{
+			AddDebugOutput($"Error loading sample folder: {ex.Message}");
+			Logger.LogError(ex, "Error loading sample folder");
+		}
+	}
+	
+	/// <summary>
+	/// Helper class for sample file data from JavaScript
+	/// </summary>
+	private class SampleFileData
+	{
+		public string Name { get; set; } = string.Empty;
+		public string RelativePath { get; set; } = string.Empty;
+		public long Size { get; set; }
+		public List<byte> Content { get; set; } = new();
 	}
 
 	// Helper class for folder file data from JavaScript
@@ -938,5 +1258,43 @@
 		
 		// Unsubscribe from host events using the helper method
 		UnsubscribeFromEmulatorHost();
+	}
+	
+	private void AddDDrawLog(string message)
+	{
+		if (_ddrawCallsLog.StartsWith("Waiting for DirectDraw"))
+		{
+			_ddrawCallsLog = "";
+		}
+		
+		var timestamp = DateTime.Now.ToString("HH:mm:ss.fff");
+		_ddrawCallsLog += $"[{timestamp}] {message}\n";
+		
+		// Keep only last N lines
+		var lines = _ddrawCallsLog.Split('\n').ToList();
+		if (lines.Count > MAX_DDRAW_LOG_LINES)
+		{
+			lines.RemoveRange(0, lines.Count - MAX_DDRAW_LOG_LINES);
+			_ddrawCallsLog = string.Join('\n', lines);
+		}
+	}
+	
+	private async Task RefreshDDrawStats()
+	{
+		try
+		{
+			// Call JavaScript to update diagnostics
+			await JS.InvokeVoidAsync("refreshDDrawDiagnostics");
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Failed to refresh DirectDraw diagnostics");
+		}
+	}
+	
+	private void RefreshVfsFiles()
+	{
+		_vfsFiles = EmulatorService.GetVfsFiles();
+		StateHasChanged();
 	}
 }

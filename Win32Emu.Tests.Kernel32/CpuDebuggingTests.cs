@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Debugging;
 using Win32Emu.Memory;
 
@@ -15,7 +15,7 @@ public class CpuDebuggingTests
     public void TestEnhancedCpuDebugger()
     {
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         var debugger = new EnhancedCpuDebugger(cpu, memory);
         
         // Test the debugging functionality
@@ -53,7 +53,7 @@ public class CpuDebuggingTests
     public void TestInstructionTracing()
     {
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         var debugger = new EnhancedCpuDebugger(cpu, memory);
         
         // Set up a sequence of instructions to trace
@@ -97,7 +97,7 @@ public class CpuDebuggingTests
     public void TestProblematicEipDetection()
     {
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         var debugger = new EnhancedCpuDebugger(cpu, memory);
         
         // Set the CPU to the problematic EIP from the original error
@@ -126,7 +126,7 @@ public class CpuDebuggingTests
     public void TestCpuDebuggingExtensions()
     {
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Initialize registers to known state first
         cpu.SetRegister("EBP", 0x00200000); // Set to valid value initially  
@@ -153,7 +153,7 @@ public class CpuDebuggingTests
     public void TestSyntheticImportAddressDetection()
     {
         var memory = new VirtualMemory();
-        var cpu = new IcedCpu(memory);
+        var cpu = new JitCpu(memory);
         
         // Set up a synthetic import address with INT3 stub (like PeImageLoader creates)
         var syntheticAddress = 0x0F000512u; // This is the problematic address from the error log
@@ -166,7 +166,7 @@ public class CpuDebuggingTests
         // Test that SingleStep correctly identifies this as a call to synthetic import
         var stepResult = cpu.SingleStep(memory);
         
-        // The IcedCpu should recognize INT3 at synthetic address as a call
+        // The JitCpu should recognize INT3 at synthetic address as a call
         Assert.True(stepResult.IsCall);
         Assert.Equal(syntheticAddress, stepResult.CallTarget);
     }

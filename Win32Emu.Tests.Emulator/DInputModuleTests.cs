@@ -1,6 +1,6 @@
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
 using Win32Emu.Gui.Backends;
@@ -67,7 +67,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
         var dinputModule = new DInputModule(env, 0x00400000);
 
@@ -100,7 +100,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var backendFactory = new MockBackendFactory();
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
         var dinputModule = new DInputModule(env, 0x00400000);
@@ -129,7 +129,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
         var dinputModule = new DInput8Module(env, 0x00400000);
 
@@ -157,7 +157,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var backendFactory = new MockBackendFactory();
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
         var dinputModule = new DInputModule(env, 0x00400000);
@@ -187,7 +187,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
         var dinputModule = new DInputModule(env, 0x00400000);
 
@@ -304,7 +304,6 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
 
         // Create DIDATAFORMAT structure at 0x0040A480 (as seen in problem statement)
@@ -338,7 +337,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
         var dinputModule = new DInputModule(env, 0x00400000);
 
@@ -367,7 +366,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
         var dinputModule = new DInputModule(env, 0x00400000);
 
@@ -401,7 +400,7 @@ public class DInputModuleTests
     {
         // Arrange
         var vm = new VirtualMemory(0x10000000);
-        var cpu = new IcedCpu(vm);
+        var cpu = new JitCpu(vm);
         var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
         var dinputModule = new DInputModule(env, 0x00400000);
 

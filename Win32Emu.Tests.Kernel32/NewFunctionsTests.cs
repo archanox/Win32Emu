@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32;
 
 namespace Win32Emu.Tests.Kernel32;
@@ -271,9 +271,9 @@ public class NewFunctionsTests : IDisposable
         var srcPtr = WriteWideString(testString);
         var charTypeBuffer = _testEnv.AllocateMemory(20);
 
-        // Act - CT_CTYPE1 = 1
+        // Act - CT_CTYPE1 = 1 (no Locale parameter for GetStringTypeW)
         var result = _testEnv.CallKernel32Api("GETSTRINGTYPEW", 
-            0, 1, srcPtr, (uint)testString.Length, charTypeBuffer);
+            1, srcPtr, (uint)testString.Length, charTypeBuffer);
 
         // Assert
         Assert.Equal((uint)NativeTypes.Win32Bool.TRUE, result);

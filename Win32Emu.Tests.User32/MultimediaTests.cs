@@ -1,5 +1,5 @@
 using Xunit;
-using Win32Emu.Tests.User32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 
 namespace Win32Emu.Tests.User32;
 
@@ -161,6 +161,7 @@ public class MultimediaTests : IDisposable
         // Assert
         Assert.True(width > 0);
     }
+
 
     public void Dispose()
     {

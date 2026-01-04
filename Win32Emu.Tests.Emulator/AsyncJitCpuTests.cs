@@ -1,6 +1,6 @@
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Jit;
-using Win32Emu.Cpu.Iced;
+
 using Win32Emu.Memory;
 using Xunit;
 
@@ -36,30 +36,6 @@ public class AsyncJitCpuTests
 		Assert.True(cpu.SupportsJit);
 	}
 
-	[Fact]
-	public void IcedCpu_ShouldImplementIAsyncCpu()
-	{
-		// Arrange
-		var mem = new VirtualMemory(1024 * 1024);
-		
-		// Act
-		var cpu = new IcedCpu(mem);
-		
-		// Assert
-		Assert.IsAssignableFrom<IAsyncCpu>(cpu);
-		Assert.IsAssignableFrom<ICpu>(cpu);
-	}
-
-	[Fact]
-	public void IcedCpu_ShouldNotReportJitSupport()
-	{
-		// Arrange
-		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new IcedCpu(mem);
-		
-		// Assert
-		Assert.False(cpu.SupportsJit);
-	}
 
 	[Fact]
 	public async Task SingleStepAsync_ShouldExecuteInstruction()
@@ -188,11 +164,11 @@ public class AsyncJitCpuTests
 	}
 
 	[Fact]
-	public async Task IcedCpu_SingleStepAsync_ShouldWorkLikeSynchronousVersion()
+	public async Task JitCpu_SingleStepAsync_ShouldWorkLikeSynchronousVersion()
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new IcedCpu(mem);
+		var cpu = new JitCpu(mem);
 		
 		cpu.SetEip(0x1000);
 		mem.Write8(0x1000, 0x90); // NOP
@@ -208,11 +184,11 @@ public class AsyncJitCpuTests
 	}
 
 	[Fact]
-	public async Task IcedCpu_ExecuteBlockAsync_ShouldExecuteMultipleSteps()
+	public async Task JitCpu_ExecuteBlockAsync_ShouldExecuteMultipleSteps()
 	{
 		// Arrange
 		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new IcedCpu(mem);
+		var cpu = new JitCpu(mem);
 		
 		cpu.SetEip(0x1000);
 		// Write multiple NOP instructions followed by a CALL to terminate the block

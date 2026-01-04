@@ -1,7 +1,7 @@
 using Xunit;
 using System.Text;
 using Win32Emu.Memory;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32;
 
 namespace Win32Emu.Tests.Kernel32;

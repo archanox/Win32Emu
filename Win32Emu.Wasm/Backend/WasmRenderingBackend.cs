@@ -50,6 +50,7 @@ public class WasmRenderingBackend : IRenderingBackend
 	{
 		if (_initialized)
 		{
+			_logger.LogInformation("[WASM] InitializeAsync called but already initialized");
 			return true;
 		}
 
@@ -59,12 +60,15 @@ public class WasmRenderingBackend : IRenderingBackend
 			_height = height;
 			_frameBuffer = new byte[width * height * BytesPerPixelRgba]; // RGBA format
 			
-			_logger.LogInformation("[WASM] Initializing rendering backend ({Width}x{Height})", width, height);
+			_logger.LogInformation("[WASM] InitializeAsync starting: ({Width}x{Height})", width, height);
+			_logger.LogInformation("[WASM] Calling JavaScript initializeEmulator with canvasId: {CanvasId}", _canvasId);
 			
 			await _jsRuntime.InvokeVoidAsync("initializeEmulator", _canvasId);
 			
 			_initialized = true;
-			_logger.LogInformation("[WASM] Rendering backend initialized successfully");
+			_logger.LogInformation("[WASM] Rendering backend initialized successfully - canvas ready for updates");
+			_logger.LogInformation("[WASM] Frame buffer allocated: {Size} bytes ({Width}x{Height}x{BytesPerPixel})", 
+				_frameBuffer.Length, width, height, BytesPerPixelRgba);
 			return true;
 		}
 		catch (Exception ex)
@@ -90,11 +94,14 @@ public class WasmRenderingBackend : IRenderingBackend
 					var paletteIndex = indexedData[srcOffset];
 					if (paletteIndex < palette.Length)
 					{
+						// PALETTEENTRY structure on little-endian systems stores colors as:
+						// Byte 0: peRed, Byte 1: peGreen, Byte 2: peBlue, Byte 3: peFlags
+						// As a uint32: 0xFFBBGGRR (flags in high byte, blue, green, red in low byte)
 						var color = palette[paletteIndex];
-						rgbaData[dstOffset + 0] = (byte)((color >> 16) & 0xFF); // R
-						rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G
-						rgbaData[dstOffset + 2] = (byte)(color & 0xFF);         // B
-						rgbaData[dstOffset + 3] = (byte)((color >> 24) & 0xFF); // A
+						rgbaData[dstOffset + 0] = (byte)(color & 0xFF);         // R (bits 0-7)
+						rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G (bits 8-15)
+						rgbaData[dstOffset + 2] = (byte)((color >> 16) & 0xFF); // B (bits 16-23)
+						rgbaData[dstOffset + 3] = 255;                           // A (always opaque)
 					}
 				}
 			}
@@ -171,6 +178,7 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
+			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
 				_width, _height, pitch, data.Length);
 			
@@ -199,8 +207,8 @@ public class WasmRenderingBackend : IRenderingBackend
 			// Update canvas through JavaScript with better error handling
 			var base64Data = Convert.ToBase64String(_frameBuffer);
 			
-			// Log the call for debugging
-			_logger.LogDebug("[WASM] Calling updateCanvas: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
+			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
+			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
 				_canvasId, _width, _height, base64Data.Length);
 			
 			// Use fire-and-forget pattern but with proper error tracking
@@ -228,6 +236,7 @@ public class WasmRenderingBackend : IRenderingBackend
 					}
 					else
 					{
+						// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 						_logger.LogTrace("[WASM] Canvas update completed successfully");
 					}
 				});

@@ -1,4 +1,4 @@
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Xunit;
 
@@ -17,7 +17,7 @@ public class IndirectCallStackAddressTests
 		// At 0x0040319A, code executes "call ebp" where EBP=0x001FEF10 (stack address)
 		var memory = new VirtualMemory();
 		var imageBase = 0x00400000u; // Typical Win32 executable image base
-		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
+		var cpu = new JitCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x0040319A);
 		cpu.SetRegister("ESP", 0x001FEF0C);
@@ -48,7 +48,7 @@ public class IndirectCallStackAddressTests
 		// This simulates the scenario where [0x004552F8] contains 0x001FEF10
 		var memory = new VirtualMemory();
 		var imageBase = 0x00400000u; // Typical Win32 executable image base
-		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
+		var cpu = new JitCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x001FEF0C);
@@ -79,7 +79,7 @@ public class IndirectCallStackAddressTests
 		// Arrange: CALL with valid code address (>= image base)
 		var memory = new VirtualMemory();
 		var imageBase = 0x00400000u; // Typical Win32 executable image base
-		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
+		var cpu = new JitCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);
@@ -102,7 +102,7 @@ public class IndirectCallStackAddressTests
 		// Arrange: CALL with import stub address (0x0F000000 - 0x0FFFFFFF)
 		var memory = new VirtualMemory();
 		var imageBase = 0x00400000u; // Typical Win32 executable image base
-		var cpu = new IcedCpu(memory, null, imageBase: imageBase);
+		var cpu = new JitCpu(memory, null, imageBase: imageBase);
 		
 		cpu.SetEip(0x00400000);
 		cpu.SetRegister("ESP", 0x00100000);

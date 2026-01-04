@@ -60,6 +60,27 @@ public class EmulatorService : IDisposable
 	/// </summary>
 	public int VfsFileCount => _browserVfs?.FileCount ?? 0;
 	
+	/// <summary>
+	/// Gets whether cache is enabled and loaded
+	/// </summary>
+	public bool IsCacheEnabled => _emulator?.Cpu is Win32Emu.Cpu.Jit.JitCpu jitCpu && jitCpu.SupportsJit;
+	
+	/// <summary>
+	/// Gets the current CPU backend name
+	/// </summary>
+	public string CpuBackend
+	{
+		get
+		{
+			if (_emulator?.Cpu == null) return "None";
+			return _emulator.Cpu switch
+			{
+				Win32Emu.Cpu.Jit.JitCpu => "JitCpu (Interpreter in WASM)",
+				_ => _emulator.Cpu.GetType().Name
+			};
+		}
+	}
+	
 	public EmulatorService(IJSRuntime jsRuntime, ILoggerFactory loggerFactory)
 	{
 		_jsRuntime = jsRuntime;
@@ -84,12 +105,18 @@ public class EmulatorService : IDisposable
 	/// <param name="fileName">The name of the executable file</param>
 	/// <param name="additionalFiles">Optional dictionary of additional files (path -> bytes) for the VFS</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
+	/// <param name="useCache">Enable cache loading from wwwroot/cache/ directory</param>
+	/// <param name="enableInstructionAnalyzer">Enable instruction analyzer for debugging (runs in interpreter mode)</param>
+	/// <param name="enableLegacyInstructionDecoding">Enable legacy instruction decoding (MPX, Cyrix, ALTINST, etc.)</param>
 	/// <returns>True if loading succeeded</returns>
 	public async Task<bool> LoadExecutableAsync(
 		byte[] executableBytes, 
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null,
-		bool force32BitStackOps = true)
+		bool force32BitStackOps = true,
+		bool useCache = true,
+		bool enableInstructionAnalyzer = false,
+		bool enableLegacyInstructionDecoding = false)
 	{
 		try
 		{
@@ -137,7 +164,11 @@ public class EmulatorService : IDisposable
 				}
 				
 				// Detect the common folder prefix from the uploaded files
+				// This is used to strip the top-level container folder from browser file uploads
+				// BUT we should only strip if ALL files are in that folder (no top-level files exist)
 				string? commonPrefix = null;
+				bool hasTopLevelFiles = false;
+				
 				foreach (var path in normalizedPaths.Keys)
 				{
 					var firstSlash = path.IndexOf('\\');
@@ -155,6 +186,18 @@ public class EmulatorService : IDisposable
 							break;
 						}
 					}
+					else
+					{
+						// This is a top-level file (no subdirectory)
+						// If we have top-level files, the prefix is NOT a container - it's a real subdirectory
+						hasTopLevelFiles = true;
+					}
+				}
+				
+				// Only use common prefix if there are NO top-level files
+				if (hasTopLevelFiles)
+				{
+					commonPrefix = null;
 				}
 				
 				foreach (var kvp in normalizedPaths)
@@ -167,9 +210,9 @@ public class EmulatorService : IDisposable
 						// Replace the original folder prefix with WASM
 						vfsPath = $"WASM{vfsPath.Substring(commonPrefix.Length)}";
 					}
-					else if (!vfsPath.Contains('\\'))
+					else if (!vfsPath.StartsWith("WASM\\", StringComparison.OrdinalIgnoreCase))
 					{
-						// Single file without folder structure - add to WASM folder
+						// Any file not already prefixed with WASM needs it
 						vfsPath = $"WASM\\{vfsPath}";
 					}
 					
@@ -187,7 +230,19 @@ public class EmulatorService : IDisposable
 			
 			// Load the executable from bytes using the Emulator's built-in method
 			// with the browser VFS for file operations
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps);
+			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
+			// When enableInstructionAnalyzer is true, instruction analysis features are available
+			// When enableLegacyInstructionDecoding is true, legacy instruction sets are supported (MPX, Cyrix, etc.)
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer, enableLegacyInstructionDecoding);
+			
+			// Load cache if enabled - JitCpu uses RTL-based cache
+			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
+			// Therefore, cache loading is not applicable - all instructions are interpreted on-demand
+			if (useCache)
+			{
+				_logger.LogInformation("[WASM] JitCpu runs in interpreter mode - cache loading not needed");
+				EmitDebugOutput("[Cache] JitCpu uses interpreter mode in WASM - no cache needed");
+			}
 			
 			_loadedExecutableName = fileName;
 			EmitDebugOutput($"Successfully loaded: {fileName}");
@@ -245,32 +300,21 @@ public class EmulatorService : IDisposable
 				ExecutableName = _loadedExecutableName
 			});
 			
-			// Run emulation on a background task
+			// Run emulation directly as an async task without Task.Run
+			// In WebAssembly, Task.Run doesn't create a real background thread - it just queues work
+			// on the same thread. Calling RunAsync() directly allows it to properly yield to the
+			// browser event loop at await points. Task.Run can actually cause issues because it
+			// wraps the async work in a way that may block the UI thread until the first await.
 			// Note: Emulator.RunAsync() doesn't accept a CancellationToken - it uses Stop() method
-			// for cancellation. The token here is used to cancel Task.Run() startup, while
-			// _emulator.Stop() (called in StopAsync) stops the actual emulation loop.
-			_emulationTask = Task.Run(async () =>
-			{
-				try
-				{
-					await _emulator.RunAsync();
-				}
-				catch (Exception ex)
-				{
-					_logger.LogError(ex, "Emulation error");
-					EmitDebugOutput($"Emulation error: {ex.Message}");
-				}
-				finally
-				{
-					_isRunning = false;
-					OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
-					{
-						IsLoaded = true,
-						IsRunning = false,
-						ExecutableName = _loadedExecutableName
-					});
-				}
-			}, _emulationCts.Token);
+			// for cancellation. The cancellation token parameter is kept for potential future use.
+			_emulationTask = RunEmulationLoopAsync(_emulationCts.Token);
+			
+			// Wait a brief moment to allow the emulation loop to start and log its first message
+			// This helps with debugging by ensuring we see the "[EmulationLoop] Starting..." message
+			// before returning from StartAsync. In WASM, this yields control to let the async task begin.
+			await Task.Delay(10);
+			
+			EmitDebugOutput("StartAsync completed, emulation task is running");
 			
 			return true;
 		}
@@ -375,6 +419,15 @@ public class EmulatorService : IDisposable
 		return Win32Emu.Win32.DirectDraw.OptimizedBlitter.GetSimdCapabilities();
 	}
 	
+	/// <summary>
+	/// Gets all files in the virtual file system.
+	/// Returns a read-only dictionary of file paths to file contents.
+	/// </summary>
+	public IReadOnlyDictionary<string, byte[]>? GetVfsFiles()
+	{
+		return _browserVfs?.Files;
+	}
+	
 	private void EmitStdOutput(string message)
 	{
 		OnStdOutput?.Invoke(this, message);
@@ -385,6 +438,59 @@ public class EmulatorService : IDisposable
 		var timestampedMessage = $"[{DateTime.Now:HH:mm:ss}] {message}";
 		_logger.LogDebug(message);
 		OnDebugOutput?.Invoke(this, timestampedMessage);
+	}
+	
+	/// <summary>
+	/// Helper method to run emulation loop with proper error handling and state management.
+	/// This is extracted to a separate method to allow calling RunAsync directly without Task.Run,
+	/// which is important for WASM where Task.Run doesn't create real background threads.
+	/// </summary>
+	/// <param name="cancellationToken">Currently unused. Cancellation is handled via _emulator.Stop().
+	/// Kept for potential future use if cooperative cancellation is needed.</param>
+	private async Task RunEmulationLoopAsync(CancellationToken cancellationToken)
+	{
+		try
+		{
+			// Log that we're starting the emulation loop
+			EmitDebugOutput("[EmulationLoop] Starting emulator.RunAsync()...");
+			
+			// Note: cancellationToken is not used here because Emulator.RunAsync() doesn't support
+			// cancellation tokens. Cancellation is handled via _emulator.Stop() in StopAsync().
+			await _emulator!.RunAsync();
+			
+			// If we get here, emulation completed normally
+			EmitDebugOutput("[EmulationLoop] Emulation completed successfully");
+		}
+		catch (OperationCanceledException)
+		{
+			// Expected when cancellation is requested
+			EmitDebugOutput("[EmulationLoop] Emulation cancelled");
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[EmulationLoop] Emulation error");
+			EmitDebugOutput($"[EmulationLoop] Emulation error: {ex.GetType().Name}: {ex.Message}");
+			
+			// Log stack trace for debugging
+			if (ex.StackTrace != null)
+			{
+				EmitDebugOutput($"[EmulationLoop] Stack trace: {ex.StackTrace}");
+			}
+		}
+		finally
+		{
+			_isRunning = false;
+			EmitDebugOutput("[EmulationLoop] Emulation stopped, updating state...");
+			
+			OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
+			{
+				IsLoaded = true,
+				IsRunning = false,
+				ExecutableName = _loadedExecutableName
+			});
+			
+			EmitDebugOutput("[EmulationLoop] State updated");
+		}
 	}
 	
 	public void Dispose()

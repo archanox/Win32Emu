@@ -1,0 +1,8 @@
+No output yet.
+Win32Emu Emulator Starting
+Executable loaded and ready
+Win32Emu WASM Starting
+
+Lisa 2 Development System, Compilation 0.91.0
+Copyright (c) UDS, 1995-1996
+

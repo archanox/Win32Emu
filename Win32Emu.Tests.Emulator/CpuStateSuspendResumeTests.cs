@@ -1,6 +1,6 @@
 using Win32Emu.Cpu;
 using Win32Emu.Cpu.Jit;
-using Win32Emu.Cpu.Iced;
+
 using Win32Emu.Memory;
 using Xunit;
 
@@ -95,24 +95,6 @@ public class CpuStateSuspendResumeTests
 		Assert.Equal(0xABCDEF00u, cpu.GetRegister("EBX"));
 	}
 	
-	[Fact]
-	public void SuspendExecution_WithIcedCpu_ShouldSaveCpuState()
-	{
-		// Arrange
-		var mem = new VirtualMemory(1024 * 1024);
-		var cpu = new IcedCpu(mem);
-		
-		cpu.SetRegister("EAX", 0x12345678);
-		cpu.SetRegister("EBX", 0xABCDEF00);
-		
-		// Act
-		var state = CpuHelpers.SuspendExecution(cpu);
-		
-		// Assert
-		Assert.NotNull(state);
-		Assert.Equal(0x12345678u, state.Eax);
-		Assert.Equal(0xABCDEF00u, state.Ebx);
-	}
 	
 	[Fact]
 	public async Task SuspendAndResume_AcrossAsyncBoundary_ShouldPreserveState()

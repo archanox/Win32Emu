@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using System.Runtime.InteropServices;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Win32Emu.Win32.COM;
@@ -49,7 +49,7 @@ public class ComVtableOrderingTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		_ = new IcedCpu(memory, NullLogger.Instance);
+		_ = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
@@ -93,7 +93,7 @@ public class ComVtableOrderingTests
 	{
 		// Arrange
 		var memory = new VirtualMemory();
-		_ = new IcedCpu(memory, NullLogger.Instance);
+		_ = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
@@ -139,7 +139,7 @@ public class ComVtableOrderingTests
 		// This was the root cause of the BasicDD.exe crash at 0x0040715A
 		
 		var memory = new VirtualMemory();
-		_ = new IcedCpu(memory, NullLogger.Instance);
+		_ = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 
@@ -196,7 +196,7 @@ public class ComVtableOrderingTests
 		// for backward compatibility with code that hasn't been migrated yet
 		
 		var memory = new VirtualMemory();
-		_ = new IcedCpu(memory, NullLogger.Instance);
+		_ = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dispatcher = env.ComDispatcher;
 

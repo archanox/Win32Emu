@@ -17,12 +17,25 @@ using Win32Emu.VirtualFileSystem;
 
 namespace Win32Emu.Win32;
 
+/// <summary>
+/// Window message constants for window creation/lifecycle
+/// </summary>
+internal static class WindowMessages
+{
+	public const uint WM_CREATE = 0x0001;
+	public const uint WM_SIZE = 0x0005;
+	public const uint WM_MOVE = 0x0003;
+}
+
 public class ProcessEnvironment
 {
 	private readonly IEmulatorHost? _host;
 	private readonly ILogger _logger;
 	private uint _allocPtr;
 	private string _currentDirectory = @"C:\"; // Default to C:\ root
+	
+	// Delegate for sending messages synchronously (set by User32Module)
+	private Func<uint, uint, uint, uint, Task<uint>>? _sendMessageAsyncDelegate;
 
 	// Constants for memory allocation flags
 	private const uint MEM_COMMIT = 0x00001000;
@@ -106,6 +119,12 @@ public class ProcessEnvironment
 	/// </summary>
 	public int DisplayBitsPerPixel { get; set; } = 16;
 
+	/// <summary>
+	/// Gets or sets the last Win32 error code for the current thread.
+	/// This is used by GetLastError/SetLastError in Kernel32 and can be set by any Win32 module.
+	/// </summary>
+	public uint LastError { get; set; }
+
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null, IBackendFactory? backendFactory = null)
 	{
 		Memory = vm;
@@ -118,6 +137,10 @@ public class ProcessEnvironment
 		_messageDispatcher = new MessageDispatcher(_logger);
 		ThreadScheduler = new ThreadScheduler(_logger);
 		SynchronizationManager = new SynchronizationManager(_logger);
+		
+		// Initialize console handles by default (most applications expect these to exist)
+		// Applications can call FreeConsole() if they don't want a console
+		AllocateConsole();
 		
 		// Initialize registry (in-memory by default, will be updated if VFS is initialized)
 		InitializeRegistry();
@@ -139,6 +162,15 @@ public class ProcessEnvironment
 	/// Gets the backend factory for creating rendering, audio, and input backends
 	/// </summary>
 	public IBackendFactory? BackendFactory { get; }
+	
+	/// <summary>
+	/// Sets the delegate for sending messages synchronously to window procedures.
+	/// This should be called by User32Module during initialization.
+	/// </summary>
+	public void SetSendMessageDelegate(Func<uint, uint, uint, uint, Task<uint>> sendMessageAsync)
+	{
+		_sendMessageAsyncDelegate = sendMessageAsync;
+	}
 
 	// Virtual File System access
 	/// <summary>
@@ -515,14 +547,24 @@ public class ProcessEnvironment
 	/// </summary>
 	public void WriteToStdOutput(byte[] data)
 	{
-		// Convert bytes to string (assuming ANSI/ASCII encoding)
+		// Convert bytes to string (assuming ANSI/ASCII encoding) for logging
 		var text = Encoding.ASCII.GetString(data);
 		
 		// Log to console for debugging
 		_logger.LogInformation("[ProcessEnvironment] StdOutput: {Text}", text);
 		
 		// Notify host if available (for GUI display)
-		_host?.OnStdOutput(text);
+		if (_host != null)
+		{
+			_host.OnStdOutput(text);
+		}
+		else
+		{
+			// Fallback to console output when no host is provided (CLI mode)
+			// Write bytes directly to prevent data loss from encoding conversion
+			using var stdout = Console.OpenStandardOutput();
+			stdout.Write(data, 0, data.Length);
+		}
 	}
 
 	// Guest memory helpers
@@ -553,22 +595,71 @@ public class ProcessEnvironment
 
 	public string ReadAnsiString(uint addr)
 	{
-		var buf = new List<byte>();
+		// Use stackalloc for small strings (most common case), fall back to array pool for larger ones
+		const int stackAllocThreshold = 256;
+		const int maxStringBytes = 65536; // Max 64KB string
+		Span<byte> stackBuffer = stackalloc byte[stackAllocThreshold];
+		var length = 0;
 		var p = addr;
-		while (true)
+		
+		// First pass: read into stack buffer if small enough
+		while (length < stackAllocThreshold)
 		{
 			var b = Memory.Read8(p++);
 			if (b == 0)
 			{
-				break;
+				// String fits in stack buffer - decode and return
+				var result = Encoding.ASCII.GetString(stackBuffer[..length]);
+				_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} result='{Result}'", addr, result);
+				return result;
 			}
-
-			buf.Add(b);
+			stackBuffer[length++] = b;
 		}
-
-		var result = Encoding.ASCII.GetString(buf.ToArray());
-		_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} result='{Result}'", addr, result);
-		return result;
+		
+		// String is larger than stack buffer - use array pool
+		var rentedArray = System.Buffers.ArrayPool<byte>.Shared.Rent(1024);
+		try
+		{
+			// Copy what we already read
+			stackBuffer.CopyTo(rentedArray);
+			
+			// Continue reading
+			while (true)
+			{
+				// Safety check to prevent infinite loops on malformed strings
+				if (length >= maxStringBytes)
+				{
+					_logger.LogWarning("[ProcessEnv] ReadAnsiString exceeded maximum length at addr=0x{Addr:X8}", addr);
+					var safeResult = Encoding.ASCII.GetString(rentedArray, 0, length);
+					return safeResult;
+				}
+				
+				var b = Memory.Read8(p++);
+				if (b == 0)
+				{
+					break;
+				}
+				
+				// Grow array if needed
+				if (length >= rentedArray.Length)
+				{
+					var newArray = System.Buffers.ArrayPool<byte>.Shared.Rent(rentedArray.Length * 2);
+					Array.Copy(rentedArray, newArray, length);
+					System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+					rentedArray = newArray;
+				}
+				
+				rentedArray[length++] = b;
+			}
+			
+			var result = Encoding.ASCII.GetString(rentedArray, 0, length);
+			_logger.LogDebug("[ProcessEnv] ReadAnsiString addr=0x{Addr:X8} result='{Result}'", addr, result);
+			return result;
+		}
+		finally
+		{
+			System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+		}
 	}
 
 	public string ReadAnsiString(uint addr, int maxLength)
@@ -586,46 +677,54 @@ public class ProcessEnvironment
 
 	public string ReadUnicodeString(uint addr)
 	{
-		const int chunkSize = 256; // Read 256 bytes at a time
-		var bytes = new List<byte>();
-		var offset = 0u;
+		// Use ArrayPool for better memory efficiency
+		const int initialSize = 512; // 256 Unicode characters
+		const int maxStringBytes = 65536; // Max 64KB string
 		
-		while (true)
+		var rentedArray = System.Buffers.ArrayPool<byte>.Shared.Rent(initialSize);
+		var length = 0;
+		
+		try
 		{
-			// Read a chunk of memory
-			var chunk = new byte[chunkSize];
-			for (var i = 0; i < chunkSize; i++)
+			var p = addr;
+			while (true)
 			{
-				chunk[i] = Memory.Read8(addr + offset + (uint)i);
-			}
-			
-			// Find the null terminator (two consecutive zero bytes for Unicode)
-			for (var i = 0; i < chunkSize - 1; i += 2)
-			{
-				if (chunk[i] == 0 && chunk[i + 1] == 0)
+				// Safety check to prevent infinite loops on malformed strings
+				if (length >= maxStringBytes)
 				{
-					// Found null terminator, add remaining bytes and return
-					for (var j = 0; j < i; j++)
-					{
-						bytes.Add(chunk[j]);
-					}
-					var result = Encoding.Unicode.GetString(bytes.ToArray());
+					_logger.LogWarning("[ProcessEnv] ReadUnicodeString exceeded maximum length at addr=0x{Addr:X8}", addr);
+					var safeResult = Encoding.Unicode.GetString(rentedArray, 0, length);
+					return safeResult;
+				}
+				
+				// Read two bytes at a time for Unicode (UTF-16)
+				var b1 = Memory.Read8(p++);
+				var b2 = Memory.Read8(p++);
+				
+				// Check for null terminator (two consecutive zero bytes)
+				if (b1 == 0 && b2 == 0)
+				{
+					var result = Encoding.Unicode.GetString(rentedArray, 0, length);
 					_logger.LogDebug("[ProcessEnv] ReadUnicodeString addr=0x{Addr:X8} result='{Result}'", addr, result);
 					return result;
 				}
+				
+				// Grow array if needed
+				if (length + 2 > rentedArray.Length)
+				{
+					var newArray = System.Buffers.ArrayPool<byte>.Shared.Rent(rentedArray.Length * 2);
+					Array.Copy(rentedArray, newArray, length);
+					System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
+					rentedArray = newArray;
+				}
+				
+				rentedArray[length++] = b1;
+				rentedArray[length++] = b2;
 			}
-			
-			// No null terminator found in this chunk, add all bytes and continue
-			bytes.AddRange(chunk);
-			offset += chunkSize;
-			
-			// Safety check to prevent infinite loops on malformed strings
-			if (offset > 65536) // Max 64KB string
-			{
-				_logger.LogWarning("[ProcessEnv] ReadUnicodeString exceeded maximum length at addr=0x{Addr:X8}", addr);
-				var safeResult = Encoding.Unicode.GetString(bytes.ToArray());
-				return safeResult;
-			}
+		}
+		finally
+		{
+			System.Buffers.ArrayPool<byte>.Shared.Return(rentedArray);
 		}
 	}
 
@@ -776,7 +875,15 @@ public class ProcessEnvironment
 	{
 		if (_environmentVariables.TryGetValue(name, out var value))
 		{
-			_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			// Use Trace level for commonly-accessed variables to reduce log spam
+			if (name == "IGN_TEAS_DEBUG")
+			{
+				_logger.LogTrace("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			}
+			else
+			{
+				_logger.LogDebug("[ProcessEnv] GetEnvironmentVariable: '{Name}'='{Value}'", name, value);
+			}
 			return value;
 		}
 
@@ -793,7 +900,15 @@ public class ProcessEnvironment
 		_logger.LogInformation("[ProcessEnv] StdOutput: {Text}", text);
 		
 		// Notify host if available (for GUI display)
-		_host?.OnStdOutput(text);
+		if (_host != null)
+		{
+			_host.OnStdOutput(text);
+		}
+		else
+		{
+			// Fallback to console output when no host is provided (CLI mode)
+			Console.Write(text);
+		}
 	}
 
 	/// <summary>
@@ -802,10 +917,18 @@ public class ProcessEnvironment
 	public void WriteToStdError(string text)
 	{
 		// Log to console for debugging
-		_logger.LogError("[ProcessEnv] StdOutput: {Text}", text);
+		_logger.LogError("[ProcessEnv] StdError: {Text}", text);
 		
-		// For now, treat stderr the same as stdout
-		_host?.OnStdOutput(text);
+		if (_host != null)
+		{
+			// For GUI mode, send stderr to host (currently same as stdout)
+			_host.OnStdOutput(text);
+		}
+		else
+		{
+			// Fallback to console error stream when no host is provided (CLI mode)
+			Console.Error.Write(text);
+		}
 	}
 
 	public byte[] MemReadBytes(uint addr, int count) => Memory.GetSpan(addr, count);
@@ -1878,6 +2001,17 @@ public class ProcessEnvironment
 	public uint CreateWindow(string className, string windowName, uint style, uint exStyle,
 		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param)
 	{
+		// This wrapper always uses the synchronous window creation path.
+		// Async/message-pumped creation for the initial CreateWindow call from application
+		// code is handled by CreateWindowExAsync via TryInvokeAsync, not through this method.
+		// Nested CreateWindow calls (e.g. from within message handlers) also come through
+		// this method and must remain synchronous.
+		return CreateWindowSync(className, windowName, style, exStyle, x, y, width, height, parent, menu, instance, param);
+	}
+	
+	private uint CreateWindowSync(string className, string windowName, uint style, uint exStyle,
+		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param)
+	{
 		if (!_windowClasses.ContainsKey(className))
 		{
 			_logger.LogError("[ProcessEnv] CreateWindow failed: Window class '{ClassName}' not registered", className);
@@ -1914,22 +2048,126 @@ public class ProcessEnvironment
 
 		// Send WM_CREATE message to the window
 		// WM_CREATE = 0x0001
-		SendMessageToWindow(handle, 0x0001, 0, param);
+		SendMessageToWindow(handle, WindowMessages.WM_CREATE, 0, param);
 		_logger.LogDebug("[ProcessEnv] Sent WM_CREATE to window 0x{Handle:X8}", handle);
 
 		// Send WM_SIZE message to the window
 		// WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
 		uint sizeParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
-		SendMessageToWindow(handle, 0x0005, 0, sizeParam);
+		SendMessageToWindow(handle, WindowMessages.WM_SIZE, 0, sizeParam);
 		_logger.LogDebug("[ProcessEnv] Sent WM_SIZE to window 0x{Handle:X8} (width={Width}, height={Height})", handle, width, height);
 
 		// Send WM_MOVE message to the window
 		// WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
 		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
-		SendMessageToWindow(handle, 0x0003, 0, moveParam);
+		SendMessageToWindow(handle, WindowMessages.WM_MOVE, 0, moveParam);
 		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
 
 		return handle;
+	}
+	
+	/// <summary>
+	/// Async version of CreateWindow that properly handles message pumping on WASM.
+	/// On WASM, messages are posted and then pumped to ensure WM_CREATE is processed
+	/// before the function returns, allowing SetTimer and other initialization to work.
+	/// </summary>
+	public async Task<uint> CreateWindowAsync(string className, string windowName, uint style, uint exStyle,
+		int x, int y, int width, int height, uint parent, uint menu, uint instance, uint param,
+		CancellationToken cancellationToken = default)
+	{
+		if (!_windowClasses.ContainsKey(className))
+		{
+			_logger.LogError("[ProcessEnv] CreateWindowAsync failed: Window class '{ClassName}' not registered", className);
+			return 0;
+		}
+
+		var handle = _nextWindowHandle;
+		_nextWindowHandle += 4;
+
+		var windowInfo = new WindowInfo(
+			handle, className, windowName, style, exStyle,
+			x, y, width, height, parent, menu, instance, param
+		);
+
+		_windows[handle] = windowInfo;
+		_logger.LogInformation("[ProcessEnv] Created window (async): HWND=0x{Handle:X8} Class='{ClassName}' Title='{WindowName}'", handle, className, windowName);
+
+		// Notify host about window creation
+		_host?.OnWindowCreate(new WindowCreateInfo
+		{
+			Handle = handle,
+			Title = windowName,
+			Width = width,
+			Height = height,
+			X = x,
+			Y = y,
+			ClassName = className,
+			Style = style,
+			ExStyle = exStyle,
+			Parent = parent,
+			Menu = menu
+		});
+
+		// Send window creation messages asynchronously
+		// WM_CREATE = 0x0001
+		await SendMessageToWindowAsync(handle, WindowMessages.WM_CREATE, 0, param, cancellationToken).ConfigureAwait(false);
+		_logger.LogDebug("[ProcessEnv] Sent WM_CREATE to window 0x{Handle:X8}", handle);
+
+		// Send WM_SIZE message
+		// WM_SIZE = 0x0005, wParam = SIZE_RESTORED (0), lParam = MAKELONG(width, height)
+		uint sizeParam = ((uint)height << 16) | ((uint)width & 0xFFFF);
+		await SendMessageToWindowAsync(handle, WindowMessages.WM_SIZE, 0, sizeParam, cancellationToken).ConfigureAwait(false);
+		_logger.LogDebug("[ProcessEnv] Sent WM_SIZE to window 0x{Handle:X8} (width={Width}, height={Height})", handle, width, height);
+
+		// Send WM_MOVE message
+		// WM_MOVE = 0x0003, wParam = 0, lParam = MAKELONG(x, y)
+		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
+		await SendMessageToWindowAsync(handle, WindowMessages.WM_MOVE, 0, moveParam, cancellationToken).ConfigureAwait(false);
+		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
+
+		return handle;
+	}
+	
+	/// <summary>
+	/// Processes messages from the queue immediately without blocking.
+	/// Primarily used on WASM for compatibility, ensuring posted messages are handled before execution continues.
+	/// </summary>
+	private async Task PumpMessagesAsync(int maxMessages = 10, CancellationToken cancellationToken = default)
+	{
+		int processedCount = 0;
+		
+		while (processedCount < maxMessages && !cancellationToken.IsCancellationRequested)
+		{
+			// Try to get a message without blocking
+			var msg = TryGetMessageNonBlocking(0, 0, 0);
+			
+			if (!msg.HasValue)
+			{
+				// No more messages in queue
+				break;
+			}
+			
+			_logger.LogDebug("[ProcessEnv] PumpMessages: Processing MSG=0x{Message:X4} HWND=0x{Hwnd:X8}", 
+				msg.Value.Message, msg.Value.Hwnd);
+			
+			// Dispatch the message to its window procedure
+			if (_sendMessageAsyncDelegate != null)
+			{
+				try
+				{
+					await _sendMessageAsyncDelegate(msg.Value.Hwnd, msg.Value.Message, 
+						msg.Value.WParam, msg.Value.LParam).ConfigureAwait(false);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[ProcessEnv] PumpMessages: Error dispatching message");
+				}
+			}
+			
+			processedCount++;
+		}
+		
+		_logger.LogDebug("[ProcessEnv] PumpMessages: Processed {Count} messages", processedCount);
 	}
 
 	public WindowInfo? GetWindow(uint hwnd)
@@ -2042,13 +2280,111 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
-	/// Send a message directly to a window (synchronous) by posting it to the queue.
-	/// For system messages during window creation/lifecycle, we post them so they can be processed
-	/// in the normal message loop.
+	/// Send a message directly to a window (synchronous) by invoking its window procedure.
+	/// For system messages during window creation/lifecycle, this ensures the message is
+	/// processed immediately before control returns to the caller.
+	/// On WASM where blocking is not supported, falls back to posting the message.
 	/// </summary>
 	public void SendMessageToWindow(uint hwnd, uint message, uint wParam, uint lParam)
 	{
-		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: posting MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		
+		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
+		// so applications can retrieve them via GetMessageA/PeekMessageA
+		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
+		bool isCreationMessage = message == WindowMessages.WM_CREATE || message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
+		
+		if (isCreationMessage)
+		{
+			_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Posting creation message 0x{Message:X4} to queue", message);
+			PostMessage(hwnd, message, wParam, lParam);
+			return;
+		}
+		
+		// If we have a delegate for synchronous message sending, try to use it
+		if (_sendMessageAsyncDelegate != null)
+		{
+			try
+			{
+				// Check if we can use blocking synchronous call
+				// On WASM, GetAwaiter().GetResult() throws PlatformNotSupportedException
+				// so we need to detect this and fall back to posting
+				if (OperatingSystem.IsBrowser())
+				{
+					// On WASM, we cannot block - post the message and it will be processed asynchronously
+					// The caller should use SendMessageToWindowAsync for proper async handling on WASM
+					_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Browser/WASM detected, posting message asynchronously");
+					PostMessage(hwnd, message, wParam, lParam);
+					return;
+				}
+				
+				// On non-WASM platforms, use synchronous delivery
+				var result = _sendMessageAsyncDelegate(hwnd, message, wParam, lParam).GetAwaiter().GetResult();
+				_logger.LogDebug("[ProcessEnv] SendMessageToWindow: WndProc returned 0x{Result:X8}", result);
+				return;
+			}
+			catch (PlatformNotSupportedException ex)
+			{
+				// WASM doesn't support blocking - fall back to posting
+				_logger.LogWarning(ex, "[ProcessEnv] SendMessageToWindow: Platform doesn't support blocking, falling back to PostMessage");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] SendMessageToWindow: Error calling WndProc, falling back to PostMessage");
+			}
+		}
+		
+		// Fallback to posting message if delegate not set or error occurred
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: Posting to queue");
+		PostMessage(hwnd, message, wParam, lParam);
+	}
+	
+	/// <summary>
+	/// Async version of SendMessageToWindow that properly handles message delivery on WASM.
+	/// On WASM, posts messages to be processed by the message pump. On other platforms, calls directly.
+	/// </summary>
+	public async Task SendMessageToWindowAsync(uint hwnd, uint message, uint wParam, uint lParam, CancellationToken cancellationToken = default)
+	{
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
+		
+		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
+		// so applications can retrieve them via GetMessageA/PeekMessageA
+		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
+		bool isCreationMessage = message == WindowMessages.WM_CREATE || message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
+		
+		if (isCreationMessage)
+		{
+			_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Posting creation message 0x{Message:X4} to queue", message);
+			PostMessage(hwnd, message, wParam, lParam);
+			return;
+		}
+		
+		// On WASM, we need to post messages and pump them to ensure proper async processing
+		// Direct calls via delegate would bypass the message queue
+		if (OperatingSystem.IsBrowser())
+		{
+			_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: WASM - posting message for pumping");
+			PostMessage(hwnd, message, wParam, lParam);
+			return;
+		}
+		
+		// On non-WASM platforms, call window procedure directly via delegate
+		if (_sendMessageAsyncDelegate != null)
+		{
+			try
+			{
+				var result = await _sendMessageAsyncDelegate(hwnd, message, wParam, lParam).ConfigureAwait(false);
+				_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: WndProc returned 0x{Result:X8}", result);
+				return;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] SendMessageToWindowAsync: Error calling WndProc");
+			}
+		}
+		
+		// Fallback: post message
+		_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Posting to queue");
 		PostMessage(hwnd, message, wParam, lParam);
 	}
 
@@ -2778,6 +3114,7 @@ public class ProcessEnvironment
 	/// <summary>
 	/// Process events from all subscribed rendering and input backends.
 	/// This should be called regularly to keep windows responsive and process input.
+	/// Backend modules may post Win32 messages (for example WM_PAINT) while processing events.
 	/// </summary>
 	public void ProcessAllBackendEvents()
 	{

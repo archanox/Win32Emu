@@ -4,7 +4,6 @@ public class EmulatorConfiguration
 {
 	public string RenderingBackend { get; set; } = "SDL";
 	public string InputBackend { get; set; } = "SDL";
-	public string CpuBackend { get; set; } = "IcedCPU";
 	public int ResolutionScaleFactor { get; set; } = 1;
 	public int ReservedMemoryMb { get; set; } = 256;
 	public string WindowsVersion { get; set; } = "Windows 95";
@@ -16,6 +15,20 @@ public class EmulatorConfiguration
 	// Instruction Analyzer Settings
 	public bool EnableInstructionAnalyzer { get; set; }
 	public bool EnableLegacyInstructionDecoding { get; set; }
+	
+	// CPU Emulation Settings
+	/// <summary>
+	/// Force 32-bit operand size for stack operations (PUSH/POP/CALL/RET) in 32-bit mode,
+	/// ignoring operand-size override prefix (0x66). Improves Win32 compatibility but may
+	/// break Win16 or mixed-mode code. Default: true for Win32 compatibility.
+	/// </summary>
+	public bool Force32BitStackOps { get; set; } = true;
+	
+	/// <summary>
+	/// Force interpreter mode even on desktop platforms (disables JIT compilation).
+	/// Useful for debugging or when JIT compilation causes issues. Default: false (JIT enabled on desktop).
+	/// </summary>
+	public bool ForceInterpreterMode { get; set; } = false;
 	
 	// OpenTelemetry Settings
 	public bool EnableOpenTelemetry { get; set; }

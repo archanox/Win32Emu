@@ -1,6 +1,6 @@
 using Xunit;
 using System.Text;
-using Win32Emu.Tests.Kernel32.TestInfrastructure;
+using Win32Emu.Tests.Infrastructure;
 
 namespace Win32Emu.Tests.Kernel32;
 

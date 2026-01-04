@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Win32Emu.Win32;
 using Win32Emu.Win32.Modules;
@@ -29,7 +29,7 @@ public class ComVtablePopulationTests
 		// Even if it returns an error, it shouldn't crash
 		
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var ddraw = new DDrawModule(env, 0x00400000, null, NullLogger.Instance);
 
@@ -47,7 +47,7 @@ public class ComVtablePopulationTests
 	public void DirectInputCreateA_ShouldBeCallable()
 	{
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var env = new ProcessEnvironment(memory, logger: NullLogger.Instance);
 		var dinput = new DInputModule(env, 0x00400000, null, NullLogger.Instance);
 
@@ -64,7 +64,7 @@ public class ComVtablePopulationTests
 		// vtable methods are NOT stack addresses (like 0x001FEF10)
 		
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, NullLogger.Instance);
+		var cpu = new JitCpu(memory, NullLogger.Instance);
 		var logger = new TestLogger(_output);
 		var env = new ProcessEnvironment(memory, logger: logger);
 		var ddraw = new DDrawModule(env, 0x00400000, null, logger);
@@ -122,12 +122,12 @@ public class ComVtablePopulationTests
 	[Fact]
 	public void FunctionPointerValidation_IsImplemented()
 	{
-		// This test verifies that function pointer validation exists in IcedCpu
-		// The ValidateIndirectTarget method should be called for indirect calls
+		// This test verifies that JitCpu implements function pointer validation
+		// The ValidateIndirectTarget method should be invoked for indirect CALL instructions
 		
 		var memory = new VirtualMemory();
 		var logger = new TestLogger(_output);
-		var cpu = new IcedCpu(memory, logger);
+		var cpu = new JitCpu(memory, logger);
 		
 		// Set up a suspicious function pointer (stack address)
 		var suspiciousPtr = 0x001FEF10u;

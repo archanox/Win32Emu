@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Debugging;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
@@ -20,7 +20,7 @@ public class GdbServerTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         var breakpoints = new BreakpointManager();
         
         // Act
@@ -35,7 +35,7 @@ public class GdbServerTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         var breakpoints = new BreakpointManager();
         
         var tempDir = Path.Combine(Path.GetTempPath(), $"GdbServerTest_{Guid.NewGuid():N}");
@@ -65,7 +65,7 @@ public class GdbServerTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         var breakpoints = new BreakpointManager();
         using var gdbServer = new GdbServer(cpu, memory, breakpoints, NullLogger.Instance, 9999);
         
@@ -81,7 +81,7 @@ public class GdbServerTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         var breakpoints = new BreakpointManager();
         using var gdbServer = new GdbServer(cpu, memory, breakpoints, NullLogger.Instance, 9999);
         
@@ -100,7 +100,7 @@ public class GdbServerTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         var breakpoints = new BreakpointManager();
         using var gdbServer = new GdbServer(cpu, memory, breakpoints, NullLogger.Instance, 9999);
         
@@ -119,7 +119,7 @@ public class GdbServerTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         var breakpoints = new BreakpointManager();
         using var gdbServer = new GdbServer(cpu, memory, breakpoints, NullLogger.Instance, 9999);
         
@@ -143,7 +143,7 @@ public class GdbServerTests
     {
         // Arrange
         var memory = new VirtualMemory(1024 * 1024);
-        var cpu = new IcedCpu(memory, NullLogger.Instance);
+        var cpu = new JitCpu(memory, NullLogger.Instance);
         var breakpoints = new BreakpointManager();
         using var gdbServer = new GdbServer(cpu, memory, breakpoints, NullLogger.Instance, 9999);
         

@@ -1,0 +1,372 @@
+@using Win32Emu.Wasm.Services
+@inject IJSRuntime JS
+@inject ILogger<VirtualFileSystemBrowser> Logger
+
+<div class="card">
+	<div class="card-header">
+		<strong>📁 Virtual File System Browser</strong>
+		<button class="btn btn-sm btn-outline-primary float-end" @onclick="RefreshFiles">
+			<i class="bi bi-arrow-clockwise"></i> Refresh
+		</button>
+	</div>
+	<div class="card-body">
+		@if (Files == null || Files.Count == 0)
+		{
+			<div class="alert alert-info mb-0">
+				<i class="bi bi-info-circle"></i> No files in the virtual file system. Files created by the emulated application will appear here.
+			</div>
+		}
+		else
+		{
+			<div class="mb-2">
+				<small class="text-muted">
+					<strong>Total files:</strong> @Files.Count | 
+					<strong>Total size:</strong> @FormatFileSize(GetTotalFileSize())
+				</small>
+			</div>
+			
+			<div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+				<table class="table table-sm table-hover">
+					<thead>
+						<tr>
+							<th style="width: 50%;">Path</th>
+							<th style="width: 20%;">Size</th>
+							<th style="width: 30%;">Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						@foreach (var file in Files.OrderBy(f => f.Key))
+						{
+							<tr>
+								<td>
+									<code>@file.Key</code>
+								</td>
+								<td>
+									@FormatFileSize(file.Value.Length)
+								</td>
+								<td>
+									<div class="btn-group btn-group-sm" role="group">
+										<button class="btn btn-outline-primary" 
+												@onclick="() => ViewFile(file.Key)"
+												title="View file content">
+											<i class="bi bi-eye"></i> View
+										</button>
+										<button class="btn btn-outline-success" 
+												@onclick="() => DownloadFile(file.Key)"
+												title="Download file">
+											<i class="bi bi-download"></i> Download
+										</button>
+									</div>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+		
+		@if (!string.IsNullOrEmpty(_viewingFilePath))
+		{
+			<div class="modal show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+				<div class="modal-dialog modal-lg modal-dialog-scrollable">
+					<div class="modal-content">
+						<div class="modal-header">
+							<h5 class="modal-title">
+								<i class="bi bi-file-text"></i> @_viewingFilePath
+							</h5>
+							<button type="button" class="btn-close" @onclick="CloseFileView"></button>
+						</div>
+						<div class="modal-body">
+							@if (_viewingFileContent != null)
+							{
+								<div class="mb-2">
+									<small class="text-muted">
+										<strong>Size:</strong> @FormatFileSize(_viewingFileContent.Length) | 
+										<strong>Encoding:</strong> @_viewingFileEncoding
+									</small>
+								</div>
+								
+								@if (_isTextFile)
+								{
+									<pre class="border rounded p-2" style="max-height: 500px; overflow: auto; background-color: #f8f9fa; font-family: 'Courier New', monospace; font-size: 12px;">@_viewingFileText</pre>
+								}
+								else
+								{
+									<div class="alert alert-warning">
+										<i class="bi bi-exclamation-triangle"></i> This file appears to be binary. 
+										<button class="btn btn-sm btn-outline-primary ms-2" @onclick="() => DownloadFile(_viewingFilePath)">
+											<i class="bi bi-download"></i> Download to view
+										</button>
+									</div>
+									<div>
+										<strong>Hex preview (first 256 bytes):</strong>
+										<pre class="border rounded p-2 mt-2" style="max-height: 300px; overflow: auto; background-color: #f8f9fa; font-family: 'Courier New', monospace; font-size: 11px;">@_hexPreview</pre>
+									</div>
+								}
+							}
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" @onclick="CloseFileView">Close</button>
+							<button type="button" class="btn btn-primary" @onclick="() => DownloadFile(_viewingFilePath)">
+								<i class="bi bi-download"></i> Download
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+</div>
+
+@code {
+	[Parameter]
+	public IReadOnlyDictionary<string, byte[]>? Files { get; set; }
+	
+	[Parameter]
+	public EventCallback OnRefresh { get; set; }
+	
+	private string _viewingFilePath = string.Empty;
+	private byte[]? _viewingFileContent = null;
+	private string _viewingFileText = string.Empty;
+	private string _viewingFileEncoding = string.Empty;
+	private bool _isTextFile = false;
+	private string _hexPreview = string.Empty;
+	private long _cachedTotalSize = 0;
+	
+	private async Task RefreshFiles()
+	{
+		await OnRefresh.InvokeAsync();
+		UpdateCachedTotalSize();
+	}
+	
+	private long GetTotalFileSize()
+	{
+		return _cachedTotalSize;
+	}
+	
+	private void UpdateCachedTotalSize()
+	{
+		_cachedTotalSize = Files?.Values.Sum(f => (long)f.Length) ?? 0;
+	}
+	
+	protected override void OnParametersSet()
+	{
+		base.OnParametersSet();
+		UpdateCachedTotalSize();
+	}
+	
+	private void ViewFile(string path)
+	{
+		if (Files == null || !Files.TryGetValue(path, out var content))
+		{
+			Logger.LogWarning("File not found: {Path}", path);
+			return;
+		}
+		
+		_viewingFilePath = path;
+		_viewingFileContent = content;
+		
+		// Try to detect if file is text
+		_isTextFile = IsTextFile(content);
+		
+		if (_isTextFile)
+		{
+			// Clear hex preview when viewing text files
+			_hexPreview = string.Empty;
+			
+			// Try different encodings
+			if (TryDecodeText(content, System.Text.Encoding.UTF8, out var utf8Text))
+			{
+				_viewingFileText = utf8Text;
+				_viewingFileEncoding = "UTF-8";
+			}
+			else if (TryDecodeText(content, System.Text.Encoding.ASCII, out var asciiText))
+			{
+				_viewingFileText = asciiText;
+				_viewingFileEncoding = "ASCII";
+			}
+			else if (TryDecodeText(content, System.Text.Encoding.Latin1, out var latin1Text))
+			{
+				_viewingFileText = latin1Text;
+				_viewingFileEncoding = "Latin-1";
+			}
+			else
+			{
+				// Fall back to binary view
+				_isTextFile = false;
+				_viewingFileText = string.Empty;
+				_viewingFileEncoding = "Binary";
+			}
+		}
+		else
+		{
+			// Clear text content when viewing binary files
+			_viewingFileText = string.Empty;
+			_viewingFileEncoding = "Binary";
+		}
+		
+		// Generate hex preview for binary files
+		if (!_isTextFile)
+		{
+			_hexPreview = GenerateHexPreview(content, 256);
+		}
+		
+		StateHasChanged();
+	}
+	
+	private void CloseFileView()
+	{
+		_viewingFilePath = string.Empty;
+		_viewingFileContent = null;
+		_viewingFileText = string.Empty;
+		_isTextFile = false;
+		_hexPreview = string.Empty;
+		StateHasChanged();
+	}
+	
+	private async Task DownloadFile(string path)
+	{
+		if (Files == null || !Files.TryGetValue(path, out var content))
+		{
+			Logger.LogWarning("File not found for download: {Path}", path);
+			return;
+		}
+		
+		try
+		{
+			// Get just the filename from the path
+			var fileName = System.IO.Path.GetFileName(path.Replace('\\', '/'));
+			
+			// Convert bytes to base64 for JavaScript
+			var base64 = Convert.ToBase64String(content);
+			
+			// Use JavaScript interop to trigger download
+			await JS.InvokeVoidAsync("downloadFile", fileName, base64);
+			
+			Logger.LogInformation("Downloaded file: {Path} ({Size} bytes)", path, content.Length);
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Failed to download file: {Path}", path);
+		}
+	}
+	
+	private bool IsTextFile(byte[] content)
+	{
+		if (content.Length == 0)
+		{
+			return true; // Empty file is considered text
+		}
+		
+		// Sample first 512 bytes to check for text content
+		var sampleSize = Math.Min(512, content.Length);
+		var nullCount = 0;
+		var controlCount = 0;
+		
+		for (var i = 0; i < sampleSize; i++)
+		{
+			var b = content[i];
+			
+			if (b == 0)
+			{
+				nullCount++;
+			}
+			else if (b < 32 && b != 9 && b != 10 && b != 13) // Allow tab, LF, CR
+			{
+				controlCount++;
+			}
+		}
+		
+		// If more than 5% null bytes or control characters, consider it binary
+		var threshold = sampleSize * 0.05;
+		return nullCount < threshold && controlCount < threshold;
+	}
+	
+	private bool TryDecodeText(byte[] content, System.Text.Encoding encoding, out string text)
+	{
+		try
+		{
+			text = encoding.GetString(content);
+			return true;
+		}
+		catch (System.Text.DecoderFallbackException ex)
+		{
+			Logger.LogDebug(ex, "Decoder fallback while decoding content using encoding {Encoding}", encoding.WebName);
+			text = string.Empty;
+			return false;
+		}
+		catch (ArgumentException ex)
+		{
+			Logger.LogWarning(ex, "Argument exception while decoding content using encoding {Encoding}", encoding.WebName);
+			text = string.Empty;
+			return false;
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Unexpected error while decoding content using encoding {Encoding}", encoding.WebName);
+			text = string.Empty;
+			return false;
+		}
+	}
+	
+	private string GenerateHexPreview(byte[] content, int maxBytes)
+	{
+		var sb = new System.Text.StringBuilder();
+		var length = Math.Min(maxBytes, content.Length);
+		
+		for (var i = 0; i < length; i += 16)
+		{
+			// Offset
+			sb.AppendFormat("{0:X8}  ", i);
+			
+			// Hex bytes
+			for (var j = 0; j < 16; j++)
+			{
+				if (i + j < length)
+				{
+					sb.AppendFormat("{0:X2} ", content[i + j]);
+				}
+				else
+				{
+					sb.Append("   ");
+				}
+				
+				if (j == 7)
+				{
+					sb.Append(" ");
+				}
+			}
+			
+			sb.Append(" ");
+			
+			// ASCII representation
+			for (var j = 0; j < 16 && i + j < length; j++)
+			{
+				var b = content[i + j];
+				sb.Append(b >= 32 && b < 127 ? (char)b : '.');
+			}
+			
+			sb.AppendLine();
+		}
+		
+		if (content.Length > maxBytes)
+		{
+			sb.AppendLine($"... ({content.Length - maxBytes} more bytes)");
+		}
+		
+		return sb.ToString();
+	}
+	
+	private string FormatFileSize(long bytes)
+	{
+		string[] sizes = { "B", "KB", "MB", "GB" };
+		double len = bytes;
+		int order = 0;
+		while (len >= 1024 && order < sizes.Length - 1)
+		{
+			order++;
+			len = len / 1024;
+		}
+		return $"{len:0.##} {sizes[order]}";
+	}
+}

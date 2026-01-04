@@ -2,7 +2,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
-using Win32Emu.Cpu.Iced;
+using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 
 namespace Win32Emu.Tests.Emulator.SingleStepTests;
@@ -84,7 +84,7 @@ public class DebugShrdTest
 	{
 		// Manually test SHRD to understand the operation
 		var memory = new VirtualMemory();
-		var cpu = new IcedCpu(memory, bitness: 16);
+		var cpu = new JitCpu(memory, null, Iced.Intel.DecoderOptions.None, false, 0x400000, 0, 0x100000, bitness: 16);
 		
 		// Test case: shrd edi, ecx, 0x81
 		// Initial: EDI=?, ECX=?, EFLAGS=?

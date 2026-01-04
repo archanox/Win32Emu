@@ -168,7 +168,10 @@ public static class NativeTypes
 		ERROR_NOT_OWNER = 288,
 		ERROR_IO_INCOMPLETE = 996,
 		ERROR_IO_PENDING = 997,
-		ERROR_RESOURCE_TYPE_NOT_FOUND = 1813
+		ERROR_INVALID_WINDOW_HANDLE = 1400,
+		ERROR_CLASS_ALREADY_EXISTS = 1410,
+		ERROR_RESOURCE_TYPE_NOT_FOUND = 1813,
+		ERROR_RESOURCE_NAME_NOT_FOUND = 1814
 	}
 
 	// NTSTATUS codes
@@ -932,6 +935,194 @@ public static class NativeTypes
 		public uint dwPlayCpuOverhead;         // Offset 16 - Play CPU overhead (obsolete)
 	}
 
+	/// <summary>
+	/// DirectSound buffer status flags
+	/// </summary>
+	[Flags]
+	public enum DSBStatus : uint
+	{
+		PLAYING = 0x00000001,      // Buffer is playing
+		BUFFERLOST = 0x00000002,   // Buffer was lost and must be restored
+		LOOPING = 0x00000004,      // Buffer is looping
+		LOCHARDWARE = 0x00000008,  // Buffer is in hardware memory
+		LOCSOFTWARE = 0x00000010,  // Buffer is in software memory
+		TERMINATED = 0x00000020    // Buffer voice has terminated
+	}
+
+	/// <summary>
+	/// DirectSound buffer lock flags
+	/// </summary>
+	[Flags]
+	public enum DSBLock : uint
+	{
+		FROMWRITECURSOR = 0x00000001,  // Start lock at write cursor
+		ENTIREBUFFER = 0x00000002      // Lock entire buffer
+	}
+
+	/// <summary>
+	/// DirectSound play flags
+	/// </summary>
+	[Flags]
+	public enum DSBPlay : uint
+	{
+		LOOPING = 0x00000001,           // Play in looping mode
+		LOCHARDWARE = 0x00000002,       // Attempt to use hardware mixing
+		LOCSOFTWARE = 0x00000004,       // Force software mixing
+		TERMINATEBY_TIME = 0x00000008,  // Terminate by time
+		TERMINATEBY_DISTANCE = 0x00000010,  // Terminate by distance
+		TERMINATEBY_PRIORITY = 0x00000020   // Terminate by priority
+	}
+
+	/// <summary>
+	/// DSBUFFERDESC structure (variable size, minimum 20 bytes)
+	/// Describes the characteristics of a new buffer
+	/// </summary>
+	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit)]
+	[GenerateMemoryRef]
+	public struct DSBUFFERDESC
+	{
+		[System.Runtime.InteropServices.FieldOffset(0)]
+		public uint dwSize;           // Offset 0 - Size of structure
+
+		[System.Runtime.InteropServices.FieldOffset(4)]
+		public uint dwFlags;          // Offset 4 - DSBCapsFlags
+
+		[System.Runtime.InteropServices.FieldOffset(8)]
+		public uint dwBufferBytes;    // Offset 8 - Size of buffer in bytes
+
+		[System.Runtime.InteropServices.FieldOffset(12)]
+		public uint dwReserved;       // Offset 12 - Reserved
+
+		[System.Runtime.InteropServices.FieldOffset(16)]
+		public uint lpwfxFormat;      // Offset 16 - Pointer to WAVEFORMATEX structure
+
+		[System.Runtime.InteropServices.FieldOffset(20)]
+		public uint guid3DAlgorithm;  // Offset 20 - Pointer to GUID for 3D algorithm (optional, LPGUID)
+	}
+
+	/// <summary>
+	/// DSCAPS structure (96 bytes)
+	/// Describes the capabilities of the DirectSound device
+	/// </summary>
+	[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Explicit, Size = 96)]
+	[GenerateMemoryRef]
+	public struct DSCAPS
+	{
+		[System.Runtime.InteropServices.FieldOffset(0)]
+		public uint dwSize;                          // Offset 0 - Size of structure (96)
+
+		[System.Runtime.InteropServices.FieldOffset(4)]
+		public uint dwFlags;                         // Offset 4 - Device capabilities flags
+
+		[System.Runtime.InteropServices.FieldOffset(8)]
+		public uint dwMinSecondarySampleRate;        // Offset 8 - Minimum sample rate for secondary buffers
+
+		[System.Runtime.InteropServices.FieldOffset(12)]
+		public uint dwMaxSecondarySampleRate;        // Offset 12 - Maximum sample rate for secondary buffers
+
+		[System.Runtime.InteropServices.FieldOffset(16)]
+		public uint dwPrimaryBuffers;                // Offset 16 - Number of primary buffers (always 1)
+
+		[System.Runtime.InteropServices.FieldOffset(20)]
+		public uint dwMaxHwMixingAllBuffers;         // Offset 20 - Max hardware mixing buffers
+
+		[System.Runtime.InteropServices.FieldOffset(24)]
+		public uint dwMaxHwMixingStaticBuffers;      // Offset 24 - Max hardware mixing static buffers
+
+		[System.Runtime.InteropServices.FieldOffset(28)]
+		public uint dwMaxHwMixingStreamingBuffers;   // Offset 28 - Max hardware mixing streaming buffers
+
+		[System.Runtime.InteropServices.FieldOffset(32)]
+		public uint dwFreeHwMixingAllBuffers;        // Offset 32 - Free hardware mixing buffers
+
+		[System.Runtime.InteropServices.FieldOffset(36)]
+		public uint dwFreeHwMixingStaticBuffers;     // Offset 36 - Free hardware mixing static buffers
+
+		[System.Runtime.InteropServices.FieldOffset(40)]
+		public uint dwFreeHwMixingStreamingBuffers;  // Offset 40 - Free hardware mixing streaming buffers
+
+		[System.Runtime.InteropServices.FieldOffset(44)]
+		public uint dwMaxHw3DAllBuffers;             // Offset 44 - Max hardware 3D buffers
+
+		[System.Runtime.InteropServices.FieldOffset(48)]
+		public uint dwMaxHw3DStaticBuffers;          // Offset 48 - Max hardware 3D static buffers
+
+		[System.Runtime.InteropServices.FieldOffset(52)]
+		public uint dwMaxHw3DStreamingBuffers;       // Offset 52 - Max hardware 3D streaming buffers
+
+		[System.Runtime.InteropServices.FieldOffset(56)]
+		public uint dwFreeHw3DAllBuffers;            // Offset 56 - Free hardware 3D buffers
+
+		[System.Runtime.InteropServices.FieldOffset(60)]
+		public uint dwFreeHw3DStaticBuffers;         // Offset 60 - Free hardware 3D static buffers
+
+		[System.Runtime.InteropServices.FieldOffset(64)]
+		public uint dwFreeHw3DStreamingBuffers;      // Offset 64 - Free hardware 3D streaming buffers
+
+		[System.Runtime.InteropServices.FieldOffset(68)]
+		public uint dwTotalHwMemBytes;               // Offset 68 - Total hardware memory in bytes
+
+		[System.Runtime.InteropServices.FieldOffset(72)]
+		public uint dwFreeHwMemBytes;                // Offset 72 - Free hardware memory in bytes
+
+		[System.Runtime.InteropServices.FieldOffset(76)]
+		public uint dwMaxContigFreeHwMemBytes;       // Offset 76 - Largest contiguous free memory block
+
+		[System.Runtime.InteropServices.FieldOffset(80)]
+		public uint dwUnlockTransferRateHwBuffers;   // Offset 80 - Unlock transfer rate (obsolete)
+
+		[System.Runtime.InteropServices.FieldOffset(84)]
+		public uint dwPlayCpuOverheadSwBuffers;      // Offset 84 - CPU overhead for software buffers (obsolete)
+
+		[System.Runtime.InteropServices.FieldOffset(88)]
+		public uint dwReserved1;                     // Offset 88 - Reserved
+
+		[System.Runtime.InteropServices.FieldOffset(92)]
+		public uint dwReserved2;                     // Offset 92 - Reserved
+	}
+
+	/// <summary>
+	/// DirectSound error codes
+	/// </summary>
+	public enum DSResult : uint
+	{
+		DS_OK = 0x00000000,                    // Success
+		DSERR_ALLOCATED = 0x8878000A,          // Resources already allocated
+		DSERR_CONTROLUNAVAIL = 0x8878001E,     // Control unavailable
+		DSERR_INVALIDPARAM = 0x80070057,       // Invalid parameter (E_INVALIDARG)
+		DSERR_INVALIDCALL = 0x88780032,        // Invalid call
+		DSERR_GENERIC = 0x80004005,            // Generic error (E_FAIL)
+		DSERR_PRIOLEVELNEEDED = 0x88780046,    // Priority level needed
+		DSERR_OUTOFMEMORY = 0x80000002,        // Out of memory
+		DSERR_BADFORMAT = 0x88780064,          // Bad format
+		DSERR_UNSUPPORTED = 0x80004001,        // Unsupported (E_NOTIMPL)
+		DSERR_NODRIVER = 0x88780078,           // No driver
+		DSERR_ALREADYINITIALIZED = 0x88780082, // Already initialized
+		DSERR_NOAGGREGATION = 0x80040110,      // No aggregation (CLASS_E_NOAGGREGATION)
+		DSERR_BUFFERLOST = 0x88780096,         // Buffer lost
+		DSERR_OTHERAPPHASPRIO = 0x887800A0,    // Another app has priority
+		DSERR_UNINITIALIZED = 0x887800AA,      // Uninitialized
+		DSERR_NOINTERFACE = 0x80004002,        // No interface (E_NOINTERFACE)
+		DSERR_ACCESSDENIED = 0x80070005        // Access denied (E_ACCESSDENIED)
+	}
+
+	/// <summary>
+	/// DirectSound speaker configuration
+	/// </summary>
+	public enum DSSpeakerConfig : uint
+	{
+		DSSPEAKER_DIRECTOUT = 0x00000000,      // Direct output (no panning)
+		DSSPEAKER_HEADPHONE = 0x00000001,      // Headphone configuration
+		DSSPEAKER_MONO = 0x00000002,           // Mono output
+		DSSPEAKER_QUAD = 0x00000003,           // Quad speaker configuration
+		DSSPEAKER_STEREO = 0x00000004,         // Stereo speaker configuration
+		DSSPEAKER_SURROUND = 0x00000005,       // Surround sound configuration
+		DSSPEAKER_5POINT1 = 0x00000006,        // 5.1 surround configuration
+		DSSPEAKER_7POINT1 = 0x00000007,        // 7.1 surround configuration
+		DSSPEAKER_7POINT1_SURROUND = 0x00000008, // 7.1 surround wide
+		DSSPEAKER_5POINT1_SURROUND = 0x00000009  // 5.1 surround
+	}
+
 	// DDCOLORKEY structure (8 bytes)
 	// Specifies a color key for DirectDraw surfaces
 	public struct DDCOLORKEY
@@ -973,6 +1164,30 @@ public static class NativeTypes
 	// STARTUPINFOA structure (68 bytes)
 	// Specifies startup information for a process
 	public struct STARTUPINFOA
+	{
+		public uint cb;              // Offset 0 - Size of structure
+		public uint lpReserved;      // Offset 4
+		public uint lpDesktop;       // Offset 8
+		public uint lpTitle;         // Offset 12
+		public uint dwX;             // Offset 16
+		public uint dwY;             // Offset 20
+		public uint dwXSize;         // Offset 24
+		public uint dwYSize;         // Offset 28
+		public uint dwXCountChars;   // Offset 32
+		public uint dwYCountChars;   // Offset 36
+		public uint dwFillAttribute; // Offset 40
+		public uint dwFlags;         // Offset 44
+		public ushort wShowWindow;   // Offset 48
+		public ushort cbReserved2;   // Offset 50
+		public uint lpReserved2;     // Offset 52
+		public uint hStdInput;       // Offset 56
+		public uint hStdOutput;      // Offset 60
+		public uint hStdError;       // Offset 64
+	}
+
+	// STARTUPINFOW structure (68 bytes)
+	// Specifies startup information for a process (Unicode version)
+	public struct STARTUPINFOW
 	{
 		public uint cb;              // Offset 0 - Size of structure
 		public uint lpReserved;      // Offset 4
