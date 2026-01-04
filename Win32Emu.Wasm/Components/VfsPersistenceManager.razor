@@ -131,7 +131,7 @@
 	public EventCallback<Dictionary<string, byte[]>> OnStateLoaded { get; set; }
 
 	[Parameter]
-	public Func<IReadOnlyDictionary<string, byte[]>?>? GetCurrentVfsFiles { get; set; }
+	public IReadOnlyDictionary<string, byte[]>? CurrentVfsFiles { get; set; }
 
 	[Parameter]
 	public string? CurrentExecutableName { get; set; }
@@ -139,8 +139,8 @@
 	private List<VfsStateMetadata> _savedStates = new();
 	private StorageUsageInfo _storageUsage = new();
 	private string _saveName = string.Empty;
-	private bool _isLoading = false;
-	private bool _isSaving = false;
+	private bool _isLoading;
+	private bool _isSaving;
 
 	protected override async Task OnInitializedAsync()
 	{
@@ -173,13 +173,7 @@
 			return;
 		}
 
-		if (GetCurrentVfsFiles == null)
-		{
-			Logger.LogWarning("Cannot save: GetCurrentVfsFiles delegate not set");
-			return;
-		}
-
-		var files = GetCurrentVfsFiles();
+		var files = CurrentVfsFiles;
 		if (files == null || files.Count == 0)
 		{
 			Logger.LogWarning("Cannot save: No VFS files available");
