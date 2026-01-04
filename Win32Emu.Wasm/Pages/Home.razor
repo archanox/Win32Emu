@@ -420,7 +420,6 @@
 					<li>Keyboard/Mouse input forwarding to emulated Windows</li>
 					<li>Performance optimization for real-time emulation</li>
 					<li>Dialog control state synchronization with emulator</li>
-					<li>Auto-save functionality for VFS persistence</li>
 				</ul>
 			</div>
 		</div>
@@ -1427,7 +1426,7 @@
 					
 					if (!cancellationToken.IsCancellationRequested && _isRunning)
 					{
-						await PerformAutoSave();
+						await InvokeAsync(PerformAutoSave);
 					}
 				}
 				catch (OperationCanceledException)
