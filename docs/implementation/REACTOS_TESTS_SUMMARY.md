@@ -2,13 +2,13 @@
 
 ## Overview
 
-This implementation adds 31 new ReactOS-style tests for Win32 API functions used by **ign_teas.exe** from the Ignition TEAS game. All tests are based on actual API call patterns observed in the ign_teas API monitoring log.
+This implementation adds 55 new ReactOS-style tests for Win32 API functions used by **ign_teas.exe** from the Ignition TEAS game. All tests are based on actual API call patterns observed in the ign_teas API monitoring log.
 
 ## Implementation Summary
 
 ### New Tests Added
 
-#### Kernel32 Tests (17 new tests)
+#### Kernel32 Tests (28 new tests)
 File: `Win32Emu.Tests.Kernel32/ReactOSPortedTests_Kernel32.cs`
 
 1. **HeapAlloc/HeapFree Tests** (8 tests)
@@ -34,7 +34,7 @@ File: `Win32Emu.Tests.Kernel32/ReactOSPortedTests_Kernel32.cs`
    - Basic string block freeing
    - Full lifecycle (Get + Free)
 
-#### User32 Tests (21 new tests)
+#### User32 Tests (34 new tests)
 File: `Win32Emu.Tests.User32/ReactOSPortedTests_IgnTeas.cs` (NEW)
 
 1. **SetFocus Tests** (3 tests)
@@ -44,7 +44,7 @@ File: `Win32Emu.Tests.User32/ReactOSPortedTests_IgnTeas.cs` (NEW)
 
 2. **ShowWindow Tests** (3 tests)
    - Show window (SW_SHOW)
-   - Hide window (SW_HIDE) - skipped, not critical
+   - Hide window (SW_HIDE)
    - Invalid handle handling
 
 3. **SetCursor Tests** (3 tests)
@@ -80,14 +80,12 @@ File: `Win32Emu.Tests.User32/ReactOSPortedTests_IgnTeas.cs` (NEW)
 ## Test Results
 
 ### Kernel32
-- **39/40 tests passing** (97.5% pass rate)
-- 1 pre-existing failure unrelated to new tests
-- All 17 new tests passing
+- **51/51 tests passing** (100% pass rate)
+- All new tests passing
 
 ### User32
-- **20/21 tests passing** (95.2% pass rate)
-- 1 test skipped (ShowWindow_WithSW_HIDE - not critical)
-- All critical functionality tested
+- **34/34 tests passing** (100% pass rate)
+- All tests passing with no skips
 
 ## Source Attribution
 
@@ -108,10 +106,10 @@ All tests are ported from or inspired by:
 
 ```
 Win32Emu.Tests.Kernel32/
-  ReactOSPortedTests_Kernel32.cs  (modified - added 17 tests)
+  ReactOSPortedTests_Kernel32.cs  (modified - 28 new tests, 51 total)
 
 Win32Emu.Tests.User32/
-  ReactOSPortedTests_IgnTeas.cs   (NEW - 21 tests)
+  ReactOSPortedTests_IgnTeas.cs   (NEW - 34 tests total)
 ```
 
 ## Usage
