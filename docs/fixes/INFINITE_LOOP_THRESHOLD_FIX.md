@@ -64,7 +64,7 @@ private const ulong MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE = 500000000;  // Nativ
 ## Technical Details
 
 ### API Monitor Evidence
-From `ApiMon Logs/ign_install/setup.exe.log`, the successful execution sequence is:
+From `ApiMon Logs/ign_install/setup.exe.log` (captured on a Mac with network mount), the successful execution sequence is:
 
 ```
 342: GetModuleFileNameA ( NULL, 0x0040bd38, 260 ) → 55
@@ -73,11 +73,13 @@ From `ApiMon Logs/ign_install/setup.exe.log`, the successful execution sequence 
 1757: DialogBoxParamA ( 0x00400000, "DLG_MASTER", NULL, 0x00401130, 0 )
 ```
 
+**Note:** The API Monitor log was captured on macOS with a network mount path (`\\Mac\RiderProjects\Win32Emu\EXEs\ign_install\SETUP.EXE` - 55 characters). In the emulator on Windows, the path is `C:\ign_install\SETUP.EXE` (24 characters), but the same tight loop pattern occurs with CharNextA parsing - the number of iterations varies based on path length.
+
 ### Loop Analysis
-- **Path length**: 55 characters (`\\Mac\RiderProjects\Win32Emu\EXEs\ign_install\SETUP.EXE`)
-- **CharNextA calls**: 55 iterations
-- **Emulated instructions**: Each CharNextA call triggers multiple x86 instructions
-- **Total iterations**: ~100M+ before reaching next Win32 API call (CoInitialize)
+- **CharNextA calls**: 55 calls in the API Monitor log (parsing the 55-character Mac mount path)
+- **Emulated instructions per iteration**: The application's loop code between CharNextA calls is fully emulated (MOV, CMP, JMP, etc.)
+- **Total emulated instructions**: ~100M+ before reaching the next Win32 API call (CoInitialize)
+- **Why so many iterations**: While CharNextA is called 55 times (or 24 times for the shorter Windows path), each iteration of the application's parsing loop executes many x86 instructions. The emulator's iteration counter counts every single x86 instruction, not just API calls.
 
 ### Why CharNextA Takes So Many Iterations
 In real Windows:

@@ -17,17 +17,19 @@ Increased the infinite loop detection threshold for native platforms from **100 
 
 ### Application Flow
 ```
-1. GetModuleFileNameA → Returns "C:\ign_install\SETUP.EXE"
-2. CharNextA loop → Parses path character-by-character (~55 iterations, 100M+ CPU instructions)
+1. GetModuleFileNameA → Returns "C:\ign_install\SETUP.EXE" (24 characters on Windows)
+2. CharNextA loop → Parses path character-by-character (24 CharNextA calls, but 100M+ total CPU instructions)
 3. ❌ LOOP DETECTOR TRIGGERED HERE (at 100M threshold) ❌
 4. CoInitialize → (Never reached)
 5. DialogBoxParamA → (Never reached - window creation code)
 ```
 
+**Note:** The path length varies by environment (24 chars on Windows, 55 chars on Mac mount). The critical issue is that the tight parsing loop executes 100M+ x86 instructions regardless of path length.
+
 ### After Fix
 ```
-1. GetModuleFileNameA → Returns "C:\ign_install\SETUP.EXE"
-2. CharNextA loop → Parses path character-by-character (~55 iterations, 100M+ CPU instructions)
+1. GetModuleFileNameA → Returns "C:\ign_install\SETUP.EXE" (24 characters on Windows)
+2. CharNextA loop → Parses path character-by-character (24 CharNextA calls, 100M+ total CPU instructions)
 3. ✅ Loop completes successfully (threshold now 500M)
 4. CoInitialize → Initializes COM successfully
 5. DialogBoxParamA → Creates and displays setup dialog window ✅
