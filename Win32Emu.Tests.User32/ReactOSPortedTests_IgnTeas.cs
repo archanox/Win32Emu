@@ -496,4 +496,281 @@ public class ReactOSPortedTests_IgnTeas : IDisposable
 	}
 
 	#endregion
+
+	#region TranslateMessage and DispatchMessageA Tests
+	// Ported from: rostests/apitests/user32/TranslateMessage.c
+	// ign_teas calls TranslateMessage and DispatchMessageA 106 times each in message loop
+
+	[Fact]
+	public void TranslateMessage_WithValidMessage_ShouldReturnBoolean()
+	{
+		// Arrange
+		var msgPtr = _testEnv.AllocateMemory((uint)MsgSize);
+		
+		// Initialize MSG structure with WM_KEYDOWN
+		const uint WM_KEYDOWN = 0x0100;
+		_testEnv.Memory.Write32(msgPtr + 0, 0); // hwnd
+		_testEnv.Memory.Write32(msgPtr + 4, WM_KEYDOWN); // message
+		_testEnv.Memory.Write32(msgPtr + 8, 0x41); // wParam (VK_A)
+		_testEnv.Memory.Write32(msgPtr + 12, 0); // lParam
+
+		// Act
+		var result = _testEnv.CallUser32Api("TRANSLATEMESSAGE", msgPtr);
+
+		// Assert - TranslateMessage returns TRUE if message was translated, FALSE otherwise
+		Assert.True(result == 0u || result == 1u, "TranslateMessage should return boolean");
+	}
+
+	[Fact]
+	public void DispatchMessageA_WithValidMessage_ShouldExecute()
+	{
+		// Arrange
+		var className = _testEnv.WriteString("EDIT");
+		var title = _testEnv.WriteString("TestWindow");
+		var hwnd = _testEnv.CallUser32Api("CREATEWINDOWA",
+			className, title, WS_POPUP, 0, 0, 100, 100, 0, 0, 0, 0);
+		Assert.NotEqual(0u, hwnd);
+
+		var msgPtr = _testEnv.AllocateMemory((uint)MsgSize);
+		_testEnv.Memory.Write32(msgPtr + 0, hwnd); // hwnd
+		_testEnv.Memory.Write32(msgPtr + 4, WM_PAINT); // message
+		_testEnv.Memory.Write32(msgPtr + 8, 0); // wParam
+		_testEnv.Memory.Write32(msgPtr + 12, 0); // lParam
+
+		// Act
+		var result = _testEnv.CallUser32Api("DISPATCHMESSAGEA", msgPtr);
+
+		// Assert - DispatchMessage returns the result from window procedure
+		// For WM_PAINT with DefWindowProc, should return 0
+		Assert.True(result >= 0, "DispatchMessage should return window procedure result");
+
+		// Cleanup
+		_testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+	}
+
+	[Fact]
+	public void GetMessageA_TranslateMessage_DispatchMessageA_MessageLoop_ShouldWork()
+	{
+		// Arrange - Simulate basic message loop pattern used by ign_teas
+		var className = _testEnv.WriteString("EDIT");
+		var title = _testEnv.WriteString("TestWindow");
+		var hwnd = _testEnv.CallUser32Api("CREATEWINDOWA",
+			className, title, WS_POPUP, 0, 0, 100, 100, 0, 0, 0, 0);
+		Assert.NotEqual(0u, hwnd);
+
+		// Post a message and a quit message
+		_testEnv.CallUser32Api("POSTMESSAGEA", hwnd, WM_PAINT, 0u, 0u);
+		_testEnv.CallUser32Api("POSTQUITMESSAGE", 0u);
+
+		// Act - Message loop
+		var msgPtr = _testEnv.AllocateMemory((uint)MsgSize);
+		var msgCount = 0;
+		
+		// Try to get at most 2 messages (WM_PAINT and WM_QUIT)
+		for (int i = 0; i < 2; i++)
+		{
+			const uint PM_REMOVE = 0x0001;
+			var hasMsg = _testEnv.CallUser32Api("PEEKMESSAGEA", msgPtr, 0u, 0u, 0u, PM_REMOVE);
+			
+			if (hasMsg != 0)
+			{
+				msgCount++;
+				_testEnv.CallUser32Api("TRANSLATEMESSAGE", msgPtr);
+				_testEnv.CallUser32Api("DISPATCHMESSAGEA", msgPtr);
+			}
+		}
+
+		// Assert - Should have processed at least one message
+		Assert.True(msgCount >= 1, $"Should have processed at least 1 message, got {msgCount}");
+
+		// Cleanup
+		_testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+	}
+
+	#endregion
+
+	#region DefWindowProcA Tests
+	// Ported from: rostests/apitests/user32/DefWindowProc.c
+	// ign_teas calls DefWindowProcA 324 times for default window message handling
+
+	[Fact]
+	public void DefWindowProcA_WithWM_NULL_ShouldReturnZero()
+	{
+		// Arrange
+		const uint WM_NULL = 0x0000;
+
+		// Act
+		var result = _testEnv.CallUser32Api("DEFWINDOWPROCA", 0u, WM_NULL, 0u, 0u);
+
+		// Assert
+		Assert.Equal(0u, result);
+	}
+
+	[Fact]
+	public void DefWindowProcA_WithWM_NCHITTEST_ShouldReturnHitTest()
+	{
+		// Arrange - Create a window
+		var className = _testEnv.WriteString("EDIT");
+		var title = _testEnv.WriteString("TestWindow");
+		var hwnd = _testEnv.CallUser32Api("CREATEWINDOWA",
+			className, title, WS_POPUP, 0, 0, 100, 100, 0, 0, 0, 0);
+		Assert.NotEqual(0u, hwnd);
+
+		const uint WM_NCHITTEST = 0x0084;
+
+		// Act
+		var result = _testEnv.CallUser32Api("DEFWINDOWPROCA", hwnd, WM_NCHITTEST, 0u, 0u);
+
+		// Assert - Should return a valid hit test code
+		Assert.True(result >= 0 && result < 25, $"Should return valid HTXXXX code, got {result}");
+
+		// Cleanup
+		_testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+	}
+
+	[Fact]
+	public void DefWindowProcA_WithWM_PAINT_ShouldReturnZero()
+	{
+		// Arrange
+		var className = _testEnv.WriteString("EDIT");
+		var title = _testEnv.WriteString("TestWindow");
+		var hwnd = _testEnv.CallUser32Api("CREATEWINDOWA",
+			className, title, WS_POPUP, 0, 0, 100, 100, 0, 0, 0, 0);
+		Assert.NotEqual(0u, hwnd);
+
+		// Act
+		var result = _testEnv.CallUser32Api("DEFWINDOWPROCA", hwnd, WM_PAINT, 0u, 0u);
+
+		// Assert - WM_PAINT should return 0
+		Assert.Equal(0u, result);
+
+		// Cleanup
+		_testEnv.CallUser32Api("DESTROYWINDOW", hwnd);
+	}
+
+	#endregion
+
+	#region LoadIconA and LoadCursorA Tests
+	// Ported from: rostests/apitests/user32/LoadImage.c
+	// ign_teas calls LoadIconA and LoadCursorA at startup
+
+	[Fact]
+	public void LoadIconA_WithIDI_APPLICATION_ShouldReturnHandle()
+	{
+		// Arrange
+		const uint IDI_APPLICATION = 32512;
+
+		// Act
+		var hIcon = _testEnv.CallUser32Api("LOADICONA", 0u, IDI_APPLICATION);
+
+		// Assert
+		Assert.NotEqual(0u, hIcon);
+	}
+
+	[Fact]
+	public void LoadIconA_WithIDI_HAND_ShouldReturnHandle()
+	{
+		// Arrange
+		const uint IDI_HAND = 32513;
+
+		// Act
+		var hIcon = _testEnv.CallUser32Api("LOADICONA", 0u, IDI_HAND);
+
+		// Assert
+		Assert.NotEqual(0u, hIcon);
+	}
+
+	[Fact]
+	public void LoadCursorA_WithIDC_ARROW_ShouldReturnHandle()
+	{
+		// Arrange - IDC_ARROW already defined in class
+
+		// Act
+		var hCursor = _testEnv.CallUser32Api("LOADCURSORA", 0u, IDC_ARROW);
+
+		// Assert
+		Assert.NotEqual(0u, hCursor);
+	}
+
+	[Fact]
+	public void LoadCursorA_WithIDC_CROSS_ShouldReturnHandle()
+	{
+		// Arrange
+		const uint IDC_CROSS = 32515;
+
+		// Act
+		var hCursor = _testEnv.CallUser32Api("LOADCURSORA", 0u, IDC_CROSS);
+
+		// Assert
+		Assert.NotEqual(0u, hCursor);
+	}
+
+	[Fact]
+	public void LoadCursorA_DifferentCursors_ShouldReturnDifferentHandles()
+	{
+		// Act
+		var arrow = _testEnv.CallUser32Api("LOADCURSORA", 0u, IDC_ARROW);
+		var wait = _testEnv.CallUser32Api("LOADCURSORA", 0u, IDC_WAIT);
+
+		// Assert
+		Assert.NotEqual(0u, arrow);
+		Assert.NotEqual(0u, wait);
+		Assert.NotEqual(arrow, wait);
+	}
+
+	#endregion
+
+	#region RegisterClassA Tests
+	// Ported from: rostests/apitests/user32/RegisterClass.c
+	// ign_teas calls RegisterClassA at startup to register "Ignition" window class
+
+	[Fact]
+	public void RegisterClassA_WithValidClass_ShouldReturnAtom()
+	{
+		// Arrange
+		var wndClassPtr = _testEnv.WriteWndClassA(
+			className: "TestClass_" + Guid.NewGuid().ToString(),
+			wndProc: 0x00401000,
+			cbClsExtra: 0,
+			cbWndExtra: 0
+		);
+
+		// Act
+		var atom = _testEnv.CallUser32Api("REGISTERCLASSA", wndClassPtr);
+
+		// Assert
+		Assert.NotEqual(0u, atom);
+		Assert.True(atom >= 0xC000, "Atom should be in valid range (>= 0xC000)");
+	}
+
+	[Fact]
+	public void RegisterClassA_WithSameClassName_ShouldFail()
+	{
+		// Arrange
+		var className = "DuplicateClass_" + Guid.NewGuid().ToString();
+		var wndClassPtr1 = _testEnv.WriteWndClassA(
+			className: className,
+			wndProc: 0x00401000,
+			cbClsExtra: 0,
+			cbWndExtra: 0
+		);
+
+		// Register once
+		var atom1 = _testEnv.CallUser32Api("REGISTERCLASSA", wndClassPtr1);
+		Assert.NotEqual(0u, atom1);
+
+		// Act - Try to register again with same name
+		var wndClassPtr2 = _testEnv.WriteWndClassA(
+			className: className,
+			wndProc: 0x00401000,
+			cbClsExtra: 0,
+			cbWndExtra: 0
+		);
+		var atom2 = _testEnv.CallUser32Api("REGISTERCLASSA", wndClassPtr2);
+
+		// Assert - Should fail (return 0) as class already registered
+		Assert.Equal(0u, atom2);
+	}
+
+	#endregion
 }

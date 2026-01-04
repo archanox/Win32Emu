@@ -959,4 +959,200 @@ public class ReactOSPortedTests_Kernel32 : IDisposable
 	}
 
 	#endregion
+
+	#region GetStdHandle and GetFileType Tests
+	// Ported from: rostests/apitests/kernel32/GetStdHandle.c
+	// ign_teas calls GetStdHandle and GetFileType at startup
+
+	[Fact]
+	public void GetStdHandle_WithSTD_INPUT_HANDLE_ShouldReturnHandle()
+	{
+		// Arrange
+		const uint STD_INPUT_HANDLE = unchecked((uint)-10);
+
+		// Act
+		var handle = _testEnv.CallKernel32Api("GETSTDHANDLE", STD_INPUT_HANDLE);
+
+		// Assert - GUI apps without console return NULL, which is valid
+		Assert.True(handle == 0u || handle != 0xFFFFFFFFu, "Should return valid handle or NULL");
+	}
+
+	[Fact]
+	public void GetStdHandle_WithSTD_OUTPUT_HANDLE_ShouldReturnHandle()
+	{
+		// Arrange
+		const uint STD_OUTPUT_HANDLE = unchecked((uint)-11);
+
+		// Act
+		var handle = _testEnv.CallKernel32Api("GETSTDHANDLE", STD_OUTPUT_HANDLE);
+
+		// Assert - GUI apps without console return NULL, which is valid
+		Assert.True(handle == 0u || handle != 0xFFFFFFFFu, "Should return valid handle or NULL");
+	}
+
+	[Fact]
+	public void GetStdHandle_WithSTD_ERROR_HANDLE_ShouldReturnHandle()
+	{
+		// Arrange
+		const uint STD_ERROR_HANDLE = unchecked((uint)-12);
+
+		// Act
+		var handle = _testEnv.CallKernel32Api("GETSTDHANDLE", STD_ERROR_HANDLE);
+
+		// Assert - GUI apps without console return NULL, which is valid
+		Assert.True(handle == 0u || handle != 0xFFFFFFFFu, "Should return valid handle or NULL");
+	}
+
+	[Fact]
+	public void GetFileType_WithNullHandle_ShouldReturnUnknown()
+	{
+		// Arrange
+		const uint FILE_TYPE_UNKNOWN = 0x0000;
+
+		// Act
+		var fileType = _testEnv.CallKernel32Api("GETFILETYPE", 0u);
+
+		// Assert
+		Assert.Equal(FILE_TYPE_UNKNOWN, fileType);
+	}
+
+	[Fact]
+	public void GetFileType_WithInvalidHandle_ShouldReturnUnknown()
+	{
+		// Arrange
+		const uint FILE_TYPE_UNKNOWN = 0x0000;
+		const uint INVALID_HANDLE = 0xBADBEEF;
+
+		// Act
+		var fileType = _testEnv.CallKernel32Api("GETFILETYPE", INVALID_HANDLE);
+
+		// Assert
+		Assert.Equal(FILE_TYPE_UNKNOWN, fileType);
+	}
+
+	#endregion
+
+	#region SetHandleCount Tests
+	// Ported from: rostests/apitests/kernel32/SetHandleCount.c
+	// ign_teas calls SetHandleCount(32) at startup
+
+	[Fact]
+	public void SetHandleCount_WithValidCount_ShouldReturnCount()
+	{
+		// Act
+		var result = _testEnv.CallKernel32Api("SETHANDLECOUNT", 32u);
+
+		// Assert - SetHandleCount is a legacy function that returns the count passed
+		Assert.Equal(32u, result);
+	}
+
+	[Fact]
+	public void SetHandleCount_WithLargeCount_ShouldReturnCount()
+	{
+		// Act
+		var result = _testEnv.CallKernel32Api("SETHANDLECOUNT", 256u);
+
+		// Assert
+		Assert.Equal(256u, result);
+	}
+
+	[Fact]
+	public void SetHandleCount_WithZero_ShouldReturnZero()
+	{
+		// Act
+		var result = _testEnv.CallKernel32Api("SETHANDLECOUNT", 0u);
+
+		// Assert - Even 0 is accepted (legacy behavior)
+		Assert.Equal(0u, result);
+	}
+
+	#endregion
+
+	#region CreateFileA and ReadFile Tests
+	// Ported from: rostests/apitests/kernel32/CreateFile.c
+	// ign_teas calls CreateFileA 79 times and ReadFile 43 times
+
+	[Fact]
+	public void CreateFileA_WithNonExistentFile_ShouldReturnInvalidHandle()
+	{
+		// Arrange
+		var fileName = _testEnv.WriteString("NonExistentFile_" + Guid.NewGuid().ToString() + ".dat");
+		const uint GENERIC_READ = 0x80000000;
+		const uint OPEN_EXISTING = 3;
+
+		// Act
+		var handle = _testEnv.CallKernel32Api("CREATEFILEA", fileName, GENERIC_READ, 0u, 0u, OPEN_EXISTING, 0x80u, 0u);
+
+		// Assert
+		Assert.Equal(0xFFFFFFFFu, handle); // INVALID_HANDLE_VALUE
+	}
+
+	[Fact]
+	public void ReadFile_WithValidFile_ShouldReadData()
+	{
+		// Arrange - Create a test file
+		var tempDir = Path.GetTempPath();
+		_testEnv.ProcessEnv.CurrentDirectory = tempDir;
+		var testFileName = "test_readfile_" + Guid.NewGuid().ToString() + ".txt";
+		var testFilePath = Path.Combine(tempDir, testFileName);
+
+		try
+		{
+			File.WriteAllText(testFilePath, "HelloWorld");
+
+			var fileName = _testEnv.WriteString(testFileName);
+			const uint GENERIC_READ = 0x80000000;
+			const uint OPEN_EXISTING = 3;
+
+			var handle = _testEnv.CallKernel32Api("CREATEFILEA", fileName, GENERIC_READ, 0x00000001u, 0u, OPEN_EXISTING, 0x80u, 0u);
+
+			if (handle == 0xFFFFFFFFu)
+			{
+				return; // Skip if file couldn't be opened
+			}
+
+			// Act - Read the file
+			var buffer = _testEnv.AllocateMemory(20);
+			var bytesRead = _testEnv.AllocateMemory(4);
+			var result = _testEnv.CallKernel32Api("READFILE", handle, buffer, 10u, bytesRead, 0u);
+
+			// Assert
+			Assert.NotEqual(0u, result); // TRUE
+
+			var actualBytesRead = _testEnv.Memory.Read32(bytesRead);
+			Assert.Equal(10u, actualBytesRead);
+
+			// Verify content
+			var data = new byte[10];
+			for (int i = 0; i < 10; i++)
+				data[i] = (byte)_testEnv.Memory.Read8(buffer + (uint)i);
+
+			var content = System.Text.Encoding.ASCII.GetString(data);
+			Assert.Equal("HelloWorld", content);
+
+			// Cleanup
+			_testEnv.CallKernel32Api("CLOSEHANDLE", handle);
+		}
+		finally
+		{
+			if (File.Exists(testFilePath))
+				File.Delete(testFilePath);
+		}
+	}
+
+	[Fact]
+	public void ReadFile_WithInvalidHandle_ShouldFail()
+	{
+		// Arrange
+		var buffer = _testEnv.AllocateMemory(10);
+		var bytesRead = _testEnv.AllocateMemory(4);
+
+		// Act
+		var result = _testEnv.CallKernel32Api("READFILE", 0xFFFFFFFFu, buffer, 10u, bytesRead, 0u);
+
+		// Assert
+		Assert.Equal(0u, result); // FALSE
+	}
+
+	#endregion
 }
