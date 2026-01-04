@@ -365,6 +365,39 @@ public class JitCacheTests
 	}
 	
 	[Fact]
+	public void JitCpu_InterpreterMode_ShouldUseMetadataCache()
+	{
+		// Arrange
+		var tempDir = Path.Combine(Path.GetTempPath(), "Win32Emu_Test_" + Guid.NewGuid());
+		
+		try
+		{
+			var mem = new VirtualMemory(1024 * 1024);
+			// Force interpreter mode to test metadata cache
+			var cpu = new JitCpu(mem, logger: null, forceInterpreterMode: true, cacheDirectory: tempDir);
+			
+			// Act
+			var stats = cpu.GetCacheStatistics();
+			
+			// Assert - In interpreter mode, should use metadata cache
+			Assert.NotNull(stats);
+			Assert.Equal(0, stats.TotalBlocks);
+			// In interpreter mode, cache directory should be the metadata cache directory (tempDir)
+			Assert.Equal(tempDir, stats.CacheDirectory);
+			// Source directory should indicate metadata-only mode
+			Assert.Contains("Metadata only", stats.SourceDirectory);
+		}
+		finally
+		{
+			// Cleanup
+			if (Directory.Exists(tempDir))
+			{
+				Directory.Delete(tempDir, true);
+			}
+		}
+	}
+	
+	[Fact]
 	public async Task PrecompileFromCacheAsync_ShouldCompileCachedBlocks()
 	{
 		// Arrange
