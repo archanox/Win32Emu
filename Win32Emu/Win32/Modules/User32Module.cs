@@ -2193,6 +2193,14 @@ namespace Win32Emu.Win32.Modules
 				currentStyle |= (uint)NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now visible", hwnd);
 
+				// Send WM_SHOWWINDOW message when window is being shown
+				// WM_SHOWWINDOW = 0x0018, wParam = TRUE (1) for being shown, lParam = 0 (called by ShowWindow)
+				if (!wasPreviouslyVisible)
+				{
+					_env.SendMessageToWindow(hwnd, 0x0018, 1, 0);
+					_logger.LogDebug("[User32] ShowWindow: Sent WM_SHOWWINDOW to window 0x{Hwnd:X8}", hwnd);
+				}
+
 				// Send WM_ACTIVATEAPP message when window becomes visible
 				// WM_ACTIVATEAPP = 0x001C, wParam = TRUE (1) for activation, lParam = 0 (thread ID)
 				if (!wasPreviouslyVisible)
@@ -2205,6 +2213,14 @@ namespace Win32Emu.Win32.Modules
 			{
 				currentStyle &= ~(uint)NativeTypes.WindowStyle.WS_VISIBLE;
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now hidden", hwnd);
+
+				// Send WM_SHOWWINDOW message when window is being hidden
+				// WM_SHOWWINDOW = 0x0018, wParam = FALSE (0) for being hidden, lParam = 0 (called by ShowWindow)
+				if (wasPreviouslyVisible)
+				{
+					_env.SendMessageToWindow(hwnd, 0x0018, 0, 0);
+					_logger.LogDebug("[User32] ShowWindow: Sent WM_SHOWWINDOW to window 0x{Hwnd:X8}", hwnd);
+				}
 
 				// Send WM_ACTIVATEAPP message when window becomes hidden
 				// WM_ACTIVATEAPP = 0x001C, wParam = FALSE (0) for deactivation, lParam = 0 (thread ID)
@@ -3813,6 +3829,8 @@ namespace Win32Emu.Win32.Modules
 				// wParam = hWndParent (or 0 if no focus control)
 				// lParam = dwInitParam
 				const uint WM_INITDIALOG = 0x0110;
+				const uint WM_SHOWWINDOW = 0x0018;
+				const uint WM_SETFOCUS = 0x0007;
 				var dialogProcTimedOut = false;
 				var dialogProcCancelled = false;
 				var dialogProcFailed = false;
@@ -3837,6 +3855,42 @@ namespace Win32Emu.Win32.Modules
 					var status = dialogProcFailed ? "failed" : (dialogProcCancelled ? "cancelled" : "timed out");
 					_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status}, ending dialog with result 0", status);
 					_env.SetDialogResult(hDlg, 0);
+				}
+				else if (lpDialogFunc != 0)
+				{
+					// Send WM_SHOWWINDOW to notify the dialog it's about to become visible
+					// wParam = TRUE (being shown), lParam = 0 (shown by call to ShowWindow)
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Sending WM_SHOWWINDOW to dialog");
+					var (showResult, showTimedOut, showCancelled, showFailed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_SHOWWINDOW, 1, 0, cancellationToken).ConfigureAwait(false);
+					_logger.LogInformation("[User32] DialogBoxParamAsync: WM_SHOWWINDOW returned {ShowResult}", showResult);
+					
+					if (showTimedOut || showCancelled || showFailed)
+					{
+						var status = showFailed ? "failed" : (showCancelled ? "cancelled" : "timed out");
+						_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during WM_SHOWWINDOW, ending dialog with result 0", status);
+						_env.SetDialogResult(hDlg, 0);
+						dialogProcTimedOut = showTimedOut;
+						dialogProcCancelled = showCancelled;
+						dialogProcFailed = showFailed;
+					}
+					else
+					{
+						// Send WM_SETFOCUS to notify the dialog it's receiving keyboard focus
+						// wParam = 0 (handle of window losing focus, or 0), lParam = 0
+						_logger.LogInformation("[User32] DialogBoxParamAsync: Sending WM_SETFOCUS to dialog");
+						var (focusResult, focusTimedOut, focusCancelled, focusFailed) = await CallDialogProcedureAsync(_cpu!, _memory!, lpDialogFunc, hDlg, WM_SETFOCUS, 0, 0, cancellationToken).ConfigureAwait(false);
+						_logger.LogInformation("[User32] DialogBoxParamAsync: WM_SETFOCUS returned {FocusResult}", focusResult);
+						
+						if (focusTimedOut || focusCancelled || focusFailed)
+						{
+							var status = focusFailed ? "failed" : (focusCancelled ? "cancelled" : "timed out");
+							_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during WM_SETFOCUS, ending dialog with result 0", status);
+							_env.SetDialogResult(hDlg, 0);
+							dialogProcTimedOut = focusTimedOut;
+							dialogProcCancelled = focusCancelled;
+							dialogProcFailed = focusFailed;
+						}
+					}
 				}
 
 				// Run modal message loop until EndDialog is called
