@@ -81,16 +81,16 @@ From `ApiMon Logs/ign_install/setup.exe.log` (captured on a Mac with network mou
 - **Total emulated instructions**: ~100M+ before reaching the next Win32 API call (CoInitialize)
 - **Why so many iterations**: While CharNextA is called 55 times (or 24 times for the shorter Windows path), each iteration of the application's parsing loop executes many x86 instructions. The emulator's iteration counter counts every single x86 instruction, not just API calls.
 
-### Why CharNextA Takes So Many Iterations
-In real Windows:
-- `CharNextA` is a single function call (fast pointer arithmetic)
-- Returns almost immediately
+### Why CharNextA Loop Takes So Many Iterations
+In both real Windows and Win32Emu:
+- `CharNextA` itself is a fast Win32 API call (pointer arithmetic)
+- Each CharNextA call executes quickly
 
-In Win32Emu:
-- Each CharNextA is emulated at the x86 instruction level
-- The application's **loop code** between CharNextA calls is fully emulated
-- Every MOV, CMP, JMP instruction counts toward the iteration counter
-- Result: 100M+ iterations for a "simple" 55-character loop
+The difference in Win32Emu:
+- The application's **loop code** between CharNextA calls is fully emulated at the x86 instruction level
+- Every MOV, CMP, JMP, CALL, RET instruction in the loop is counted
+- Each iteration of the parsing loop executes dozens of x86 instructions
+- Result: 100M+ emulated instructions for parsing the path (24 or 55 iterations depending on path length)
 
 ## Files Changed
 - `Win32Emu/Emulator.cs` - Updated threshold constant
