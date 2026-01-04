@@ -98,7 +98,7 @@ public class JitCpu : IAsyncCpu
 	private readonly RtlJitCache? _rtlJitCache;
 	
 	// Metadata-only cache for block boundaries and analysis info
-	// Works in all modes including WASM/interpreter - speeds up block discovery
+	// Works in all modes including WASM/interpreter; intended for block discovery metadata
 	private readonly JitCache? _metadataCache;
 	
 	private string? _currentExecutablePath;
@@ -177,9 +177,9 @@ public class JitCpu : IAsyncCpu
 		}
 		
 		// Initialize metadata cache for all modes (including WASM/interpreter)
-		// This cache stores block boundaries and analysis info to speed up block discovery
+		// This cache stores block boundaries and analysis info for persistence and future reuse
 		_metadataCache = new JitCache(cacheDirectory, logger);
-		_logger.LogInformation("[JitCpu] Metadata cache initialized for block analysis acceleration");
+		_logger.LogInformation("[JitCpu] Metadata cache initialized for block analysis metadata persistence");
 		
 		// Initialize instruction analyzer if requested
 		if (enableInstructionAnalyzer)
@@ -412,7 +412,7 @@ public class JitCpu : IAsyncCpu
 		}
 		
 		// Load metadata cache (block boundaries, analysis info) for all modes
-		// This works in WASM/interpreter mode and speeds up block discovery
+		// This works in WASM/interpreter mode and makes metadata available for block discovery
 		if (_metadataCache != null)
 		{
 			await _metadataCache.LoadCacheAsync(_currentExecutablePath);
@@ -1559,7 +1559,7 @@ public class JitCpu : IAsyncCpu
 			}
 		}
 		
-		// Store block metadata in cache for faster future lookups (works in all modes)
+		// Store block metadata in cache for use by JIT cache and analysis (works in all modes)
 		if (_metadataCache != null && instructions.Count > 0)
 		{
 			var blockLength = (int)(_decoder.IP - startEip);
