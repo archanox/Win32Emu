@@ -151,6 +151,53 @@ The `ign_teas` game is known to write log files during execution. To view these 
 - Ensure pop-ups/downloads are not blocked
 - Try a different browser if issues persist
 
+## VFS Persistence (IndexedDB) ✅ IMPLEMENTED
+
+The VFS now supports persistence using browser IndexedDB storage. This allows you to save and restore VFS states across browser sessions.
+
+### Features
+
+- **Save VFS States**: Save the current VFS contents with a custom name
+- **Load VFS States**: Restore previously saved VFS states
+- **State Management**: View, delete, and manage multiple saved states
+- **Storage Usage**: Monitor browser storage usage
+- **Metadata**: Each state includes executable name, file count, and timestamp
+
+### Usage
+
+1. **Save Current State**:
+   - Enter a name for your save state (e.g., "my-save-game")
+   - Click "Save" to persist the current VFS to IndexedDB
+   - The state is saved with metadata (executable name, file count, timestamp)
+
+2. **View Saved States**:
+   - All saved states are listed in the VFS Persistence panel
+   - Shows executable name, file count, and save timestamp
+   - Storage usage bar indicates how much browser storage is used
+
+3. **Load Saved State**:
+   - Click "Load" on any saved state to restore it
+   - The VFS will be cleared and replaced with the saved files
+   - Loaded files appear in the VFS Browser
+
+4. **Delete States**:
+   - Click the trash icon to delete individual states
+   - Click "Clear All Saved States" to remove all states at once
+
+### Technical Details
+
+- Uses IndexedDB API for browser-local storage
+- Files are stored as base64-encoded strings for JSON serialization
+- Database name: `Win32EmuVFS`
+- Object store: `vfs_states`
+- Each state includes: id, executableName, timestamp, fileCount, files
+
+### Storage Limits
+
+- IndexedDB typically provides 50-100 MB of storage per origin
+- Storage usage is shown as a percentage bar
+- Consider deleting old states if approaching quota
+
 ## Future Enhancements
 
 Potential improvements for the VFS browser:
@@ -159,15 +206,18 @@ Potential improvements for the VFS browser:
 2. **Directory Tree**: Show files in a hierarchical tree structure
 3. **File Editor**: Allow editing text files and writing back to VFS
 4. **File Upload**: Upload files to VFS from local system
-5. **IndexedDB Persistence**: Save VFS to browser storage between sessions
+5. ~~**IndexedDB Persistence**: Save VFS to browser storage between sessions~~ ✅ COMPLETED
 6. **Export All**: Download entire VFS as a ZIP file
 7. **File Metadata**: Show creation/modification timestamps
 8. **Syntax Highlighting**: Add code highlighting for common file types
+9. **Auto-save**: Automatic periodic saving of VFS state during emulation
 
 ## Related Files
 
-- `/Win32Emu.Wasm/Components/VirtualFileSystemBrowser.razor` - Main component
+- `/Win32Emu.Wasm/Components/VirtualFileSystemBrowser.razor` - Main VFS browser component
+- `/Win32Emu.Wasm/Components/VfsPersistenceManager.razor` - IndexedDB persistence UI component
 - `/Win32Emu.Wasm/Services/EmulatorService.cs` - Service layer
+- `/Win32Emu.Wasm/Services/VfsPersistenceService.cs` - IndexedDB persistence service
 - `/Win32Emu.Wasm/VirtualFileSystem/BrowserVirtualFileSystem.cs` - VFS implementation
 - `/Win32Emu.Wasm/Pages/Home.razor` - Page integration
-- `/Win32Emu.Wasm/wwwroot/index.html` - JavaScript functions
+- `/Win32Emu.Wasm/wwwroot/index.html` - JavaScript functions (including IndexedDB API)

@@ -277,6 +277,15 @@
 					</div>
 				</div>
 			</div>
+			
+			<!-- VFS Persistence Manager -->
+			<div class="card mb-3">
+				<VfsPersistenceManager 
+					CanSave="@(_executableLoaded && !_isRunning)"
+					CurrentExecutableName="@_loadedFileName"
+					GetCurrentVfsFiles="@(() => EmulatorService.GetVfsFiles())"
+					OnStateLoaded="@HandleVfsStateLoaded" />
+			</div>
 		</div>
 	</div>
 
@@ -354,15 +363,16 @@
 					<li>✅ EmulatorService for lifecycle management</li>
 					<li>✅ Browser-based VFS for game data files (in-memory, case-insensitive)</li>
 					<li>✅ Win32 windows and dialogs rendering (MessageBox, DialogBox, CreateWindow)</li>
+					<li>✅ IndexedDB persistence for VFS (save and restore game states)</li>
 				</ul>
 				<p class="mb-0">
 					<strong>Remaining work:</strong>
 				</p>
 				<ul class="mb-0">
-					<li>IndexedDB persistence for VFS (save games)</li>
 					<li>Keyboard/Mouse input forwarding to emulated Windows</li>
 					<li>Performance optimization for real-time emulation</li>
 					<li>Dialog control state synchronization with emulator</li>
+					<li>Auto-save functionality for VFS persistence</li>
 				</ul>
 			</div>
 		</div>
@@ -1296,5 +1306,29 @@
 	{
 		_vfsFiles = EmulatorService.GetVfsFiles();
 		StateHasChanged();
+	}
+	
+	/// <summary>
+	/// Handle loading of a saved VFS state.
+	/// </summary>
+	private void HandleVfsStateLoaded(Dictionary<string, byte[]> files)
+	{
+		try
+		{
+			AddDebugOutput($"Loading VFS state with {files.Count} files...");
+			
+			// Load files into the emulator's VFS
+			EmulatorService.LoadVfsFiles(files);
+			
+			// Refresh the VFS browser to show the loaded files
+			RefreshVfsFiles();
+			
+			AddDebugOutput($"Successfully loaded VFS state ({files.Count} files)");
+		}
+		catch (Exception ex)
+		{
+			AddDebugOutput($"Error loading VFS state: {ex.Message}");
+			Logger.LogError(ex, "Error loading VFS state");
+		}
 	}
 }
