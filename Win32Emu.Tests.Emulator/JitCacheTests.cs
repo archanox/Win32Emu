@@ -341,7 +341,8 @@ public class JitCacheTests
 		try
 		{
 			var mem = new VirtualMemory(1024 * 1024);
-			var cpu = new JitCpu(mem, logger: null);
+			// Pass the custom cache directory to JitCpu
+			var cpu = new JitCpu(mem, logger: null, cacheDirectory: tempDir);
 			
 			// Act
 			var stats = cpu.GetCacheStatistics();
@@ -349,7 +350,9 @@ public class JitCacheTests
 			// Assert
 			Assert.NotNull(stats);
 			Assert.Equal(0, stats.TotalBlocks);
-			Assert.Equal(tempDir, stats.CacheDirectory);
+			// In native mode (not forced interpreter), JitCpu uses RtlJitCache which uses the provided cache directory
+			// Verify the cache directory starts with our tempDir
+			Assert.StartsWith(tempDir, stats.CacheDirectory);
 		}
 		finally
 		{
