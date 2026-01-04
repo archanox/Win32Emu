@@ -7,6 +7,7 @@
 @inject ILogger<Home> Logger
 @inject Win32Emu.Wasm.Services.EmulatorService EmulatorService
 @inject Win32Emu.Wasm.Services.WasmDebugLogService DebugLogService
+@inject Win32Emu.Wasm.Services.VfsPersistenceService PersistenceService
 
 <PageTitle>Win32Emu - Web Emulator</PageTitle>
 
@@ -283,8 +284,55 @@
 				<VfsPersistenceManager 
 					CanSave="@(_executableLoaded && !_isRunning)"
 					CurrentExecutableName="@_loadedFileName"
-					GetCurrentVfsFiles="@(() => EmulatorService.GetVfsFiles())"
+					CurrentVfsFiles="@EmulatorService.GetVfsFiles()"
 					OnStateLoaded="@HandleVfsStateLoaded" />
+			</div>
+			
+			<!-- Auto-Save Configuration -->
+			<div class="card mb-3">
+				<div class="card-header">
+					<strong>⏱️ Auto-Save Settings</strong>
+				</div>
+				<div class="card-body">
+					<div class="form-check mb-2">
+						<input class="form-check-input" type="checkbox" id="autoSaveEnabled" @bind="_autoSaveEnabled" />
+						<label class="form-check-label" for="autoSaveEnabled">
+							Enable Auto-Save
+						</label>
+					</div>
+					
+					@if (_autoSaveEnabled)
+					{
+						<div class="mb-2">
+							<label for="autoSaveInterval" class="form-label">Auto-Save Interval</label>
+							<select id="autoSaveInterval" class="form-select" @bind="_autoSaveInterval">
+								<option value="30">30 seconds</option>
+								<option value="60">1 minute</option>
+								<option value="120">2 minutes</option>
+								<option value="300">5 minutes</option>
+								<option value="600">10 minutes</option>
+							</select>
+						</div>
+						
+						@if (_lastAutoSaveTime.HasValue)
+						{
+							<small class="text-muted">
+								<i class="bi bi-clock-history"></i> Last auto-save: @_lastAutoSaveTime.Value.ToString("HH:mm:ss")
+							</small>
+						}
+					}
+					
+					<div class="form-check mt-2">
+						<input class="form-check-input" type="checkbox" id="saveOnStop" @bind="_saveOnStop" />
+						<label class="form-check-label" for="saveOnStop">
+							Auto-save on emulation stop
+						</label>
+					</div>
+					
+					<small class="text-muted d-block mt-2">
+						Auto-saved states use the pattern "autosave-{executable}"
+					</small>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -515,6 +563,14 @@
 	
 	// Track the currently subscribed host to avoid double subscriptions and enable proper cleanup
 	private Win32Emu.Wasm.Services.WasmEmulatorHost? _subscribedHost = null;
+	
+	// Auto-save settings
+	private bool _autoSaveEnabled = false;
+	private int _autoSaveInterval = 120; // Default: 2 minutes
+	private bool _saveOnStop = true; // Default: enabled
+	private DateTime? _lastAutoSaveTime = null;
+	private CancellationTokenSource? _autoSaveCts = null;
+	private Task? _autoSaveTask = null;
 	
 	/// <summary>
 	/// Called when the component is initialized. Subscribe to the debug log service.
@@ -830,6 +886,12 @@
 					await Task.Delay(100); // Update UI at 10 FPS
 				}
 			});
+			
+			// Start auto-save task if enabled
+			if (_autoSaveEnabled)
+			{
+				StartAutoSave();
+			}
 		}
 		catch (Exception ex)
 		{
@@ -874,6 +936,15 @@
 
 	private async Task StopEmulation()
 	{
+		// Stop auto-save task if running
+		StopAutoSave();
+		
+		// Save on stop if enabled
+		if (_saveOnStop && !string.IsNullOrEmpty(_loadedFileName))
+		{
+			await PerformAutoSave();
+		}
+		
 		await EmulatorService.StopAsync();
 		
 		// Unsubscribe from events
@@ -1258,6 +1329,9 @@
 	/// </summary>
 	public void Dispose()
 	{
+		// Stop auto-save task
+		StopAutoSave();
+		
 		// Unsubscribe from debug log service
 		DebugLogService.LogReceived -= OnBackendLogReceived;
 		
@@ -1329,6 +1403,84 @@
 		{
 			AddDebugOutput($"Error loading VFS state: {ex.Message}");
 			Logger.LogError(ex, "Error loading VFS state");
+		}
+	}
+	
+	/// <summary>
+	/// Start auto-save task that periodically saves VFS state.
+	/// </summary>
+	private void StartAutoSave()
+	{
+		// Stop existing auto-save task if running
+		StopAutoSave();
+		
+		_autoSaveCts = new CancellationTokenSource();
+		var cancellationToken = _autoSaveCts.Token;
+		
+		_autoSaveTask = Task.Run(async () =>
+		{
+			while (!cancellationToken.IsCancellationRequested)
+			{
+				try
+				{
+					await Task.Delay(_autoSaveInterval * 1000, cancellationToken);
+					
+					if (!cancellationToken.IsCancellationRequested && _isRunning)
+					{
+						await PerformAutoSave();
+					}
+				}
+				catch (OperationCanceledException)
+				{
+					// Expected when cancellation is requested
+					break;
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError(ex, "Error in auto-save task");
+				}
+			}
+		}, cancellationToken);
+		
+		AddDebugOutput($"Auto-save enabled (interval: {_autoSaveInterval}s)");
+	}
+	
+	/// <summary>
+	/// Stop the auto-save task.
+	/// </summary>
+	private void StopAutoSave()
+	{
+		_autoSaveCts?.Cancel();
+		_autoSaveCts?.Dispose();
+		_autoSaveCts = null;
+		_autoSaveTask = null;
+	}
+	
+	/// <summary>
+	/// Perform an auto-save of the current VFS state.
+	/// </summary>
+	private async Task PerformAutoSave()
+	{
+		try
+		{
+			var files = EmulatorService.GetVfsFiles();
+			if (files == null || files.Count == 0)
+			{
+				return;
+			}
+			
+			var stateName = $"autosave-{_loadedFileName}";
+			var success = await PersistenceService.SaveVfsStateAsync(stateName, _loadedFileName, files);
+			
+			if (success)
+			{
+				_lastAutoSaveTime = DateTime.Now;
+				AddDebugOutput($"Auto-saved VFS state: {stateName} ({files.Count} files)");
+			}
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error performing auto-save");
 		}
 	}
 }
