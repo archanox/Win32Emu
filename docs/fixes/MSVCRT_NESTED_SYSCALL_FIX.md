@@ -52,10 +52,14 @@ public void SetLoadedImage(LoadedImage image)
 
 Added `HandleNestedSyscalls` method that:
 - Detects import calls (calls to addresses in the import address table)
-- Dispatches them through the `Win32Dispatcher`
-- Handles both implemented and unimplemented imports gracefully
-- Validates return addresses to ensure proper execution flow
-- Saves and restores callee-saved registers (EBX, ESI, EDI, EBP)
+- Delegates to the shared `ImportCallHelper.HandleImportCall()` method for processing
+- The shared helper handles:
+  - Dispatching through the `Win32Dispatcher`
+  - Handling both implemented and unimplemented imports gracefully
+  - Validating return addresses to ensure proper execution flow
+  - Saving and restoring callee-saved registers (EBX, ESI, EDI, EBP)
+
+Note: The import call handling logic is shared between `MsvcrtModule` and `User32Module` via the `ImportCallHelper` class to reduce code duplication and improve maintainability.
 
 ### 3. Update Callback Execution
 
@@ -97,6 +101,15 @@ _dispatcher.RegisterModule(msvcrtModule);
 2. **Backward Compatible**: Tests that don't set a dispatcher continue to work with a warning
 3. **Consistent Architecture**: Uses the same pattern as `User32Module` for handling nested calls
 4. **Proper Error Handling**: Validates return addresses and handles both implemented and unimplemented imports
+5. **Reduced Code Duplication**: Import call handling logic is now shared via `ImportCallHelper` class, improving maintainability
+
+## Shared Helper Class
+
+The `ImportCallHelper` class in `Win32Emu/Win32/ImportCallHelper.cs` provides a centralized implementation for handling import calls during callback execution. This shared helper:
+- Eliminates ~110 lines of duplicated code between `MsvcrtModule` and `User32Module`
+- Provides consistent behavior for import call handling across all modules
+- Makes it easier to add import call support to other modules in the future
+- Centralizes bug fixes and improvements in one location
 
 ## Testing
 
@@ -120,8 +133,9 @@ Expected log output should show:
 ## Related Files
 
 - `Win32Emu/Win32/Modules/MsvcrtModule.cs` - Main implementation
+- `Win32Emu/Win32/ImportCallHelper.cs` - Shared helper for import call handling
 - `Win32Emu/Emulator.cs` - Initialization code
-- `Win32Emu/Win32/Modules/User32Module.cs` - Reference implementation for `HandleComAndImportCalls`
+- `Win32Emu/Win32/Modules/User32Module.cs` - Also uses shared `ImportCallHelper`
 
 ## Date
 

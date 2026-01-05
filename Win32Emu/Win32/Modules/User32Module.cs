@@ -5026,75 +5026,22 @@ namespace Win32Emu.Win32.Modules
 				_logger.Log(logLevel, "[User32] {Context}: Import call {Dll}!{Name} at 0x{CallTarget:X8}", logContext, dll, name, step.CallTarget);
 				stepDesc = $"Import call {dll}!{name}";
 
-				// Save callee-saved registers (EBX, ESI, EDI, EBP)
-				var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
-
-				if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+				// Use shared import call handler
+				var handled = ImportCallHelper.HandleImportCall(
+					dll, name, cpu, memory, _dispatcher, _image, _logger,
+					"User32:" + logContext, (addr) => IsValidReturnAddress(addr, _image), out shouldBreak);
+				
+				// After successful call, check if handle-returning function returned NULL
+				if (handled && !shouldBreak)
 				{
-					_logger.Log(logLevel, "[User32] {Context}: Import {Dll}!{Name} returned 0x{Ret:X8}", logContext, dll, name, ret);
-
-					// Warn if a function that typically returns handles/pointers returns NULL
+					var ret = cpu.GetRegister("EAX");
 					if (ret == 0 && IsHandleReturningFunction(name))
 					{
 						_logger.LogWarning("[User32] {Context}: {Dll}!{Name} returned NULL (0) - this may cause NULL pointer dereference if used as function pointer or handle", logContext, dll, name);
 					}
-
-					var currentEsp = cpu.GetRegister("ESP");
-					var retEip = memory.Read32(currentEsp);
-
-					// Validate return address before jumping
-					if (!IsValidReturnAddress(retEip, _image))
-					{
-						_logger.LogError("[User32] {Context}: Invalid return address 0x{RetEip:X8} from import {Dll}!{Name}", logContext, retEip, dll, name);
-						shouldBreak = true;
-						return true;
-					}
-
-					currentEsp += 4 + (uint)argBytes;
-
-					cpu.SetRegister("ESP", currentEsp);
-					cpu.SetRegister("EAX", ret);
-					cpu.SetEip(retEip);
-
-					// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
-					CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
 				}
-				else
-				{
-					// Import function not implemented - try to get arg bytes from metadata and simulate return
-					var simulatedArgBytes = 0;
-					try
-					{
-						simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
-						_logger.LogWarning("[User32] {Context}: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", logContext, dll, name, simulatedArgBytes);
-					}
-					catch (Exception ex)
-					{
-						_logger.LogError(ex, "[User32] {Context}: Unimplemented import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", logContext, dll, name);
-					}
-
-					var currentEsp = cpu.GetRegister("ESP");
-					var retEip = memory.Read32(currentEsp);
-
-					// Validate return address before jumping
-					if (!IsValidReturnAddress(retEip, _image))
-					{
-						_logger.LogError("[User32] {Context}: Invalid return address 0x{RetEip:X8} from unimplemented import {Dll}!{Name}", logContext, retEip, dll, name);
-						shouldBreak = true;
-						return true;
-					}
-
-					// Pop return address + parameters (stdcall convention - callee cleans)
-					currentEsp += 4 + (uint)simulatedArgBytes;
-
-					cpu.SetRegister("ESP", currentEsp);
-					cpu.SetRegister("EAX", 0); // Return 0 as default
-					cpu.SetEip(retEip);
-
-					// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
-					CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
-				}
-				return true;
+				
+				return handled;
 			}
 
 			return false;
