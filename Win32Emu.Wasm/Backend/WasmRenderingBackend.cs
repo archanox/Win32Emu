@@ -160,7 +160,7 @@ public class WasmRenderingBackend : IRenderingBackend
 		return rgbaData;
 	}
 
-	public bool UpdateFrameBuffer(byte[] data, int pitch)
+	public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle = default)
 	{
 		// Stop rendering if a previous error occurred
 		if (_renderingErrorOccurred)
@@ -178,9 +178,25 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
+			// Determine which canvas to render to
+			// If targetWindowHandle is provided and not zero, use window-specific canvas
+			// Otherwise, fall back to default emulatorCanvas
+			var canvasId = _canvasId; // Default to main canvas
+			if (targetWindowHandle != IntPtr.Zero)
+			{
+				// Use window-specific canvas ID format: "window-canvas-{HWND}"
+				var windowHandleValue = (uint)targetWindowHandle.ToInt32();
+				canvasId = $"window-canvas-{windowHandleValue:X8}";
+				_logger.LogTrace("[WASM] Rendering to window-specific canvas: {CanvasId} (HWND 0x{WindowHandle:X8})", canvasId, windowHandleValue);
+			}
+			else
+			{
+				_logger.LogTrace("[WASM] Rendering to default canvas: {CanvasId}", canvasId);
+			}
+			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
-			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}", 
-				_width, _height, pitch, data.Length);
+			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, targetWindow={TargetWindow:X}", 
+				_width, _height, pitch, data.Length, targetWindowHandle.ToInt64());
 			
 			// Copy data to internal frame buffer
 			if (pitch == _width * BytesPerPixelRgba)

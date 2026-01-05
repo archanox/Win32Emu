@@ -150,7 +150,10 @@ public interface IRenderingBackend : IDisposable
 	/// <summary>
 	/// Update the display with new frame buffer data
 	/// </summary>
-	bool UpdateFrameBuffer(byte[] data, int pitch);
+	/// <param name="data">Frame buffer data in RGBA format</param>
+	/// <param name="pitch">Number of bytes per row</param>
+	/// <param name="targetWindowHandle">Optional window handle to render to. If 0 or not supported, renders to default canvas.</param>
+	bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle = default);
 
 	/// <summary>
 	/// Clear the display with specified color

@@ -3672,7 +3672,7 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogInformation("[DDraw] Calling UpdateFrameBuffer: surface=0x{SurfaceHandle:X8}, width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, frameCount={FrameCount}", 
 							surface.Handle, surface.Width, surface.Height, displayPitch, displayData.Length, ddrawObj.FrameUpdateCount);
 					}
-					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch);
+					var updateResult = ddrawObj.RenderingBackend.UpdateFrameBuffer(displayData, displayPitch, ddrawObj.WindowHandle);
 					if (ddrawObj.FrameUpdateCount % 100 == 0 || ddrawObj.FrameUpdateCount < 5)
 					{
 						_logger.LogInformation("[DDraw] UpdateFrameBuffer result: {Result}, frameCount={FrameCount}", updateResult, ddrawObj.FrameUpdateCount);
@@ -3804,7 +3804,7 @@ namespace Win32Emu.Win32.Modules
 				var frame = ddrawObj.PendingFrames.Dequeue();
 				try
 				{
-					var result = ddrawObj.RenderingBackend.UpdateFrameBuffer(frame.Data, frame.Pitch);
+					var result = ddrawObj.RenderingBackend.UpdateFrameBuffer(frame.Data, frame.Pitch, ddrawObj.WindowHandle);
 					if (result)
 					{
 						processedCount++;
