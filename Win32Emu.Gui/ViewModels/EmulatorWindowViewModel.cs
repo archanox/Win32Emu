@@ -49,6 +49,9 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
     // Track created windows - maps Win32 HWND to Avalonia Window
     private readonly Dictionary<uint, Window> _createdWindows = new();
     
+    // Track window bitmaps - maps Win32 HWND to WriteableBitmap for that window
+    private readonly Dictionary<uint, WriteableBitmap> _windowBitmaps = new();
+    
     // Track created dialogs - maps Win32 HWND to DialogWindow
     private readonly Dictionary<uint, Views.DialogWindow> _createdDialogs = new();
     
@@ -455,8 +458,22 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             window.Position = new PixelPoint(info.X, info.Y);
         }
 
-        // Create a canvas to host child controls
+        // Create a canvas to host child controls and the DirectDraw image
         var canvas = new Canvas();
+        
+        // Create an Image control for DirectDraw rendering
+        // This will be hidden initially and shown when DirectDraw content is received
+        var image = new Avalonia.Controls.Image
+        {
+            Width = info.Width > 0 ? info.Width : 640,
+            Height = info.Height > 0 ? info.Height : 480,
+            Stretch = Avalonia.Media.Stretch.Fill,
+            IsVisible = false,
+            [Canvas.LeftProperty] = 0.0,
+            [Canvas.TopProperty] = 0.0
+        };
+        canvas.Children.Add(image);
+        
         window.Content = canvas;
 
         // Store the window mapping
@@ -466,6 +483,14 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         window.Closing += (s, e) =>
         {
             _createdWindows.Remove(info.Handle);
+            
+            // Dispose window bitmap if it exists
+            if (_windowBitmaps.TryGetValue(info.Handle, out var bitmap))
+            {
+                bitmap.Dispose();
+                _windowBitmaps.Remove(info.Handle);
+            }
+            
             OnDebugOutput($"Avalonia window closed for HWND=0x{info.Handle:X8}", DebugLevel.Info);
         };
 
@@ -825,53 +850,17 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         {
             try
             {
-                // Create or resize the bitmap if needed
-                if (DisplayBitmap == null || DisplayBitmap.PixelSize.Width != info.Width || DisplayBitmap.PixelSize.Height != info.Height)
+                // Check if this update is for a specific window
+                if (info.TargetWindowHandle != IntPtr.Zero)
                 {
-                    // Dispose old bitmap if it exists
-                    DisplayBitmap?.Dispose();
-                    
-                    DisplayBitmap = new WriteableBitmap(
-                        new PixelSize(info.Width, info.Height),
-                        new Vector(96, 96),
-                        PixelFormat.Rgba8888,
-                        AlphaFormat.Premul);
-                    
-                    HasDisplay = true;
-                    OnDebugOutput($"Created display bitmap: {info.Width}x{info.Height}", DebugLevel.Info);
-                    
-                    // Resize the window to match the display size (first time only)
-                    if (!_hasResizedForDisplay && _ownerWindow != null)
-                    {
-                        ResizeWindowForDisplay(info.Width, info.Height);
-                        _hasResizedForDisplay = true;
-                    }
+                    var windowHandle = (uint)info.TargetWindowHandle.ToInt32();
+                    UpdateWindowDisplay(windowHandle, info);
                 }
-
-                // Update the bitmap with the new frame buffer data
-                using (var framebuffer = DisplayBitmap.Lock())
+                else
                 {
-                    // Calculate the actual framebuffer size accounting for stride/row padding
-                    var framebufferBytes = framebuffer.RowBytes * framebuffer.Size.Height;
-                    
-                    // Ensure we don't copy more data than available or than the framebuffer can hold
-                    var maxCopy = Math.Min(framebufferBytes, info.Width * info.Height * 4);
-                    var bytesToCopy = Math.Min(info.FrameBuffer.Length, maxCopy);
-                    
-                    if (bytesToCopy != info.FrameBuffer.Length)
-                    {
-                        OnDebugOutput($"Frame buffer size mismatch: provided={info.FrameBuffer.Length}, framebuffer={framebufferBytes}, copying={bytesToCopy}", DebugLevel.Warning);
-                    }
-                    
-                    // Copy using Marshal for safety - bounds are validated above
-                    System.Runtime.InteropServices.Marshal.Copy(
-                        info.FrameBuffer,
-                        0,
-                        framebuffer.Address,
-                        bytesToCopy);
+                    // Update the main display bitmap (default behavior)
+                    UpdateMainDisplay(info);
                 }
-
-                OnDebugOutput($"Display updated: {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
             }
             catch (ArgumentException ex)
             {
@@ -890,6 +879,128 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 OnDebugOutput($"Unexpected error updating display: {ex.Message}", DebugLevel.Error);
             }
         });
+    }
+
+    private void UpdateMainDisplay(DisplayUpdateInfo info)
+    {
+        // Create or resize the bitmap if needed
+        if (DisplayBitmap == null || DisplayBitmap.PixelSize.Width != info.Width || DisplayBitmap.PixelSize.Height != info.Height)
+        {
+            // Dispose old bitmap if it exists
+            DisplayBitmap?.Dispose();
+            
+            DisplayBitmap = new WriteableBitmap(
+                new PixelSize(info.Width, info.Height),
+                new Vector(96, 96),
+                PixelFormat.Rgba8888,
+                AlphaFormat.Premul);
+            
+            HasDisplay = true;
+            OnDebugOutput($"Created main display bitmap: {info.Width}x{info.Height}", DebugLevel.Info);
+            
+            // Resize the window to match the display size (first time only)
+            if (!_hasResizedForDisplay && _ownerWindow != null)
+            {
+                ResizeWindowForDisplay(info.Width, info.Height);
+                _hasResizedForDisplay = true;
+            }
+        }
+
+        // Update the bitmap with the new frame buffer data
+        using (var framebuffer = DisplayBitmap.Lock())
+        {
+            // Calculate the actual framebuffer size accounting for stride/row padding
+            var framebufferBytes = framebuffer.RowBytes * framebuffer.Size.Height;
+            
+            // Ensure we don't copy more data than available or than the framebuffer can hold
+            var maxCopy = Math.Min(framebufferBytes, info.Width * info.Height * 4);
+            var bytesToCopy = Math.Min(info.FrameBuffer.Length, maxCopy);
+            
+            if (bytesToCopy != info.FrameBuffer.Length)
+            {
+                OnDebugOutput($"Frame buffer size mismatch: provided={info.FrameBuffer.Length}, framebuffer={framebufferBytes}, copying={bytesToCopy}", DebugLevel.Warning);
+            }
+            
+            // Copy using Marshal for safety - bounds are validated above
+            System.Runtime.InteropServices.Marshal.Copy(
+                info.FrameBuffer,
+                0,
+                framebuffer.Address,
+                bytesToCopy);
+        }
+
+        OnDebugOutput($"Main display updated: {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
+    }
+
+    private void UpdateWindowDisplay(uint windowHandle, DisplayUpdateInfo info)
+    {
+        // Find the window
+        if (!_createdWindows.TryGetValue(windowHandle, out var window))
+        {
+            OnDebugOutput($"Window 0x{windowHandle:X8} not found for display update, falling back to main display", DebugLevel.Warning);
+            UpdateMainDisplay(info);
+            return;
+        }
+
+        // Get or create the bitmap for this window
+        if (!_windowBitmaps.TryGetValue(windowHandle, out var bitmap) || 
+            bitmap.PixelSize.Width != info.Width || 
+            bitmap.PixelSize.Height != info.Height)
+        {
+            // Dispose old bitmap if it exists
+            if (_windowBitmaps.TryGetValue(windowHandle, out var oldBitmap))
+            {
+                oldBitmap.Dispose();
+            }
+            
+            bitmap = new WriteableBitmap(
+                new PixelSize(info.Width, info.Height),
+                new Vector(96, 96),
+                PixelFormat.Rgba8888,
+                AlphaFormat.Premul);
+            
+            _windowBitmaps[windowHandle] = bitmap;
+            OnDebugOutput($"Created window bitmap for HWND=0x{windowHandle:X8}: {info.Width}x{info.Height}", DebugLevel.Info);
+        }
+
+        // Update the bitmap with the new frame buffer data
+        using (var framebuffer = bitmap.Lock())
+        {
+            // Calculate the actual framebuffer size accounting for stride/row padding
+            var framebufferBytes = framebuffer.RowBytes * framebuffer.Size.Height;
+            
+            // Ensure we don't copy more data than available or than the framebuffer can hold
+            var maxCopy = Math.Min(framebufferBytes, info.Width * info.Height * 4);
+            var bytesToCopy = Math.Min(info.FrameBuffer.Length, maxCopy);
+            
+            if (bytesToCopy != info.FrameBuffer.Length)
+            {
+                OnDebugOutput($"Window frame buffer size mismatch: provided={info.FrameBuffer.Length}, framebuffer={framebufferBytes}, copying={bytesToCopy}", DebugLevel.Warning);
+            }
+            
+            // Copy using Marshal for safety - bounds are validated above
+            System.Runtime.InteropServices.Marshal.Copy(
+                info.FrameBuffer,
+                0,
+                framebuffer.Address,
+                bytesToCopy);
+        }
+
+        // Update the Image control in the window with the new bitmap
+        if (window.Content is Canvas canvas)
+        {
+            // Find the Image control we created
+            var image = canvas.Children.OfType<Avalonia.Controls.Image>().FirstOrDefault();
+            if (image != null)
+            {
+                image.Source = bitmap;
+                image.Width = info.Width;
+                image.Height = info.Height;
+                image.IsVisible = true;
+            }
+        }
+
+        OnDebugOutput($"Window display updated: HWND=0x{windowHandle:X8}, {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
     }
 
     public async Task<string?> OnBrowseForFolder(string? title, string? rootPath)
