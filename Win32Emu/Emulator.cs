@@ -117,7 +117,7 @@ public sealed class Emulator : IDisposable
     private const ushort DOS_FILE_ATTR_ARCHIVE = 0x0020;
     private const uint DOS_ERROR_INVALID_FUNCTION = 0xFFFFFFFF;
     private const int MAX_DOS_STRING_LENGTH = 1024;
-    private const int MAX_NULL_TERMINATED_STRING_LENGTH = 256;
+
     private const int DOS_MAX_CURRENT_DIR_LENGTH = 63;
     
     /// <summary>
@@ -2694,7 +2694,7 @@ public sealed class Emulator : IDisposable
 
             case DosFunction.CreateFile:
                 {
-                    var filename = ReadNullTerminatedString(dx);
+                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger);
                     _logger.LogDebug("[DOS INT 21h] Create file: {Filename} (AH=0x3C)", filename);
                     // Return dummy file handle in AX
                     _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_DUMMY_FILE_HANDLE);
@@ -2703,7 +2703,7 @@ public sealed class Emulator : IDisposable
 
             case DosFunction.OpenFile:
                 {
-                    var filename = ReadNullTerminatedString(dx);
+                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger);
                     var accessMode = al & 0x03; // 0=read, 1=write, 2=read/write
                     _logger.LogDebug("[DOS INT 21h] Open file: {Filename}, mode={Mode} (AH=0x3D)", filename, accessMode);
                     // Return dummy file handle in AX
@@ -2775,7 +2775,7 @@ public sealed class Emulator : IDisposable
 
             case DosFunction.GetSetFileAttributes:
                 {
-                    var filename = ReadNullTerminatedString(dx);
+                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger);
                     if (al == 0x00)
                     {
                         // Get attributes
@@ -2874,29 +2874,7 @@ public sealed class Emulator : IDisposable
         await Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Helper method to read a null-terminated string from memory.
-    /// </summary>
-    private string ReadNullTerminatedString(uint address)
-    {
-        var sb = new System.Text.StringBuilder();
-        var offset = 0u;
-        try
-        {
-            while (offset < MAX_NULL_TERMINATED_STRING_LENGTH) // Safety limit
-            {
-                var ch = _vm!.Read8(address + offset);
-                if (ch == 0) break;
-                sb.Append((char)ch);
-                offset++;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[DOS INT 21h] Error reading null-terminated string from memory at 0x{Address:X8} (offset {Offset}). Returning partial string.", address, offset);
-        }
-        return sb.ToString();
-    }
+
 
     private static uint GetCallTarget(ICpu cpu, VirtualMemory vm)
     {

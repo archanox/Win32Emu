@@ -189,7 +189,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 		string? title = null;
 		if (lpszTitle != 0)
 		{
-			title = ReadNullTerminatedString(lpszTitle);
+			title = MemoryHelpers.ReadNullTerminatedString(_env, lpszTitle, _logger);
 			if (string.IsNullOrEmpty(title))
 			{
 				title = "Browse For Folder";
@@ -356,7 +356,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 		uint offset = 0;
 		while (true)
 		{
-			var str = ReadNullTerminatedString(address + offset);
+			var str = MemoryHelpers.ReadNullTerminatedString(_env, address + offset, _logger);
 			if (string.IsNullOrEmpty(str))
 			{
 				break;
@@ -369,33 +369,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 		return result;
 	}
 
-	/// <summary>
-	/// Reads a single null-terminated string from memory.
-	/// </summary>
-	private string ReadNullTerminatedString(uint address)
-	{
-		var bytes = new List<byte>();
-		uint offset = 0;
 
-		while (true)
-		{
-			var b = _env.MemRead8(address + offset);
-			if (b == 0)
-			{
-				break;
-			}
-
-			bytes.Add(b);
-			offset++;
-
-			if (offset > 4096) // Safety limit
-			{
-				break;
-			}
-		}
-
-		return System.Text.Encoding.ASCII.GetString(bytes.ToArray());
-	}
 
 	private uint PerformCopyOperation(List<string> sources, List<string> dests, uint flags)
 	{
