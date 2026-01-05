@@ -3186,7 +3186,7 @@ namespace Win32Emu.Win32.Modules
 		stepDesc = null;
 		shouldBreak = false;
 
-		// Check for import calls (syscalls via INT 0x80)
+		// Check for import calls (calls to imported Win32 API functions)
 		if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
 		{
 			var dll = imp.dll.ToUpperInvariant();
