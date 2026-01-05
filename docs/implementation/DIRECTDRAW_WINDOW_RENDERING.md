@@ -84,18 +84,29 @@ public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle 
 
 The existing JavaScript function `updateCanvas(canvasId, base64Data, width, height)` already supports dynamic canvas IDs, so no JavaScript changes were needed.
 
+
 ### Avalonia Implementation Status
 
-The Avalonia frontend has been updated to accept the new parameter but currently maintains backward-compatible behavior:
+The Avalonia frontend now has full window-specific rendering support:
 
-- ✅ Accepts `targetWindowHandle` parameter  
-- ⚠️ Ignores the handle and renders to main display (existing behavior)
-- ℹ️ Future enhancement: Route to specific window `WriteableBitmap` instances
+- ✅ Accepts `targetWindowHandle` parameter in `AvaloniaRenderingBackend`
+- ✅ Routes rendering to specific window `WriteableBitmap` instances
+- ✅ Creates `Image` control in each window for DirectDraw content
+- ✅ Falls back to main display for fullscreen or when window not found
+- ✅ Properly disposes window bitmaps when windows close
+
+Implementation details:
+- Each created window has an `Image` control added to its canvas
+- `DisplayUpdateInfo` includes optional `TargetWindowHandle` field
+- `OnDisplayUpdate` routes to `UpdateWindowDisplay` or `UpdateMainDisplay` based on handle
+- Window-specific `WriteableBitmap` instances tracked in `_windowBitmaps` dictionary
 
 This approach ensures:
-- No breaking changes to existing functionality
-- Foundation for future window-specific rendering
-- Consistent API across all backends
+- Full window-specific rendering support
+- Backward compatibility with fullscreen mode
+- Consistent behavior with WASM frontend
+- Proper resource cleanup when windows close
+
 
 ## Usage Pattern
 
@@ -157,7 +168,10 @@ public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle 
 
 | Scenario | Behavior |
 |----------|----------|
-| All scenarios | Renders to main `DisplayBitmap` |
+| Window created, then DirectDraw | Renders to window's `Image` control via `WriteableBitmap` |
+| Fullscreen DirectDraw | Renders to main `DisplayBitmap` |
+| No window handle (0) | Renders to main `DisplayBitmap` |
+| Window not found | Falls back to main `DisplayBitmap` |
 
 ## Benefits
 
@@ -203,8 +217,13 @@ public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle 
 - `Win32Emu.Wasm/Pages/Home.razor` - Window component rendering
 
 ### Avalonia
-- `Win32Emu.Gui/Backends/AvaloniaRenderingBackend.cs` - Backend implementation
-- `Win32Emu.Gui/ViewModels/EmulatorWindowViewModel.cs` - Window creation
+- `Win32Emu/DisplayUpdateInfo.cs` - Added `TargetWindowHandle` field
+- `Win32Emu.Gui/Backends/AvaloniaRenderingBackend.cs` - Passes window handle to host
+- `Win32Emu.Gui/ViewModels/EmulatorWindowViewModel.cs` - Window-specific bitmap management
+  - `_windowBitmaps` dictionary tracks per-window `WriteableBitmap` instances
+  - `UpdateWindowDisplay()` handles window-specific rendering
+  - `UpdateMainDisplay()` handles default/fullscreen rendering
+  - `Image` control added to each created window for DirectDraw content
 
 ### Other Backends
 - `Win32Emu.Gui/Backends/SDL3RenderingBackend.cs`
@@ -215,20 +234,13 @@ public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle 
 
 ## Future Enhancements
 
-### Avalonia Window Rendering
-To fully implement window-specific rendering in Avalonia:
-
-1. Add `WriteableBitmap` to each created window
-2. Store window handle to bitmap mapping
-3. Update `OnDisplayUpdate` to accept window handle
-4. Route framebuffer updates to correct bitmap
-
 ### Additional Features
 - Window dragging/resizing in WASM
 - Multi-monitor support
 - Window Z-order management
 - Window focus tracking
 - Proper window decorations (minimize, maximize buttons)
+- Performance optimization for high-frequency updates
 
 ## References
 

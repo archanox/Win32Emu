@@ -239,7 +239,8 @@ public class AvaloniaRenderingBackend : IRenderingBackend
                     FrameBuffer = bufferCopy,
                     Width = _width,
                     Height = _height,
-                    Stride = pitch
+                    Stride = pitch,
+                    TargetWindowHandle = targetWindowHandle
                 });
 
                 _logger.LogTrace("[Avalonia] Frame buffer updated: {Size} bytes, {Width}x{Height}", copySize, _width, _height);
