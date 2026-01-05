@@ -507,7 +507,7 @@ fragment float4 fragmentShader(VertexOut in [[stage_in]],
         return rgbaData;
     }
 
-    public bool UpdateFrameBuffer(byte[] data, int pitch)
+    public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle = default)
     {
         lock (_lock)
         {

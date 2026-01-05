@@ -6,10 +6,14 @@
 		<span class="win32-window-title">@Info.Title</span>
 		<button class="win32-window-close" @onclick="HandleClose">×</button>
 	</div>
-	<div class="win32-window-content">
-		<p>Window: @Info.ClassName</p>
-		<p>Handle: 0x@Info.Handle.ToString("X8")</p>
-		<small class="text-muted">Window rendering is handled by the emulator canvas below.</small>
+	<div class="win32-window-content" style="padding: 0; overflow: hidden;">
+		<!-- Canvas for DirectDraw rendering to this specific window -->
+		<!-- The canvas ID format allows the rendering backend to target this window -->
+		<canvas id="window-canvas-@(Info.Handle.ToString("X8"))"
+				width="@Info.Width"
+				height="@Info.Height"
+				style="display: block; width: 100%; height: 100%; image-rendering: pixelated; background-color: #000;">
+		</canvas>
 	</div>
 </div>
 

@@ -585,7 +585,7 @@ void main()
         return rgbaData;
     }
 
-    public bool UpdateFrameBuffer(byte[] data, int pitch)
+    public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle = default)
     {
         lock (_lock)
         {

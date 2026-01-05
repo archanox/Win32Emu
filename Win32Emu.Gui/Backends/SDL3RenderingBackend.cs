@@ -228,7 +228,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
         return rgbaData;
     }
 
-    public bool UpdateFrameBuffer(byte[] data, int pitch)
+    public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle = default)
     {
         if (!_initialized)
         {
