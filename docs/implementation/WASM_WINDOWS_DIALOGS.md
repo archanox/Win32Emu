@@ -4,6 +4,8 @@
 
 This implementation adds support for rendering Win32 windows, dialogs, and message boxes in the WASM frontend. When an emulated application creates a window, dialog, or displays a message box, the WASM UI will now show these UI elements overlaid on the emulator canvas using Blazor components styled to look like classic Windows 95/98 UI.
 
+**New in this version:** Windows created via CreateWindowEx now render their DirectDraw content to window-specific canvases instead of being hidden. Each window gets its own canvas element for rendering.
+
 ## Architecture
 
 ### Components
@@ -21,11 +23,11 @@ The implementation consists of three main Blazor components located in `Win32Emu
    - Two-way binding for edit controls
    - Returns control ID on button clicks
 
-3. **WindowComponent.razor** - (Not currently used)
-   - Originally designed to show window metadata as overlays
-   - **Not rendered** to avoid occluding the canvas where DirectDraw content is displayed
-   - Regular windows render their content directly on the canvas via DirectDraw/GDI
-   - Window creation events are still tracked for debugging purposes
+3. **WindowComponent.razor** - Renders Win32 windows with DirectDraw support
+   - Creates a canvas element for each window (`window-canvas-{HWND}`)
+   - DirectDraw content is rendered to the window-specific canvas
+   - Window titlebar with title and close button
+   - Draggable window (future enhancement)
 
 ### Event Flow
 
@@ -97,10 +99,12 @@ The WASM UI will:
 - ComboBox
 - Visibility and disabled state handling
 
-⚠️ **Windows (Not Rendered as HTML Overlays)**
-- Regular windows (CreateWindowEx) render their content directly on the canvas via DirectDraw/GDI
-- WindowComponent overlays are intentionally NOT rendered to avoid occluding the canvas
-- Window creation events are still tracked for debugging purposes
+✅ **Windows with DirectDraw**
+- Windows created via CreateWindowEx are now rendered as HTML overlays
+- Each window has its own canvas element for DirectDraw content
+- Canvas ID format: `window-canvas-{HWND}` (e.g., `window-canvas-00010001`)
+- DirectDraw automatically routes rendering to the appropriate window canvas
+- Fallback to default canvas when no specific window is associated (fullscreen mode)
 
 ## Limitations and Future Work
 
