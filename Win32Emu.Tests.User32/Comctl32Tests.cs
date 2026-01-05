@@ -96,6 +96,20 @@ public sealed class Comctl32Tests : IDisposable
 		Assert.Equal(1u, result); // TRUE - success
 	}
 
+	[Fact]
+	public void InitCommonControlsEx_WithNullPointer_ReturnsFalse()
+	{
+		// Arrange
+		var structAddr = 0u; // NULL pointer
+
+		// Act
+		var result = _testEnv.CallComctl32Api("INITCOMMONCONTROLSEX", structAddr);
+
+		// Assert
+		Assert.Equal(0u, result); // FALSE - failure
+		Assert.Equal((uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER, _testEnv.ProcessEnv.LastError);
+	}
+
 	public void Dispose()
 	{
 		_testEnv.Dispose();
