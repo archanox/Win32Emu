@@ -2129,6 +2129,10 @@ namespace Win32Emu.Win32.Modules
 		private uint ShowWindow(uint hwnd, int nCmdShow)
 		{
 			// SW_HIDE = 0, SW_NORMAL = 1, SW_SHOWMINIMIZED = 2, SW_SHOWMAXIMIZED = 3, etc.
+			// Window message constants
+			const uint WM_SHOWWINDOW = 0x0018;
+			const uint WM_ACTIVATEAPP = 0x001C;
+			
 			_logger.LogInformation("[User32] ShowWindow: HWND=0x{Hwnd:X8} nCmdShow={NCmdShow}", hwnd, nCmdShow);
 
 			// Get the current window to check if it exists and get previous visibility
@@ -2194,18 +2198,18 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now visible", hwnd);
 
 				// Send WM_SHOWWINDOW message when window is being shown
-				// WM_SHOWWINDOW = 0x0018, wParam = TRUE (1) for being shown, lParam = 0 (called by ShowWindow)
+				// wParam = TRUE (1) for being shown, lParam = 0 (called by ShowWindow)
 				if (!wasPreviouslyVisible)
 				{
-					_env.SendMessageToWindow(hwnd, 0x0018, 1, 0);
+					_env.SendMessageToWindow(hwnd, WM_SHOWWINDOW, 1, 0);
 					_logger.LogDebug("[User32] ShowWindow: Sent WM_SHOWWINDOW to window 0x{Hwnd:X8}", hwnd);
 				}
 
 				// Send WM_ACTIVATEAPP message when window becomes visible
-				// WM_ACTIVATEAPP = 0x001C, wParam = TRUE (1) for activation, lParam = 0 (thread ID)
+				// wParam = TRUE (1) for activation, lParam = 0 (thread ID)
 				if (!wasPreviouslyVisible)
 				{
-					_env.SendMessageToWindow(hwnd, 0x001C, 1, 0);
+					_env.SendMessageToWindow(hwnd, WM_ACTIVATEAPP, 1, 0);
 					_logger.LogDebug("[User32] ShowWindow: Sent WM_ACTIVATEAPP to window 0x{Hwnd:X8}", hwnd);
 				}
 			}
@@ -2215,18 +2219,18 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[User32] ShowWindow: Window 0x{Hwnd:X8} is now hidden", hwnd);
 
 				// Send WM_SHOWWINDOW message when window is being hidden
-				// WM_SHOWWINDOW = 0x0018, wParam = FALSE (0) for being hidden, lParam = 0 (called by ShowWindow)
+				// wParam = FALSE (0) for being hidden, lParam = 0 (called by ShowWindow)
 				if (wasPreviouslyVisible)
 				{
-					_env.SendMessageToWindow(hwnd, 0x0018, 0, 0);
+					_env.SendMessageToWindow(hwnd, WM_SHOWWINDOW, 0, 0);
 					_logger.LogDebug("[User32] ShowWindow: Sent WM_SHOWWINDOW to window 0x{Hwnd:X8}", hwnd);
 				}
 
 				// Send WM_ACTIVATEAPP message when window becomes hidden
-				// WM_ACTIVATEAPP = 0x001C, wParam = FALSE (0) for deactivation, lParam = 0 (thread ID)
+				// wParam = FALSE (0) for deactivation, lParam = 0 (thread ID)
 				if (wasPreviouslyVisible)
 				{
-					_env.SendMessageToWindow(hwnd, 0x001C, 0, 0);
+					_env.SendMessageToWindow(hwnd, WM_ACTIVATEAPP, 0, 0);
 					_logger.LogDebug("[User32] ShowWindow: Sent WM_ACTIVATEAPP (deactivate) to window 0x{Hwnd:X8}", hwnd);
 				}
 			}
@@ -3870,7 +3874,6 @@ namespace Win32Emu.Win32.Modules
 						_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during WM_SHOWWINDOW, ending dialog with result 0", status);
 						_env.SetDialogResult(hDlg, 0);
 						dialogProcTimedOut = showTimedOut;
-						dialogProcCancelled = showCancelled;
 						dialogProcFailed = showFailed;
 					}
 					else
@@ -3887,19 +3890,21 @@ namespace Win32Emu.Win32.Modules
 							_logger.LogWarning("[User32] DialogBoxParamAsync: Dialog procedure {Status} during WM_SETFOCUS, ending dialog with result 0", status);
 							_env.SetDialogResult(hDlg, 0);
 							dialogProcTimedOut = focusTimedOut;
-							dialogProcCancelled = focusCancelled;
 							dialogProcFailed = focusFailed;
 						}
 					}
 				}
 
 				// Run modal message loop until EndDialog is called
-				_logger.LogInformation("[User32] DialogBoxParamAsync: Entering modal message loop");
-
-
-				while (!_env.IsDialogEnded(hDlg) && !cancellationToken.IsCancellationRequested)
+				// Only enter the loop if the dialog hasn't already ended during initialization
+				if (!_env.IsDialogEnded(hDlg))
 				{
-					// Check for quit message
+					_logger.LogInformation("[User32] DialogBoxParamAsync: Entering modal message loop");
+
+
+					while (!_env.IsDialogEnded(hDlg) && !cancellationToken.IsCancellationRequested)
+					{
+						// Check for quit message
 					if (_env.HasQuitMessage())
 					{
 						_logger.LogInformation("[User32] DialogBoxParamAsync: Quit message received, breaking modal loop");
@@ -3954,21 +3959,22 @@ namespace Win32Emu.Win32.Modules
 						await Task.Yield();
 					}
 				}
+			}
 
-				if (cancellationToken.IsCancellationRequested)
-				{
-					_logger.LogInformation("[User32] DialogBoxParamAsync: Cancellation requested, ending dialog");
-				}
+			if (cancellationToken.IsCancellationRequested)
+			{
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Cancellation requested, ending dialog");
+			}
 
-				// Get the result from EndDialog
-				var dialogResult = _env.GetDialogResult(hDlg);
+			// Get the result from EndDialog
+			var dialogResult = _env.GetDialogResult(hDlg);
 
-				// Clean up dialog state
-				_env.CleanupDialogState(hDlg);
-				_env.CloseHandle(hDlg);
+			// Clean up dialog state
+			_env.CleanupDialogState(hDlg);
+			_env.CloseHandle(hDlg);
 
-				_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", dialogResult);
-				return dialogResult;
+			_logger.LogInformation("[User32] DialogBoxParamAsync: Returning result={DialogResult}", dialogResult);
+			return dialogResult;
 			}
 			else
 			{
