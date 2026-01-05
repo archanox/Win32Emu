@@ -27,6 +27,9 @@ namespace Win32Emu.Win32.Modules
 		// Loaded image for import validation
 		private LoadedImage? _image;
 		
+		// Track patched import stubs to avoid redundant memory writes
+		private readonly HashSet<uint> _patchedImportStubs = new();
+		
 		// Invalid parameter handler tracking
 		private uint _invalidParameterHandler = 0;
 		
@@ -3209,6 +3212,16 @@ namespace Win32Emu.Win32.Modules
 			// Read return address to import stub
 			var retToStub = memory.Read32(esp);
 			
+			// Validate that the return address points into the import hook range
+			if (!MemoryRegions.IsInImportHookRange(retToStub))
+			{
+				_logger.LogError(
+					"[msvcrt] {Context}: Invalid nested syscall return-to-stub address 0x{RetToStub:X8} (ESP=0x{Esp:X8}) - not in import hook range",
+					logContext, retToStub, esp);
+				shouldBreak = true;
+				return true;
+			}
+			
 			// Calculate import stub address (5 bytes before return address for CALL instruction)
 			var importStubAddr = retToStub - 5;
 			
@@ -3243,10 +3256,25 @@ namespace Win32Emu.Win32.Modules
 					// then RET in import stub (pops return-to-callback and cleans args)
 					cpu.SetRegister("ESP", originalEsp);
 					
+					// Validate restored ESP to detect potential stack corruption
+					if (originalEsp < MemoryRegions.MinValidUserAddress)
+					{
+						_logger.LogError(
+							"[msvcrt] {Context}: Restored ESP 0x{Esp:X8} below MinValidUserAddress 0x{MinEsp:X8} after nested syscall {Dll}!{Name}",
+							logContext,
+							originalEsp,
+							MemoryRegions.MinValidUserAddress,
+							dll,
+							name);
+						shouldBreak = true;
+						return true;
+					}
+					
 					// Patch the import stub's RET instruction with argBytes for stdcall cleanup
 					// The stub RET is at importStubAddr + 5 (after the 5-byte CALL instruction)
 					// Format: RET imm16 = 0xC2 <low_byte> <high_byte>
-					if (argBytes > 0 && argBytes <= 0xFFFF)
+					// Only patch if not already patched to avoid redundant memory writes
+					if (argBytes > 0 && argBytes <= 0xFFFF && !_patchedImportStubs.Contains(importStubAddr))
 					{
 						var retInstrAddr = importStubAddr + 5;
 						var opcode = memory.Read8(retInstrAddr);
@@ -3255,8 +3283,25 @@ namespace Win32Emu.Win32.Modules
 							// Patch the immediate value
 							memory.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
 							memory.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+							_patchedImportStubs.Add(importStubAddr);
 							_logger.LogDebug("[msvcrt] {Context}: Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", 
 								logContext, retInstrAddr, argBytes);
+						}
+						else if (opcode == 0xC3)
+						{
+							// Found RET (0xC3) but need RET imm16 (0xC2) for stdcall cleanup
+							// Overwrite with RET imm16 to handle argument cleanup
+							memory.Write8(retInstrAddr, 0xC2); // Change to RET imm16
+							memory.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
+							memory.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+							_patchedImportStubs.Add(importStubAddr);
+							_logger.LogDebug("[msvcrt] {Context}: Converted RET to RET imm16 at 0x{RetAddr:X8} with argBytes={ArgBytes}", 
+								logContext, retInstrAddr, argBytes);
+						}
+						else
+						{
+							_logger.LogWarning("[msvcrt] {Context}: Expected RET (0xC3) or RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", 
+								logContext, retInstrAddr, opcode);
 						}
 					}
 					
@@ -3277,9 +3322,14 @@ namespace Win32Emu.Win32.Modules
 					{
 						simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
 					}
-					catch
+					catch (System.ArgumentException ex)
 					{
-						_logger.LogWarning("[msvcrt] {Context}: Cannot determine argBytes for {Dll}!{Name}, assuming 0", 
+						_logger.LogWarning(ex, "[msvcrt] {Context}: Cannot determine argBytes for {Dll}!{Name}, assuming 0", 
+							logContext, dll, name);
+					}
+					catch (System.Collections.Generic.KeyNotFoundException ex)
+					{
+						_logger.LogWarning(ex, "[msvcrt] {Context}: Cannot determine argBytes for {Dll}!{Name}, assuming 0", 
 							logContext, dll, name);
 					}
 					
@@ -3289,8 +3339,23 @@ namespace Win32Emu.Win32.Modules
 					// Restore ESP to original value
 					cpu.SetRegister("ESP", originalEsp);
 					
+					// Validate restored ESP to detect potential stack corruption
+					if (originalEsp < MemoryRegions.MinValidUserAddress)
+					{
+						_logger.LogError(
+							"[msvcrt] {Context}: Restored ESP 0x{Esp:X8} below MinValidUserAddress 0x{MinEsp:X8} after unimplemented nested syscall {Dll}!{Name}",
+							logContext,
+							originalEsp,
+							MemoryRegions.MinValidUserAddress,
+							dll,
+							name);
+						shouldBreak = true;
+						return true;
+					}
+					
 					// Patch the stub's RET if needed
-					if (simulatedArgBytes > 0 && simulatedArgBytes <= 0xFFFF)
+					// Only patch if not already patched to avoid redundant memory writes
+					if (simulatedArgBytes > 0 && simulatedArgBytes <= 0xFFFF && !_patchedImportStubs.Contains(importStubAddr))
 					{
 						var retInstrAddr = importStubAddr + 5;
 						var opcode = memory.Read8(retInstrAddr);
@@ -3298,8 +3363,25 @@ namespace Win32Emu.Win32.Modules
 						{
 							memory.Write8(retInstrAddr + 1, (byte)(simulatedArgBytes & 0xFF));
 							memory.Write8(retInstrAddr + 2, (byte)((simulatedArgBytes >> 8) & 0xFF));
+							_patchedImportStubs.Add(importStubAddr);
 							_logger.LogDebug("[msvcrt] {Context}: Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", 
 								logContext, retInstrAddr, simulatedArgBytes);
+						}
+						else if (opcode == 0xC3)
+						{
+							// Found RET (0xC3) but need RET imm16 (0xC2) for stdcall cleanup
+							// Overwrite with RET imm16 to handle argument cleanup
+							memory.Write8(retInstrAddr, 0xC2); // Change to RET imm16
+							memory.Write8(retInstrAddr + 1, (byte)(simulatedArgBytes & 0xFF));
+							memory.Write8(retInstrAddr + 2, (byte)((simulatedArgBytes >> 8) & 0xFF));
+							_patchedImportStubs.Add(importStubAddr);
+							_logger.LogDebug("[msvcrt] {Context}: Converted RET to RET imm16 at 0x{RetAddr:X8} with argBytes={ArgBytes}", 
+								logContext, retInstrAddr, simulatedArgBytes);
+						}
+						else
+						{
+							_logger.LogWarning("[msvcrt] {Context}: Expected RET (0xC3) or RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", 
+								logContext, retInstrAddr, opcode);
 						}
 					}
 					
