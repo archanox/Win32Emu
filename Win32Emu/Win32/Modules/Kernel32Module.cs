@@ -1780,16 +1780,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Maximum string length limit to prevent excessive memory usage and infinite loops
 		const int maxStringLengthLimit = 1000;
 
-		if (lpSrcStr == 0 || lpCharType == 0)
+		if (!MemoryHelpers.ValidatePointer(_env, lpSrcStr, _logger, "lpSrcStr") ||
+		    !MemoryHelpers.ValidatePointer(_env, lpCharType, _logger, "lpCharType"))
 		{
-			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// We only support CT_CTYPE1 for simplicity
 		if (dwInfoType != 1)
 		{
-			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			MemoryHelpers.SetInvalidParameterError(_env, _logger, $"Unsupported dwInfoType: {dwInfoType}");
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
@@ -1901,16 +1901,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		// Note: Unlike GetStringTypeA, GetStringTypeW does NOT have a Locale parameter
 		const int maxStringLengthLimit = 1000;
 
-		if (lpSrcStr == 0 || lpCharType == 0)
+		if (!MemoryHelpers.ValidatePointer(_env, lpSrcStr, _logger, "lpSrcStr") ||
+		    !MemoryHelpers.ValidatePointer(_env, lpCharType, _logger, "lpCharType"))
 		{
-			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
 		// We only support CT_CTYPE1 for simplicity
 		if (dwInfoType != 1)
 		{
-			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			MemoryHelpers.SetInvalidParameterError(_env, _logger, $"Unsupported dwInfoType: {dwInfoType}");
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 

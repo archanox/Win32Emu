@@ -84,4 +84,66 @@ public static class MemoryHelpers
 			return bytes.Count > 0 ? Encoding.ASCII.GetString(bytes.ToArray()) : string.Empty;
 		}
 	}
+
+	/// <summary>
+	/// Validates that a pointer is not null (0).
+	/// Useful for Win32 API parameter validation.
+	/// </summary>
+	/// <param name="pointer">The pointer value to validate.</param>
+	/// <returns>True if the pointer is valid (non-zero), false otherwise.</returns>
+	public static bool IsValidPointer(uint pointer)
+	{
+		return pointer != 0;
+	}
+
+	/// <summary>
+	/// Validates that a pointer is not null (0) and sets ERROR_INVALID_PARAMETER if invalid.
+	/// </summary>
+	/// <param name="env">The process environment.</param>
+	/// <param name="pointer">The pointer value to validate.</param>
+	/// <param name="logger">Optional logger for diagnostics.</param>
+	/// <param name="parameterName">Optional parameter name for logging.</param>
+	/// <returns>True if the pointer is valid (non-zero), false otherwise.</returns>
+	public static bool ValidatePointer(ProcessEnvironment env, uint pointer, ILogger? logger = null, string? parameterName = null)
+	{
+		if (pointer == 0)
+		{
+			env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			if (logger != null && parameterName != null)
+			{
+				logger.LogWarning("Invalid parameter: {ParameterName} is null", parameterName);
+			}
+			return false;
+		}
+		return true;
+	}
+
+	/// <summary>
+	/// Sets the ERROR_INVALID_PARAMETER error code in the process environment.
+	/// </summary>
+	/// <param name="env">The process environment.</param>
+	/// <param name="logger">Optional logger for diagnostics.</param>
+	/// <param name="message">Optional message to log.</param>
+	public static void SetInvalidParameterError(ProcessEnvironment env, ILogger? logger = null, string? message = null)
+	{
+		env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+		if (logger != null && message != null)
+		{
+			logger.LogWarning("Invalid parameter: {Message}", message);
+		}
+	}
+
+	/// <summary>
+	/// Validates a handle by attempting to retrieve it from a dictionary.
+	/// This is a common pattern in Win32 module implementations.
+	/// </summary>
+	/// <typeparam name="T">The type of the handle value.</typeparam>
+	/// <param name="handleDict">The dictionary containing handles.</param>
+	/// <param name="handle">The handle to validate.</param>
+	/// <param name="value">The retrieved value if the handle is valid.</param>
+	/// <returns>True if the handle is valid and found in the dictionary, false otherwise.</returns>
+	public static bool TryGetHandle<T>(Dictionary<uint, T> handleDict, uint handle, out T? value)
+	{
+		return handleDict.TryGetValue(handle, out value);
+	}
 }
