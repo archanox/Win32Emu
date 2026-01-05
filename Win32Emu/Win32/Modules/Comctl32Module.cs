@@ -64,7 +64,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				return true;
 
 			case "INITCOMMONCONTROLSEX":
-				returnValue = InitCommonControlsEx(a.InitCommonControlsEx(0));
+				returnValue = InitCommonControlsEx(a.UInt32(0));
 				return true;
 
 			case "CREATEPROPERTYSHEETPAGEA":
@@ -288,18 +288,31 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	/// BOOL InitCommonControlsEx(const INITCOMMONCONTROLSEX *lpInitCtrls);
 	/// </summary>
 	[DllModuleExport(84, Version = "5.81.4916.400")]
-	private uint InitCommonControlsEx(INITCOMMONCONTROLSEXRef lpInitCtrls)
+	private uint InitCommonControlsEx(uint lpInitCtrls)
 	{
-		var dwSize = lpInitCtrls.dwSize;
-		var dwICC = lpInitCtrls.dwICC;
+		_logger.LogInformation("[Comctl32] InitCommonControlsEx(lpInitCtrls=0x{LpInitCtrls:X8})", lpInitCtrls);
 
-		_logger.LogInformation("[Comctl32] InitCommonControlsEx(dwSize={DwSize}, dwICC=0x{DwICC:X8})",
+		// Validate pointer before creating the ref struct to avoid reading from address 0
+		if (lpInitCtrls == 0)
+		{
+			_logger.LogWarning("[Comctl32] InitCommonControlsEx: null lpInitCtrls pointer");
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		var lpInitCtrlsRef = new INITCOMMONCONTROLSEXRef(_env.Memory, lpInitCtrls);
+
+		var dwSize = lpInitCtrlsRef.dwSize;
+		var dwICC = lpInitCtrlsRef.dwICC;
+
+		_logger.LogInformation("[Comctl32] InitCommonControlsEx: dwSize={DwSize}, dwICC=0x{DwICC:X8}",
 			dwSize, dwICC);
 
 		// Validate structure size
-		if (dwSize != 8)
+		var expectedSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeTypes.INITCOMMONCONTROLSEX>();
+		if (dwSize != expectedSize)
 		{
-			_logger.LogWarning("[Comctl32] InitCommonControlsEx: Invalid structure size {DwSize}, expected 8", dwSize);
+			_logger.LogWarning("[Comctl32] InitCommonControlsEx: Invalid structure size {DwSize}, expected {ExpectedSize}", dwSize, expectedSize);
 			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 			return 0; // FALSE
 		}
