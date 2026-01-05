@@ -2694,7 +2694,7 @@ public sealed class Emulator : IDisposable
 
             case DosFunction.CreateFile:
                 {
-                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger);
+                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger, maxLength: 256);
                     _logger.LogDebug("[DOS INT 21h] Create file: {Filename} (AH=0x3C)", filename);
                     // Return dummy file handle in AX
                     _cpu.SetRegister("EAX", (_cpu.GetRegister("EAX") & 0xFFFF0000) | DOS_DUMMY_FILE_HANDLE);
@@ -2703,7 +2703,7 @@ public sealed class Emulator : IDisposable
 
             case DosFunction.OpenFile:
                 {
-                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger);
+                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger, maxLength: 256);
                     var accessMode = al & 0x03; // 0=read, 1=write, 2=read/write
                     _logger.LogDebug("[DOS INT 21h] Open file: {Filename}, mode={Mode} (AH=0x3D)", filename, accessMode);
                     // Return dummy file handle in AX
@@ -2775,7 +2775,7 @@ public sealed class Emulator : IDisposable
 
             case DosFunction.GetSetFileAttributes:
                 {
-                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger);
+                    var filename = Win32.MemoryHelpers.ReadNullTerminatedString(_vm!, dx, _logger, maxLength: 256);
                     if (al == 0x00)
                     {
                         // Get attributes

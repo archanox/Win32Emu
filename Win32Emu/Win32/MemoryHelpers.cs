@@ -16,20 +16,26 @@ public static class MemoryHelpers
 	private const uint MAX_STRING_LENGTH = 4096;
 
 	/// <summary>
+	/// Maximum length for DOS null-terminated strings (traditional DOS limit).
+	/// </summary>
+	private const uint MAX_DOS_STRING_LENGTH = 256;
+
+	/// <summary>
 	/// Reads a null-terminated ASCII string from memory.
 	/// </summary>
 	/// <param name="memory">The virtual memory to read from.</param>
 	/// <param name="address">The address to start reading from.</param>
 	/// <param name="logger">Optional logger for diagnostics.</param>
+	/// <param name="maxLength">Maximum string length to read. Defaults to 4096 bytes.</param>
 	/// <returns>The read string, or empty string if an error occurs.</returns>
-	public static string ReadNullTerminatedString(VirtualMemory memory, uint address, ILogger? logger = null)
+	public static string ReadNullTerminatedString(VirtualMemory memory, uint address, ILogger? logger = null, uint maxLength = MAX_STRING_LENGTH)
 	{
 		var bytes = new List<byte>();
 		uint offset = 0;
 
 		try
 		{
-			while (offset < MAX_STRING_LENGTH)
+			while (offset < maxLength)
 			{
 				var b = memory.Read8(address + offset);
 				if (b == 0)
@@ -56,15 +62,16 @@ public static class MemoryHelpers
 	/// <param name="env">The process environment.</param>
 	/// <param name="address">The address to start reading from.</param>
 	/// <param name="logger">Optional logger for diagnostics.</param>
+	/// <param name="maxLength">Maximum string length to read. Defaults to 4096 bytes.</param>
 	/// <returns>The read string, or empty string if an error occurs.</returns>
-	public static string ReadNullTerminatedString(ProcessEnvironment env, uint address, ILogger? logger = null)
+	public static string ReadNullTerminatedString(ProcessEnvironment env, uint address, ILogger? logger = null, uint maxLength = MAX_STRING_LENGTH)
 	{
 		var bytes = new List<byte>();
 		uint offset = 0;
 
 		try
 		{
-			while (offset < MAX_STRING_LENGTH)
+			while (offset < maxLength)
 			{
 				var b = env.MemRead8(address + offset);
 				if (b == 0)
@@ -133,17 +140,4 @@ public static class MemoryHelpers
 		}
 	}
 
-	/// <summary>
-	/// Validates a handle by attempting to retrieve it from a dictionary.
-	/// This is a common pattern in Win32 module implementations.
-	/// </summary>
-	/// <typeparam name="T">The type of the handle value.</typeparam>
-	/// <param name="handleDict">The dictionary containing handles.</param>
-	/// <param name="handle">The handle to validate.</param>
-	/// <param name="value">The retrieved value if the handle is valid.</param>
-	/// <returns>True if the handle is valid and found in the dictionary, false otherwise.</returns>
-	public static bool TryGetHandle<T>(Dictionary<uint, T> handleDict, uint handle, out T? value)
-	{
-		return handleDict.TryGetValue(handle, out value);
-	}
 }

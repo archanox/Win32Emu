@@ -1809,7 +1809,6 @@ namespace Win32Emu.Win32.Modules
 		{
 			if (!MemoryHelpers.ValidatePointer(_env, lpWndClass, _logger, "lpWndClass"))
 			{
-				_logger.LogInformation("[User32] RegisterClassA: NULL WNDCLASS pointer");
 				return 0;
 			}
 
@@ -1818,7 +1817,6 @@ namespace Win32Emu.Win32.Modules
 
 			if (!MemoryHelpers.ValidatePointer(_env, wndClass.lpszClassName, _logger, "lpszClassName"))
 			{
-				_logger.LogInformation("[User32] RegisterClassA: NULL class name");
 				return 0;
 			}
 

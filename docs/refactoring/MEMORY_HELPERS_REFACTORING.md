@@ -33,12 +33,13 @@ Reads a null-terminated ASCII string from memory with safety limits.
 
 **Signatures:**
 ```csharp
-public static string ReadNullTerminatedString(VirtualMemory memory, uint address, ILogger? logger = null)
-public static string ReadNullTerminatedString(ProcessEnvironment env, uint address, ILogger? logger = null)
+public static string ReadNullTerminatedString(VirtualMemory memory, uint address, ILogger? logger = null, uint maxLength = 4096)
+public static string ReadNullTerminatedString(ProcessEnvironment env, uint address, ILogger? logger = null, uint maxLength = 4096)
 ```
 
 **Features:**
-- Safety limit of 4096 bytes to prevent infinite loops
+- Safety limit of 4096 bytes by default (configurable via maxLength parameter)
+- DOS operations can use 256-byte limit for traditional DOS constraints
 - Exception handling with partial string recovery
 - Optional logging for diagnostics
 
@@ -63,6 +64,9 @@ private string ReadNullTerminatedString(uint address)
 **After:**
 ```csharp
 var str = MemoryHelpers.ReadNullTerminatedString(_env, address, _logger);
+
+// For DOS operations with traditional 256-byte limit
+var dosFilename = MemoryHelpers.ReadNullTerminatedString(_vm, address, _logger, maxLength: 256);
 ```
 
 #### 2. ValidatePointer
@@ -128,23 +132,6 @@ if (!MemoryHelpers.IsValidPointer(lpBuffer))
 }
 ```
 
-#### 5. TryGetHandle
-
-Generic helper for handle validation using dictionary lookup.
-
-**Signature:**
-```csharp
-public static bool TryGetHandle<T>(Dictionary<uint, T> handleDict, uint handle, out T? value)
-```
-
-**Usage:**
-```csharp
-if (!MemoryHelpers.TryGetHandle(_surfaces, surfaceHandle, out var surface))
-{
-    // Handle not found
-}
-```
-
 ## Refactored Modules
 
 ### Phase 1: String Reading Utilities
@@ -174,8 +161,8 @@ All refactored code passes existing tests:
 
 While this refactoring focused on the most duplicated patterns, there are additional opportunities:
 
-1. **More Module Refactoring**: Apply helpers to remaining 100+ parameter validation sites
-2. **Handle Validation Patterns**: 87+ TryGetValue patterns could use TryGetHandle helper
+1. **More Module Refactoring**: Apply helpers to remaining parameter validation sites (200+ additional occurrences beyond the examples refactored)
+2. **Handle Validation Patterns**: 87+ TryGetValue patterns could benefit from consistent error handling
 3. **String Writing Helpers**: Add WriteNullTerminatedString for output buffers
 4. **Buffer Validation**: Add helpers for buffer size and bounds checking
 
