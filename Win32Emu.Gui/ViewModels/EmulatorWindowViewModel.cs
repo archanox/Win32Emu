@@ -853,7 +853,8 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 // Check if this update is for a specific window
                 if (info.TargetWindowHandle != IntPtr.Zero)
                 {
-                    var windowHandle = (uint)info.TargetWindowHandle.ToInt32();
+                    // Use safe conversion pattern for both 32-bit and 64-bit systems
+                    var windowHandle = (uint)(long)info.TargetWindowHandle;
                     UpdateWindowDisplay(windowHandle, info);
                 }
                 else
@@ -943,22 +944,28 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         }
 
         // Get or create the bitmap for this window
-        if (!_windowBitmaps.TryGetValue(windowHandle, out var bitmap) || 
-            bitmap.PixelSize.Width != info.Width || 
-            bitmap.PixelSize.Height != info.Height)
+        WriteableBitmap? bitmap = null;
+        var needsNewBitmap = !_windowBitmaps.TryGetValue(windowHandle, out bitmap) || 
+                            bitmap == null ||
+                            bitmap.PixelSize.Width != info.Width || 
+                            bitmap.PixelSize.Height != info.Height;
+        
+        if (needsNewBitmap)
         {
             // Dispose old bitmap if it exists
-            if (_windowBitmaps.TryGetValue(windowHandle, out var oldBitmap))
+            if (bitmap != null)
             {
-                oldBitmap.Dispose();
+                bitmap.Dispose();
             }
             
+            // Create new bitmap with proper disposal tracking
             bitmap = new WriteableBitmap(
                 new PixelSize(info.Width, info.Height),
                 new Vector(96, 96),
                 PixelFormat.Rgba8888,
                 AlphaFormat.Premul);
             
+            // Store immediately to ensure proper tracking
             _windowBitmaps[windowHandle] = bitmap;
             OnDebugOutput($"Created window bitmap for HWND=0x{windowHandle:X8}: {info.Width}x{info.Height}", DebugLevel.Info);
         }

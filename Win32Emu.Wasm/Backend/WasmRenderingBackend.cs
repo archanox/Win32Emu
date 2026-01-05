@@ -185,7 +185,8 @@ public class WasmRenderingBackend : IRenderingBackend
 			if (targetWindowHandle != IntPtr.Zero)
 			{
 				// Use window-specific canvas ID format: "window-canvas-{HWND}"
-				var windowHandleValue = (uint)targetWindowHandle.ToInt32();
+				// Use ToInt64() to safely handle both 32-bit and 64-bit handle values
+				var windowHandleValue = (uint)targetWindowHandle.ToInt64();
 				canvasId = $"window-canvas-{windowHandleValue:X8}";
 				_logger.LogTrace("[WASM] Rendering to window-specific canvas: {CanvasId} (HWND 0x{WindowHandle:X8})", canvasId, windowHandleValue);
 			}
@@ -225,11 +226,12 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
-				_canvasId, _width, _height, base64Data.Length);
+				canvasId, _width, _height, base64Data.Length);
 			
 			// Use fire-and-forget pattern but with proper error tracking
 			// We return success immediately for performance, but track errors for future calls
-			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", _canvasId, base64Data, _width, _height)
+			// Use the computed canvasId instead of _canvasId to ensure correct routing
+			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", canvasId, base64Data, _width, _height)
 				.AsTask()
 				.ContinueWith(t =>
 				{
