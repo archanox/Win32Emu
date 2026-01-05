@@ -140,13 +140,15 @@ public static class NativeTypes
 	}
 
 	// INITCOMMONCONTROLSEX structure for InitCommonControlsEx
+	// Follows the Win32 API INITCOMMONCONTROLSEX structure specification
+	// Used to specify which common control classes should be registered
 	// Total size: 8 bytes
 	[StructLayout(LayoutKind.Explicit, Size = 8)]
 	[GenerateMemoryRef]
 	public struct INITCOMMONCONTROLSEX
 	{
 		[FieldOffset(0)]
-		public uint dwSize;  // Offset 0 - Size of the structure
+		public uint dwSize;  // Offset 0 - Size of the structure (must be 8)
 		[FieldOffset(4)]
 		public uint dwICC;   // Offset 4 - ICC_* flags indicating which control classes to register
 	}
