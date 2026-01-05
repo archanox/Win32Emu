@@ -3170,7 +3170,7 @@ namespace Win32Emu.Win32.Modules
 	}
 
 	/// <summary>
-	/// Handles nested syscalls (import calls) during callback execution.
+	/// Handles nested syscalls (import calls and INT 0x80 syscalls) during callback execution.
 	/// Based on User32Module.HandleComAndImportCalls but simplified - does not handle COM vtable calls
 	/// since MSVCRT callbacks typically only call standard Win32 APIs.
 	/// </summary>
@@ -3180,17 +3180,149 @@ namespace Win32Emu.Win32.Modules
 	/// <param name="logContext">Context string for logging</param>
 	/// <param name="stepDesc">Output parameter for step description (for debugging)</param>
 	/// <param name="shouldBreak">Output parameter indicating if execution should stop</param>
-	/// <returns>True if the step was handled (import call), false if it should be processed normally</returns>
+	/// <returns>True if the step was handled (import call or INT 0x80 syscall), false if it should be processed normally</returns>
 	private bool HandleNestedSyscalls(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext, out string? stepDesc, out bool shouldBreak)
 	{
 		stepDesc = null;
 		shouldBreak = false;
 
-		// Check for import calls (calls to imported Win32 API functions)
-		if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+		// Check for INT 0x80 syscalls (import stubs trigger INT 0x80)
+		// This is the most common case for nested syscalls in callbacks
+		if (step.IsSyscall && _image != null && _dispatcher != null)
 		{
-			var dll = imp.dll.ToUpperInvariant();
-			var name = imp.name;
+			// Read the import stub info from the stack (same as HandleSyscallAsync in Emulator.cs)
+			// Stack layout:
+			// [ESP+0] = return address to import stub (points to RET after CALL to syscall dispatcher)
+			// [ESP+4] = return address to callback code
+			// [ESP+8+] = function arguments
+			
+			var esp = cpu.GetRegister("ESP");
+			
+			// Validate ESP
+			if (esp < MemoryRegions.MinValidUserAddress)
+			{
+				_logger.LogError("[msvcrt] {Context}: ESP=0x{Esp:X8} is too low during nested syscall", logContext, esp);
+				shouldBreak = true;
+				return true;
+			}
+			
+			// Read return address to import stub
+			var retToStub = memory.Read32(esp);
+			
+			// Calculate import stub address (5 bytes before return address for CALL instruction)
+			var importStubAddr = retToStub - 5;
+			
+			// Look up the import
+			if (_image.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
+			{
+				var dll = imp.dll.ToUpperInvariant();
+				var name = imp.name;
+				_logger.LogDebug("[msvcrt] {Context}: Nested INT 0x80 syscall {Dll}!{Name} from stub at 0x{Stub:X8}", 
+					logContext, dll, name, importStubAddr);
+				stepDesc = $"INT 0x80 syscall {dll}!{name}";
+				
+				// Save callee-saved registers
+				var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+				
+				// Adjust ESP to skip the return-to-stub address
+				// This allows the dispatcher to read arguments at correct offsets
+				var originalEsp = esp;
+				cpu.SetRegister("ESP", esp + 4);
+				
+				// Dispatch the API call
+				if (_dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+				{
+					_logger.LogDebug("[msvcrt] {Context}: Nested syscall {Dll}!{Name} returned 0x{Ret:X8}, argBytes={ArgBytes}", 
+						logContext, dll, name, ret, argBytes);
+					
+					// Set return value in EAX
+					cpu.SetRegister("EAX", ret);
+					
+					// Restore ESP to original value so CPU can execute RET instructions naturally
+					// The CPU will execute RET in syscall dispatcher (pops return-to-stub),
+					// then RET in import stub (pops return-to-callback and cleans args)
+					cpu.SetRegister("ESP", originalEsp);
+					
+					// Patch the import stub's RET instruction with argBytes for stdcall cleanup
+					// The stub RET is at importStubAddr + 5 (after the 5-byte CALL instruction)
+					// Format: RET imm16 = 0xC2 <low_byte> <high_byte>
+					if (argBytes > 0 && argBytes <= 0xFFFF)
+					{
+						var retInstrAddr = importStubAddr + 5;
+						var opcode = memory.Read8(retInstrAddr);
+						if (opcode == 0xC2)
+						{
+							// Patch the immediate value
+							memory.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
+							memory.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+							_logger.LogDebug("[msvcrt] {Context}: Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", 
+								logContext, retInstrAddr, argBytes);
+						}
+					}
+					
+					// Restore callee-saved registers
+					CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
+					
+					return true;
+				}
+				else
+				{
+					// Function not implemented - simulate return
+					_logger.LogWarning("[msvcrt] {Context}: Nested syscall {Dll}!{Name} not implemented, simulating return with 0", 
+						logContext, dll, name);
+					
+					// Try to get arg bytes from metadata
+					var simulatedArgBytes = 0;
+					try
+					{
+						simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
+					}
+					catch
+					{
+						_logger.LogWarning("[msvcrt] {Context}: Cannot determine argBytes for {Dll}!{Name}, assuming 0", 
+							logContext, dll, name);
+					}
+					
+					// Set return value in EAX
+					cpu.SetRegister("EAX", 0);
+					
+					// Restore ESP to original value
+					cpu.SetRegister("ESP", originalEsp);
+					
+					// Patch the stub's RET if needed
+					if (simulatedArgBytes > 0 && simulatedArgBytes <= 0xFFFF)
+					{
+						var retInstrAddr = importStubAddr + 5;
+						var opcode = memory.Read8(retInstrAddr);
+						if (opcode == 0xC2)
+						{
+							memory.Write8(retInstrAddr + 1, (byte)(simulatedArgBytes & 0xFF));
+							memory.Write8(retInstrAddr + 2, (byte)((simulatedArgBytes >> 8) & 0xFF));
+							_logger.LogDebug("[msvcrt] {Context}: Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", 
+								logContext, retInstrAddr, simulatedArgBytes);
+						}
+					}
+					
+					// Restore callee-saved registers
+					CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
+					
+					return true;
+				}
+			}
+			else
+			{
+				_logger.LogError("[msvcrt] {Context}: Nested syscall at unmapped import stub 0x{Stub:X8}", logContext, importStubAddr);
+				shouldBreak = true;
+				return true;
+			}
+		}
+
+		// Check for direct import calls (CALL instructions to imported Win32 API functions)
+		// This is less common but still supported
+		if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp2))
+		{
+			var dll = imp2.dll.ToUpperInvariant();
+			var name = imp2.name;
 			_logger.LogDebug("[msvcrt] {Context}: Nested import call {Dll}!{Name} at 0x{CallTarget:X8}", logContext, dll, name, step.CallTarget);
 			stepDesc = $"Import call {dll}!{name}";
 
