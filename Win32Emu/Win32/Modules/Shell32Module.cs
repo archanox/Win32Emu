@@ -934,10 +934,10 @@ public partial class Shell32Module : IWin32ModuleAsync
 	[DllModuleExport(24)]
 	private uint ShellExecuteA(uint hwnd, in LpcStr lpOperation, in LpcStr lpFile, in LpcStr lpParameters, in LpcStr lpDirectory, int nShowCmd)
 	{
-		var operation = lpOperation.ToString() ?? string.Empty;
-		var file = lpFile.ToString() ?? string.Empty;
-		var parameters = lpParameters.ToString() ?? string.Empty;
-		var directory = lpDirectory.ToString() ?? string.Empty;
+		var operation = lpOperation.Read(_env.Memory) ?? string.Empty;
+		var file = lpFile.Read(_env.Memory) ?? string.Empty;
+		var parameters = lpParameters.Read(_env.Memory) ?? string.Empty;
+		var directory = lpDirectory.Read(_env.Memory) ?? string.Empty;
 
 		LogShellExecuteA(hwnd, operation, file, parameters, directory, nShowCmd);
 

@@ -50,7 +50,7 @@ public partial class DsetupModule : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint DirectXSetupA(uint hWnd, in LpcStr lpszRootPath, uint dwFlags)
 	{
-		var rootPath = lpszRootPath.ToString() ?? string.Empty;
+		var rootPath = lpszRootPath.Read(_env.Memory) ?? string.Empty;
 		LogDirectXSetupA(hWnd, rootPath, dwFlags);
 
 		// Stub - return success (DirectX already installed)

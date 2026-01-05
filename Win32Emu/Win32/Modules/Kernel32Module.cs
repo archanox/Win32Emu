@@ -1311,7 +1311,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	public uint OpenSemaphoreA(uint dwDesiredAccess, uint bInheritHandle, LpcStr lpName)
 	{
-		var name = lpName.ToString() ?? string.Empty;
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[kernel32] OpenSemaphoreA(dwDesiredAccess=0x{DwDesiredAccess:X8}, bInheritHandle={BInheritHandle}, lpName=\"{LpName}\")",
 			dwDesiredAccess, bInheritHandle, name);
 
@@ -2101,7 +2101,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		}
 
 		// Read the library name from memory
-		var libraryName = lpLibFileName.ToString();
+		var libraryName = lpLibFileName.Read(_env.Memory);
 		if (string.IsNullOrEmpty(libraryName))
 		{
 			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
@@ -5969,7 +5969,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(37)]
 	private uint CreateMutex(uint lpMutexAttributes, uint bInitialOwner, in LpcStr lpName)
 	{
-		var name = lpName.ToString();
+		var name = lpName.Read(_env.Memory);
 		var initialOwner = bInitialOwner != 0;
 		var currentThreadId = _env.GetCurrentThreadId();
 
@@ -6024,7 +6024,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(37)]
 	private uint CreateEvent(uint lpEventAttributes, uint bManualReset, uint bInitialState, in LpcStr lpName)
 	{
-		var name = lpName.ToString();
+		var name = lpName.Read(_env.Memory);
 		var manualReset = bManualReset != 0;
 		var initialState = bInitialState != 0;
 
@@ -6121,7 +6121,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(37)]
 	private uint CreateSemaphore(uint lpSemaphoreAttributes, uint lInitialCount, uint lMaximumCount, in LpcStr lpName)
 	{
-		var name = lpName.ToString();
+		var name = lpName.Read(_env.Memory);
 
 		_logger.LogInformation("[Kernel32] CreateSemaphore(attr=0x{Attr:X8}, initial={Initial}, max={Max}, name=\"{Name}\")",
 			lpSemaphoreAttributes, lInitialCount, lMaximumCount, name ?? "<unnamed>");
@@ -6447,7 +6447,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint SetCurrentDirectoryA(in LpcStr lpPathName)
 	{
-		var path = lpPathName.ToString();
+		var path = lpPathName.Read(_env.Memory);
 		if (string.IsNullOrEmpty(path))
 		{
 			_logger.LogInformation("[Kernel32] SetCurrentDirectoryA failed: Invalid path (empty or null)");
@@ -6518,7 +6518,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint CreateDirectoryA(in LpcStr lpPathName, uint lpSecurityAttributes)
 	{
-		var path = lpPathName.ToString();
+		var path = lpPathName.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] CreateDirectoryA(\"{Path}\", 0x{LpSecurityAttributes:X8})", path, lpSecurityAttributes);
 
 		if (string.IsNullOrEmpty(path))
@@ -6586,7 +6586,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint LstrcatA(in LpStr lpString1, in LpcStr lpString2)
 	{
 		var str1 = lpString1.Read(_env.Memory);
-		var str2 = lpString2.ToString();
+		var str2 = lpString2.Read(_env.Memory);
 
 		_logger.LogInformation("[Kernel32] LstrcatA(\"{Str1}\", \"{Str2}\")", str1, str2);
 
@@ -6601,7 +6601,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint LstrcpyA(in LpStr lpString1, in LpcStr lpString2)
 	{
-		var str2 = lpString2.ToString();
+		var str2 = lpString2.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] LstrcpyA(dest=0x{Address:X8}, src=\"{Str2}\")", lpString1.Address, str2);
 
 		// Copy string to destination
@@ -6614,7 +6614,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint LstrlenA(in LpcStr lpString)
 	{
-		var str = lpString.ToString();
+		var str = lpString.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] LstrlenA(\"{Str}\")", str);
 
 		// Return the length of the string (excluding null terminator)
@@ -6646,7 +6646,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint WinExec(in LpcStr lpCmdLine, uint uCmdShow)
 	{
-		var cmdLine = lpCmdLine.ToString();
+		var cmdLine = lpCmdLine.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] WinExec(\"{CmdLine}\", {UCmdShow})", cmdLine, uCmdShow);
 
 		if (cmdLine == null)
@@ -6963,7 +6963,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint SetFileAttributesA(in LpcStr lpFileName, uint dwFileAttributes)
 	{
-		var fileName = lpFileName.ToString();
+		var fileName = lpFileName.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] SetFileAttributesA(\"{FileName}\", 0x{DwFileAttributes:X8})", fileName, dwFileAttributes);
 
 		if (string.IsNullOrEmpty(fileName))
@@ -7024,7 +7024,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(20)]
 	private uint GetDiskFreeSpaceA(in LpcStr lpRootPathName, uint lpSectorsPerCluster, uint lpBytesPerSector, uint lpNumberOfFreeClusters, uint lpTotalNumberOfClusters)
 	{
-		var rootPath = lpRootPathName.ToString() ?? "C:\\";
+		var rootPath = lpRootPathName.Read(_env.Memory) ?? "C:\\";
 		_logger.LogInformation("[Kernel32] GetDiskFreeSpaceA(\"{RootPath}\", 0x{LpSectorsPerCluster:X8}, 0x{LpBytesPerSector:X8}, 0x{LpNumberOfFreeClusters:X8}, 0x{LpTotalNumberOfClusters:X8})",
 			rootPath, lpSectorsPerCluster, lpBytesPerSector, lpNumberOfFreeClusters, lpTotalNumberOfClusters);
 
@@ -7071,7 +7071,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(320, entryPoint: 0x0001A254, Version = "4.90.0.3000")]
 	private uint GetDriveTypeA(in LpcStr lpRootPathName)
 	{
-		var rootPath = lpRootPathName.ToString() ?? "C:\\";
+		var rootPath = lpRootPathName.Read(_env.Memory) ?? "C:\\";
 		_logger.LogInformation("[Kernel32] GetDriveTypeA(\"{RootPath}\")", rootPath);
 
 		// Drive types:
@@ -7161,7 +7161,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(481, entryPoint: 0x00020B87, Version = "4.90.0.3000")]
 	private uint OutputDebugStringA(in LpcStr lpOutputString)
 	{
-		var message = lpOutputString.ToString();
+		var message = lpOutputString.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] OutputDebugStringA: {Message}", message);
 
 		// OutputDebugStringA returns void (0) in the real API
@@ -7313,7 +7313,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint GetEnvironmentVariableA(in LpcStr lpName, uint lpBuffer, uint nSize)
 	{
-		var name = lpName.ToString() ?? string.Empty;
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetEnvironmentVariableA(lpName=\"{Name}\", lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
 			name, lpBuffer, nSize);
 
@@ -7390,7 +7390,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint GlobalAddAtomA(in LpcStr lpString)
 	{
-		var str = lpString.ToString() ?? string.Empty;
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GlobalAddAtomA(lpString=\"{Str}\")", str);
 		return 0xC000; // Return a valid atom value
 	}
@@ -7405,7 +7405,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint GlobalFindAtomA(in LpcStr lpString)
 	{
-		var str = lpString.ToString() ?? string.Empty;
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GlobalFindAtomA(lpString=\"{Str}\")", str);
 		return 0; // Not found
 	}
@@ -7419,7 +7419,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4, IsStub = true)]
 	private uint FindAtomA(in LpcStr lpString)
 	{
-		var str = lpString.ToString() ?? string.Empty;
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] FindAtomA(lpString=\"{Str}\")", str);
 		// Stub implementation - return 0 (not found)
 		return 0;
@@ -7434,7 +7434,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4, IsStub = true)]
 	private uint FindAtomW(in LpcWStr lpString)
 	{
-		var str = lpString.ToString() ?? string.Empty;
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] FindAtomW(lpString=\"{Str}\")", str);
 		// Stub implementation - return 0 (not found)
 		return 0;
@@ -7622,8 +7622,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private int lstrcmpA(in LpcStr lpString1, in LpcStr lpString2)
 	{
-		var str1 = lpString1.ToString() ?? string.Empty;
-		var str2 = lpString2.ToString() ?? string.Empty;
+		var str1 = lpString1.Read(_env.Memory) ?? string.Empty;
+		var str2 = lpString2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] lstrcmpA(lpString1=\"{Str1}\", lpString2=\"{Str2}\")", str1, str2);
 		return string.Compare(str1, str2, StringComparison.Ordinal);
 	}
@@ -7631,8 +7631,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private int lstrcmpiA(in LpcStr lpString1, in LpcStr lpString2)
 	{
-		var str1 = lpString1.ToString() ?? string.Empty;
-		var str2 = lpString2.ToString() ?? string.Empty;
+		var str1 = lpString1.Read(_env.Memory) ?? string.Empty;
+		var str2 = lpString2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] lstrcmpiA(lpString1=\"{Str1}\", lpString2=\"{Str2}\")", str1, str2);
 		return string.Compare(str1, str2, StringComparison.OrdinalIgnoreCase);
 	}
@@ -7640,7 +7640,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint lstrcpynA(uint lpString1, in LpcStr lpString2, int iMaxLength)
 	{
-		var str2 = lpString2.ToString() ?? string.Empty;
+		var str2 = lpString2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] lstrcpynA(lpString1=0x{LpString1:X8}, lpString2=\"{Str2}\", iMaxLength={IMaxLength})",
 			lpString1, str2, iMaxLength);
 		if (lpString1 != 0 && iMaxLength > 0)
@@ -7661,7 +7661,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint lstrcpynW(uint lpString1, in LpcWStr lpString2, int iMaxLength)
 	{
-		var str2 = lpString2.ToString() ?? string.Empty;
+		var str2 = lpString2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] lstrcpynW(lpString1=0x{LpString1:X8}, lpString2=\"{Str2}\", iMaxLength={IMaxLength})",
 			lpString1, str2, iMaxLength);
 		if (lpString1 != 0 && iMaxLength > 0)
@@ -7695,7 +7695,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint OpenMutexA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
 	{
-		var name = lpName.ToString() ?? string.Empty;
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] OpenMutexA(dwDesiredAccess=0x{DwDesiredAccess:X}, bInheritHandle={BInheritHandle}, lpName=\"{Name}\")",
 			dwDesiredAccess, bInheritHandle, name);
 		return 0; // NULL - mutex doesn't exist
@@ -7704,7 +7704,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint RemoveDirectoryA(in LpcStr lpPathName)
 	{
-		var pathName = lpPathName.ToString() ?? string.Empty;
+		var pathName = lpPathName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] RemoveDirectoryA(lpPathName=\"{PathName}\")", pathName);
 		return 1; // TRUE (stub)
 	}
@@ -7787,10 +7787,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint WritePrivateProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpString, in LpcStr lpFileName)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var keyName = lpKeyName.ToString() ?? string.Empty;
-		var str = lpString.ToString() ?? string.Empty;
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var keyName = lpKeyName.Read(_env.Memory) ?? string.Empty;
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] WritePrivateProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpString=\"{Str}\", lpFileName=\"{FileName}\")",
 			appName, keyName, str, fileName);
 		return 1; // TRUE (stub)
@@ -7809,8 +7809,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16, IsStub = true)]
 	private uint WritePrivateProfileSectionA(in LpcStr lpAppName, in LpcStr lpString, in LpcStr lpFileName)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] WritePrivateProfileSectionA(lpAppName=\"{AppName}\", lpFileName=\"{FileName}\")",
 			appName, fileName);
 		return 1; // TRUE (stub)
@@ -7862,7 +7862,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint GetFileAttributesA(in LpcStr lpFileName)
 	{
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetFileAttributesA(lpFileName=\"{FileName}\")", fileName);
 
 		if (string.IsNullOrEmpty(fileName))
@@ -7964,7 +7964,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint GetFullPathNameA(in LpcStr lpFileName, uint nBufferLength, in LpStr lpBuffer, uint lpFilePart)
 	{
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetFullPathNameA(lpFileName=\"{FileName}\")", fileName);
 		var fullPath = "C:\\\\" + fileName; // Stub - just prepend C:\
 		var requiredLength = (uint)fullPath.Length + 1;
@@ -8024,7 +8024,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetVolumeInformationA(in LpcStr lpRootPathName, in LpStr lpVolumeNameBuffer, uint nVolumeNameSize,
 		uint lpVolumeSerialNumber, uint lpMaximumComponentLength, uint lpFileSystemFlags, in LpStr lpFileSystemNameBuffer, uint nFileSystemNameSize)
 	{
-		var rootPath = lpRootPathName.ToString() ?? "C:\\";
+		var rootPath = lpRootPathName.Read(_env.Memory) ?? "C:\\";
 		_logger.LogInformation("[Kernel32] GetVolumeInformationA(lpRootPathName=\"{RootPath}\")", rootPath);
 		if (lpVolumeNameBuffer.Address != 0 && nVolumeNameSize > 0)
 		{
@@ -8172,7 +8172,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint GetDateFormatA(uint locale, uint dwFlags, uint lpDate, in LpcStr lpFormat, in LpStr lpDateStr, int cchDate)
 	{
-		var format = lpFormat.ToString();
+		var format = lpFormat.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] GetDateFormatA(locale=0x{Locale:X8}, dwFlags=0x{DwFlags:X8}, lpFormat=\"{Format}\", cchDate={CchDate})",
 			locale, dwFlags, format, cchDate);
 
@@ -8226,7 +8226,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint ExpandEnvironmentStringsA(in LpcStr lpSrc, in LpStr lpDst, uint nSize)
 	{
-		var src = lpSrc.ToString() ?? string.Empty;
+		var src = lpSrc.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] ExpandEnvironmentStringsA(lpSrc=\"{Src}\", nSize={NSize})", src, nSize);
 
 		// Simple environment variable expansion
@@ -8255,10 +8255,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(1)]
 	private uint GetPrivateProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpDefault, in LpStr lpReturnedString, uint nSize, in LpcStr lpFileName)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var keyName = lpKeyName.ToString() ?? string.Empty;
-		var defaultValue = lpDefault.ToString() ?? string.Empty;
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var keyName = lpKeyName.Read(_env.Memory) ?? string.Empty;
+		var defaultValue = lpDefault.Read(_env.Memory) ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Kernel32] GetPrivateProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpDefault=\"{Default}\", nSize={NSize}, lpFileName=\"{FileName}\")",
 			appName, keyName, defaultValue, nSize, fileName);
@@ -8303,8 +8303,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16, IsStub = true)]
 	private uint GetPrivateProfileSectionA(in LpcStr lpAppName, in LpStr lpReturnedString, uint nSize, in LpcStr lpFileName)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Kernel32] GetPrivateProfileSectionA(lpAppName=\"{AppName}\", nSize={NSize}, lpFileName=\"{FileName}\")",
 			appName, nSize, fileName);
@@ -8328,9 +8328,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		uint lpThreadAttributes, uint bInheritHandles, uint dwCreationFlags, uint lpEnvironment,
 		in LpcStr lpCurrentDirectory, uint lpStartupInfo, uint lpProcessInformation)
 	{
-		var appName = lpApplicationName.ToString() ?? string.Empty;
-		var cmdLine = lpCommandLine.ToString() ?? string.Empty;
-		var currentDir = lpCurrentDirectory.ToString() ?? string.Empty;
+		var appName = lpApplicationName.Read(_env.Memory) ?? string.Empty;
+		var cmdLine = lpCommandLine.Read(_env.Memory) ?? string.Empty;
+		var currentDir = lpCurrentDirectory.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Kernel32] CreateProcessA(lpApplicationName=\"{AppName}\", lpCommandLine=\"{CmdLine}\", dwCreationFlags=0x{Flags:X8}, lpCurrentDirectory=\"{CurrentDir}\")",
 			appName, cmdLine, dwCreationFlags, currentDir);
@@ -8386,7 +8386,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint FatalAppExitA(uint uAction, in LpcStr lpMessageText)
 	{
-		var message = lpMessageText.ToString() ?? string.Empty;
+		var message = lpMessageText.Read(_env.Memory) ?? string.Empty;
 		_logger.LogError("[Kernel32] FatalAppExitA(uAction={UAction}, lpMessageText=\"{Message}\")", uAction, message);
 
 		// Stub - just log the error
@@ -8396,9 +8396,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint GetPrivateProfileIntA(in LpcStr lpAppName, in LpcStr lpKeyName, int nDefault, in LpcStr lpFileName)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var keyName = lpKeyName.ToString() ?? string.Empty;
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var keyName = lpKeyName.Read(_env.Memory) ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Kernel32] GetPrivateProfileIntA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", nDefault={NDefault}, lpFileName=\"{FileName}\")",
 			appName, keyName, nDefault, fileName);
@@ -8410,7 +8410,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint GetShortPathNameA(in LpcStr lpszLongPath, in LpStr lpszShortPath, uint cchBuffer)
 	{
-		var longPath = lpszLongPath.ToString() ?? string.Empty;
+		var longPath = lpszLongPath.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetShortPathNameA(lpszLongPath=\"{LongPath}\", cchBuffer={CchBuffer})", longPath, cchBuffer);
 
 		// Stub - just copy the long path as the short path
@@ -8435,7 +8435,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(20)]
 	private uint GetStringTypeExA(uint Locale, uint dwInfoType, in LpcStr lpSrcStr, int cchSrc, uint lpCharType)
 	{
-		var srcStr = lpSrcStr.ToString() ?? string.Empty;
+		var srcStr = lpSrcStr.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetStringTypeExA(Locale=0x{Locale:X}, dwInfoType=0x{DwInfoType:X}, cchSrc={CchSrc})",
 			Locale, dwInfoType, cchSrc);
 
@@ -8455,8 +8455,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint GetTempFileNameA(in LpcStr lpPathName, in LpcStr lpPrefixString, uint uUnique, in LpStr lpTempFileName)
 	{
-		var pathName = lpPathName.ToString() ?? string.Empty;
-		var prefix = lpPrefixString.ToString() ?? string.Empty;
+		var pathName = lpPathName.Read(_env.Memory) ?? string.Empty;
+		var prefix = lpPrefixString.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Kernel32] GetTempFileNameA(lpPathName=\"{PathName}\", lpPrefixString=\"{Prefix}\", uUnique={UUnique})",
 			pathName, prefix, uUnique);
@@ -8558,8 +8558,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint GetProfileIntA(in LpcStr lpAppName, in LpcStr lpKeyName, int nDefault)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var keyName = lpKeyName.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var keyName = lpKeyName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetProfileIntA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", nDefault={NDefault})",
 			appName, keyName, nDefault);
 		// Return default value (stub - no Win.ini support)
@@ -8569,9 +8569,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(20)]
 	private uint GetProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpDefault, uint lpReturnedString, uint nSize)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var keyName = lpKeyName.ToString() ?? string.Empty;
-		var defaultStr = lpDefault.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var keyName = lpKeyName.Read(_env.Memory) ?? string.Empty;
+		var defaultStr = lpDefault.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] GetProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpDefault=\"{Default}\", lpReturnedString=0x{LpReturnedString:X8}, nSize={NSize})",
 			appName, keyName, defaultStr, lpReturnedString, nSize);
 
@@ -8614,7 +8614,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint _lcreat(in LpcStr lpPathName, int iAttribute)
 	{
-		var pathName = lpPathName.ToString() ?? string.Empty;
+		var pathName = lpPathName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] _lcreat(lpPathName=\"{PathName}\", iAttribute={IAttribute})",
 			pathName, iAttribute);
 
@@ -8677,7 +8677,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint _lopen(in LpcStr lpPathName, int iReadWrite)
 	{
-		var pathName = lpPathName.ToString() ?? string.Empty;
+		var pathName = lpPathName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] _lopen(lpPathName=\"{PathName}\", iReadWrite={IReadWrite})",
 			pathName, iReadWrite);
 
@@ -8803,9 +8803,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint WriteProfileStringA(in LpcStr lpAppName, in LpcStr lpKeyName, in LpcStr lpString)
 	{
-		var appName = lpAppName.ToString() ?? string.Empty;
-		var keyName = lpKeyName.ToString() ?? string.Empty;
-		var str = lpString.ToString() ?? string.Empty;
+		var appName = lpAppName.Read(_env.Memory) ?? string.Empty;
+		var keyName = lpKeyName.Read(_env.Memory) ?? string.Empty;
+		var str = lpString.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] WriteProfileStringA(lpAppName=\"{AppName}\", lpKeyName=\"{KeyName}\", lpString=\"{Str}\")",
 			appName, keyName, str);
 		// Return success (stub - no Win.ini support)
@@ -8827,7 +8827,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint CreateFileMappingA(uint hFile, uint lpFileMappingAttributes, uint flProtect,
 		uint dwMaximumSizeHigh, uint dwMaximumSizeLow, in LpcStr lpName)
 	{
-		var name = lpName.ToString() ?? string.Empty;
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] CreateFileMappingA(hFile=0x{HFile:X8}, flProtect=0x{FlProtect:X}, dwMaximumSizeHigh={DwMaximumSizeHigh}, dwMaximumSizeLow={DwMaximumSizeLow}, lpName=\"{Name}\")",
 			hFile, flProtect, dwMaximumSizeHigh, dwMaximumSizeLow, name);
 
@@ -8863,7 +8863,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(20, IsStub = true)]
 	private uint OpenFileMappingA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
 	{
-		var name = lpName.ToString() ?? string.Empty;
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] OpenFileMappingA(dwDesiredAccess=0x{Access:X8}, bInheritHandle={Inherit}, lpName=\"{Name}\")",
 			dwDesiredAccess, bInheritHandle, name);
 
@@ -9184,9 +9184,9 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(0)]
 	private uint SearchPathA(in LpcStr lpPath, in LpcStr lpFileName, in LpcStr lpExtension, uint nBufferLength, in LpStr lpBuffer, uint lpFilePart)
 	{
-		var path = lpPath.ToString();
-		var fileName = lpFileName.ToString();
-		var extension = lpExtension.ToString();
+		var path = lpPath.Read(_env.Memory);
+		var fileName = lpFileName.Read(_env.Memory);
+		var extension = lpExtension.Read(_env.Memory);
 
 		_logger.LogInformation("[Kernel32] SearchPathA(lpPath=\"{Path}\", lpFileName=\"{FileName}\", lpExtension=\"{Extension}\", nBufferLength={NBufferLength})",
 		path ?? "(null)", fileName ?? "(null)", extension ?? "(null)", nBufferLength);
@@ -10929,7 +10929,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint OpenEventA(uint dwDesiredAccess, uint bInheritHandle, in LpcStr lpName)
 	{
-		var name = lpName.ToString() ?? string.Empty;
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] OpenEventA(dwDesiredAccess=0x{DwDesiredAccess:X}, bInheritHandle={BInheritHandle}, lpName=\"{Name}\")",
 			dwDesiredAccess, bInheritHandle, name);
 
@@ -11742,7 +11742,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(49)]
 	private uint LoadLibraryExA(in LpcStr lpLibFileName, uint hFile, uint dwFlags)
 	{
-		var fileName = lpLibFileName.ToString() ?? string.Empty;
+		var fileName = lpLibFileName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] LoadLibraryExA(lpLibFileName={LpLibFileName}, hFile=0x{HFile:X8}, dwFlags=0x{DwFlags:X8})",
 			fileName, hFile, dwFlags);
 		

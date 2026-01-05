@@ -102,6 +102,12 @@ public readonly struct LpcStr
 	/// <summary>
 	/// Returns the string value from memory, or null if the pointer is null.
 	/// </summary>
+	/// <remarks>
+	/// DEPRECATED: This method only works when memory was provided in the constructor.
+	/// When LpcStr is created via implicit conversion from uint, it lacks the _memory reference
+	/// and this method will return null. Use Read(memory) instead.
+	/// </remarks>
+	[Obsolete("Use Read(memory) instead. ToString() only works when memory was provided in constructor.", false)]
 	public override string? ToString()
 	{
 		return Read();

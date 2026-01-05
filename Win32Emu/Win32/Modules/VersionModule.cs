@@ -61,7 +61,7 @@ public partial class VersionModule : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint GetFileVersionInfoSizeA(in LpcStr lptstrFilename, uint lpdwHandle)
 	{
-		var filename = lptstrFilename.ToString() ?? string.Empty;
+		var filename = lptstrFilename.Read(_env.Memory) ?? string.Empty;
 		LogGetFileVersionInfoSizeA(filename, lpdwHandle);
 
 		// Clear the handle output parameter
@@ -86,7 +86,7 @@ public partial class VersionModule : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint GetFileVersionInfoA(in LpcStr lptstrFilename, uint dwHandle, uint dwLen, uint lpData)
 	{
-		var filename = lptstrFilename.ToString() ?? string.Empty;
+		var filename = lptstrFilename.Read(_env.Memory) ?? string.Empty;
 		LogGetFileVersionInfoA(filename, dwHandle, dwLen, lpData);
 
 		// For a stub implementation, just zero out the buffer
@@ -113,7 +113,7 @@ public partial class VersionModule : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint VerQueryValueA(uint pBlock, in LpcStr lpSubBlock, uint lplpBuffer, uint puLen)
 	{
-		var subBlock = lpSubBlock.ToString() ?? string.Empty;
+		var subBlock = lpSubBlock.Read(_env.Memory) ?? string.Empty;
 		LogVerQueryValueA(pBlock, subBlock, lplpBuffer, puLen);
 
 		// Return NULL pointer and 0 length (not found)

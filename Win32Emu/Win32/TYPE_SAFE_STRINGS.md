@@ -26,7 +26,7 @@ Represents `LPCSTR` (Long Pointer to Const String) - a read-only ANSI string poi
 // Win32Emu implementation:
 private uint GetModuleHandleA(in LpcStr lpModuleName)
 {
-    var moduleName = lpModuleName.ToString();
+    var moduleName = lpModuleName.Read(_env.Memory);
     _logger.LogInformation($"Getting module handle for '{moduleName ?? "NULL (current process)"}'");
     // ...
 }
@@ -34,11 +34,11 @@ private uint GetModuleHandleA(in LpcStr lpModuleName)
 
 **Features:**
 - `IsNull` property to check if pointer is null
-- `Read(VirtualMemory mem = null)` method to read the string from memory
-- `ToString()` override - returns the actual string value from memory (or null if pointer is null)
+- `Read(VirtualMemory mem)` method to read the string from memory (required for function parameters)
+- `ToString()` override - DEPRECATED: only works when memory was provided in constructor
 - `Address` property to access the raw address
 - Implicit conversions to/from `uint`
-- VirtualMemory passed in constructor for automatic string reading
+- For safe usage, always pass memory explicitly: `lpParam.Read(_env.Memory)`
 
 ### LpStr
 
@@ -159,8 +159,8 @@ When updating existing Win32 API implementations:
 
 3. Update the implementation:
    - Use `.IsNull` instead of `== null` checks
-   - Use `.ToString()` to get the string value (preferred - works automatically with memory)
-   - Use `.Read(mem)` for lower-level access when needed
+   - **Use `.Read(_env.Memory)` to get the string value (required for parameters created via implicit conversion)**
+   - **DEPRECATED: `.ToString()` only works when memory was provided in the constructor - do not use for function parameters**
    - Use `.Write()` to write strings (for writable types)
    - Use `.Address` when you need the raw pointer value
 

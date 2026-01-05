@@ -4436,7 +4436,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint SetWindowTextA(uint hWnd, in LpcStr lpString)
 		{
-			var text = lpString.ToString() ?? string.Empty;
+			var text = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] SetWindowTextA(hWnd=0x{HWnd:X8}, lpString=\"{Text}\")", hWnd, text);
 
 			// Update the window title in ProcessEnvironment
@@ -5660,7 +5660,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(0)]
 		private uint EnumDisplaySettingsA(in LpcStr lpszDeviceName, uint iModeNum, uint lpDevMode)
 		{
-			var deviceName = lpszDeviceName.ToString() ?? string.Empty;
+			var deviceName = lpszDeviceName.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] EnumDisplaySettingsA(lpszDeviceName=\"{DeviceName}\", iModeNum={IModeNum})",
 				deviceName, iModeNum);
 
@@ -5750,8 +5750,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint FindWindowA(in LpcStr lpClassName, in LpcStr lpWindowName)
 		{
-			var className = lpClassName.ToString() ?? string.Empty;
-			var windowName = lpWindowName.ToString() ?? string.Empty;
+			var className = lpClassName.Read(_env.Memory) ?? string.Empty;
+			var windowName = lpWindowName.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] FindWindowA(lpClassName=\"{ClassName}\", lpWindowName=\"{WindowName}\")", className, windowName);
 			return 0; // NULL
 		}
@@ -5935,7 +5935,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private int DrawTextA(uint hdc, in LpcStr lpchText, int cchText, uint lprc, uint format)
 		{
-			var text = lpchText.ToString() ?? string.Empty;
+			var text = lpchText.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] DrawTextA(hdc=0x{Hdc:X8}, lpchText=\"{Text}\", format=0x{Format:X})", hdc, text, format);
 			return text.Length; // Return text length
 		}
@@ -5950,7 +5950,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(32)]
 		private uint TabbedTextOutA(uint hdc, int x, int y, in LpcStr lpString, int chCount, int nTabPositions, uint lpnTabStopPositions, int nTabOrigin)
 		{
-			var str = lpString.ToString() ?? string.Empty;
+			var str = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] TabbedTextOutA(hdc=0x{Hdc:X8}, x={X}, y={Y}, lpString=\"{Str}\")", hdc, x, y, str);
 			return 0; // Return 0 (stub)
 		}
@@ -6008,7 +6008,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint ModifyMenuA(uint hMnu, uint uPosition, uint uFlags, uint uIDNewItem, in LpcStr lpNewItem)
 		{
-			var newItem = lpNewItem.ToString() ?? string.Empty;
+			var newItem = lpNewItem.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] ModifyMenuA(hMnu=0x{HMnu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X})", hMnu, uPosition, uFlags);
 			return 1; // TRUE
 		}
@@ -6037,7 +6037,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint LoadMenuA(uint hInstance, in LpcStr lpMenuName)
 		{
-			var menuName = lpMenuName.ToString() ?? string.Empty;
+			var menuName = lpMenuName.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] LoadMenuA(hInstance=0x{HInstance:X8}, lpMenuName=\"{MenuName}\")", hInstance, menuName);
 			return 0xABCD0000; // Dummy menu handle
 		}
@@ -6358,7 +6358,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint GetPropA(uint hWnd, in LpcStr lpString)
 		{
-			var str = lpString.ToString() ?? string.Empty;
+			var str = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] GetPropA(hWnd=0x{HWnd:X8}, lpString=\"{Str}\")", hWnd, str);
 			return 0; // NULL
 		}
@@ -6366,7 +6366,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(12)]
 		private uint SetPropA(uint hWnd, in LpcStr lpString, uint hData)
 		{
-			var str = lpString.ToString() ?? string.Empty;
+			var str = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] SetPropA(hWnd=0x{HWnd:X8}, lpString=\"{Str}\", hData=0x{HData:X8})", hWnd, str, hData);
 			return 1; // TRUE
 		}
@@ -6374,7 +6374,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint RemovePropA(uint hWnd, in LpcStr lpString)
 		{
-			var str = lpString.ToString() ?? string.Empty;
+			var str = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] RemovePropA(hWnd=0x{HWnd:X8}, lpString=\"{Str}\")", hWnd, str);
 			return 0; // NULL
 		}
@@ -6383,7 +6383,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint LoadBitmapA(uint hInstance, in LpcStr lpBitmapName)
 		{
-			var bitmapName = lpBitmapName.ToString() ?? string.Empty;
+			var bitmapName = lpBitmapName.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] LoadBitmapA(hInstance=0x{HInstance:X8}, lpBitmapName=\"{BitmapName}\")", hInstance, bitmapName);
 
 			// LoadBitmapA is a legacy function that's essentially LoadImageA with IMAGE_BITMAP
@@ -6456,7 +6456,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(12)]
 		private uint GetClassInfoA(uint hInstance, in LpcStr lpClassName, uint lpWndClass)
 		{
-			var className = lpClassName.ToString() ?? string.Empty;
+			var className = lpClassName.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] GetClassInfoA(hInstance=0x{HInstance:X8}, lpClassName=\"{ClassName}\")", hInstance, className);
 			return 0; // FALSE
 		}
@@ -6476,7 +6476,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint UnregisterClassA(in LpcStr lpClassName, uint hInstance)
 		{
-			var className = lpClassName.ToString() ?? string.Empty;
+			var className = lpClassName.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] UnregisterClassA(lpClassName=\"{ClassName}\", hInstance=0x{HInstance:X8})", className, hInstance);
 			return 1; // TRUE
 		}
@@ -6500,7 +6500,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint LoadAcceleratorsA(uint hInstance, in LpcStr lpTableName)
 		{
-			var tableName = lpTableName.ToString() ?? string.Empty;
+			var tableName = lpTableName.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] LoadAcceleratorsA(hInstance=0x{HInstance:X8}, lpTableName=\"{TableName}\")", hInstance, tableName);
 			return 0; // NULL
 		}
@@ -6654,7 +6654,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(16)]
 		private uint WinHelpA(uint hWndMain, in LpcStr lpszHelp, uint uCommand, uint dwData)
 		{
-			var helpFile = lpszHelp.ToString() ?? string.Empty;
+			var helpFile = lpszHelp.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] WinHelpA(hWndMain=0x{HWndMain:X8}, lpszHelp=\"{HelpFile}\", uCommand={UCommand})", hWndMain, helpFile, uCommand);
 			return 1; // TRUE
 		}
@@ -7014,7 +7014,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(4)]
 		private uint RegisterClipboardFormatA(in LpcStr lpszFormat)
 		{
-			var format = lpszFormat.ToString() ?? string.Empty;
+			var format = lpszFormat.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] RegisterClipboardFormatA(lpszFormat=\"{Format}\")", format);
 
 			// Return a fake clipboard format ID
@@ -7616,7 +7616,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(0)]
 		private uint LoadCursorFromFileA(in LpcStr lpFileName)
 		{
-			var fileName = lpFileName.ToString();
+			var fileName = lpFileName.Read(_env.Memory);
 			_logger.LogInformation("[User32] LoadCursorFromFileA(lpFileName=\"{FileName}\")", fileName ?? "(null)");
 			// Return a fake cursor handle
 			return 0x80002000;
@@ -9891,7 +9891,7 @@ return 1; // TRUE - Stub implementation
 [DllModuleExport(20, IsStub = true)]
 private int ChangeDisplaySettingsExW(in LpcWStr lpszDeviceName, uint lpDevMode, uint hwnd, uint dwflags, uint lParam)
 {
-var deviceName = lpszDeviceName.ToString() ?? string.Empty;
+var deviceName = lpszDeviceName.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] ChangeDisplaySettingsExW(lpszDeviceName=\"{DeviceName}\", lpDevMode=0x{LpDevMode:X8}, hwnd=0x{Hwnd:X8}, dwflags=0x{Dwflags:X8}, lParam=0x{LParam:X8})",
 deviceName, lpDevMode, hwnd, dwflags, lParam);
 return 0; // DISP_CHANGE_SUCCESSFUL - Stub implementation
@@ -9975,8 +9975,8 @@ return 0x00050001; // Fake cursor handle - Stub implementation
 [DllModuleExport(24, IsStub = true)]
 private uint CreateDesktopW(in LpcWStr lpszDesktop, in LpcWStr lpszDevice, uint pDevmode, uint dwFlags, uint dwDesiredAccess, uint lpsa)
 {
-var desktop = lpszDesktop.ToString() ?? string.Empty;
-var device = lpszDevice.ToString() ?? string.Empty;
+var desktop = lpszDesktop.Read(_env.Memory) ?? string.Empty;
+var device = lpszDevice.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] CreateDesktopW(lpszDesktop=\"{Desktop}\", lpszDevice=\"{Device}\", pDevmode=0x{PDevmode:X8}, dwFlags=0x{DwFlags:X8}, dwDesiredAccess=0x{DwDesiredAccess:X8}, lpsa=0x{Lpsa:X8})",
 desktop, device, pDevmode, dwFlags, dwDesiredAccess, lpsa);
 return 0x00020001; // Fake desktop handle - Stub implementation
@@ -10010,7 +10010,7 @@ return 0x00040001; // Fake icon/cursor handle - Stub implementation
 [DllModuleExport(16, IsStub = true)]
 private uint CreateWindowStationW(in LpcWStr lpwinsta, uint dwFlags, uint dwDesiredAccess, uint lpsa)
 {
-var winsta = lpwinsta.ToString() ?? string.Empty;
+var winsta = lpwinsta.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] CreateWindowStationW(lpwinsta=\"{Winsta}\", dwFlags=0x{DwFlags:X8}, dwDesiredAccess=0x{DwDesiredAccess:X8}, lpsa=0x{Lpsa:X8})",
 winsta, dwFlags, dwDesiredAccess, lpsa);
 return 0x00030001; // Fake window station handle - Stub implementation
@@ -10022,7 +10022,7 @@ return 0x00030001; // Fake window station handle - Stub implementation
 [DllModuleExport(12, IsStub = true)]
 private uint EnumDisplaySettingsW(in LpcWStr lpszDeviceName, uint iModeNum, uint lpDevMode)
 {
-var deviceName = lpszDeviceName.ToString() ?? string.Empty;
+var deviceName = lpszDeviceName.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] EnumDisplaySettingsW(lpszDeviceName=\"{DeviceName}\", iModeNum={IModeNum}, lpDevMode=0x{LpDevMode:X8})",
 deviceName, iModeNum, lpDevMode);
 return 0; // FALSE - Stub implementation (no modes available)
@@ -10055,8 +10055,8 @@ return 0xFFFFFFFF; // -1 indicates no properties enumerated - Stub implementatio
 [DllModuleExport(8, IsStub = true)]
 private uint FindWindowW(in LpcWStr lpClassName, in LpcWStr lpWindowName)
 {
-var className = lpClassName.ToString() ?? string.Empty;
-var windowName = lpWindowName.ToString() ?? string.Empty;
+var className = lpClassName.Read(_env.Memory) ?? string.Empty;
+var windowName = lpWindowName.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] FindWindowW(lpClassName=\"{ClassName}\", lpWindowName=\"{WindowName}\")",
 className, windowName);
 return 0; // NULL - Stub implementation (window not found)
@@ -10140,7 +10140,7 @@ return 0; // 0 indicates no suitable icon found - Stub implementation
 [DllModuleExport(16, IsStub = true)]
 private uint OpenDesktopW(in LpcWStr lpszDesktop, uint dwFlags, int fInherit, uint dwDesiredAccess)
 {
-var desktop = lpszDesktop.ToString() ?? string.Empty;
+var desktop = lpszDesktop.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] OpenDesktopW(lpszDesktop=\"{Desktop}\", dwFlags=0x{DwFlags:X8}, fInherit={FInherit}, dwDesiredAccess=0x{DwDesiredAccess:X8})",
 desktop, dwFlags, fInherit, dwDesiredAccess);
 return 0; // NULL - Stub implementation (desktop not opened)
@@ -10152,7 +10152,7 @@ return 0; // NULL - Stub implementation (desktop not opened)
 [DllModuleExport(12, IsStub = true)]
 private uint OpenWindowStationW(in LpcWStr lpwinsta, int fInherit, uint dwDesiredAccess)
 {
-var winsta = lpwinsta.ToString() ?? string.Empty;
+var winsta = lpwinsta.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] OpenWindowStationW(lpwinsta=\"{Winsta}\", fInherit={FInherit}, dwDesiredAccess=0x{DwDesiredAccess:X8})",
 winsta, fInherit, dwDesiredAccess);
 return 0; // NULL - Stub implementation (window station not opened)
@@ -10187,7 +10187,7 @@ return 0; // 0 indicates error - Stub implementation
 [DllModuleExport(4, IsStub = true)]
 private uint RegisterWindowMessageW(in LpcWStr lpString)
 {
-var message = lpString.ToString() ?? string.Empty;
+var message = lpString.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] RegisterWindowMessageW(lpString=\"{Message}\")", message);
 return 0xC000; // Return a valid registered message ID - Stub implementation
 }

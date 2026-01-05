@@ -1436,9 +1436,9 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint CreateDCA(in LpcStr lpszDriver, in LpcStr lpszDevice, in LpcStr lpszOutput, uint lpInitData)
 		{
-			var driver = lpszDriver.ToString() ?? string.Empty;
-			var device = lpszDevice.ToString() ?? string.Empty;
-			var output = lpszOutput.ToString() ?? string.Empty;
+			var driver = lpszDriver.Read(_env.Memory) ?? string.Empty;
+			var device = lpszDevice.Read(_env.Memory) ?? string.Empty;
+			var output = lpszOutput.Read(_env.Memory) ?? string.Empty;
 
 			_logger.LogInformation("[Gdi32] CreateDCA(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\")",
 				driver, device, output);
@@ -1573,7 +1573,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(16)]
 		private uint GetTextExtentPoint32A(uint hdc, in LpcStr lpString, int c, uint psizl)
 		{
-			var str = lpString.ToString() ?? string.Empty;
+			var str = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[Gdi32] GetTextExtentPoint32A(hdc=0x{Hdc:X8}, string=\"{Str}\", c={C})", hdc, str, c);
 			if (psizl != 0)
 			{
@@ -1586,7 +1586,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(32)]
 		private uint ExtTextOutA(uint hdc, int x, int y, uint options, uint lprect, in LpcStr lpString, uint c, uint lpDx)
 		{
-			var str = lpString.ToString() ?? string.Empty;
+			var str = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[Gdi32] ExtTextOutA(hdc=0x{Hdc:X8}, pos=({X},{Y}), string=\"{Str}\")", hdc, x, y, str);
 			return 1; // TRUE
 		}
@@ -2059,7 +2059,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(16)]
 		private uint GetTextExtentPointA(uint hdc, in LpcStr lpString, int c, uint lpsz)
 		{
-			var str = lpString.ToString() ?? string.Empty;
+			var str = lpString.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[Gdi32] GetTextExtentPointA(hdc=0x{Hdc:X8}, lpString=\"{Str}\", c={C}, lpsz=0x{Lpsz:X8})",
 				hdc, str, c, lpsz);
 
@@ -2448,7 +2448,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private int DrawTextA(uint hdc, in LpcStr lpchText, int cchText, uint lprc, uint format)
 		{
-			var text = lpchText.ToString() ?? string.Empty;
+			var text = lpchText.Read(_env.Memory) ?? string.Empty;
 
 			// Read rectangle if provided
 			int left = 0, top = 0, right = 0, bottom = 0;
@@ -3005,9 +3005,9 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint CreateICA(in LpcStr lpszDriver, in LpcStr lpszDevice, in LpcStr lpszOutput, uint lpdvmInit)
 		{
-			var driver = lpszDriver.ToString() ?? string.Empty;
-			var device = lpszDevice.ToString() ?? string.Empty;
-			var output = lpszOutput.ToString() ?? string.Empty;
+			var driver = lpszDriver.Read(_env.Memory) ?? string.Empty;
+			var device = lpszDevice.Read(_env.Memory) ?? string.Empty;
+			var output = lpszOutput.Read(_env.Memory) ?? string.Empty;
 			
 			_logger.LogInformation("[Gdi32] CreateICA(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\", lpdvmInit=0x{LpdvmInit:X8})",
 				driver, device, output, lpdvmInit);
@@ -3034,9 +3034,9 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint CreateICW(in LpcWStr lpszDriver, in LpcWStr lpszDevice, in LpcWStr lpszOutput, uint lpdvmInit)
 		{
-			var driver = lpszDriver.ToString() ?? string.Empty;
-			var device = lpszDevice.ToString() ?? string.Empty;
-			var output = lpszOutput.ToString() ?? string.Empty;
+			var driver = lpszDriver.Read(_env.Memory) ?? string.Empty;
+			var device = lpszDevice.Read(_env.Memory) ?? string.Empty;
+			var output = lpszOutput.Read(_env.Memory) ?? string.Empty;
 			
 			_logger.LogInformation("[Gdi32] CreateICW(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\", lpdvmInit=0x{LpdvmInit:X8})",
 				driver, device, output, lpdvmInit);
@@ -3063,9 +3063,9 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint CreateDCW(in LpcWStr lpszDriver, in LpcWStr lpszDevice, in LpcWStr lpszOutput, uint lpdvmInit)
 		{
-			var driver = lpszDriver.ToString() ?? string.Empty;
-			var device = lpszDevice.ToString() ?? string.Empty;
-			var output = lpszOutput.ToString() ?? string.Empty;
+			var driver = lpszDriver.Read(_env.Memory) ?? string.Empty;
+			var device = lpszDevice.Read(_env.Memory) ?? string.Empty;
+			var output = lpszOutput.Read(_env.Memory) ?? string.Empty;
 			
 			_logger.LogInformation("[Gdi32] CreateDCW(lpszDriver=\"{Driver}\", lpszDevice=\"{Device}\", lpszOutput=\"{Output}\", lpdvmInit=0x{LpdvmInit:X8})",
 				driver, device, output, lpdvmInit);
@@ -3221,7 +3221,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(16, IsStub = true)]
 		private uint EnumFontFamiliesA(uint hdc, in LpcStr lpszFamily, uint lpEnumFontFamProc, uint lParam)
 		{
-			var family = lpszFamily.ToString() ?? string.Empty;
+			var family = lpszFamily.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[Gdi32] EnumFontFamiliesA(hdc=0x{Hdc:X8}, lpszFamily=\"{Family}\", lpEnumFontFamProc=0x{LpEnumFontFamProc:X8}, lParam=0x{LParam:X8})",
 				hdc, family, lpEnumFontFamProc, lParam);
 			
@@ -3328,7 +3328,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(4, IsStub = true)]
 		private uint CreateMetaFileA(in LpcStr lpszFile)
 		{
-			var file = lpszFile.ToString() ?? string.Empty;
+			var file = lpszFile.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[Gdi32] CreateMetaFileA(lpszFile=\"{File}\")", file);
 			
 			// Stub: return a dummy metafile handle
@@ -3348,8 +3348,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(16, IsStub = true)]
 		private uint CreateEnhMetaFileA(uint hdcRef, in LpcStr lpFilename, uint lpRect, in LpcStr lpDescription)
 		{
-			var filename = lpFilename.ToString() ?? string.Empty;
-			var description = lpDescription.ToString() ?? string.Empty;
+			var filename = lpFilename.Read(_env.Memory) ?? string.Empty;
+			var description = lpDescription.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[Gdi32] CreateEnhMetaFileA(hdcRef=0x{HdcRef:X8}, lpFilename=\"{Filename}\", lpRect=0x{LpRect:X8}, lpDescription=\"{Description}\")",
 				hdcRef, filename, lpRect, description);
 			

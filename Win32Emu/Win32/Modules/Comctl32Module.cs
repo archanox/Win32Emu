@@ -382,7 +382,7 @@ public class Comctl32Module : IWin32ModuleUnsafe
 	[DllModuleExport(65, Version = "5.81.4916.400")]
 	private uint ImageList_LoadImageA(uint hi, in LpcStr lpbmpPtr, int cx, int cGrow, uint crMask, uint uType, uint uFlags)
 	{
-		var lpbmp = lpbmpPtr.ToString() ?? string.Empty;
+		var lpbmp = lpbmpPtr.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Comctl32] ImageList_LoadImageA(hi=0x{Hi:X8}, lpbmp=\"{Lpbmp}\", cx={Cx}, cGrow={CGrow}, crMask=0x{CrMask:X8}, uType={UType}, uFlags=0x{UFlags:X8})",
 			hi, lpbmp, cx, cGrow, crMask, uType, uFlags);
