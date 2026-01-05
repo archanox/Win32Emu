@@ -67,7 +67,7 @@ public partial class Lz32Module : IWin32ModuleUnsafe
 	[DllModuleExport(12, IsStub = true)]
 	private int LZOpenFileA(in LpcStr lpFileName, uint lpReOpenBuf, uint wStyle)
 	{
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 		LogLZOpenFileA(fileName, lpReOpenBuf, wStyle);
 
 		// Stub implementation: return error (file not found)

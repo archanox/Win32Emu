@@ -158,7 +158,7 @@ public class Wavmix32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint WaveMixOpenWave(uint hMixSession, in LpcStr lpszWaveFilename, uint hInst, uint dwFlags)
 	{
-		var waveFilename = lpszWaveFilename.ToString() ?? string.Empty;
+		var waveFilename = lpszWaveFilename.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Wavmix32] WaveMixOpenWave(hMixSession=0x{HMixSession:X8}, lpszWaveFilename=\"{WaveFilename}\", hInst=0x{HInst:X8}, dwFlags=0x{DwFlags:X})",
 			hMixSession, waveFilename, hInst, dwFlags);
 		// Return a dummy wave handle

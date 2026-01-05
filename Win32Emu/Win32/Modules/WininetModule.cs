@@ -58,9 +58,9 @@ public partial class WininetModule : IWin32ModuleUnsafe
 	[DllModuleExport(20)]
 	private uint InternetOpenA(in LpcStr lpszAgent, uint dwAccessType, in LpcStr lpszProxy, in LpcStr lpszProxyBypass, uint dwFlags)
 	{
-		var agent = lpszAgent.ToString() ?? "(null)";
-		var proxy = lpszProxy.ToString() ?? "(null)";
-		var proxyBypass = lpszProxyBypass.ToString() ?? "(null)";
+		var agent = lpszAgent.Read(_env.Memory) ?? "(null)";
+		var proxy = lpszProxy.Read(_env.Memory) ?? "(null)";
+		var proxyBypass = lpszProxyBypass.Read(_env.Memory) ?? "(null)";
 
 		LogInternetOpenA(agent, dwAccessType, proxy, proxyBypass, dwFlags);
 

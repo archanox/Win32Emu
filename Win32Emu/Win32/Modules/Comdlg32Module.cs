@@ -276,7 +276,7 @@ public class Comdlg32Module : IWin32ModuleAsync
 	[DllModuleExport(108, Version = "5.50.4134.100")]
 	private uint GetFileTitleA(in LpcStr lpszFile, in LpStr lpszTitle, uint cchSize)
 	{
-		var file = lpszFile.ToString() ?? string.Empty;
+		var file = lpszFile.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Comdlg32] GetFileTitleA(lpszFile=\"{File}\", cchSize={CchSize})", file, cchSize);
 
 		// Extract just the file name without path

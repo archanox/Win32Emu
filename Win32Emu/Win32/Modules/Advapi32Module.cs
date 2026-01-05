@@ -240,7 +240,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(240, Version = "4.90.0.3000")]
 	private uint RegOpenKeyExA(uint hKey, in LpcStr lpSubKey, uint ulOptions, uint samDesired, uint phkResult)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
 
 		// Predefined registry key values
 		const uint HKEY_CLASSES_ROOT = 0x80000000;
@@ -290,7 +290,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(248, Version = "4.90.0.3000")]
 	private uint RegQueryValueExA(uint hKey, in LpcStr lpValueName, uint lpReserved, uint lpType, uint lpData, uint lpcbData)
 	{
-		var valueName = lpValueName.ToString() ?? string.Empty;
+		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Advapi32] RegQueryValueExA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", lpType=0x{LpType:X8}, lpData=0x{LpData:X8}, lpcbData=0x{LpcbData:X8})",
 			hKey, valueName, lpType, lpData, lpcbData);
@@ -424,8 +424,8 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(221, Version = "4.90.0.3000")]
 	private uint RegCreateKeyExA(uint hKey, in LpcStr lpSubKey, uint reserved, in LpcStr lpClass, uint dwOptions, uint samDesired, uint lpSecurityAttributes, uint phkResult, uint lpdwDisposition)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
-		var className = lpClass.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
+		var className = lpClass.Read(_env.Memory) ?? string.Empty;
 
 		// Predefined registry key values
 		const uint HKEY_CLASSES_ROOT = 0x80000000;
@@ -484,7 +484,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(260, Version = "4.90.0.3000")]
 	private uint RegSetValueExA(uint hKey, in LpcStr lpValueName, uint reserved, uint dwType, uint lpData, uint cbData)
 	{
-		var valueName = lpValueName.ToString() ?? string.Empty;
+		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Advapi32] RegSetValueExA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\", type=0x{DwType:X}, lpData=0x{LpData:X8}, cbData={CbData})",
 			hKey, valueName, dwType, lpData, cbData);
@@ -585,7 +585,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(247, Version = "4.90.0.3000")]
 	private uint RegQueryValueA(uint hKey, in LpcStr lpSubKey, uint lpData, uint lpcbData)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegQueryValueA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", lpData=0x{LpData:X8}, lpcbData=0x{LpcbData:X8})",
 			hKey, subKey, lpData, lpcbData);
 
@@ -784,8 +784,8 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(179, Version = "4.90.0.3000")]
 	private uint LookupPrivilegeValueA(in LpcStr lpSystemName, in LpcStr lpName, uint lpLuid)
 	{
-		var systemName = lpSystemName.ToString() ?? string.Empty;
-		var name = lpName.ToString() ?? string.Empty;
+		var systemName = lpSystemName.Read(_env.Memory) ?? string.Empty;
+		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] LookupPrivilegeValueA(lpSystemName=\"{SystemName}\", lpName=\"{Name}\", lpLuid=0x{LpLuid:X8})",
 			systemName, name, lpLuid);
 
@@ -879,8 +879,8 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(201, Version = "4.90.0.3000")]
 	private uint OpenSCManagerA(in LpcStr lpMachineName, in LpcStr lpDatabaseName, uint dwDesiredAccess)
 	{
-		var machineName = lpMachineName.ToString() ?? string.Empty;
-		var databaseName = lpDatabaseName.ToString() ?? string.Empty;
+		var machineName = lpMachineName.Read(_env.Memory) ?? string.Empty;
+		var databaseName = lpDatabaseName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] OpenSCManagerA(lpMachineName=\"{MachineName}\", lpDatabaseName=\"{DatabaseName}\", dwDesiredAccess=0x{DwDesiredAccess:X})",
 			machineName, databaseName, dwDesiredAccess);
 
@@ -890,7 +890,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(203, Version = "4.90.0.3000")]
 	private uint OpenServiceA(uint hSCManager, in LpcStr lpServiceName, uint dwDesiredAccess)
 	{
-		var serviceName = lpServiceName.ToString() ?? string.Empty;
+		var serviceName = lpServiceName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] OpenServiceA(hSCManager=0x{HSCManager:X8}, lpServiceName=\"{ServiceName}\", dwDesiredAccess=0x{DwDesiredAccess:X})",
 			hSCManager, serviceName, dwDesiredAccess);
 
@@ -1246,7 +1246,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(224, Version = "4.90.0.3000")]
 	private uint RegDeleteKeyA(uint hKey, in LpcStr lpSubKey)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegDeleteKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\")", hKey, subKey);
 
 		try
@@ -1282,7 +1282,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(226, Version = "4.90.0.3000")]
 	private uint RegDeleteValueA(uint hKey, in LpcStr lpValueName)
 	{
-		var valueName = lpValueName.ToString() ?? string.Empty;
+		var valueName = lpValueName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegDeleteValueA(hKey=0x{HKey:X8}, lpValueName=\"{ValueName}\")", hKey, valueName);
 
 		try
@@ -1979,7 +1979,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(220, Version = "4.90.0.3000")]
 	private uint RegCreateKeyA(uint hKey, in LpcStr lpSubKey, uint phkResult)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegCreateKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", phkResult=0x{PhkResult:X8})", hKey, subKey, phkResult);
 
 		try
@@ -2023,7 +2023,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(259, Version = "4.90.0.3000")]
 	private uint RegSetValueA(uint hKey, in LpcStr lpSubKey, uint dwType, uint lpData, uint cbData)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] RegSetValueA(hKey=0x{HKey:X8}, lpSubKey=\"{SubKey}\", dwType={DwType}, lpData=0x{LpData:X8}, cbData={CbData})",
 			hKey, subKey, dwType, lpData, cbData);
 
@@ -2115,7 +2115,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(116, Version = "4.90.0.3000", IsStub = true)]
 	private uint GetFileSecurityA(in LpcStr lpFileName, uint RequestedInformation, uint pSecurityDescriptor, uint nLength, uint lpnLengthNeeded)
 	{
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] GetFileSecurityA(lpFileName=\"{FileName}\", RequestedInformation=0x{RequestedInformation:X}, nLength={NLength})",
 			fileName, RequestedInformation, nLength);
 
@@ -2131,7 +2131,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(279, Version = "4.90.0.3000", IsStub = true)]
 	private uint SetFileSecurityA(in LpcStr lpFileName, uint SecurityInformation, uint pSecurityDescriptor)
 	{
-		var fileName = lpFileName.ToString() ?? string.Empty;
+		var fileName = lpFileName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Advapi32] SetFileSecurityA(lpFileName=\"{FileName}\", SecurityInformation=0x{SecurityInformation:X}, pSecurityDescriptor=0x{PSecurityDescriptor:X8})",
 			fileName, SecurityInformation, pSecurityDescriptor);
 
@@ -2208,8 +2208,8 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(236, Version = "4.90.0.3000", IsStub = true)]
 	private uint RegLoadKeyA(uint hKey, in LpcStr lpSubKey, in LpcStr lpFile)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
-		var file = lpFile.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
+		var file = lpFile.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Advapi32] RegLoadKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{LpSubKey}\", lpFile=\"{LpFile}\")",
 			hKey, subKey, file);
@@ -2232,7 +2232,7 @@ public class Advapi32Module : IWin32ModuleUnsafe
 	[DllModuleExport(263, Version = "4.90.0.3000")]
 	private uint RegUnLoadKeyA(uint hKey, in LpcStr lpSubKey)
 	{
-		var subKey = lpSubKey.ToString() ?? string.Empty;
+		var subKey = lpSubKey.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogInformation("[Advapi32] RegUnLoadKeyA(hKey=0x{HKey:X8}, lpSubKey=\"{LpSubKey}\")",
 			hKey, subKey);
