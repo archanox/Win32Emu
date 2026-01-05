@@ -2034,7 +2034,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(16)]
 	private uint GetModuleHandleA(in LpcStr lpModuleName)
 	{
-		var moduleName = lpModuleName.ToString();
+		var moduleName = lpModuleName.Read(_env.Memory);
 		_logger.LogInformation("[Kernel32] GetModuleHandleA called: module='{ModuleName}'", moduleName ?? "NULL (current process)");
 
 		// NULL means get handle to current process executable
@@ -2205,7 +2205,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		else
 		{
 			// It's a string pointer
-			procName = lpProcName.ToString();
+			procName = lpProcName.Read(_env.Memory);
 			_logger.LogInformation("[Kernel32] GetProcAddress: Looking up '{ProcName}'", procName);
 		}
 
