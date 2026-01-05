@@ -664,7 +664,12 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Oleaut32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, peLoader, _logger));
-        _dispatcher.RegisterModule(new MsvcrtModule(_env, _image.BaseAddress, peLoader, _logger));
+        
+        var msvcrtModule = new MsvcrtModule(_env, _image.BaseAddress, peLoader, _logger);
+        msvcrtModule.SetDispatcher(_dispatcher);
+        msvcrtModule.SetLoadedImage(_image);
+        _dispatcher.RegisterModule(msvcrtModule);
+        
         _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Wavmix32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Comctl32Module(_env, _image.BaseAddress, peLoader, _logger));
