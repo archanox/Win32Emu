@@ -63,7 +63,7 @@ Modified `ExecuteCallback` to call `HandleNestedSyscalls` instead of aborting:
 ```csharp
 // Handle nested syscalls (import calls) from within callbacks
 // This allows callbacks to call other Win32 API functions
-if (HandleNestedSyscalls(step, _cpu, _env.Memory, logContext, out var shouldBreak))
+if (HandleNestedSyscalls(step, _cpu, _env.Memory, logContext, out var stepDesc, out var shouldBreak))
 {
     if (shouldBreak)
     {
