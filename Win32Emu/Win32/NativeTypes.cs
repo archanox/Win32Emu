@@ -139,6 +139,18 @@ public static class NativeTypes
 		public uint hEvent;            // HANDLE - offset 16, 4 bytes - Event handle
 	}
 
+	// INITCOMMONCONTROLSEX structure for InitCommonControlsEx
+	// Total size: 8 bytes
+	[StructLayout(LayoutKind.Explicit, Size = 8)]
+	[GenerateMemoryRef]
+	public struct INITCOMMONCONTROLSEX
+	{
+		[FieldOffset(0)]
+		public uint dwSize;  // Offset 0 - Size of the structure
+		[FieldOffset(4)]
+		public uint dwICC;   // Offset 4 - ICC_* flags indicating which control classes to register
+	}
+
 	// Pointer to CPINFO structure - now just a uint address
 	public readonly struct Lpcpinfo(uint v)
 	{
@@ -296,6 +308,29 @@ public static class NativeTypes
 		CS_BYTEALIGNCLIENT = 0x1000,
 		CS_BYTEALIGNWINDOW = 0x2000,
 		CS_GLOBALCLASS = 0x4000
+	}
+
+	// Common control class flags for InitCommonControlsEx
+	[Flags]
+	public enum IccFlags : uint
+	{
+		ICC_LISTVIEW_CLASSES = 0x00000001,   // List-view and header control classes
+		ICC_TREEVIEW_CLASSES = 0x00000002,   // Tree-view control class
+		ICC_BAR_CLASSES = 0x00000004,        // Toolbar, status bar, trackbar, and tooltip control classes
+		ICC_TAB_CLASSES = 0x00000008,        // Tab control class
+		ICC_UPDOWN_CLASS = 0x00000010,       // Up-down control class
+		ICC_PROGRESS_CLASS = 0x00000020,     // Progress bar control class
+		ICC_HOTKEY_CLASS = 0x00000040,       // Hot key control class
+		ICC_ANIMATE_CLASS = 0x00000080,      // Animate control class
+		ICC_WIN95_CLASSES = 0x000000FF,      // All Windows 95 control classes
+		ICC_DATE_CLASSES = 0x00000100,       // Date and time picker control class
+		ICC_USEREX_CLASSES = 0x00000200,     // ComboBoxEx class
+		ICC_COOL_CLASSES = 0x00000400,       // Rebar control class
+		ICC_INTERNET_CLASSES = 0x00000800,   // IP address control class
+		ICC_PAGESCROLLER_CLASS = 0x00001000, // Page scroller control class
+		ICC_NATIVEFNTCTL_CLASS = 0x00002000, // Native font control class
+		ICC_STANDARD_CLASSES = 0x00004000,   // Standard control classes
+		ICC_LINK_CLASS = 0x00008000          // Hyperlink control class
 	}
 
 	// Window styles
