@@ -1807,20 +1807,18 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint RegisterClassA(uint lpWndClass)
 		{
-			if (lpWndClass == 0)
+			if (!MemoryHelpers.ValidatePointer(_env, lpWndClass, _logger, "lpWndClass"))
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL WNDCLASS pointer");
-				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
 			// Use ref struct wrapper for automatic memory access
 			var wndClass = new WndClassARef(_env.Memory, lpWndClass);
 
-			if (wndClass.lpszClassName == 0)
+			if (!MemoryHelpers.ValidatePointer(_env, wndClass.lpszClassName, _logger, "lpszClassName"))
 			{
 				_logger.LogInformation("[User32] RegisterClassA: NULL class name");
-				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
 				return 0;
 			}
 
