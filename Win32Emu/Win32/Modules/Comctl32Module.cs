@@ -63,6 +63,10 @@ public class Comctl32Module : IWin32ModuleUnsafe
 				returnValue = InitCommonControls(a.UInt32(0), a.UInt32(1), a.UInt32(2));
 				return true;
 
+			case "INITCOMMONCONTROLSEX":
+				returnValue = InitCommonControlsEx(a.InitCommonControlsEx(0));
+				return true;
+
 			case "CREATEPROPERTYSHEETPAGEA":
 				returnValue = CreatePropertySheetPageA(a.UInt32(0));
 				return true;
@@ -277,6 +281,36 @@ public class Comctl32Module : IWin32ModuleUnsafe
 
 		// InitCommonControls typically doesn't return a value, but we return success
 		return 1;
+	}
+
+	/// <summary>
+	/// Registers specific common control classes from the common control DLL.
+	/// BOOL InitCommonControlsEx(const INITCOMMONCONTROLSEX *lpInitCtrls);
+	/// </summary>
+	[DllModuleExport(84, Version = "5.81.4916.400")]
+	private uint InitCommonControlsEx(INITCOMMONCONTROLSEXRef lpInitCtrls)
+	{
+		var dwSize = lpInitCtrls.dwSize;
+		var dwICC = lpInitCtrls.dwICC;
+
+		_logger.LogInformation("[Comctl32] InitCommonControlsEx(dwSize={DwSize}, dwICC=0x{DwICC:X8})",
+			dwSize, dwICC);
+
+		// Validate structure size
+		if (dwSize != 8)
+		{
+			_logger.LogWarning("[Comctl32] InitCommonControlsEx: Invalid structure size {DwSize}, expected 8", dwSize);
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // FALSE
+		}
+
+		// Log which control classes are being registered
+		var flags = (NativeTypes.IccFlags)dwICC;
+		_logger.LogInformation("[Comctl32] Registering control classes: {Flags}", flags);
+
+		// In a real implementation, this would initialize the specified common controls
+		// For the emulator, we just return success since we don't need to actually register them
+		return 1; // TRUE - success
 	}
 
 	/// <summary>

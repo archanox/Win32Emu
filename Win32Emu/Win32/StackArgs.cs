@@ -68,4 +68,6 @@ public readonly ref struct StackArgs(ICpu cpu, VirtualMemory mem, uint baseOffse
 	public ExceptionPointersRef ExceptionPointers(int index) => new ExceptionPointersRef(mem, UInt32(index));
 	
 	public ExceptionRecordRef ExceptionRecord(int index) => new ExceptionRecordRef(mem, UInt32(index));
+	
+	public INITCOMMONCONTROLSEXRef InitCommonControlsEx(int index) => new INITCOMMONCONTROLSEXRef(mem, UInt32(index));
 }
