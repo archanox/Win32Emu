@@ -57,7 +57,7 @@ public readonly struct LpcWStr(uint address, VirtualMemory? memory = null)
 	/// When LpcWStr is created via implicit conversion from uint, it lacks the _memory reference
 	/// and this method will return null. Use Read(memory) instead.
 	/// </remarks>
-	[Obsolete("Use Read(memory) instead. ToString() only works when memory was provided in constructor.", false)]
+	[Obsolete("Use Read(memory) instead. ToString() only works when memory was provided in constructor.", true)]
 	public override string? ToString()
 	{
 		return Read();

@@ -6004,7 +6004,6 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint ModifyMenuA(uint hMnu, uint uPosition, uint uFlags, uint uIDNewItem, in LpcStr lpNewItem)
 		{
-			var newItem = lpNewItem.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] ModifyMenuA(hMnu=0x{HMnu:X8}, uPosition={UPosition}, uFlags=0x{UFlags:X})", hMnu, uPosition, uFlags);
 			return 1; // TRUE
 		}
