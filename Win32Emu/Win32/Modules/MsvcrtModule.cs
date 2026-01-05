@@ -21,6 +21,12 @@ namespace Win32Emu.Win32.Modules
 		// Cannot be passed as parameter to [DllModuleExport] methods as it breaks source generation
 		private ICpu? _cpu;
 		
+		// Dispatcher for handling nested syscalls in callbacks
+		private Win32Dispatcher? _dispatcher;
+		
+		// Loaded image for import validation
+		private LoadedImage? _image;
+		
 		// Invalid parameter handler tracking
 		private uint _invalidParameterHandler = 0;
 		
@@ -130,6 +136,16 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		public string Name => "MSVCRT.DLL";
+
+		public void SetDispatcher(Win32Dispatcher dispatcher)
+		{
+			_dispatcher = dispatcher;
+		}
+
+		public void SetLoadedImage(LoadedImage image)
+		{
+			_image = image;
+		}
 
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
@@ -3154,6 +3170,141 @@ namespace Win32Emu.Win32.Modules
 	}
 
 	/// <summary>
+	/// Handles nested syscalls (import calls) during callback execution.
+	/// Based on User32Module.HandleComAndImportCalls but simplified for MsvcrtModule's needs.
+	/// </summary>
+	/// <param name="step">The current CPU step result</param>
+	/// <param name="cpu">The CPU instance</param>
+	/// <param name="memory">The virtual memory instance</param>
+	/// <param name="logContext">Context string for logging</param>
+	/// <param name="shouldBreak">Output parameter indicating if execution should stop</param>
+	/// <returns>True if the step was handled (import call), false if it should be processed normally</returns>
+	private bool HandleNestedSyscalls(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext, out bool shouldBreak)
+	{
+		shouldBreak = false;
+
+		// Check for import calls (syscalls via INT 0x80)
+		if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
+		{
+			var dll = imp.dll.ToUpperInvariant();
+			var name = imp.name;
+			_logger.LogDebug("[msvcrt] {Context}: Nested import call {Dll}!{Name} at 0x{CallTarget:X8}", logContext, dll, name, step.CallTarget);
+
+			// Save callee-saved registers (EBX, ESI, EDI, EBP)
+			var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+
+			if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+			{
+				_logger.LogDebug("[msvcrt] {Context}: Nested import {Dll}!{Name} returned 0x{Ret:X8}", logContext, dll, name, ret);
+
+				var currentEsp = cpu.GetRegister("ESP");
+				var retEip = memory.Read32(currentEsp);
+
+				// Validate return address before jumping
+				if (!IsValidReturnAddress(retEip))
+				{
+					_logger.LogError("[msvcrt] {Context}: Invalid return address 0x{RetEip:X8} from import {Dll}!{Name}", logContext, retEip, dll, name);
+					shouldBreak = true;
+					return true;
+				}
+
+				currentEsp += 4 + (uint)argBytes;
+
+				cpu.SetRegister("ESP", currentEsp);
+				cpu.SetRegister("EAX", ret);
+				cpu.SetEip(retEip);
+
+				// Restore callee-saved registers, skipping invalid EBP values
+				CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
+			}
+			else
+			{
+				// Import function not implemented - try to get arg bytes from metadata and simulate return
+				var simulatedArgBytes = 0;
+				try
+				{
+					simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
+					_logger.LogWarning("[msvcrt] {Context}: Unimplemented nested import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", logContext, dll, name, simulatedArgBytes);
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[msvcrt] {Context}: Unimplemented nested import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", logContext, dll, name);
+				}
+
+				var currentEsp = cpu.GetRegister("ESP");
+				var retEip = memory.Read32(currentEsp);
+
+				// Validate return address before jumping
+				if (!IsValidReturnAddress(retEip))
+				{
+					_logger.LogError("[msvcrt] {Context}: Invalid return address 0x{RetEip:X8} from unimplemented import {Dll}!{Name}", logContext, retEip, dll, name);
+					shouldBreak = true;
+					return true;
+				}
+
+				// Pop return address + parameters (stdcall convention - callee cleans)
+				currentEsp += 4 + (uint)simulatedArgBytes;
+
+				cpu.SetRegister("ESP", currentEsp);
+				cpu.SetRegister("EAX", 0); // Return 0 as default
+				cpu.SetEip(retEip);
+
+				// Restore callee-saved registers, skipping invalid EBP values
+				CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
+			}
+			return true;
+		}
+
+		return false;
+	}
+
+	/// <summary>
+	/// Validates that a return address points to valid executable code and not to stack or invalid memory.
+	/// Simplified version of User32Module's method.
+	/// </summary>
+	/// <param name="address">The return address to validate</param>
+	/// <returns>True if the address is valid for execution, false otherwise</returns>
+	private bool IsValidReturnAddress(uint address)
+	{
+		// Reject NULL addresses
+		if (address == 0)
+		{
+			return false;
+		}
+
+		// Get actual stack boundaries from process environment
+		var stackLimit = _env.StackLimit;
+		var stackBase = _env.StackBase;
+
+		// Reject addresses within the stack region
+		if (address >= stackLimit && address <= stackBase)
+		{
+			return false;
+		}
+
+		// If we have image info, use IsAddressInCodeSection for proper validation
+		if (_image != null)
+		{
+			var isInCodeSection = _image.IsAddressInCodeSection(address);
+
+			// Also check if it's in imported DLL space
+			// Accept any address above the image base if not in code section
+			// This handles DLLs that are loaded at different addresses
+			if (!isInCodeSection && address >= _image.BaseAddress)
+			{
+				// Could be in a DLL, allow it
+				return true;
+			}
+
+			return isInCodeSection;
+		}
+
+		// Without image info, use conservative default (typical Win32 image base)
+		const uint DEFAULT_MIN_CODE_ADDRESS = 0x00400000;
+		return address >= DEFAULT_MIN_CODE_ADDRESS;
+	}
+
+	/// <summary>
 	/// Execute a callback function in the emulated code.
 	/// Similar to User32Module's callback execution but adapted for synchronous context.
 	/// This method sets up a call frame, executes the callback, and restores CPU state.
@@ -3231,12 +3382,16 @@ namespace Win32Emu.Win32.Modules
 				// Execute one instruction
 				var step = _cpu.SingleStep(_env.Memory);
 				
-				// Nested syscalls from within callbacks are not supported here
-				// Proper handling would require recursive syscall dispatching similar to User32Module.HandleComAndImportCalls
-				if (step.IsSyscall)
+				// Handle nested syscalls (import calls) from within callbacks
+				// This allows callbacks to call other Win32 API functions
+				if (HandleNestedSyscalls(step, _cpu, _env.Memory, logContext, out var shouldBreak))
 				{
-					_logger.LogWarning("[msvcrt] {LogContext}: Callback attempted nested syscall at step {Steps} (EIP=0x{Eip:X8}) - aborting callback execution", logContext, steps, _cpu.GetEip());
-					return false;
+					if (shouldBreak)
+					{
+						_logger.LogError("[msvcrt] {LogContext}: Nested syscall handler indicated execution should stop", logContext);
+						return false;
+					}
+					// Successfully handled nested syscall, continue to next instruction
 				}
 				
 				steps++;
