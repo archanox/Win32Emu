@@ -80,12 +80,11 @@ public class GetProcAddressStringReadingTests : IDisposable
 		// Write a function name that might be in the exports
 		var procNamePtr = _testEnv.WriteString("GetVersion");
 
-		// Act - Call GetProcAddress
-		var result = _testEnv.CallKernel32Api("GETPROCADDRESS", moduleHandle, procNamePtr);
+		// Act - Call GetProcAddress (this verifies string reading completes without exceptions)
+		_testEnv.CallKernel32Api("GETPROCADDRESS", moduleHandle, procNamePtr);
 
-		// Assert - This test verifies that the call completes without exceptions.
+		// Assert - If we reach here without exceptions, the string was read successfully.
 		// The actual result (0 or non-zero) depends on whether the module has exports,
 		// but the key verification is that string reading works correctly without truncation.
-		// If the test completes without exceptions, the string was read successfully.
 	}
 }
