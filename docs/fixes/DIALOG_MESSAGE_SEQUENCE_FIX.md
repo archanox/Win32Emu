@@ -59,10 +59,12 @@ Enhanced the ShowWindow function to send WM_SHOWWINDOW messages when window visi
 if (shouldBeVisible && !wasPreviouslyVisible)
 {
     // Send WM_SHOWWINDOW before WM_ACTIVATEAPP
-    _env.SendMessageToWindow(hwnd, 0x0018, 1, 0);
-    _env.SendMessageToWindow(hwnd, 0x001C, 1, 0);
+    _env.SendMessageToWindow(hwnd, WM_SHOWWINDOW, 1, 0);
+    _env.SendMessageToWindow(hwnd, WM_ACTIVATEAPP, 1, 0);
 }
 ```
+
+**Note:** The actual code uses named constants (`WM_SHOWWINDOW`, `WM_ACTIVATEAPP`) instead of magic numbers, following the project's coding guidelines that prohibit magic numbers.
 
 This ensures that regular window show/hide operations also follow Windows API behavior.
 
