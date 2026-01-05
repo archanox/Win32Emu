@@ -3393,6 +3393,13 @@ namespace Win32Emu.Win32.Modules
 					}
 					// Successfully handled nested syscall, continue to next instruction
 				}
+				else if (step.IsSyscall)
+				{
+					// Syscall was not handled (dispatcher or image not available)
+					// This maintains backward compatibility with tests that don't set dispatcher
+					_logger.LogWarning("[msvcrt] {LogContext}: Callback attempted nested syscall at step {Steps} (EIP=0x{Eip:X8}) but dispatcher not available - aborting callback execution", logContext, steps, _cpu.GetEip());
+					return false;
+				}
 				
 				steps++;
 			}
