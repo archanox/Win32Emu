@@ -28,6 +28,7 @@ public class TestEnvironment : IDisposable
 	private DSoundModule? _dsound;
 	private DInputModule? _dinput;
 	private WinMmModule? _winmm;
+	private Comctl32Module? _comctl32;
 
 	internal Kernel32Module Kernel32 => _kernel32 ??= CreateKernel32Module();
 	internal User32Module User32 => _user32 ??= CreateUser32Module();
@@ -36,6 +37,7 @@ public class TestEnvironment : IDisposable
 	public DSoundModule DSound => _dsound ??= CreateDSoundModule();
 	public DInputModule DInput => _dinput ??= CreateDInputModule();
 	internal WinMmModule WinMm => _winmm ??= CreateWinMmModule();
+	internal Comctl32Module Comctl32 => _comctl32 ??= CreateComctl32Module();
 
 	/// <summary>
 	/// Create a test environment with optional custom host
@@ -120,6 +122,11 @@ public class TestEnvironment : IDisposable
 	private WinMmModule CreateWinMmModule()
 	{
 		return new WinMmModule(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
+	}
+
+	private Comctl32Module CreateComctl32Module()
+	{
+		return new Comctl32Module(ProcessEnv, 0x00400000, PeLoader, NullLogger.Instance);
 	}
 
 	/// <summary>
@@ -215,6 +222,20 @@ public class TestEnvironment : IDisposable
 	{
 		Cpu.SetupStackArgs(Memory, args);
 		var success = WinMm.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
+		if (!success)
+		{
+			throw new InvalidOperationException($"Failed to invoke {functionName}");
+		}
+		return returnValue;
+	}
+
+	/// <summary>
+	/// Call a Comctl32 API function with the given arguments
+	/// </summary>
+	public uint CallComctl32Api(string functionName, params uint[] args)
+	{
+		Cpu.SetupStackArgs(Memory, args);
+		var success = Comctl32.TryInvokeUnsafe(functionName, Cpu, Memory, out var returnValue);
 		if (!success)
 		{
 			throw new InvalidOperationException($"Failed to invoke {functionName}");
