@@ -3194,69 +3194,12 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogDebug("[msvcrt] {Context}: Nested import call {Dll}!{Name} at 0x{CallTarget:X8}", logContext, dll, name, step.CallTarget);
 			stepDesc = $"Import call {dll}!{name}";
 
-			// Save callee-saved registers (EBX, ESI, EDI, EBP)
-			var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
-
-			if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
-			{
-				_logger.LogDebug("[msvcrt] {Context}: Nested import {Dll}!{Name} returned 0x{Ret:X8}", logContext, dll, name, ret);
-
-				var currentEsp = cpu.GetRegister("ESP");
-				var retEip = memory.Read32(currentEsp);
-
-				// Validate return address before jumping
-				if (!IsValidReturnAddress(retEip))
-				{
-					_logger.LogError("[msvcrt] {Context}: Invalid return address 0x{RetEip:X8} from import {Dll}!{Name}", logContext, retEip, dll, name);
-					shouldBreak = true;
-					return true;
-				}
-
-				currentEsp += 4 + (uint)argBytes;
-
-				cpu.SetRegister("ESP", currentEsp);
-				cpu.SetRegister("EAX", ret);
-				cpu.SetEip(retEip);
-
-				// Restore callee-saved registers, skipping invalid EBP values
-				CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
-			}
-			else
-			{
-				// Import function not implemented - try to get arg bytes from metadata and simulate return
-				var simulatedArgBytes = 0;
-				try
-				{
-					simulatedArgBytes = StdCallMeta.GetArgBytes(dll, name);
-					_logger.LogWarning("[msvcrt] {Context}: Unimplemented nested import {Dll}!{Name}, simulating return with 0, argBytes={ArgBytes}", logContext, dll, name, simulatedArgBytes);
-				}
-				catch (Exception ex)
-				{
-					_logger.LogError(ex, "[msvcrt] {Context}: Unimplemented nested import {Dll}!{Name}, simulating return with 0, argBytes unknown (assuming 0)", logContext, dll, name);
-				}
-
-				var currentEsp = cpu.GetRegister("ESP");
-				var retEip = memory.Read32(currentEsp);
-
-				// Validate return address before jumping
-				if (!IsValidReturnAddress(retEip))
-				{
-					_logger.LogError("[msvcrt] {Context}: Invalid return address 0x{RetEip:X8} from unimplemented import {Dll}!{Name}", logContext, retEip, dll, name);
-					shouldBreak = true;
-					return true;
-				}
-
-				// Pop return address + parameters (stdcall convention - callee cleans)
-				currentEsp += 4 + (uint)simulatedArgBytes;
-
-				cpu.SetRegister("ESP", currentEsp);
-				cpu.SetRegister("EAX", 0); // Return 0 as default
-				cpu.SetEip(retEip);
-
-				// Restore callee-saved registers, skipping invalid EBP values
-				CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
-			}
-			return true;
+			// Use shared import call handler
+			var handled = ImportCallHelper.HandleImportCall(
+				dll, name, cpu, memory, _dispatcher, _image, _logger,
+				"msvcrt:" + logContext, IsValidReturnAddress, out shouldBreak);
+			
+			return handled;
 		}
 
 		return false;
