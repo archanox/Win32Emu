@@ -50,7 +50,9 @@ public void SetLoadedImage(LoadedImage image)
 
 ### 2. Implement Nested Syscall Handler
 
-Added `HandleNestedSyscalls` method that:
+Added `HandleNestedSyscalls` method that handles two types of nested calls:
+
+#### A. Direct Import Calls (CALL instructions)
 - Detects import calls (calls to addresses in the import address table)
 - Delegates to the shared `ImportCallHelper.HandleImportCall()` method for processing
 - The shared helper handles:
@@ -61,11 +63,20 @@ Added `HandleNestedSyscalls` method that:
 
 Note: The import call handling logic is shared between `MsvcrtModule` and `User32Module` via the `ImportCallHelper` class to reduce code duplication and improve maintainability.
 
+#### B. INT 0x80 Syscalls (2026-01-05 Update)
+- Detects INT 0x80 syscalls triggered by import stubs
+- Reads import stub information from the stack (same as main emulator's `HandleSyscallAsync`)
+- Manages stack pointer (ESP) correctly for dispatcher and stdcall cleanup
+- Patches import stub's RET instruction with argBytes for proper stack cleanup
+- Restores callee-saved registers after the call
+
+This additional handling was needed because some callbacks execute code that triggers INT 0x80 syscalls rather than direct import calls. The implementation follows the exact pattern used in `Emulator.HandleSyscallAsync()` to ensure consistency.
+
 ### 3. Update Callback Execution
 
 Modified `ExecuteCallback` to call `HandleNestedSyscalls` instead of aborting:
 ```csharp
-// Handle nested syscalls (import calls) from within callbacks
+// Handle nested syscalls (import calls and INT 0x80 syscalls) from within callbacks
 // This allows callbacks to call other Win32 API functions
 if (HandleNestedSyscalls(step, _cpu, _env.Memory, logContext, out var stepDesc, out var shouldBreak))
 {
@@ -85,6 +96,10 @@ else if (step.IsSyscall)
 }
 ```
 
+The `HandleNestedSyscalls` method now handles both:
+- Direct import calls (`step.IsCall` with import address)
+- INT 0x80 syscalls (`step.IsSyscall` with import stub info on stack)
+
 ### 4. Update Emulator Initialization
 
 Modified `Emulator.cs` to set the dispatcher and loaded image on `MsvcrtModule`:
@@ -97,11 +112,12 @@ _dispatcher.RegisterModule(msvcrtModule);
 
 ## Benefits
 
-1. **Allows Full Initialization**: Executables can now properly initialize using `_initterm` callbacks that call Win32 APIs
+1. **Allows Full Initialization**: Executables can now properly initialize using `_initterm` callbacks that call Win32 APIs (both direct calls and INT 0x80 syscalls)
 2. **Backward Compatible**: Tests that don't set a dispatcher continue to work with a warning
-3. **Consistent Architecture**: Uses the same pattern as `User32Module` for handling nested calls
+3. **Consistent Architecture**: Uses the same pattern as `User32Module` and `Emulator.HandleSyscallAsync()` for handling nested calls
 4. **Proper Error Handling**: Validates return addresses and handles both implemented and unimplemented imports
 5. **Reduced Code Duplication**: Import call handling logic is now shared via `ImportCallHelper` class, improving maintainability
+6. **Comprehensive Coverage**: Handles both direct import calls (CALL instructions) and INT 0x80 syscalls, ensuring all callback scenarios work correctly
 
 ## Shared Helper Class
 
@@ -123,12 +139,16 @@ To verify this fix works with `simple_ddraw.exe`:
 Expected log output should show:
 ```
 [DBG] [Emulator] [msvcrt] _initterm: Calling initializer #1 at 0x00401010
-[DBG] [Emulator] [msvcrt] _initterm: Nested import call KERNEL32.DLL!GetModuleHandleA at 0x...
-[DBG] [Emulator] [msvcrt] _initterm: Nested import KERNEL32.DLL!GetModuleHandleA returned 0x...
+[DBG] [Emulator] [msvcrt] _initterm: Executing callback at 0x00401010
+[DBG] [Emulator] [JitCpu] INT 0x80 syscall at 0x0E000000
+[DBG] [Emulator] [msvcrt] _initterm: Nested INT 0x80 syscall KERNEL32.DLL!GetModuleHandleA from stub at 0x...
+[DBG] [Emulator] [msvcrt] _initterm: Nested syscall KERNEL32.DLL!GetModuleHandleA returned 0x..., argBytes=...
 [DBG] [Emulator] [msvcrt] _initterm: Callback returned successfully after N steps
 [DBG] [Emulator] [msvcrt] _initterm: Initializer #1 completed successfully
 [INF] [Emulator] [msvcrt] _initterm: Executed 1/1 initializers successfully
 ```
+
+The key difference from the error case is that nested syscalls are now properly handled and logged with detailed information about the import stub and return values.
 
 ## Related Files
 
@@ -139,4 +159,5 @@ Expected log output should show:
 
 ## Date
 
-2026-01-05
+Initial fix: 2026-01-05
+INT 0x80 syscall support: 2026-01-05 (same day, updated to handle both direct calls and INT 0x80 syscalls)
