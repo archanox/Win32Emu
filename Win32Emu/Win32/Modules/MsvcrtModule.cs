@@ -3171,16 +3171,19 @@ namespace Win32Emu.Win32.Modules
 
 	/// <summary>
 	/// Handles nested syscalls (import calls) during callback execution.
-	/// Based on User32Module.HandleComAndImportCalls but simplified for MsvcrtModule's needs.
+	/// Based on User32Module.HandleComAndImportCalls but simplified - does not handle COM vtable calls
+	/// since MSVCRT callbacks typically only call standard Win32 APIs.
 	/// </summary>
 	/// <param name="step">The current CPU step result</param>
 	/// <param name="cpu">The CPU instance</param>
 	/// <param name="memory">The virtual memory instance</param>
 	/// <param name="logContext">Context string for logging</param>
+	/// <param name="stepDesc">Output parameter for step description (for debugging)</param>
 	/// <param name="shouldBreak">Output parameter indicating if execution should stop</param>
 	/// <returns>True if the step was handled (import call), false if it should be processed normally</returns>
-	private bool HandleNestedSyscalls(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext, out bool shouldBreak)
+	private bool HandleNestedSyscalls(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext, out string? stepDesc, out bool shouldBreak)
 	{
+		stepDesc = null;
 		shouldBreak = false;
 
 		// Check for import calls (syscalls via INT 0x80)
@@ -3189,6 +3192,7 @@ namespace Win32Emu.Win32.Modules
 			var dll = imp.dll.ToUpperInvariant();
 			var name = imp.name;
 			_logger.LogDebug("[msvcrt] {Context}: Nested import call {Dll}!{Name} at 0x{CallTarget:X8}", logContext, dll, name, step.CallTarget);
+			stepDesc = $"Import call {dll}!{name}";
 
 			// Save callee-saved registers (EBX, ESI, EDI, EBP)
 			var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
@@ -3260,7 +3264,7 @@ namespace Win32Emu.Win32.Modules
 
 	/// <summary>
 	/// Validates that a return address points to valid executable code and not to stack or invalid memory.
-	/// Simplified version of User32Module's method.
+	/// Uses the class field _image for validation rather than passing it as a parameter.
 	/// </summary>
 	/// <param name="address">The return address to validate</param>
 	/// <returns>True if the address is valid for execution, false otherwise</returns>
@@ -3384,7 +3388,7 @@ namespace Win32Emu.Win32.Modules
 				
 				// Handle nested syscalls (import calls) from within callbacks
 				// This allows callbacks to call other Win32 API functions
-				if (HandleNestedSyscalls(step, _cpu, _env.Memory, logContext, out var shouldBreak))
+				if (HandleNestedSyscalls(step, _cpu, _env.Memory, logContext, out var stepDesc, out var shouldBreak))
 				{
 					if (shouldBreak)
 					{
