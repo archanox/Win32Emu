@@ -10,7 +10,7 @@ using Win32Emu.Threading;
 
 namespace Win32Emu.Win32.Modules
 {
-	internal class User32Module : IWin32ModuleAsync
+	public class User32Module : IWin32ModuleAsync
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;

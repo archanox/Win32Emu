@@ -12,13 +12,15 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+		private readonly User32Module? _user32Module;
 
-		public Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		public Gdi32Module(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null, User32Module? user32Module = null)
 		{
 			_env = env;
 			_imageBase = imageBase;
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
+			_user32Module = user32Module;
 		}
 
 		public string Name => "GDI32.DLL";
@@ -1478,29 +1480,72 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] SelectObject(hdc=0x{Hdc:X8}, hObject=0x{HObject:X8})", hdc, hObject);
 
+			// Check if this is a User32 bitmap handle (0x90000000 range)
+			if (_user32Module != null && hObject >= 0x90000000 && hObject < 0xA0000000)
+			{
+				// Try to convert User32 bitmap handle to GDI bitmap
+				var bitmapData = _user32Module.GetLoadedBitmapData(hObject);
+				if (bitmapData != null)
+				{
+					_logger.LogInformation("[Gdi32] SelectObject: Converting User32 bitmap handle 0x{HObject:X8} to GDI bitmap", hObject);
+					
+					// Parse the bitmap file data to get dimensions and pixel data
+					if (TryParseBitmapFile(bitmapData, out var width, out var height, out var bpp, out var pixelData, out var stride))
+					{
+						// Create a GDI bitmap object from the bitmap data
+						var gdiBitmapHandle = _nextGdiObjectHandle++;
+						var gdiBitmapData = new BitmapData
+						{
+							Width = width,
+							Height = height,
+							BitCount = (uint)bpp,
+							Bits = pixelData,
+							Stride = stride
+						};
+						
+						_gdiObjects[gdiBitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = gdiBitmapData };
+						_logger.LogInformation("[Gdi32] SelectObject: Created GDI bitmap 0x{GdiBitmapHandle:X8} from User32 handle 0x{HObject:X8} ({Width}x{Height}, {Bpp}bpp)",
+							gdiBitmapHandle, hObject, width, height, bpp);
+						
+						// Now select the GDI bitmap into the DC
+						if (_deviceContexts.TryGetValue(hdc, out var dc))
+						{
+							var previousBitmap = dc.SelectedBitmap;
+							dc.SelectedBitmap = gdiBitmapHandle;
+							_logger.LogInformation("[Gdi32] SelectObject: Selected GDI bitmap 0x{GdiBitmapHandle:X8} into DC 0x{Hdc:X8}", gdiBitmapHandle, hdc);
+							return previousBitmap; // Return previous bitmap
+						}
+					}
+					else
+					{
+						_logger.LogWarning("[Gdi32] SelectObject: Failed to parse bitmap file data for User32 handle 0x{HObject:X8}", hObject);
+					}
+				}
+			}
+
 			// Track object selection in DC
-			if (_deviceContexts.TryGetValue(hdc, out var dc) && _gdiObjects.TryGetValue(hObject, out var obj))
+			if (_deviceContexts.TryGetValue(hdc, out var deviceContext) && _gdiObjects.TryGetValue(hObject, out var obj))
 			{
 				switch (obj.Type)
 				{
 					case GdiObjectType.Bitmap:
 					{
-						var previousBitmap = dc.SelectedBitmap;
-						dc.SelectedBitmap = hObject;
+						var previousBitmap = deviceContext.SelectedBitmap;
+						deviceContext.SelectedBitmap = hObject;
 						_logger.LogInformation("[Gdi32] SelectObject: Selected bitmap 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
 						return previousBitmap; // Return previous bitmap
 					}
 					case GdiObjectType.Brush:
 					{
-						var previousBrush = dc.SelectedBrush;
-						dc.SelectedBrush = hObject;
+						var previousBrush = deviceContext.SelectedBrush;
+						deviceContext.SelectedBrush = hObject;
 						_logger.LogInformation("[Gdi32] SelectObject: Selected brush 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
 						return previousBrush; // Return previous brush
 					}
 					case GdiObjectType.Pen:
 					{
-						var previousPen = dc.SelectedPen;
-						dc.SelectedPen = hObject;
+						var previousPen = deviceContext.SelectedPen;
+						deviceContext.SelectedPen = hObject;
 						_logger.LogInformation("[Gdi32] SelectObject: Selected pen 0x{HObject:X8} into DC 0x{Hdc:X8}", hObject, hdc);
 						return previousPen; // Return previous pen
 					}
@@ -2538,6 +2583,75 @@ namespace Win32Emu.Win32.Modules
 			public GdiObjectType Type { get; set; }
 			public BitmapData? Bitmap { get; set; }
 			public uint BrushColor { get; set; } = 0x00000000; // For solid brushes
+		}
+
+		/// <summary>
+		/// Parses a bitmap file (BMP format) to extract dimensions and pixel data.
+		/// </summary>
+		private bool TryParseBitmapFile(byte[] bitmapData, out int width, out int height, out int bpp, out byte[] pixelData, out int stride)
+		{
+			width = 0;
+			height = 0;
+			bpp = 0;
+			pixelData = Array.Empty<byte>();
+			stride = 0;
+
+			try
+			{
+				// Check for BM header
+				if (bitmapData.Length < 54 || bitmapData[0] != 'B' || bitmapData[1] != 'M')
+				{
+					_logger.LogWarning("[Gdi32] TryParseBitmapFile: Invalid bitmap header");
+					return false;
+				}
+
+				// Read BITMAPFILEHEADER
+				var pixelDataOffset = BitConverter.ToUInt32(bitmapData, 10);
+
+				// Read BITMAPINFOHEADER
+				var headerSize = BitConverter.ToInt32(bitmapData, 14);
+				width = BitConverter.ToInt32(bitmapData, 18);
+				height = BitConverter.ToInt32(bitmapData, 22);
+				bpp = BitConverter.ToUInt16(bitmapData, 28);
+
+				// Handle bottom-up bitmaps (height is positive)
+				var isBottomUp = height > 0;
+				var absHeight = Math.Abs(height);
+
+				// Calculate stride (must be DWORD-aligned)
+				stride = ((width * bpp + 31) / 32) * 4;
+
+				// Extract pixel data
+				var pixelDataSize = stride * absHeight;
+				if (pixelDataOffset + pixelDataSize > bitmapData.Length)
+				{
+					_logger.LogWarning("[Gdi32] TryParseBitmapFile: Pixel data exceeds file size");
+					return false;
+				}
+
+				pixelData = new byte[pixelDataSize];
+				Array.Copy(bitmapData, (int)pixelDataOffset, pixelData, 0, pixelDataSize);
+
+				// If bitmap is bottom-up, flip it to top-down
+				if (isBottomUp)
+				{
+					var flipped = new byte[pixelDataSize];
+					for (var y = 0; y < absHeight; y++)
+					{
+						Array.Copy(pixelData, (absHeight - 1 - y) * stride, flipped, y * stride, stride);
+					}
+					pixelData = flipped;
+					height = absHeight; // Make height positive for top-down
+				}
+
+				_logger.LogDebug("[Gdi32] TryParseBitmapFile: Parsed bitmap {Width}x{Height}, {Bpp}bpp, stride={Stride}", width, height, bpp, stride);
+				return true;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogWarning(ex, "[Gdi32] TryParseBitmapFile: Exception parsing bitmap data");
+				return false;
+			}
 		}
 
 		private class BitmapData
