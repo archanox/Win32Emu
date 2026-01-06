@@ -1,7 +1,7 @@
 Using launch settings from /home/runner/work/Win32Emu/Win32Emu/Win32Emu.Gui/Properties/launchSettings.json...
-Warning: Could not enable file logging: File not found: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_112145.log
+Warning: Could not enable file logging: File not found: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_112854.log
 info: Win32Emu.Emulator[0]
-      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_112145.log
+      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_112854.log
 info: Win32Emu.Emulator[0]
       Using existing virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
 info: Win32Emu.Emulator[0]
@@ -5119,7 +5119,3 @@ warn: Win32Emu.Emulator[0]
       [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
 dbug: Win32Emu.Emulator[0]
       [Loop Check] Instruction 15410000: EIP=0x004122D9
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15420000: EIP=0x004122DC
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15430000: EIP=0x004122C4
