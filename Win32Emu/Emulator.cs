@@ -649,9 +649,10 @@ public sealed class Emulator : IDisposable
         user32Module.SetHost(_host); // Set host for dialog UI callbacks
         _dispatcher.RegisterModule(user32Module);
         
-        _dispatcher.RegisterModule(new Gdi32Module(_env, _image.BaseAddress, peLoader, _logger));
+        var gdi32Module = new Gdi32Module(_env, _image.BaseAddress, peLoader, _logger);
+        _dispatcher.RegisterModule(gdi32Module);
         _dispatcher.RegisterModule(new Comdlg32Module(_env, _image.BaseAddress, peLoader, _logger));
-        _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, peLoader, _logger));
+        _dispatcher.RegisterModule(new DDrawModule(_env, _image.BaseAddress, peLoader, _logger, gdi32Module));
         _dispatcher.RegisterModule(new DSoundModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new DInputModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new WinMmModule(_env, _image.BaseAddress, peLoader, _logger));
