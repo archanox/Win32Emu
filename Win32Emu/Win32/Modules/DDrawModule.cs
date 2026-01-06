@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Text;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
@@ -1556,12 +1557,19 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lphDC, dcHandle);
 
 			// Register the DC with GDI32 so GDI operations can write to the DirectDraw surface
-			if (_gdi32Module != null && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
+			if (_gdi32Module != null)
 			{
-				_gdi32Module.RegisterDirectDrawSurfaceDC(dcHandle, surface.Bits, surface.Width, surface.Height, surface.Pitch, ddrawObj.BitsPerPixel);
-				_logger.LogInformation("[DDraw] Registered DC 0x{DcHandle:X8} with GDI32 for DirectDraw surface", dcHandle);
+				if (_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
+				{
+					_gdi32Module.RegisterDirectDrawSurfaceDC(dcHandle, surface.Bits, surface.Width, surface.Height, surface.Pitch, ddrawObj.BitsPerPixel);
+					_logger.LogInformation("[DDraw] Registered DC 0x{DcHandle:X8} with GDI32 for DirectDraw surface", dcHandle);
+				}
+				else
+				{
+					_logger.LogWarning("[DDraw] GetDC: Could not find DirectDraw object for surface 0x{Handle:X8}, GDI operations may not work correctly", surface.Handle);
+				}
 			}
-			else if (_gdi32Module == null)
+			else
 			{
 				_logger.LogWarning("[DDraw] GetDC: Gdi32Module not available, GDI operations on this DC will not work");
 			}
@@ -2261,7 +2269,7 @@ namespace Win32Emu.Win32.Modules
 			if (bits == null || bits.Length == 0)
 				return "null/empty";
 			
-			var samples = new System.Text.StringBuilder();
+			var samples = new StringBuilder();
 			var step = Math.Max(1, bits.Length / sampleCount);
 			for (var i = 0; i < Math.Min(sampleCount, bits.Length / bytesPerPixel); i++)
 			{
