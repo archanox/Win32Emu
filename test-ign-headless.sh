@@ -1,8 +1,15 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Comprehensive headless test script for ign_teas and ign_demo
 # This script runs the applications headlessly and captures detailed logs
 
 set -euo pipefail
+
+# Configuration
+TIMEOUT_SECONDS=10
+PATTERN_FAIL="fail:"
+PATTERN_WARN="warn:"
+PATTERN_HEAP_EXEC="heap memory range"
+PATTERN_MEMORY_ERROR="Memory access out of range"
 
 PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 LOGS_DIR="$PROJECT_ROOT/diagnostic_logs"
@@ -54,10 +61,10 @@ for app_name in "${!APPS[@]}"; do
         cd "$app_dir"
     fi
     
-    # Run application with timeout (10 seconds)
+    # Run application with timeout
     echo "   🚀 Starting emulation..."
     set +e  # Don't exit on error
-    timeout 10 dotnet run --project "$GUI_PROJECT" --configuration Release --no-build -- \
+    timeout $TIMEOUT_SECONDS dotnet run --project "$GUI_PROJECT" --configuration Release --no-build -- \
         --nogui \
         --log-file "$log_file" \
         --backend Software \
@@ -83,11 +90,11 @@ for app_name in "${!APPS[@]}"; do
     echo "   📊 Log analysis:"
     
     if [ -f "$log_file" ]; then
-        # Count errors
-        error_count=$(grep -c "fail:" "$log_file" 2>/dev/null || echo "0")
-        warn_count=$(grep -c "warn:" "$log_file" 2>/dev/null || echo "0")
-        heap_exec_count=$(grep -c "heap memory range" "$log_file" 2>/dev/null || echo "0")
-        memory_error_count=$(grep -c "Memory access out of range" "$log_file" 2>/dev/null || echo "0")
+        # Count errors using defined patterns
+        error_count=$(grep -c "$PATTERN_FAIL" "$log_file" 2>/dev/null || echo "0")
+        warn_count=$(grep -c "$PATTERN_WARN" "$log_file" 2>/dev/null || echo "0")
+        heap_exec_count=$(grep -c "$PATTERN_HEAP_EXEC" "$log_file" 2>/dev/null || echo "0")
+        memory_error_count=$(grep -c "$PATTERN_MEMORY_ERROR" "$log_file" 2>/dev/null || echo "0")
         
         echo "      Errors: $error_count"
         echo "      Warnings: $warn_count"
