@@ -942,9 +942,12 @@ namespace Win32Emu.Win32.Modules
 			// 1. Get the bitmap selected into the source DC
 			if (srcDc.SelectedBitmap == 0 || !_gdiObjects.TryGetValue(srcDc.SelectedBitmap, out var srcObj) || srcObj.Bitmap == null)
 			{
-				_logger.LogInformation("[Gdi32] StretchBlt: No bitmap selected in source DC, operation is a no-op");
+				_logger.LogWarning("[Gdi32] StretchBlt: No bitmap selected in source DC 0x{HdcSrc:X8}, srcDc.SelectedBitmap=0x{SelectedBitmap:X8}", hdcSrc, srcDc.SelectedBitmap);
 				return 1; // TRUE - operation succeeded but had no visible effect
 			}
+
+			_logger.LogInformation("[Gdi32] StretchBlt: Source bitmap found: {Width}x{Height}, {Bpp}bpp, stride={Stride}, bits={BitsSize} bytes",
+				srcObj.Bitmap.Width, srcObj.Bitmap.Height, srcObj.Bitmap.BitCount, srcObj.Bitmap.Stride, srcObj.Bitmap.Bits?.Length ?? 0);
 
 			// 2. Get the bitmap selected into the destination DC (if any)
 			BitmapData? destBitmap = null;
@@ -955,9 +958,12 @@ namespace Win32Emu.Win32.Modules
 
 			if (destBitmap == null)
 			{
-				_logger.LogInformation("[Gdi32] StretchBlt: No destination bitmap selected, operation is a no-op");
+				_logger.LogWarning("[Gdi32] StretchBlt: No destination bitmap selected in DC 0x{HdcDest:X8}, destDc.SelectedBitmap=0x{SelectedBitmap:X8}", hdcDest, destDc.SelectedBitmap);
 				return 1; // TRUE - operation succeeded but had no visible effect
 			}
+
+			_logger.LogInformation("[Gdi32] StretchBlt: Destination bitmap found: {Width}x{Height}, {Bpp}bpp, stride={Stride}, bits={BitsSize} bytes",
+				destBitmap.Width, destBitmap.Height, destBitmap.BitCount, destBitmap.Stride, destBitmap.Bits?.Length ?? 0);
 
 			// 3. Scale the bitmap from source to destination size
 			var srcBitmap = srcObj.Bitmap;
@@ -1487,7 +1493,7 @@ namespace Win32Emu.Win32.Modules
 				var bitmapData = _user32Module.GetLoadedBitmapData(hObject);
 				if (bitmapData != null)
 				{
-					_logger.LogInformation("[Gdi32] SelectObject: Converting User32 bitmap handle 0x{HObject:X8} to GDI bitmap", hObject);
+					_logger.LogInformation("[Gdi32] SelectObject: Converting User32 bitmap handle 0x{HObject:X8} to GDI bitmap (bitmap data size: {Size} bytes)", hObject, bitmapData.Length);
 					
 					// Parse the bitmap file data to get dimensions and pixel data
 					if (TryParseBitmapFile(bitmapData, out var width, out var height, out var bpp, out var pixelData, out var stride))
@@ -1504,22 +1510,30 @@ namespace Win32Emu.Win32.Modules
 						};
 						
 						_gdiObjects[gdiBitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = gdiBitmapData };
-						_logger.LogInformation("[Gdi32] SelectObject: Created GDI bitmap 0x{GdiBitmapHandle:X8} from User32 handle 0x{HObject:X8} ({Width}x{Height}, {Bpp}bpp)",
-							gdiBitmapHandle, hObject, width, height, bpp);
+						_logger.LogInformation("[Gdi32] SelectObject: Created GDI bitmap 0x{GdiBitmapHandle:X8} from User32 handle 0x{HObject:X8} ({Width}x{Height}, {Bpp}bpp, stride={Stride}, pixelData={PixelSize} bytes)",
+							gdiBitmapHandle, hObject, width, height, bpp, stride, pixelData.Length);
 						
 						// Now select the GDI bitmap into the DC
 						if (_deviceContexts.TryGetValue(hdc, out var dc))
 						{
 							var previousBitmap = dc.SelectedBitmap;
 							dc.SelectedBitmap = gdiBitmapHandle;
-							_logger.LogInformation("[Gdi32] SelectObject: Selected GDI bitmap 0x{GdiBitmapHandle:X8} into DC 0x{Hdc:X8}", gdiBitmapHandle, hdc);
+							_logger.LogInformation("[Gdi32] SelectObject: Selected GDI bitmap 0x{GdiBitmapHandle:X8} into DC 0x{Hdc:X8}, previous bitmap was 0x{PrevBitmap:X8}", gdiBitmapHandle, hdc, previousBitmap);
 							return previousBitmap; // Return previous bitmap
+						}
+						else
+						{
+							_logger.LogWarning("[Gdi32] SelectObject: DC 0x{Hdc:X8} not found after converting User32 bitmap! Cannot select bitmap.", hdc);
 						}
 					}
 					else
 					{
 						_logger.LogWarning("[Gdi32] SelectObject: Failed to parse bitmap file data for User32 handle 0x{HObject:X8}", hObject);
 					}
+				}
+				else
+				{
+					_logger.LogWarning("[Gdi32] SelectObject: User32 bitmap handle 0x{HObject:X8} has no data", hObject);
 				}
 			}
 
@@ -1552,6 +1566,7 @@ namespace Win32Emu.Win32.Modules
 				}
 			}
 
+			_logger.LogWarning("[Gdi32] SelectObject: Failed to select object 0x{HObject:X8} into DC 0x{Hdc:X8} - DC or object not found", hObject, hdc);
 			return hObject; // Return previous object (stub for non-tracked objects)
 		}
 
