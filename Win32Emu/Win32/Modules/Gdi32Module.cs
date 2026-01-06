@@ -2601,7 +2601,8 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Parses a bitmap file (BMP format) to extract dimensions and pixel data.
+		/// Parses a bitmap file (BMP format) or DIB data to extract dimensions and pixel data.
+		/// Handles both complete BMP files (with BITMAPFILEHEADER) and raw DIB data (just BITMAPINFOHEADER + pixels).
 		/// </summary>
 		private bool TryParseBitmapFile(byte[] bitmapData, out int width, out int height, out int bpp, out byte[] pixelData, out int stride)
 		{
@@ -2613,21 +2614,27 @@ namespace Win32Emu.Win32.Modules
 
 			try
 			{
-				// Check for BM header
-				if (bitmapData.Length < 54 || bitmapData[0] != 'B' || bitmapData[1] != 'M')
+				var hasBitmapFileHeader = bitmapData.Length >= 14 && bitmapData[0] == 'B' && bitmapData[1] == 'M';
+				var infoHeaderOffset = hasBitmapFileHeader ? 14 : 0;
+
+				// Need at least BITMAPINFOHEADER (40 bytes)
+				if (bitmapData.Length < infoHeaderOffset + 40)
 				{
-					_logger.LogWarning("[Gdi32] TryParseBitmapFile: Invalid bitmap header");
+					_logger.LogWarning("[Gdi32] TryParseBitmapFile: Data too small for bitmap header (size={Size})", bitmapData.Length);
 					return false;
 				}
 
-				// Read BITMAPFILEHEADER
-				var pixelDataOffset = BitConverter.ToUInt32(bitmapData, 10);
-
 				// Read BITMAPINFOHEADER
-				var headerSize = BitConverter.ToInt32(bitmapData, 14);
-				width = BitConverter.ToInt32(bitmapData, 18);
-				height = BitConverter.ToInt32(bitmapData, 22);
-				bpp = BitConverter.ToUInt16(bitmapData, 28);
+				var headerSize = BitConverter.ToUInt32(bitmapData, infoHeaderOffset);
+				if (headerSize < 40)
+				{
+					_logger.LogWarning("[Gdi32] TryParseBitmapFile: Invalid header size {HeaderSize}", headerSize);
+					return false;
+				}
+
+				width = BitConverter.ToInt32(bitmapData, infoHeaderOffset + 4);
+				height = BitConverter.ToInt32(bitmapData, infoHeaderOffset + 8);
+				bpp = BitConverter.ToUInt16(bitmapData, infoHeaderOffset + 14);
 
 				// Handle bottom-up bitmaps (height is positive)
 				var isBottomUp = height > 0;
@@ -2636,11 +2643,37 @@ namespace Win32Emu.Win32.Modules
 				// Calculate stride (must be DWORD-aligned)
 				stride = ((width * bpp + 31) / 32) * 4;
 
+				// Calculate pixel data offset
+				uint pixelDataOffset;
+				if (hasBitmapFileHeader)
+				{
+					// BMP file: read offset from file header
+					pixelDataOffset = BitConverter.ToUInt32(bitmapData, 10);
+				}
+				else
+				{
+					// DIB data: pixels start after info header and color table (if any)
+					var colorTableSize = 0u;
+					if (bpp <= 8)
+					{
+						// For palettized images, read number of colors used
+						var colorsUsed = BitConverter.ToUInt32(bitmapData, infoHeaderOffset + 32);
+						if (colorsUsed == 0)
+						{
+							// If colorsUsed is 0, use maximum for bpp
+							colorsUsed = (uint)(1 << bpp);
+						}
+						colorTableSize = colorsUsed * 4; // Each color table entry is 4 bytes (RGBQUAD)
+					}
+					pixelDataOffset = (uint)(infoHeaderOffset + headerSize + colorTableSize);
+				}
+
 				// Extract pixel data
 				var pixelDataSize = stride * absHeight;
 				if (pixelDataOffset + pixelDataSize > bitmapData.Length)
 				{
-					_logger.LogWarning("[Gdi32] TryParseBitmapFile: Pixel data exceeds file size");
+					_logger.LogWarning("[Gdi32] TryParseBitmapFile: Pixel data exceeds buffer size (offset={Offset}, size={Size}, total={Total})",
+						pixelDataOffset, pixelDataSize, bitmapData.Length);
 					return false;
 				}
 
@@ -2659,7 +2692,8 @@ namespace Win32Emu.Win32.Modules
 					height = absHeight; // Make height positive for top-down
 				}
 
-				_logger.LogDebug("[Gdi32] TryParseBitmapFile: Parsed bitmap {Width}x{Height}, {Bpp}bpp, stride={Stride}", width, height, bpp, stride);
+				_logger.LogInformation("[Gdi32] TryParseBitmapFile: Parsed bitmap {Width}x{Height}, {Bpp}bpp, stride={Stride}, format={Format}",
+					width, height, bpp, stride, hasBitmapFileHeader ? "BMP file" : "DIB data");
 				return true;
 			}
 			catch (Exception ex)
@@ -2668,6 +2702,7 @@ namespace Win32Emu.Win32.Modules
 				return false;
 			}
 		}
+
 
 		private class BitmapData
 		{
