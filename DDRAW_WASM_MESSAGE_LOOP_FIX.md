@@ -20,7 +20,7 @@ The fix follows the same pattern already established in `Glide2xModule.grBufferS
 
 **Location**: `Surface_Flip()` method, after the `ProcessEvents()` call
 
-**Change**: Added WM_PAINT message posting (11 lines):
+**Change**: Added WM_PAINT message posting (9 lines):
 ```csharp
 // Post a WM_PAINT message to keep the message queue active
 // This ensures GetMessageA doesn't block forever when there are no user interactions
