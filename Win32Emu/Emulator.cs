@@ -46,6 +46,11 @@ public sealed class Emulator : IDisposable
     // Progress logging interval for emulation loop
     private const ulong PROGRESS_LOG_INTERVAL = 10000;
     
+    // Event processing interval - process backend events and post synthetic messages
+    // Set to 1000 iterations (~1-10ms) for responsive message handling
+    // Lower than PROGRESS_LOG_INTERVAL to ensure apps waiting for messages don't block for long
+    private const ulong EVENT_PROCESSING_INTERVAL = 1000;
+    
     // Logging throttle interval when stuck at same EIP (reduce spam)
     // Log a warning every 1M iterations to avoid excessive log spam during legitimate tight loops
     private const ulong STUCK_EIP_LOG_INTERVAL = 1000000;
@@ -1201,8 +1206,8 @@ public sealed class Emulator : IDisposable
             // Process events from rendering and input backends periodically
             // This is essential for applications that wait for window messages (WM_PAINT, WM_TIMER, etc.)
             // and ensures GetMessageA doesn't block forever when no DirectDraw rendering is happening
-            // Process events every 10000 iterations to balance responsiveness and performance
-            if (iterationCount % PROGRESS_LOG_INTERVAL == 0)
+            // Process events every EVENT_PROCESSING_INTERVAL iterations for responsive message handling
+            if (iterationCount % EVENT_PROCESSING_INTERVAL == 0)
             {
                 _env?.ProcessAllBackendEvents();
                 
@@ -1212,7 +1217,7 @@ public sealed class Emulator : IDisposable
                 var firstWindow = _env?.GetAllWindowHandles().FirstOrDefault();
                 if (firstWindow.HasValue && firstWindow.Value != 0)
                 {
-                    _env?.PostMessage(firstWindow.Value, 0x000F, 0, 0); // WM_PAINT = 0x000F
+                    _env?.PostMessage(firstWindow.Value, (uint)Win32.Messaging.WM.PAINT, 0, 0);
                 }
             }
 
