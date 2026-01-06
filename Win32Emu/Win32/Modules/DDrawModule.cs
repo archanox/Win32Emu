@@ -1955,21 +1955,26 @@ namespace Win32Emu.Win32.Modules
 							_logger.LogDebug("[DDraw] Copying backbuffer (0x{BackBufferHandle:X8}) to primary surface (0x{PrimaryHandle:X8}) for flip", 
 								backBufferHandle, surface.Handle);
 							
-							// Log backbuffer pixel samples before copy for debugging
+							// Log pixel samples for debugging (backbuffer before copy, primary after copy)
 							if (_logger.IsEnabled(LogLevel.Debug) && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var dbgDDraw))
 							{
-								var backBufferSamples = SampleSurfacePixels(backBuffer.Bits, backBuffer.Width, backBuffer.Height, backBuffer.Pitch, dbgDDraw.BitsPerPixel / 8);
+								var bytesPerPixel = dbgDDraw.BitsPerPixel / 8;
+								
+								// Backbuffer samples before copy
+								var backBufferSamples = SampleSurfacePixels(backBuffer.Bits, backBuffer.Width, backBuffer.Height, backBuffer.Pitch, bytesPerPixel);
 								_logger.LogDebug("[DDraw] Flip: Backbuffer samples before copy: {Samples}", backBufferSamples);
-							}
-							
-							// Copy backbuffer contents to primary surface
-							Array.Copy(backBuffer.Bits, surface.Bits, Math.Min(backBuffer.Bits.Length, surface.Bits.Length));
-							
-							// Log primary surface pixel samples after copy for debugging
-							if (_logger.IsEnabled(LogLevel.Debug) && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var dbgDDraw2))
-							{
-								var primarySamples = SampleSurfacePixels(surface.Bits, surface.Width, surface.Height, surface.Pitch, dbgDDraw2.BitsPerPixel / 8);
+								
+								// Copy backbuffer contents to primary surface
+								Array.Copy(backBuffer.Bits, surface.Bits, Math.Min(backBuffer.Bits.Length, surface.Bits.Length));
+								
+								// Primary surface samples after copy
+								var primarySamples = SampleSurfacePixels(surface.Bits, surface.Width, surface.Height, surface.Pitch, bytesPerPixel);
 								_logger.LogDebug("[DDraw] Flip: Primary surface samples after copy: {Samples}", primarySamples);
+							}
+							else
+							{
+								// Copy backbuffer contents to primary surface when debug logging or DDraw object not available
+								Array.Copy(backBuffer.Bits, surface.Bits, Math.Min(backBuffer.Bits.Length, surface.Bits.Length));
 							}
 							
 							// Mark primary surface as dirty so it gets updated
@@ -2269,27 +2274,35 @@ namespace Win32Emu.Win32.Modules
 			if (bits == null || bits.Length == 0)
 				return "null/empty";
 			
+			if (bytesPerPixel <= 0)
+				return "invalid-bytes-per-pixel";
+
+			var pixelCount = bits.Length / bytesPerPixel;
+			if (pixelCount <= 0 || sampleCount <= 0)
+				return "null/empty";
+
 			var samples = new StringBuilder();
-			var step = Math.Max(1, bits.Length / sampleCount);
-			for (var i = 0; i < Math.Min(sampleCount, bits.Length / bytesPerPixel); i++)
+			var maxSamples = Math.Min(sampleCount, pixelCount);
+			for (var i = 0; i < maxSamples; i++)
 			{
-				var offset = i * step;
-				if (offset + bytesPerPixel <= bits.Length)
+				// Distribute samples evenly across the buffer while staying within bounds
+				var offset = (int)((long)i * bits.Length / maxSamples);
+				if (offset > bits.Length - bytesPerPixel)
+					offset = bits.Length - bytesPerPixel;
+
+				if (bytesPerPixel == 2)
 				{
-					if (bytesPerPixel == 2)
-					{
-						var pixel = BitConverter.ToUInt16(bits, offset);
-						samples.Append($"0x{pixel:X4} ");
-					}
-					else if (bytesPerPixel == 4)
-					{
-						var pixel = BitConverter.ToUInt32(bits, offset);
-						samples.Append($"0x{pixel:X8} ");
-					}
-					else
-					{
-						samples.Append($"0x{bits[offset]:X2} ");
-					}
+					var pixel = BitConverter.ToUInt16(bits, offset);
+					samples.Append($"0x{pixel:X4} ");
+				}
+				else if (bytesPerPixel == 4)
+				{
+					var pixel = BitConverter.ToUInt32(bits, offset);
+					samples.Append($"0x{pixel:X8} ");
+				}
+				else
+				{
+					samples.Append($"0x{bits[offset]:X2} ");
 				}
 			}
 			return samples.ToString().TrimEnd();

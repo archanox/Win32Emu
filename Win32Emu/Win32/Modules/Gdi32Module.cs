@@ -2555,7 +2555,7 @@ namespace Win32Emu.Win32.Modules
 		/// This is called by DDrawModule when IDirectDrawSurface::GetDC is called.
 		/// </summary>
 		/// <param name="dcHandle">The DC handle created by DirectDraw</param>
-		/// <param name="surfaceBits">Pointer to the surface bits array</param>
+		/// <param name="surfaceBits">The byte array containing the surface bits</param>
 		/// <param name="width">Surface width in pixels</param>
 		/// <param name="height">Surface height in pixels</param>
 		/// <param name="pitch">Surface pitch (stride) in bytes</param>
@@ -2565,10 +2565,20 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] RegisterDirectDrawSurfaceDC: DC=0x{DcHandle:X8}, size={Width}x{Height}, pitch={Pitch}, bpp={Bpp}",
 				dcHandle, width, height, pitch, bitsPerPixel);
 
-			// Create a device context if it doesn't exist
-			if (!_deviceContexts.ContainsKey(dcHandle))
+			// Create a device context if it doesn't exist, or get the existing one
+			if (!_deviceContexts.TryGetValue(dcHandle, out var dc))
 			{
-				_deviceContexts[dcHandle] = new DeviceContext { Handle = dcHandle };
+				dc = new DeviceContext { Handle = dcHandle };
+				_deviceContexts[dcHandle] = dc;
+			}
+			else
+			{
+				// If DC already exists and has a selected bitmap, clean up the old one to prevent resource leak
+				if (dc.SelectedBitmap != 0)
+				{
+					_gdiObjects.Remove(dc.SelectedBitmap);
+					_logger.LogDebug("[Gdi32] Removed old bitmap handle 0x{BitmapHandle:X8} for DC 0x{DcHandle:X8}", dc.SelectedBitmap, dcHandle);
+				}
 			}
 
 			// Create a synthetic bitmap object that wraps the DirectDraw surface bits
@@ -2585,7 +2595,7 @@ namespace Win32Emu.Win32.Modules
 			_gdiObjects[bitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = bitmapData };
 
 			// Select the bitmap into the DC so GDI operations work on it
-			_deviceContexts[dcHandle].SelectedBitmap = bitmapHandle;
+			dc.SelectedBitmap = bitmapHandle;
 
 			_logger.LogInformation("[Gdi32] Created bitmap handle 0x{BitmapHandle:X8} for DirectDraw surface and selected into DC 0x{DcHandle:X8}",
 				bitmapHandle, dcHandle);
