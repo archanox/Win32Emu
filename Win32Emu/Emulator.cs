@@ -1198,6 +1198,24 @@ public sealed class Emulator : IDisposable
             // This ensures sleeping threads are woken up before we check if any threads are runnable
             scheduler?.ProcessWaitTimeouts();
 
+            // Process events from rendering and input backends periodically
+            // This is essential for applications that wait for window messages (WM_PAINT, WM_TIMER, etc.)
+            // and ensures GetMessageA doesn't block forever when no DirectDraw rendering is happening
+            // Process events every 10000 iterations to balance responsiveness and performance
+            if (iterationCount % PROGRESS_LOG_INTERVAL == 0)
+            {
+                _env?.ProcessAllBackendEvents();
+                
+                // Post a synthetic WM_PAINT message to keep the message queue active
+                // This is especially important in headless mode where SDL may not generate any events
+                // DirectDraw does the same thing after Flip - we need it for apps that don't use DirectDraw
+                var firstWindow = _env?.GetAllWindowHandles().FirstOrDefault();
+                if (firstWindow.HasValue && firstWindow.Value != 0)
+                {
+                    _env?.PostMessage(firstWindow.Value, 0x000F, 0, 0); // WM_PAINT = 0x000F
+                }
+            }
+
             // Check if we have any runnable threads
             // However, if threads are blocked waiting for messages and we have timers or the event processing
             // loop running, we should continue execution to allow timers to fire and wake up blocked threads
