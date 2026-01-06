@@ -1911,8 +1911,22 @@ namespace Win32Emu.Win32.Modules
 							_logger.LogDebug("[DDraw] Copying backbuffer (0x{BackBufferHandle:X8}) to primary surface (0x{PrimaryHandle:X8}) for flip", 
 								backBufferHandle, surface.Handle);
 							
+							// Log backbuffer pixel samples before copy for debugging
+							if (_logger.IsEnabled(LogLevel.Debug) && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var dbgDDraw))
+							{
+								var backBufferSamples = SampleSurfacePixels(backBuffer.Bits, backBuffer.Width, backBuffer.Height, backBuffer.Pitch, dbgDDraw.BitsPerPixel / 8);
+								_logger.LogDebug("[DDraw] Flip: Backbuffer samples before copy: {Samples}", backBufferSamples);
+							}
+							
 							// Copy backbuffer contents to primary surface
 							Array.Copy(backBuffer.Bits, surface.Bits, Math.Min(backBuffer.Bits.Length, surface.Bits.Length));
+							
+							// Log primary surface pixel samples after copy for debugging
+							if (_logger.IsEnabled(LogLevel.Debug) && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var dbgDDraw2))
+							{
+								var primarySamples = SampleSurfacePixels(surface.Bits, surface.Width, surface.Height, surface.Pitch, dbgDDraw2.BitsPerPixel / 8);
+								_logger.LogDebug("[DDraw] Flip: Primary surface samples after copy: {Samples}", primarySamples);
+							}
 							
 							// Mark primary surface as dirty so it gets updated
 							surface.IsTextureDirty = true;
@@ -2202,6 +2216,41 @@ namespace Win32Emu.Win32.Modules
 			return (uint)DDResult.DD_OK;
 		}
 
+		/// <summary>
+		/// Helper method to sample a few pixels from surface data for debugging.
+		/// Returns a string representation of pixel values to verify non-zero data.
+		/// </summary>
+		private string SampleSurfacePixels(byte[]? bits, int width, int height, int pitch, int bytesPerPixel, int sampleCount = 5)
+		{
+			if (bits == null || bits.Length == 0)
+				return "null/empty";
+			
+			var samples = new System.Text.StringBuilder();
+			var step = Math.Max(1, bits.Length / sampleCount);
+			for (var i = 0; i < Math.Min(sampleCount, bits.Length / bytesPerPixel); i++)
+			{
+				var offset = i * step;
+				if (offset + bytesPerPixel <= bits.Length)
+				{
+					if (bytesPerPixel == 2)
+					{
+						var pixel = BitConverter.ToUInt16(bits, offset);
+						samples.Append($"0x{pixel:X4} ");
+					}
+					else if (bytesPerPixel == 4)
+					{
+						var pixel = BitConverter.ToUInt32(bits, offset);
+						samples.Append($"0x{pixel:X8} ");
+					}
+					else
+					{
+						samples.Append($"0x{bits[offset]:X2} ");
+					}
+				}
+			}
+			return samples.ToString().TrimEnd();
+		}
+
 		private uint Surface_BltFast(ICpu cpu, VirtualMemory mem)
 		{
 			var args = new StackArgs(cpu, mem);
@@ -2321,6 +2370,13 @@ namespace Win32Emu.Win32.Modules
 			// DDBLTFAST_SRCCOLORKEY = 0x00000001
 			var useSrcColorKey = (dwTrans & 0x00000001) != 0 && srcSurface.HasColorKey;
 
+			// Log source surface pixel samples before blit for debugging
+			if (_logger.IsEnabled(LogLevel.Debug))
+			{
+				var srcSamples = SampleSurfacePixels(srcSurface.Bits, srcSurface.Width, srcSurface.Height, srcSurface.Pitch, bytesPerPixel);
+				_logger.LogDebug("[DDraw] BltFast: Source surface samples: {Samples}", srcSamples);
+			}
+
 			// Use OptimizedBlitter for high-performance blitting
 			if (useSrcColorKey)
 			{
@@ -2345,6 +2401,13 @@ namespace Win32Emu.Win32.Modules
 					srcWidth,
 					srcHeight,
 					bytesPerPixel);
+			}
+
+			// Log destination surface pixel samples after blit for debugging
+			if (_logger.IsEnabled(LogLevel.Debug))
+			{
+				var destSamples = SampleSurfacePixels(destSurface.Bits, destSurface.Width, destSurface.Height, destSurface.Pitch, bytesPerPixel);
+				_logger.LogDebug("[DDraw] BltFast: Destination surface samples after blit: {Samples}", destSamples);
 			}
 
 			// Mark destination surface as dirty
@@ -3670,6 +3733,13 @@ namespace Win32Emu.Win32.Modules
 
 				// Convert surface to RGBA format
 				byte[] displayData = ConvertSurfaceToRGBA(surface, ddrawObj);
+				
+				// Log converted RGBA pixel samples for debugging
+				if (_logger.IsEnabled(LogLevel.Debug) && displayData != null)
+				{
+					var rgbaSamples = SampleSurfacePixels(displayData, surface.Width, surface.Height, surface.Width * BytesPerPixelRgba, BytesPerPixelRgba);
+					_logger.LogDebug("[DDraw] UpdateRenderingBackend: RGBA samples: {Samples}", rgbaSamples);
+				}
 				
 				// Update the rendering backend texture with the converted surface data
 				if (displayData != null)
