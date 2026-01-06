@@ -984,7 +984,8 @@ namespace Win32Emu.Win32.Modules
 				srcBytesPerPixel = 1;
 			}
 
-			var srcStride = ((src.Width * srcBytesPerPixel + 3) / 4) * 4;
+			// Use explicit stride if provided (for DirectDraw surfaces), otherwise calculate with DWORD alignment
+			var srcStride = src.Stride > 0 ? src.Stride : ((src.Width * srcBytesPerPixel + 3) / 4) * 4;
 
 			var destBytesPerPixel = (int)(dest.BitCount / 8);
 			if (destBytesPerPixel == 0)
@@ -992,7 +993,8 @@ namespace Win32Emu.Win32.Modules
 				destBytesPerPixel = 1;
 			}
 
-			var destStride = ((dest.Width * destBytesPerPixel + 3) / 4) * 4;
+			// Use explicit stride if provided (for DirectDraw surfaces), otherwise calculate with DWORD alignment
+			var destStride = dest.Stride > 0 ? dest.Stride : ((dest.Width * destBytesPerPixel + 3) / 4) * 4;
 
 			// Use bilinear interpolation for scaling
 			for (var dy = 0; dy < hDest; dy++)
@@ -1071,7 +1073,8 @@ namespace Win32Emu.Win32.Modules
 				bytesPerPixel = 1;
 			}
 
-			var stride = ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
+			// Use explicit stride if provided (for DirectDraw surfaces), otherwise calculate with DWORD alignment
+			var stride = bitmap.Stride > 0 ? bitmap.Stride : ((bitmap.Width * bytesPerPixel + 3) / 4) * 4;
 
 			for (var dy = 0; dy < h; dy++)
 			{
@@ -2544,6 +2547,7 @@ namespace Win32Emu.Win32.Modules
 			public uint Planes { get; set; }
 			public uint BitCount { get; set; }
 			public byte[]? Bits { get; set; }
+			public int Stride { get; set; } // Stride/pitch in bytes (0 means auto-calculate)
 		}
 
 		/// <summary>
@@ -2574,7 +2578,8 @@ namespace Win32Emu.Win32.Modules
 				Width = width,
 				Height = height,
 				BitCount = (uint)bitsPerPixel,
-				Bits = surfaceBits
+				Bits = surfaceBits,
+				Stride = pitch // Use DirectDraw's pitch instead of calculating
 			};
 
 			_gdiObjects[bitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = bitmapData };
