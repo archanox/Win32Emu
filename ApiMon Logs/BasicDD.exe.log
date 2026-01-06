@@ -1,0 +1,852 @@
+#	Time of Day	Thread	Module	API	Return Value	Error	Duration
+5353	6:03:45.085 PM	1	BasicDD.exe	GetVersion (  )	602931718		0.0000052
+5354	6:03:45.085 PM	1	BasicDD.exe	HeapCreate ( HEAP_NO_SERIALIZE, 4096, 0 )	0x00b60000		0.0000204
+5356	6:03:45.085 PM	1	BasicDD.exe	GetVersionExA ( 0x0019fe58 )	TRUE		0.0000135
+5359	6:03:45.085 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 256 )	0x00b60498		0.0000005
+5360	6:03:45.085 PM	1	BasicDD.exe	GetStartupInfoA ( 0x0019feb8 )			0.0000079
+5365	6:03:45.085 PM	1	BasicDD.exe	GetStdHandle ( STD_INPUT_HANDLE )	NULL		0.0000003
+5366	6:03:45.085 PM	1	BasicDD.exe	GetFileType ( NULL )	FILE_TYPE_UNKNOWN		0.0000044
+5369	6:03:45.085 PM	1	BasicDD.exe	GetStdHandle ( STD_OUTPUT_HANDLE )	NULL		0.0000001
+5370	6:03:45.086 PM	1	BasicDD.exe	GetFileType ( NULL )	FILE_TYPE_UNKNOWN		0.0000025
+5373	6:03:45.086 PM	1	BasicDD.exe	GetStdHandle ( STD_ERROR_HANDLE )	NULL		0.0000003
+5374	6:03:45.086 PM	1	BasicDD.exe	GetFileType ( NULL )	FILE_TYPE_UNKNOWN		0.0000006
+5377	6:03:45.086 PM	1	BasicDD.exe	GetCommandLineA (  )	0x006ea940		0.0000005
+5378	6:03:45.086 PM	1	BasicDD.exe	GetEnvironmentStringsW (  )	0x00705bb8		0.0000327
+5433	6:03:45.086 PM	1	BasicDD.exe	WideCharToMultiByte ( CP_ACP, 0, "=::=::\", 4481, NULL, 0, NULL, NULL )	4481		0.0000024
+5434	6:03:45.086 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 4496 )	0x00b605a0		0.0000076
+5435	6:03:45.086 PM	1	BasicDD.exe	WideCharToMultiByte ( CP_ACP, 0, "=::=::\", 4481, 0x00b605a0, 4481, NULL, NULL )	4481		0.0000035
+5436	6:03:45.086 PM	1	BasicDD.exe	FreeEnvironmentStringsW ( "=::=::\" )	TRUE		0.0000027
+5438	6:03:45.086 PM	1	BasicDD.exe	GetACP (  )	65001		0.0000005
+5439	6:03:45.086 PM	1	BasicDD.exe	GetCPInfo ( CP_UTF8, 0x0019febc )	TRUE		0.0000008
+5440	6:03:45.086 PM	1	BasicDD.exe	GetCPInfo ( CP_UTF8, 0x0019fe94 )	TRUE		0.0000002
+5441	6:03:45.086 PM	1	BasicDD.exe	GetStringTypeW ( CT_CTYPE1, "", 1, 0x0019f950 )	TRUE		0.0000008
+5442	6:03:45.086 PM	1	BasicDD.exe	MultiByteToWideChar ( CP_UTF8, MB_PRECOMPOSED, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ", 256, NULL, 0 )	256		0.0000021
+5443	6:03:45.086 PM	1	BasicDD.exe	MultiByteToWideChar ( CP_UTF8, MB_PRECOMPOSED, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ", 256, 0x0019f738, 256 )	256		0.0000014
+5444	6:03:45.086 PM	1	BasicDD.exe	GetStringTypeW ( CT_CTYPE1, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~                                                                                                                                靜@, 256, 0x0019f994 )	TRUE		0.0000010
+5445	6:03:45.086 PM	1	BasicDD.exe	LCMapStringW ( LOCALE_NEUTRAL, LCMAP_LOWERCASE, "", 1, NULL, 0 )	1		0.0000011
+5446	6:03:45.086 PM	1	BasicDD.exe	MultiByteToWideChar ( CP_UTF8, MB_PRECOMPOSED, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ", 256, NULL, 0 )	256		0.0000008
+5447	6:03:45.086 PM	1	BasicDD.exe	MultiByteToWideChar ( CP_UTF8, MB_PRECOMPOSED, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ", 256, 0x0019f714, 256 )	256		0.0000011
+5448	6:03:45.086 PM	1	BasicDD.exe	LCMapStringW ( LOCALE_NEUTRAL, LCMAP_LOWERCASE, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~                                                                                                                                靜@, 256, NULL, 0 )	256		0.0000005
+5449	6:03:45.086 PM	1	BasicDD.exe	LCMapStringW ( LOCALE_NEUTRAL, LCMAP_LOWERCASE, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~                                                                                                                                靜@, 256, 0x0019f514, 256 )	256		0.0000021
+5450	6:03:45.086 PM	1	BasicDD.exe	WideCharToMultiByte ( CP_UTF8, WC_COMPOSITECHECK | WC_SEPCHARS, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@abcdefghijklmnopqrstuvwxyz[\]^_`abcdefghijklmnopqrstuvwxyz{|}~                                                                                                                                 , 256, 0x0019fc94, 256, NULL, NULL )	0	122 = The data area passed to a system call is too small. 	0.0000010
+5452	6:03:45.099 PM	1	BasicDD.exe	MultiByteToWideChar ( CP_UTF8, MB_PRECOMPOSED, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ", 256, NULL, 0 )	256		0.0000028
+5453	6:03:45.099 PM	1	BasicDD.exe	MultiByteToWideChar ( CP_UTF8, MB_PRECOMPOSED, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ¡¢£¤¥¦§¨©ª«¬­®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ", 256, 0x0019f6f4, 256 )	256		0.0000015
+5454	6:03:45.099 PM	1	BasicDD.exe	LCMapStringW ( LOCALE_NEUTRAL, LCMAP_UPPERCASE, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~                                                                                                                                靜@, 256, NULL, 0 )	256		0.0000016
+5455	6:03:45.099 PM	1	BasicDD.exe	LCMapStringW ( LOCALE_NEUTRAL, LCMAP_UPPERCASE, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnopqrstuvwxyz{|}~                                                                                                                                靜@, 256, 0x0019f4f4, 256 )	256		0.0000027
+5456	6:03:45.099 PM	1	BasicDD.exe	WideCharToMultiByte ( CP_UTF8, WC_COMPOSITECHECK | WC_SEPCHARS, "  	
+
+
+ !"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`ABCDEFGHIJKLMNOPQRSTUVWXYZ{|}~                                                                                                                                 , 256, 0x0019fb94, 256, NULL, NULL )	0	122 = The data area passed to a system call is too small. 	0.0000195
+5458	6:03:45.099 PM	1	BasicDD.exe	GetModuleFileNameA ( NULL, 0x004095f8, 260 )	53		0.0000108
+5463	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b61738		0.0000010
+5464	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 208 )	0x00b61780		0.0000003
+5465	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b61858		0.0000002
+5466	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b61880		0.0000002
+5467	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 80 )	0x00b618b8		0.0000002
+5468	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b61910		0.0000002
+5469	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b61958		0.0000002
+5470	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b619a0		0.0000002
+5471	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b619e8		0.0000002
+5472	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b61a10		0.0000002
+5473	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b61a48		0.0000002
+5474	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b61a90		0.0000002
+5475	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b61ab8		0.0000002
+5476	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 16 )	0x00b61ae0		0.0000003
+5477	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b61af8		0.0000002
+5478	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 432 )	0x00b61b20		0.0000003
+5479	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b61cd8		0.0000003
+5480	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b61d20		0.0000002
+5481	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b61d68		0.0000002
+5482	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b61da0		0.0000002
+5483	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b61dc8		0.0000002
+5484	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b61df0		0.0000002
+5485	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b61e28		0.0000002
+5486	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 16 )	0x00b61e60		0.0000002
+5487	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 2080 )	0x00b61e78		0.0000002
+5488	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b626a0		0.0000002
+5489	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b626e8		0.0000002
+5490	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62720		0.0000002
+5491	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62748		0.0000002
+5492	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 80 )	0x00b62770		0.0000003
+5493	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b627c8		0.0000003
+5494	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b627f0		0.0000002
+5495	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62818		0.0000003
+5496	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b62840		0.0000003
+5497	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b62878		0.0000002
+5498	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b628b0		0.0000003
+5499	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 400 )	0x00b628d8		0.0000002
+5500	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62a70		0.0000003
+5501	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62a98		0.0000002
+5502	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 16 )	0x00b62ac0		0.0000002
+5503	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62ad8		0.0000002
+5504	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b62b00		0.0000002
+5505	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b62b38		0.0000002
+5506	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62b70		0.0000002
+5507	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b62b98		0.0000002
+5508	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 16 )	0x00b62bd0		0.0000002
+5509	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62be8		0.0000002
+5510	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 64 )	0x00b62c10		0.0000003
+5511	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62c58		0.0000002
+5512	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 32 )	0x00b62c80		0.0000003
+5513	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 48 )	0x00b62ca8		0.0000002
+5514	6:03:45.099 PM	1	BasicDD.exe	HeapFree ( 0x00b60000, 0, 0x00b605a0 )	TRUE		0.0000009
+5515	6:03:45.099 PM	1	BasicDD.exe	HeapAlloc ( 0x00b60000, 0, 128 )	0x00b62ce0		0.0000004
+5516	6:03:45.099 PM	1	BasicDD.exe	HeapSize ( 0x00b60000, 0, 0x00b62ce0 )	128		0.0000004
+5517	6:03:45.099 PM	1	BasicDD.exe	GetStartupInfoA ( 0x0019ff18 )			0.0000006
+5518	6:03:45.099 PM	1	BasicDD.exe	GetModuleHandleA ( NULL )	0x00400000		0.0000005
+5519	6:03:45.099 PM	1	BasicDD.exe	LoadIconA ( 0x00400000, IDI_APPLICATION )	NULL	1813 = The specified resource type cannot be found in the image file. 	0.0003956
+5528	6:03:45.100 PM	1	BasicDD.exe	LoadCursorA ( NULL, IDC_ARROW )	0x00010003		0.0000872
+5530	6:03:45.100 PM	1	BasicDD.exe	GetStockObject ( BLACK_BRUSH )	0x00900011		0.0000026
+5531	6:03:45.100 PM	1	BasicDD.exe	RegisterClassA ( 0x0019fea0 )	50009		0.0002257
+5574	6:03:45.101 PM	1	BasicDD.exe	GetSystemMetrics ( SM_CYSCREEN )	1080		0.0044416
+8722	6:03:45.379 PM	1	BasicDD.exe	GetSystemMetrics ( SM_CXSCREEN )	1920		0.0000006
+8723	6:03:45.379 PM	1	BasicDD.exe	CreateWindowExA ( WS_EX_TOPMOST, "Basic DD", "Basic DD", WS_POPUP, 0, 0, 1920, 1080, NULL, NULL, 0x00400000, NULL )	0x001b0e10		0.0086647
+8750	6:03:45.380 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCCREATE, 0, 1702160 )	1		0.0000244
+11296	6:03:45.596 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCCALCSIZE, 0, 1702140 )	0		0.0008309
+11342	6:03:45.598 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_CREATE, 0, 1702160 )	0		0.0000007
+11355	6:03:45.598 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SIZE, 0, 70780800 )	0		0.0000005
+11358	6:03:45.599 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOVE, 0, 0 )	0		0.0000005
+11360	6:03:45.599 PM	1	BasicDD.exe	ShowWindow ( 0x001b0e10, SW_SHOWDEFAULT )	FALSE		0.0358808
+11363	6:03:45.599 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SHOWWINDOW, 1, 0 )	0		0.0000007
+11399	6:03:45.600 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGING, 0, 1703284 )	0		0.0000007
+11445	6:03:45.603 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGING, 0, 1703284 )	0		0.0000007
+11461	6:03:45.610 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_ACTIVATEAPP, 1, 13332 )	0		0.0000022
+11464	6:03:45.611 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCACTIVATE, 1, 0 )	1		0.0003078
+11484	6:03:45.611 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_ACTIVATE, 1, 0 )	0		0.0297765
+22160	6:03:46.441 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_IME_SETCONTEXT, 1, -1073741809 )	0		0.0030658
+22708	6:03:46.487 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETFOCUS, 0, 0 )	0		0.0000009
+22726	6:03:46.488 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCPAINT, 1, 0 )	0		0.0002131
+22766	6:03:46.489 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_ERASEBKGND, 453050642, 0 )	1		0.0008908
+22849	6:03:46.504 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGED, 0, 1703284 )	0		0.0000038
+22878	6:03:46.504 PM	1	BasicDD.exe	UpdateWindow ( 0x001b0e10 )	TRUE		0.0005109
+22891	6:03:46.504 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_PAINT, 0, 0 )	0		0.0003417
+22902	6:03:46.505 PM	1	BasicDD.exe	SetFocus ( 0x001b0e10 )	0x001b0e10		0.0000029
+22903	6:03:46.505 PM	1	BasicDD.exe	DirectDrawCreateEx ( NULL, 0x00409584, IDirectDraw7, NULL )	DDENUMRET_CANCEL		0.0638761
+97271	6:03:51.170 PM	1	BasicDD.exe	IDirectDraw7::SetCooperativeLevel ( 0x001b0e10, DDSCL_EXCLUSIVE | DDSCL_FULLSCREEN )	DDENUMRET_CANCEL		0.0017107
+97370	6:03:51.172 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGING, 0, 1702684 )	0		0.0000084
+97449	6:03:51.185 PM	1	BasicDD.exe	IDirectDraw7::SetDisplayMode ( 640, 480, 16, 0, 0 )	DDENUMRET_CANCEL		1.6179346
+119528	6:03:54.654 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGING, 0, 1702324 )	0		0.0011527
+119544	6:03:54.656 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCCALCSIZE, 1, 1702284 )	0		0.0004028
+119578	6:03:54.660 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGED, 0, 1702324 )	0		0.0000530
+119601	6:03:54.661 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SIZE, 0, 31457920 )	0		0.0000006
+119746	6:03:54.674 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_DISPLAYCHANGE, 16, 31457920 )	0		0.0000017
+119753	6:03:54.675 PM	1	BasicDD.exe	IDirectDraw7::CreateSurface ( 0x0019fe50, 0x00409588, NULL )	DDENUMRET_CANCEL		0.0050470
+119883	6:03:54.682 PM	1	BasicDD.exe	IDirectDraw7::AddRef (  )	2		0.0000019
+119928	6:03:54.690 PM	1	BasicDD.exe	IDirectDraw7::AddRef (  )	3		0.0000010
+119955	6:03:54.691 PM	1	BasicDD.exe	IDirectDraw7::AddRef (  )	4		0.0000009
+119983	6:03:54.691 PM	1	BasicDD.exe	IDirectDraw7::AddRef (  )	5		0.0000011
+120163	6:03:54.708 PM	1	BasicDD.exe	IDirectDrawSurface::GetAttachedSurface ( 0x0019fe40, 0x0040958c )	DDENUMRET_CANCEL		0.0000075
+120177	6:03:54.708 PM	1	BasicDD.exe	IDirectDraw7::CreateSurface ( 0x0019fe34, 0x00409578, NULL )	DDENUMRET_CANCEL		0.0003340
+120239	6:03:54.709 PM	1	BasicDD.exe	IDirectDraw7::AddRef (  )	6		0.0000012
+120244	6:03:54.710 PM	1	BasicDD.exe	LoadImageA ( 0x00400000, 101, IMAGE_BITMAP, 1500, 280, LR_DEFAULTCOLOR )	0x8e051869		0.0024757
+120267	6:03:54.713 PM	1	BasicDD.exe	IDirectDrawSurface::Restore (  )	DDENUMRET_CANCEL		0.0000070
+120270	6:03:54.713 PM	1	BasicDD.exe	CreateCompatibleDC ( NULL )	0xab0100fd		0.0001830
+120271	6:03:54.713 PM	1	BasicDD.exe	SelectObject ( 0xab0100fd, 0x8e051869 )	0x0085000f		0.0000078
+120272	6:03:54.713 PM	1	BasicDD.exe	GetObjectA ( 0x8e051869, 24, 0x0019fe14 )	24		0.0000045
+120273	6:03:54.723 PM	1	BasicDD.exe	IDirectDrawSurface::GetSurfaceDesc ( 0x0019fe2c )	DDENUMRET_CANCEL		0.0026091
+120477	6:03:54.740 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb0 )	S_OK		0.0000127
+120489	6:03:54.741 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcac )	S_OK		0.0002000
+120756	6:03:54.757 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000098
+120759	6:03:54.757 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000048
+120766	6:03:54.757 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000033
+120769	6:03:54.757 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000013
+120775	6:03:54.758 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb0 )	S_OK		0.0000071
+120786	6:03:54.769 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcac )	S_OK		0.0000114
+120798	6:03:54.770 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000054
+120801	6:03:54.770 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000032
+120807	6:03:54.770 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000033
+120810	6:03:54.770 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000014
+120816	6:03:54.770 PM	1	BasicDD.exe	IDirectDrawSurface::GetDC ( 0x0019fe10 )	DDENUMRET_CANCEL		0.0013176
+120819	6:03:54.770 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb8 )	S_OK		0.0000045
+120830	6:03:54.770 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb4 )	S_OK		0.0001547
+121097	6:03:54.786 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000081
+121100	6:03:54.786 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000050
+121107	6:03:54.786 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000035
+121110	6:03:54.786 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000014
+121116	6:03:54.786 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb8 )	S_OK		0.0000059
+121127	6:03:54.800 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb4 )	S_OK		0.0000096
+121138	6:03:54.802 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000050
+121141	6:03:54.802 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000024
+121147	6:03:54.802 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000033
+121150	6:03:54.802 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000014
+121250	6:03:54.804 PM	1	BasicDD.exe	StretchBlt ( 0xaf01155b, 0, 0, 1500, 280, 0xab0100fd, 0, 0, 1500, 280, SRCCOPY )	TRUE		0.0006924
+121251	6:03:54.804 PM	1	BasicDD.exe	IDirectDrawSurface::ReleaseDC ( 0xaf01155b )	DDENUMRET_CANCEL		0.0002878
+121254	6:03:54.804 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb8 )	S_OK		0.0000065
+121265	6:03:54.805 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb4 )	S_OK		0.0001551
+121532	6:03:54.832 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000090
+121535	6:03:54.832 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000054
+121542	6:03:54.832 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000040
+121545	6:03:54.832 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000011
+121551	6:03:54.832 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb8 )	S_OK		0.0000056
+121562	6:03:54.833 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fcb4 )	S_OK		0.0000039
+121573	6:03:54.833 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000033
+121576	6:03:54.833 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000014
+121582	6:03:54.834 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000028
+121585	6:03:54.834 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000010
+121607	6:03:54.834 PM	1	BasicDD.exe	DeleteDC ( 0xab0100fd )	TRUE		0.0000199
+121608	6:03:54.834 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0036262
+121670	6:03:54.848 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGING, 0, 1703156 )	0		0.0000024
+121686	6:03:54.848 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCCALCSIZE, 1, 1703116 )	0		0.0000232
+121720	6:03:54.850 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGED, 0, 1703156 )	0		0.0000429
+121750	6:03:54.851 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SIZE, 0, 31457920 )	0		0.0000007
+121767	6:03:54.851 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SYNCPAINT, 4, 0 )	0		0.0006787
+121783	6:03:54.852 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCPAINT, 1, 0 )	0		0.0001491
+121826	6:03:54.863 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_ERASEBKGND, 2231442738, 0 )	1		0.0002310
+121921	6:03:54.865 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000003
+121922	6:03:54.865 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000094
+121928	6:03:54.865 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, 49307, 0, 0 )	0		0.0000013
+121929	6:03:54.865 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0000424
+121930	6:03:54.866 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000003
+121931	6:03:54.866 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000095
+121942	6:03:54.866 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_ACTIVATEAPP, 1, 6704 )	0		0.0000008
+121943	6:03:54.866 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0000689
+121979	6:03:54.866 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000001
+121980	6:03:54.866 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000021
+121983	6:03:54.867 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0027913
+123155	6:03:54.960 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCACTIVATE, 1, 0 )	1		0.0002249
+123234	6:03:54.976 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_WINDOWPOSCHANGING, 0, 1703156 )	0		0.0000012
+123250	6:03:54.976 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCHITTEST, 0, 15728960 )	1		0.0000072
+123273	6:03:54.977 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETCURSOR, 1773072, 33554433 )	0		0.0001162
+123274	6:03:54.977 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000003
+123275	6:03:54.977 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000061
+123281	6:03:54.977 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOUSEMOVE, 0, 15728960 )	0		0.0000008
+123282	6:03:54.977 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0000575
+123288	6:03:54.977 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000002
+123289	6:03:54.978 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000023
+123292	6:03:54.978 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0004184
+123424	6:03:54.989 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000007
+123425	6:03:54.989 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0002458
+123441	6:03:54.989 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_PAINT, 0, 0 )	0		0.0001417
+123452	6:03:54.990 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0002443
+123518	6:03:54.991 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000002
+123519	6:03:54.991 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000029
+123522	6:03:54.991 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0042911
+124646	6:03:55.053 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, 49235, 1, 1697040 )	0		0.0000017
+125101	6:03:55.100 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000003
+125102	6:03:55.100 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000066
+125105	6:03:55.100 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0028848
+125157	6:03:55.103 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCHITTEST, 0, 15728960 )	1		0.0000129
+125180	6:03:55.104 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETCURSOR, 1773072, 33554433 )	0		0.0001760
+125181	6:03:55.104 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000004
+125182	6:03:55.104 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000080
+125188	6:03:55.105 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOUSEMOVE, 0, 15728960 )	0		0.0000011
+125189	6:03:55.105 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0006737
+125195	6:03:55.106 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000003
+125196	6:03:55.106 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000040
+125199	6:03:55.106 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0017306
+125571	6:03:55.131 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000003
+125572	6:03:55.131 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000038
+125575	6:03:55.131 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0000154
+125576	6:03:55.131 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000002
+125577	6:03:55.131 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0001719
+125606	6:03:55.132 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0002672
+125612	6:03:55.132 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCHITTEST, 0, 15728960 )	1		0.0000132
+125635	6:03:55.133 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETCURSOR, 1773072, 33554433 )	0		0.0000082
+125636	6:03:55.133 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000002
+125637	6:03:55.133 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000074
+125643	6:03:55.133 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOUSEMOVE, 0, 15728960 )	0		0.0000010
+125644	6:03:55.133 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0003319
+125700	6:03:55.145 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000003
+125701	6:03:55.145 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000027
+125704	6:03:55.145 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0000062
+125705	6:03:55.145 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000001
+125706	6:03:55.145 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000418
+125714	6:03:55.146 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0002200
+125808	6:03:55.146 PM	1	BasicDD.exe	GetTickCount (  )	80193406		0.0000007
+125809	6:03:55.146 PM	1	BasicDD.exe	IDirectDrawSurface::BltFast ( 245, 170, 0x02fb4f10, 0x0019fe8c, DDBLTFAST_NOCOLORKEY )	DDENUMRET_CANCEL		0.0046565
+125812	6:03:55.146 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fd0c )	S_OK		0.0000063
+125823	6:03:55.147 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fd08 )	S_OK		0.0001338
+126090	6:03:55.162 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000082
+126093	6:03:55.162 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000048
+126100	6:03:55.162 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000034
+126103	6:03:55.162 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000013
+126109	6:03:55.162 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fd0c )	S_OK		0.0000053
+126120	6:03:55.163 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fd08 )	S_OK		0.0000036
+126131	6:03:55.163 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000031
+126134	6:03:55.163 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000012
+126140	6:03:55.163 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000027
+126143	6:03:55.163 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000009
+126149	6:03:55.163 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fd0c )	S_OK		0.0000034
+126160	6:03:55.164 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fd08 )	S_OK		0.0001623
+126427	6:03:55.177 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000071
+126430	6:03:55.177 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000044
+126437	6:03:55.177 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000019
+126440	6:03:55.177 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000007
+126447	6:03:55.177 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fca0 )	S_OK		0.0000050
+126458	6:03:55.177 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fc9c )	S_OK		0.0001687
+126725	6:03:55.191 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000111
+126728	6:03:55.191 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000048
+126735	6:03:55.192 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000031
+126738	6:03:55.192 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000012
+126746	6:03:55.192 PM	1	BasicDD.exe	IDirectDrawSurface::GetPixelFormat ( 0x0019fd00 )	DDENUMRET_CANCEL		0.0002032
+126749	6:03:55.192 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb94 )	S_OK		0.0000052
+126760	6:03:55.193 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb90 )	S_OK		0.0001652
+127027	6:03:55.207 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000085
+127030	6:03:55.207 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000046
+127037	6:03:55.208 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000035
+127040	6:03:55.208 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000016
+127046	6:03:55.208 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb94 )	S_OK		0.0000050
+127057	6:03:55.208 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb90 )	S_OK		0.0000035
+127068	6:03:55.209 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000033
+127071	6:03:55.209 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000013
+127077	6:03:55.209 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000031
+127080	6:03:55.209 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000014
+127168	6:03:55.211 PM	1	BasicDD.exe	IDirectDrawSurface::IsLost (  )	DDENUMRET_CANCEL		0.0000020
+127171	6:03:55.211 PM	1	BasicDD.exe	IDirectDrawSurface::IsLost (  )	DDENUMRET_CANCEL		0.0000010
+127174	6:03:55.212 PM	1	BasicDD.exe	IDirectDrawSurface::GetDC ( 0x0019fcb4 )	DDENUMRET_CANCEL		0.0015400
+127177	6:03:55.212 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb5c )	S_OK		0.0000073
+127188	6:03:55.212 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb58 )	S_OK		0.0001774
+127455	6:03:55.224 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000092
+127458	6:03:55.224 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000054
+127465	6:03:55.224 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000042
+127468	6:03:55.224 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000019
+127547	6:03:55.226 PM	1	BasicDD.exe	IDirectDrawSurface::GetDC ( 0x0019fcb8 )	DDENUMRET_CANCEL		0.0002917
+127550	6:03:55.226 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb5c )	S_OK		0.0000079
+127562	6:03:55.227 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb58 )	S_OK		0.0001398
+127829	6:03:55.239 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000102
+127832	6:03:55.239 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000054
+127839	6:03:55.240 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000066
+127842	6:03:55.240 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000028
+127848	6:03:55.240 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb5c )	S_OK		0.0000076
+127859	6:03:55.240 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb58 )	S_OK		0.0000056
+127870	6:03:55.240 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000048
+127873	6:03:55.241 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000025
+127879	6:03:55.241 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000037
+127882	6:03:55.241 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000015
+127894	6:03:55.241 PM	1	BasicDD.exe	IDirectDrawSurface::ReleaseDC ( 0x07011e7f )	DDENUMRET_CANCEL		0.0002316
+127897	6:03:55.241 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb5c )	S_OK		0.0000059
+127908	6:03:55.241 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb58 )	S_OK		0.0001363
+128175	6:03:55.255 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000096
+128178	6:03:55.255 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000055
+128185	6:03:55.255 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000047
+128188	6:03:55.255 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000021
+128194	6:03:55.255 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb5c )	S_OK		0.0000065
+128205	6:03:55.255 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb58 )	S_OK		0.0000043
+128216	6:03:55.256 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000043
+128219	6:03:55.256 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000025
+128225	6:03:55.256 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000033
+128228	6:03:55.256 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000013
+128238	6:03:55.256 PM	1	BasicDD.exe	IDirectDrawSurface::ReleaseDC ( 0x0b011e78 )	DDENUMRET_CANCEL		0.0003261
+128241	6:03:55.256 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb5c )	S_OK		0.0000054
+128252	6:03:55.257 PM	1	BasicDD.exe	IDirectDrawSurface::QueryInterface ( IUnknown, 0x0019fb58 )	S_OK		0.0001485
+128519	6:03:55.271 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000088
+128522	6:03:55.271 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000045
+128529	6:03:55.271 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000077
+128532	6:03:55.271 PM	1	BasicDD.exe	IUnknown::Release (  )	0		0.0000045
+128556	6:03:55.272 PM	1	BasicDD.exe	IDirectDrawSurface::Flip ( NULL, 0 )	DDENUMRET_CANCEL		0.0032883
+128560	6:03:55.272 PM	1	BasicDD.exe	IDirectDrawSurface::GetClipper ( 0x0019fd94 )	DDERR_NOCLIPPERATTACHED	0x88760238 = 	0.0000080
+128563	6:03:55.272 PM	1	BasicDD.exe	IDirectDrawSurface::GetClipper ( 0x0019fd90 )	DDERR_NOCLIPPERATTACHED	0x88760238 = 	0.0000011
+129316	6:03:55.303 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000008
+129317	6:03:55.303 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0015655
+129323	6:03:55.303 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_GETICON, 1, 96 )	0		0.0002681
+129329	6:03:55.304 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCHITTEST, 0, 15728960 )	1		0.0000122
+129352	6:03:55.306 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETCURSOR, 1773072, 33554433 )	0		0.0001114
+129353	6:03:55.306 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000004
+129354	6:03:55.306 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000066
+129360	6:03:55.306 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOUSEMOVE, 0, 15728960 )	0		0.0000009
+129361	6:03:55.306 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0011904
+129367	6:03:55.307 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCHITTEST, 0, 15728960 )	1		0.0000098
+129390	6:03:55.308 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETCURSOR, 1773072, 33554433 )	0		0.0001738
+129391	6:03:55.308 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000005
+129392	6:03:55.308 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000072
+129398	6:03:55.308 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOUSEMOVE, 0, 15728960 )	0		0.0000011
+129399	6:03:55.308 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0002263
+129400	6:03:55.309 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000005
+129401	6:03:55.309 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0007118
+129407	6:03:55.309 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_GETICON, 2, 96 )	0		0.0003179
+129408	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000004
+129409	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000029
+129410	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129411	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000013
+129412	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129413	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000012
+129414	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129415	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129416	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129417	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129418	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129419	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129420	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129421	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129422	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129423	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129424	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129425	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129426	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129427	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129428	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129429	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129430	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129431	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129432	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129433	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129434	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129435	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129436	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129437	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129438	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129439	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129440	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129441	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129442	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129443	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129444	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129445	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129446	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129447	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129448	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129449	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129450	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129451	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129452	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129453	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129454	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129455	6:03:55.310 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129456	6:03:55.310 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129457	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129458	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129459	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129460	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129461	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129462	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129463	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129464	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129465	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129466	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129467	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129468	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129469	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129470	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129471	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129472	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129473	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129474	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129475	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129476	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129477	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129478	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129479	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129480	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129481	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129482	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129483	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )			
+129484	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129485	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129486	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129487	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129488	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129489	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129490	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129491	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129492	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129493	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129494	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129495	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129496	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129497	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129498	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129499	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129500	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129501	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129502	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129503	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129504	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129505	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129506	6:03:55.311 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129507	6:03:55.311 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000012
+129508	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129509	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129510	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129511	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129512	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129513	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129514	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129515	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129516	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129517	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000012
+129518	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129519	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000013
+129520	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129521	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129522	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129523	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129524	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000001
+129525	6:03:55.312 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129526	6:03:55.312 PM	1	BasicDD.exe	GetTickCount (  )	80193562		0.0000002
+129527	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000064
+129528	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000005
+129529	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129530	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129531	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129532	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129533	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129534	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129535	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129536	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129537	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129538	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129539	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129540	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129541	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129542	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129543	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000047
+129544	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000005
+129545	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000020
+129546	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129547	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000014
+129548	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129549	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129550	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129551	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129552	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129553	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129554	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )			
+129555	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129556	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129557	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129558	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129559	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129560	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129561	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129562	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129563	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129564	6:03:55.317 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129565	6:03:55.317 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129566	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129567	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129568	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129569	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129570	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129571	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129572	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129573	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129574	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129575	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129576	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129577	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129578	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129579	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129580	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129581	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129582	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129583	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129584	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129585	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129586	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129587	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129588	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129589	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129590	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129591	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129592	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129593	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129594	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129595	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129596	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129597	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129598	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129599	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0001650
+129600	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000004
+129601	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000023
+129602	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129603	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000012
+129604	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129605	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129606	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129607	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129608	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129609	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129610	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129611	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129612	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129613	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129614	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129615	6:03:55.318 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129616	6:03:55.318 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129617	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129618	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129619	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000014
+129620	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129621	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129622	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129623	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129624	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129625	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129626	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129627	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000012
+129628	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129629	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129630	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129631	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129632	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129633	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129634	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129635	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129636	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129637	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129638	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129639	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129640	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129641	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129642	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129643	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129644	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129645	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129646	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129647	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129648	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129649	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129650	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129651	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129652	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129653	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129654	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129655	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129656	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129657	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000012
+129658	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129659	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129660	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129661	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129662	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129663	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129664	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129665	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129666	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129667	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129668	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129669	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129670	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129671	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129672	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129673	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129674	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129675	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129676	6:03:55.319 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129677	6:03:55.319 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129678	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129679	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129680	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129681	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000014
+129682	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129683	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129684	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129685	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129686	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129687	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129688	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129689	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129690	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129691	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129692	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129693	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129694	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129695	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129696	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129697	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129698	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129699	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129700	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129701	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129702	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129703	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129704	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129705	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129706	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129707	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129708	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000002
+129709	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129710	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129711	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129712	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129713	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129714	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193578		0.0000001
+129715	6:03:55.320 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129716	6:03:55.320 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000011
+129717	6:03:55.332 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0022301
+129723	6:03:55.332 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_GETICON, 0, 96 )	0		0.0002533
+129729	6:03:55.334 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCHITTEST, 0, 15728960 )	1		0.0000135
+129752	6:03:55.335 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETCURSOR, 1773072, 33554433 )	0		0.0001263
+129753	6:03:55.335 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000004
+129754	6:03:55.335 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000081
+129760	6:03:55.335 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOUSEMOVE, 0, 15728960 )	0		0.0000011
+129761	6:03:55.335 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0001362
+129762	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000005
+129763	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000026
+129764	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129765	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129766	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129767	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129768	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129769	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129770	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129771	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129772	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129773	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129774	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129775	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129776	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129777	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129778	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129779	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129780	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129781	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129782	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129783	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129784	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129785	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129786	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129787	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129788	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129789	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129790	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129791	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129792	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129793	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129794	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129795	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129796	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129797	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129798	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129799	6:03:55.336 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129800	6:03:55.336 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129801	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129802	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129803	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129804	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129805	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129806	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129807	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129808	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129809	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129810	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129811	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129812	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129813	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129814	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129815	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129816	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129817	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129818	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129819	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129820	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129821	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129822	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129823	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129824	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129825	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129826	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129827	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129828	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129829	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129830	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129831	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129832	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129833	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129834	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129835	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129836	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129837	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129838	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129839	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000013
+129840	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129841	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000028
+129843	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129844	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129845	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129846	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )			
+129847	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129848	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129849	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129850	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129851	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000003
+129852	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129853	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129854	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000008
+129855	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129856	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129857	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000003
+129858	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129859	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129860	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129861	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129862	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129863	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129864	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129865	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129866	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129867	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129868	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129869	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129870	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129871	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129872	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129873	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129874	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129875	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129876	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000007
+129877	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129878	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129879	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129880	6:03:55.337 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000006
+129881	6:03:55.337 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129882	6:03:55.338 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000011
+129883	6:03:55.338 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129884	6:03:55.338 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129885	6:03:55.338 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000002
+129886	6:03:55.338 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129887	6:03:55.338 PM	1	BasicDD.exe	GetTickCount (  )	80193593		0.0000001
+129888	6:03:55.338 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	TRUE		0.0003691
+129894	6:03:55.348 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_NCHITTEST, 0, 15728960 )	1		0.0000153
+129917	6:03:55.349 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_SETCURSOR, 1773072, 33554433 )	0		0.0000354
+129918	6:03:55.349 PM	1	BasicDD.exe	TranslateMessage ( 0x0019fed0 )	FALSE		0.0000004
+129919	6:03:55.349 PM	1	BasicDD.exe	DispatchMessageA ( 0x0019fed0 )	0		0.0000056
+129925	6:03:55.349 PM	1	BasicDD.exe	DefWindowProcA ( 0x001b0e10, WM_MOUSEMOVE, 0, 15728960 )	0		0.0000007
+129926	6:03:55.349 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000277
+129927	6:03:55.349 PM	1	BasicDD.exe	GetTickCount (  )	80193609		0.0000004
+129928	6:03:55.349 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000016
+129929	6:03:55.349 PM	1	BasicDD.exe	GetTickCount (  )	80193609		0.0000002
+129930	6:03:55.349 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129931	6:03:55.349 PM	1	BasicDD.exe	GetTickCount (  )	80193609		0.0000002
+129932	6:03:55.349 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000010
+129933	6:03:55.349 PM	1	BasicDD.exe	GetTickCount (  )	80193609		0.0000002
+129934	6:03:55.349 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129935	6:03:55.349 PM	1	BasicDD.exe	GetTickCount (  )	80193609		0.0000002
+129936	6:03:55.349 PM	1	BasicDD.exe	PeekMessageA ( 0x0019fed0, NULL, 0, 0, PM_REMOVE )	FALSE		0.0000009
+129937	6:03:55.349 PM	1	BasicDD.exe	GetTickCount (  )	80193609		0.0000001
