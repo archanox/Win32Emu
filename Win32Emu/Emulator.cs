@@ -1215,10 +1215,10 @@ public sealed class Emulator : IDisposable
                 // Post a synthetic WM_PAINT message to keep the message queue active
                 // This is especially important in headless mode where SDL may not generate any events
                 // DirectDraw does the same thing after Flip - we need it for apps that don't use DirectDraw
-                var firstWindow = _env?.GetAllWindowHandles().FirstOrDefault();
-                if (firstWindow.HasValue && firstWindow.Value != 0)
+                var firstWindow = _env?.GetAllWindowHandles().FirstOrDefault() ?? 0;
+                if (firstWindow != 0)
                 {
-                    _env?.PostMessage(firstWindow.Value, (uint)Win32.Messaging.WM.PAINT, 0, 0);
+                    _env?.PostMessage(firstWindow, (uint)Win32.Messaging.WM.PAINT, 0, 0);
                 }
             }
 

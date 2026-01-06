@@ -6,8 +6,9 @@ set -euo pipefail
 
 # Configuration
 TIMEOUT_SECONDS=10
-PATTERN_FAIL="fail:"
-PATTERN_WARN="warn:"
+# Log patterns - case-insensitive to match various log formats
+PATTERN_FAIL="[Ff]ail:|\[Error\]|[Ee]rror|err:"
+PATTERN_WARN="[Ww]arn:|\[Warning\]|[Ww]arning|wrn:"
 PATTERN_HEAP_EXEC="heap memory range"
 PATTERN_MEMORY_ERROR="Memory access out of range"
 
