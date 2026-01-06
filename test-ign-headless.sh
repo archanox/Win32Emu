@@ -113,7 +113,7 @@ for app_name in "${!APPS[@]}"; do
         
         # Check for heap execution
         if [ $heap_exec_count -gt 0 ]; then
-            first_heap_exec=$(grep "heap memory range" "$log_file" | head -1)
+            first_heap_exec=$(grep "$PATTERN_HEAP_EXEC" "$log_file" | head -1)
             echo "      First heap execution: $first_heap_exec"
         fi
     else

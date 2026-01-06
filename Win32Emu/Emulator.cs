@@ -47,8 +47,9 @@ public sealed class Emulator : IDisposable
     private const ulong PROGRESS_LOG_INTERVAL = 10000;
     
     // Event processing interval - process backend events and post synthetic messages
-    // Set to 1000 iterations (~1-10ms) for responsive message handling
+    // Set to 1000 iterations for responsive message handling
     // Lower than PROGRESS_LOG_INTERVAL to ensure apps waiting for messages don't block for long
+    // Note: Based on instruction count, not real time - actual latency depends on CPU performance
     private const ulong EVENT_PROCESSING_INTERVAL = 1000;
     
     // Logging throttle interval when stuck at same EIP (reduce spam)
