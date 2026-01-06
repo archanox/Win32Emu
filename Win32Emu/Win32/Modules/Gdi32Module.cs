@@ -1037,7 +1037,7 @@ namespace Win32Emu.Win32.Modules
 					switch (rop)
 					{
 						case (uint)RasterOperation.SRCCOPY:
-							CopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							CopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel, src.Palette, dest.Palette);
 							break;
 
 						case (uint)RasterOperation.SRCPAINT:
@@ -1058,7 +1058,7 @@ namespace Win32Emu.Win32.Modules
 
 						default:
 							// Default to SRCCOPY for unknown operations
-							CopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel);
+							CopyPixel(src.Bits, srcOffset, srcBytesPerPixel, dest.Bits, destOffset, destBytesPerPixel, src.Palette, dest.Palette);
 							break;
 					}
 				}
@@ -1286,8 +1286,37 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Copy pixel from source to destination
 		/// </summary>
-		private void CopyPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp)
+		private void CopyPixel(byte[] src, int srcOffset, int srcBpp, byte[] dest, int destOffset, int destBpp, byte[]? srcPalette = null, byte[]? destPalette = null)
 		{
+			// Handle palette conversion for 8bpp to 16bpp (RGB565)
+			if (srcBpp == 1 && destBpp == 2 && srcPalette != null && srcOffset < src.Length)
+			{
+				// Source is 8bpp palettized, destination is 16bpp RGB565
+				var paletteIndex = src[srcOffset];
+				if (paletteIndex * 4 + 2 < srcPalette.Length)
+				{
+					// RGBQUAD format: B, G, R, reserved
+					var b = srcPalette[paletteIndex * 4];
+					var g = srcPalette[paletteIndex * 4 + 1];
+					var r = srcPalette[paletteIndex * 4 + 2];
+					
+					// Convert RGB888 to RGB565
+					var r5 = (ushort)((r >> 3) & 0x1F);
+					var g6 = (ushort)((g >> 2) & 0x3F);
+					var b5 = (ushort)((b >> 3) & 0x1F);
+					var rgb565 = (ushort)((r5 << 11) | (g6 << 5) | b5);
+					
+					// Write RGB565 value to destination
+					if (destOffset + 1 < dest.Length)
+					{
+						dest[destOffset] = (byte)(rgb565 & 0xFF);
+						dest[destOffset + 1] = (byte)((rgb565 >> 8) & 0xFF);
+					}
+					return;
+				}
+			}
+			
+			// Default: Direct byte copy for same or different bpp
 			var bytesToCopy = Math.Min(srcBpp, destBpp);
 			for (var i = 0; i < bytesToCopy && srcOffset + i < src.Length && destOffset + i < dest.Length; i++)
 			{
@@ -1495,8 +1524,8 @@ namespace Win32Emu.Win32.Modules
 				{
 					_logger.LogInformation("[Gdi32] SelectObject: Converting User32 bitmap handle 0x{HObject:X8} to GDI bitmap (bitmap data size: {Size} bytes)", hObject, bitmapData.Length);
 					
-					// Parse the bitmap file data to get dimensions and pixel data
-					if (TryParseBitmapFile(bitmapData, out var width, out var height, out var bpp, out var pixelData, out var stride))
+					// Parse the bitmap file data to get dimensions, pixel data, and palette
+					if (TryParseBitmapFile(bitmapData, out var width, out var height, out var bpp, out var pixelData, out var stride, out var palette))
 					{
 						// Create a GDI bitmap object from the bitmap data
 						var gdiBitmapHandle = _nextGdiObjectHandle++;
@@ -1506,12 +1535,13 @@ namespace Win32Emu.Win32.Modules
 							Height = height,
 							BitCount = (uint)bpp,
 							Bits = pixelData,
-							Stride = stride
+							Stride = stride,
+							Palette = palette
 						};
 						
 						_gdiObjects[gdiBitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = gdiBitmapData };
-						_logger.LogInformation("[Gdi32] SelectObject: Created GDI bitmap 0x{GdiBitmapHandle:X8} from User32 handle 0x{HObject:X8} ({Width}x{Height}, {Bpp}bpp, stride={Stride}, pixelData={PixelSize} bytes)",
-							gdiBitmapHandle, hObject, width, height, bpp, stride, pixelData.Length);
+						_logger.LogInformation("[Gdi32] SelectObject: Created GDI bitmap 0x{GdiBitmapHandle:X8} from User32 handle 0x{HObject:X8} ({Width}x{Height}, {Bpp}bpp, stride={Stride}, pixelData={PixelSize} bytes, palette={HasPalette})",
+							gdiBitmapHandle, hObject, width, height, bpp, stride, pixelData.Length, palette != null);
 						
 						// Now select the GDI bitmap into the DC
 						if (_deviceContexts.TryGetValue(hdc, out var dc))
@@ -2601,16 +2631,17 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Parses a bitmap file (BMP format) or DIB data to extract dimensions and pixel data.
+		/// Parses a bitmap file (BMP format) or DIB data to extract dimensions, pixel data, and palette.
 		/// Handles both complete BMP files (with BITMAPFILEHEADER) and raw DIB data (just BITMAPINFOHEADER + pixels).
 		/// </summary>
-		private bool TryParseBitmapFile(byte[] bitmapData, out int width, out int height, out int bpp, out byte[] pixelData, out int stride)
+		private bool TryParseBitmapFile(byte[] bitmapData, out int width, out int height, out int bpp, out byte[] pixelData, out int stride, out byte[]? palette)
 		{
 			width = 0;
 			height = 0;
 			bpp = 0;
 			pixelData = Array.Empty<byte>();
 			stride = 0;
+			palette = null;
 
 			try
 			{
@@ -2643,17 +2674,26 @@ namespace Win32Emu.Win32.Modules
 				// Calculate stride (must be DWORD-aligned)
 				stride = ((width * bpp + 31) / 32) * 4;
 
-				// Calculate pixel data offset
+				// Calculate pixel data offset and extract palette for palettized images
 				uint pixelDataOffset;
+				uint paletteOffset = 0;
+				uint paletteSize = 0;
+				
 				if (hasBitmapFileHeader)
 				{
 					// BMP file: read offset from file header
 					pixelDataOffset = BitConverter.ToUInt32(bitmapData, 10);
+					// Palette is between header and pixel data
+					paletteOffset = (uint)(infoHeaderOffset + headerSize);
+					if (pixelDataOffset > paletteOffset)
+					{
+						paletteSize = pixelDataOffset - paletteOffset;
+					}
 				}
 				else
 				{
 					// DIB data: pixels start after info header and color table (if any)
-					var colorTableSize = 0u;
+					paletteOffset = (uint)(infoHeaderOffset + headerSize);
 					if (bpp <= 8)
 					{
 						// For palettized images, read number of colors used
@@ -2663,9 +2703,17 @@ namespace Win32Emu.Win32.Modules
 							// If colorsUsed is 0, use maximum for bpp
 							colorsUsed = (uint)(1 << bpp);
 						}
-						colorTableSize = colorsUsed * 4; // Each color table entry is 4 bytes (RGBQUAD)
+						paletteSize = colorsUsed * 4; // Each color table entry is 4 bytes (RGBQUAD)
 					}
-					pixelDataOffset = (uint)(infoHeaderOffset + headerSize + colorTableSize);
+					pixelDataOffset = paletteOffset + paletteSize;
+				}
+
+				// Extract palette for palettized images
+				if (bpp <= 8 && paletteSize > 0 && paletteOffset + paletteSize <= bitmapData.Length)
+				{
+					palette = new byte[paletteSize];
+					Array.Copy(bitmapData, (int)paletteOffset, palette, 0, (int)paletteSize);
+					_logger.LogInformation("[Gdi32] TryParseBitmapFile: Extracted palette with {Colors} colors", paletteSize / 4);
 				}
 
 				// Extract pixel data
@@ -2712,6 +2760,7 @@ namespace Win32Emu.Win32.Modules
 			public uint BitCount { get; set; }
 			public byte[]? Bits { get; set; }
 			public int Stride { get; set; } // Stride/pitch in bytes (0 means auto-calculate)
+			public byte[]? Palette { get; set; } // Color palette for palettized bitmaps (RGBQUAD format: B, G, R, reserved)
 		}
 
 		/// <summary>
