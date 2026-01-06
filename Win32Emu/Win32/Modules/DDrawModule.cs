@@ -17,6 +17,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly uint _imageBase;
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
+		private readonly Gdi32Module? _gdi32Module;
 
 		// RGBA pixel format constant
 		private const int BytesPerPixelRgba = 4;
@@ -34,12 +35,13 @@ namespace Win32Emu.Win32.Modules
 		private ICpu? _currentCpu;
 		private VirtualMemory? _currentMemory;
 
-		public DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null)
+		public DDrawModule(ProcessEnvironment env, uint imageBase, PeImageLoader? peLoader = null, ILogger? logger = null, Gdi32Module? gdi32Module = null)
 		{
 			_env = env;
 			_imageBase = imageBase;
 			_peLoader = peLoader;
 			_logger = logger ?? NullLogger.Instance;
+			_gdi32Module = gdi32Module;
 		}
 
 		public string Name => "DDRAW.DLL";
@@ -1274,6 +1276,13 @@ namespace Win32Emu.Win32.Modules
 					return (uint)DDResult.DDERR_INVALIDOBJECT;
 				}
 
+				// Unregister the DC from GDI32
+				if (_gdi32Module != null)
+				{
+					_gdi32Module.UnregisterDirectDrawSurfaceDC(hDC);
+					_logger.LogInformation("[DDraw] Unregistered DC 0x{HDC:X8} from GDI32", hDC);
+				}
+
 				_surfaceDCs.Remove(hDC);
 				_logger.LogInformation("[DDraw] Released DC 0x{HDC:X8} for surface 0x{ThisPtr:X8}", hDC, thisPtr);
 				return (uint)DDResult.DD_OK;
@@ -1522,6 +1531,22 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DDResult.DDERR_INVALIDPARAMS;
 			}
 
+			// Find the surface by COM object address
+			var surface = _surfaces.Values.FirstOrDefault(s => s.ComObjectAddress == thisPtr);
+
+			if (surface == null)
+			{
+				_logger.LogError("[DDraw] GetDC: could not find surface with COM address 0x{ThisPtr:X8}", thisPtr);
+				return (uint)DDResult.DDERR_INVALIDOBJECT;
+			}
+
+			// Ensure surface has bits allocated
+			if (surface.Bits == null)
+			{
+				surface.Bits = new byte[surface.Pitch * surface.Height];
+				_logger.LogInformation("[DDraw] GetDC: Allocated bits for surface 0x{Handle:X8}", surface.Handle);
+			}
+
 			// Create a device context handle and track which surface it belongs to
 			// This allows ReleaseDC to properly validate and clean up
 			// Note: The emulator runs Win32 applications in a single-threaded context,
@@ -1529,6 +1554,17 @@ namespace Win32Emu.Win32.Modules
 			var dcHandle = _nextDCHandle++;
 			_surfaceDCs[dcHandle] = thisPtr;
 			_env.MemWrite32(lphDC, dcHandle);
+
+			// Register the DC with GDI32 so GDI operations can write to the DirectDraw surface
+			if (_gdi32Module != null && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
+			{
+				_gdi32Module.RegisterDirectDrawSurfaceDC(dcHandle, surface.Bits, surface.Width, surface.Height, surface.Pitch, ddrawObj.BitsPerPixel);
+				_logger.LogInformation("[DDraw] Registered DC 0x{DcHandle:X8} with GDI32 for DirectDraw surface", dcHandle);
+			}
+			else if (_gdi32Module == null)
+			{
+				_logger.LogWarning("[DDraw] GetDC: Gdi32Module not available, GDI operations on this DC will not work");
+			}
 
 			_logger.LogInformation("[DDraw] Created DC handle 0x{DcHandle:X8} for surface COM object 0x{ThisPtr:X8}", dcHandle, thisPtr);
 			return (uint)DDResult.DD_OK;

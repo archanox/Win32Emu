@@ -6,7 +6,7 @@ using Win32Emu.Memory;
 
 namespace Win32Emu.Win32.Modules
 {
-	internal class Gdi32Module : IWin32ModuleUnsafe
+	public class Gdi32Module : IWin32ModuleUnsafe
 	{
 		private readonly ProcessEnvironment _env;
 		private readonly uint _imageBase;
@@ -2544,6 +2544,69 @@ namespace Win32Emu.Win32.Modules
 			public uint Planes { get; set; }
 			public uint BitCount { get; set; }
 			public byte[]? Bits { get; set; }
+		}
+
+		/// <summary>
+		/// Registers a DirectDraw surface DC so that GDI operations can write to the surface.
+		/// This is called by DDrawModule when IDirectDrawSurface::GetDC is called.
+		/// </summary>
+		/// <param name="dcHandle">The DC handle created by DirectDraw</param>
+		/// <param name="surfaceBits">Pointer to the surface bits array</param>
+		/// <param name="width">Surface width in pixels</param>
+		/// <param name="height">Surface height in pixels</param>
+		/// <param name="pitch">Surface pitch (stride) in bytes</param>
+		/// <param name="bitsPerPixel">Bits per pixel (8, 16, 24, or 32)</param>
+		public void RegisterDirectDrawSurfaceDC(uint dcHandle, byte[] surfaceBits, int width, int height, int pitch, int bitsPerPixel)
+		{
+			_logger.LogInformation("[Gdi32] RegisterDirectDrawSurfaceDC: DC=0x{DcHandle:X8}, size={Width}x{Height}, pitch={Pitch}, bpp={Bpp}",
+				dcHandle, width, height, pitch, bitsPerPixel);
+
+			// Create a device context if it doesn't exist
+			if (!_deviceContexts.ContainsKey(dcHandle))
+			{
+				_deviceContexts[dcHandle] = new DeviceContext { Handle = dcHandle };
+			}
+
+			// Create a synthetic bitmap object that wraps the DirectDraw surface bits
+			var bitmapHandle = _nextGdiObjectHandle++;
+			var bitmapData = new BitmapData
+			{
+				Width = width,
+				Height = height,
+				BitCount = (uint)bitsPerPixel,
+				Bits = surfaceBits
+			};
+
+			_gdiObjects[bitmapHandle] = new GdiObject { Type = GdiObjectType.Bitmap, Bitmap = bitmapData };
+
+			// Select the bitmap into the DC so GDI operations work on it
+			_deviceContexts[dcHandle].SelectedBitmap = bitmapHandle;
+
+			_logger.LogInformation("[Gdi32] Created bitmap handle 0x{BitmapHandle:X8} for DirectDraw surface and selected into DC 0x{DcHandle:X8}",
+				bitmapHandle, dcHandle);
+		}
+
+		/// <summary>
+		/// Unregisters a DirectDraw surface DC.
+		/// This is called by DDrawModule when IDirectDrawSurface::ReleaseDC is called.
+		/// </summary>
+		/// <param name="dcHandle">The DC handle to unregister</param>
+		public void UnregisterDirectDrawSurfaceDC(uint dcHandle)
+		{
+			_logger.LogInformation("[Gdi32] UnregisterDirectDrawSurfaceDC: DC=0x{DcHandle:X8}", dcHandle);
+
+			if (_deviceContexts.TryGetValue(dcHandle, out var dc))
+			{
+				// Remove the synthetic bitmap object
+				if (dc.SelectedBitmap != 0)
+				{
+					_gdiObjects.Remove(dc.SelectedBitmap);
+					_logger.LogDebug("[Gdi32] Removed bitmap handle 0x{BitmapHandle:X8}", dc.SelectedBitmap);
+				}
+
+				// Remove the device context
+				_deviceContexts.Remove(dcHandle);
+			}
 		}
 
 		private class DeviceContext
