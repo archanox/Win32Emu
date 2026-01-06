@@ -1,9 +1,429 @@
 Using launch settings from /home/runner/work/Win32Emu/Win32Emu/Win32Emu.Gui/Properties/launchSettings.json...
-Warning: Could not enable file logging: File not found: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_112854.log
+Warning: Could not enable file logging: File not found: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_130443.log
 info: Win32Emu.Emulator[0]
-      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_112854.log
+      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260106_130443.log
 info: Win32Emu.Emulator[0]
-      Using existing virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+      Creating virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] VHD disk formatted with FAT32
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Created and formatted Vhd disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (536870912 bytes)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (Read-Write)
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Created directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      Created root directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Starting copy of 29 files to virtual disk
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 1/29: IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS.EXE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='IGN_TEAS.EXE'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN_TEAS.EXE (290816 bytes) [1/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 2/29: README.TXT
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\README.TXT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='README.TXT'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\README.TXT
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied README.TXT (2662 bytes) [2/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Created directory: \ign_teas\DATA
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 3/29: IGN3.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN3.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN3.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN3.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN3.TEX (65536 bytes) [3/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 4/29: IGN.PSQ
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.PSQ'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.PSQ'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN.PSQ
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.PSQ (288 bytes) [4/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 5/29: IGN6.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN6.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN6.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN6.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN6.DPS (23059 bytes) [5/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 6/29: IGN.PFM
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.PFM'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.PFM'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN.PFM
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.PFM (5831571 bytes) [6/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 7/29: IGN5.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN5.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN5.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN5.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN5.DPS (23088 bytes) [7/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 8/29: IGN0.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN0.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN0.PIC'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN0.PIC
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN0.PIC (64846 bytes) [8/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 9/29: IGN1.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN1.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN1.PIC'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN1.PIC
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN1.PIC (308046 bytes) [9/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 10/29: IGN3.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN3.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN3.PIC'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN3.PIC
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN3.PIC (308046 bytes) [10/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 11/29: IGN8.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN8.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN8.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN8.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN8.TEX (65536 bytes) [11/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 12/29: IGN4.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN4.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN4.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN4.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN4.DPS (23066 bytes) [12/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 13/29: IGN4.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN4.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN4.PIC'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN4.PIC
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN4.PIC (308046 bytes) [13/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 14/29: IGN2.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN2.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN2.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN2.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN2.TEX (393280 bytes) [14/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 15/29: IGN7.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN7.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN7.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN7.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN7.DPS (23055 bytes) [15/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 16/29: IGN.PAN
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.PAN'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.PAN'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN.PAN
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.PAN (65536 bytes) [16/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 17/29: IGN1.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN1.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN1.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN1.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN1.DPS (45272 bytes) [17/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 18/29: IGN2.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN2.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN2.PIC'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN2.PIC
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN2.PIC (308046 bytes) [18/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 19/29: IGN6.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN6.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN6.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN6.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN6.TEX (32768 bytes) [19/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 20/29: IGN2.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN2.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN2.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN2.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN2.DPS (23049 bytes) [20/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 21/29: IGN1.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN1.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN1.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN1.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN1.TEX (1048768 bytes) [21/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 22/29: IGN7.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN7.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN7.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN7.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN7.TEX (65536 bytes) [22/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 23/29: IGN.SHD
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.SHD'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.SHD'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN.SHD
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.SHD (65536 bytes) [23/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 24/29: IGN3.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN3.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN3.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN3.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN3.DPS (23097 bytes) [24/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 25/29: IGN35.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN35.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN35.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN35.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN35.DPS (23030 bytes) [25/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 26/29: IGN25.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN25.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN25.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN25.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN25.DPS (23046 bytes) [26/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 27/29: IGN4.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN4.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN4.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN4.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN4.TEX (65536 bytes) [27/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 28/29: IGN.COL
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.COL'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.COL'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN.COL
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.COL (776 bytes) [28/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 29/29: IGN5.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN5.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN5.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN5.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN5.TEX (65536 bytes) [29/29]
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Disposed
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Virtual disk created successfully: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (29/29 files copied)
 info: Win32Emu.Emulator[0]
       Using virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
 info: Win32Emu.Emulator[0]
@@ -5023,99 +5443,3 @@ warn: Win32Emu.Emulator[0]
       [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
 dbug: Win32Emu.Emulator[0]
       [Loop Check] Instruction 15010000: EIP=0x004122C9
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15020000: EIP=0x004122CA
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15030000: EIP=0x004122CC
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15040000: EIP=0x004122D1
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15050000: EIP=0x004122D3
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15060000: EIP=0x004122D5
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15070000: EIP=0x004122D7
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15080000: EIP=0x004122D9
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15090000: EIP=0x004122DC
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15100000: EIP=0x004122C4
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] Emulator has executed 15100000 instructions and may be stuck in a loop. EIP=0x004122C4
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15110000: EIP=0x004122C7
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15120000: EIP=0x004122C9
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15130000: EIP=0x004122CA
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15140000: EIP=0x004122CC
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15150000: EIP=0x004122D1
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15160000: EIP=0x004122D3
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15170000: EIP=0x004122D5
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15180000: EIP=0x004122D7
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15190000: EIP=0x004122D9
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15200000: EIP=0x004122DC
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] Emulator has executed 15200000 instructions and may be stuck in a loop. EIP=0x004122DC
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15210000: EIP=0x004122C4
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15220000: EIP=0x004122C7
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15230000: EIP=0x004122C9
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15240000: EIP=0x004122CA
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15250000: EIP=0x004122CC
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15260000: EIP=0x004122D1
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15270000: EIP=0x004122D3
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15280000: EIP=0x004122D5
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15290000: EIP=0x004122D7
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15300000: EIP=0x004122D9
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] Emulator has executed 15300000 instructions and may be stuck in a loop. EIP=0x004122D9
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15310000: EIP=0x004122DC
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15320000: EIP=0x004122C4
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15330000: EIP=0x004122C7
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15340000: EIP=0x004122C9
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15350000: EIP=0x004122CA
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15360000: EIP=0x004122CC
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15370000: EIP=0x004122D1
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15380000: EIP=0x004122D3
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15390000: EIP=0x004122D5
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15400000: EIP=0x004122D7
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] Emulator has executed 15400000 instructions and may be stuck in a loop. EIP=0x004122D7
-warn: Win32Emu.Emulator[0]
-      [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
-dbug: Win32Emu.Emulator[0]
-      [Loop Check] Instruction 15410000: EIP=0x004122D9

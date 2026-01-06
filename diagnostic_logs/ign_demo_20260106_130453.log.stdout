@@ -1,7 +1,7 @@
 Using launch settings from /home/runner/work/Win32Emu/Win32Emu/Win32Emu.Gui/Properties/launchSettings.json...
-Warning: Could not enable file logging: File not found: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_demo_20260106_112904.log
+Warning: Could not enable file logging: File not found: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_demo_20260106_130453.log
 info: Win32Emu.Emulator[0]
-      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_demo_20260106_112904.log
+      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_demo_20260106_130453.log
 info: Win32Emu.Emulator[0]
       Using existing virtual disk: /tmp/Win32Emu_VHDs/IGN_DEMO_5dbfba27b9511c57.vhd
 info: Win32Emu.Emulator[0]
@@ -5159,3 +5159,63 @@ dbug: Win32Emu.Emulator[0]
       [Loop Check] Instruction 15110000: EIP=0x0046C677
 dbug: Win32Emu.Emulator[0]
       [Loop Check] Instruction 15120000: EIP=0x0046C679
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15130000: EIP=0x0046C67C
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15140000: EIP=0x0046C664
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15150000: EIP=0x0046C667
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15160000: EIP=0x0046C669
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15170000: EIP=0x0046C66A
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15180000: EIP=0x0046C66C
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15190000: EIP=0x0046C671
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15200000: EIP=0x0046C673
+warn: Win32Emu.Emulator[0]
+      [Loop Detection] Emulator has executed 15200000 instructions and may be stuck in a loop. EIP=0x0046C673
+warn: Win32Emu.Emulator[0]
+      [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15210000: EIP=0x0046C675
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15220000: EIP=0x0046C677
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15230000: EIP=0x0046C679
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15240000: EIP=0x0046C67C
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15250000: EIP=0x0046C664
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15260000: EIP=0x0046C667
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15270000: EIP=0x0046C669
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15280000: EIP=0x0046C66A
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15290000: EIP=0x0046C66C
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15300000: EIP=0x0046C671
+warn: Win32Emu.Emulator[0]
+      [Loop Detection] Emulator has executed 15300000 instructions and may be stuck in a loop. EIP=0x0046C671
+warn: Win32Emu.Emulator[0]
+      [Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15310000: EIP=0x0046C673
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15320000: EIP=0x0046C675
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15330000: EIP=0x0046C677
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15340000: EIP=0x0046C679
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15350000: EIP=0x0046C67C
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15360000: EIP=0x0046C664
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15370000: EIP=0x0046C667
+dbug: Win32Emu.Emulator[0]
+      [Loop Check] Instruction 15380000: EIP=0x0046C669
