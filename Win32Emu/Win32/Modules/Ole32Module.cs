@@ -136,7 +136,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// COM initialization in Win32 can involve thread-specific setup, which we handle
 	/// cooperatively with the emulator's threading system.
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(43)]
 	private uint CoInitialize(uint pvReserved)
 	{
 		_logger.LogInformation("[Ole32] CoInitialize called with pvReserved=0x{PvReserved:X8}", pvReserved);
@@ -163,7 +163,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// frees any other resources that the thread maintains, and forces all RPC connections on the thread to close.
 	/// void CoUninitialize();
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(78)]
 	private uint CoUninitialize()
 	{
 		_logger.LogInformation("[Ole32] CoUninitialize called");
@@ -191,7 +191,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	///   [out] LPVOID    *ppv
 	/// );
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(7)]
 	private uint CoCreateInstance(uint rclsid, uint pUnkOuter, uint dwClsContext, uint riid, uint ppv)
 	{
 		_logger.LogInformation("[Ole32] CoCreateInstance(rclsid=0x{Rclsid:X8}, pUnkOuter=0x{PUnkOuter:X8}, dwClsContext=0x{DwClsContext:X}, riid=0x{Riid:X8}, ppv=0x{Ppv:X8})",
@@ -218,7 +218,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	///   [in]  int cchMax
 	/// );
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(253)]
 	private uint StringFromGUID2(uint rguid, uint lpsz, int cchMax)
 	{
 		_logger.LogInformation("[Ole32] StringFromGUID2(rguid=0x{Rguid:X8}, lpsz=0x{Lpsz:X8}, cchMax={CchMax})",
@@ -244,7 +244,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Converts a string to a CLSID.
 	/// HRESULT CLSIDFromString(LPCOLESTR lpsz, LPCLSID pclsid);
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(3)]
 	private uint CLSIDFromString(uint lpsz, uint pclsid)
 	{
 		_logger.LogInformation("[Ole32] CLSIDFromString(lpsz=0x{Lpsz:X8}, pclsid=0x{Pclsid:X8})", lpsz, pclsid);
@@ -265,7 +265,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Converts a programmatic identifier (ProgID) to a CLSID.
 	/// HRESULT CLSIDFromProgID(LPCOLESTR lpszProgID, LPCLSID lpclsid);
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(6)]
 	private uint CLSIDFromProgID(uint lpszProgID, uint lpclsid)
 	{
 		_logger.LogInformation("[Ole32] CLSIDFromProgID(lpszProgID=0x{LpszProgID:X8}, lpclsid=0x{Lpclsid:X8})", 
@@ -287,7 +287,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Converts a CLSID to a string.
 	/// HRESULT StringFromCLSID(REFCLSID rclsid, LPOLESTR *lplpsz);
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(252)]
 	private uint StringFromCLSID(uint rclsid, uint lplpsz)
 	{
 		_logger.LogInformation("[Ole32] StringFromCLSID(rclsid=0x{Rclsid:X8}, lplpsz=0x{Lplpsz:X8})", 
@@ -306,7 +306,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Retrieves a pointer to a class object.
 	/// HRESULT CoGetClassObject(REFCLSID rclsid, DWORD dwClsContext, COSERVERINFO *pServerInfo, REFIID riid, LPVOID *ppv);
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(39)]
 	private uint CoGetClassObject(uint rclsid, uint dwClsContext, uint pServerInfo, uint riid, uint ppv)
 	{
 		_logger.LogInformation("[Ole32] CoGetClassObject(rclsid=0x{Rclsid:X8}, dwClsContext=0x{DwClsContext:X}, riid=0x{Riid:X8}, ppv=0x{Ppv:X8})",
@@ -325,7 +325,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Registers an EXE class object with COM.
 	/// HRESULT CoRegisterClassObject(REFCLSID rclsid, LPUNKNOWN pUnk, DWORD dwClsContext, DWORD flags, LPDWORD lpdwRegister);
 	/// </summary>
-	[DllModuleExport(20)]
+	[DllModuleExport(59)]
 	private uint CoRegisterClassObject(uint rclsid, uint pUnk, uint dwClsContext, uint flags, uint lpdwRegister)
 	{
 		_logger.LogInformation("[Ole32] CoRegisterClassObject(rclsid=0x{Rclsid:X8}, pUnk=0x{PUnk:X8}, dwClsContext=0x{DwClsContext:X}, flags=0x{Flags:X}, lpdwRegister=0x{LpdwRegister:X8})",
@@ -344,7 +344,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Revokes a class object registration.
 	/// HRESULT CoRevokeClassObject(DWORD dwRegister);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(68)]
 	private uint CoRevokeClassObject(uint dwRegister)
 	{
 		_logger.LogInformation("[Ole32] CoRevokeClassObject(dwRegister=0x{DwRegister:X})", dwRegister);
@@ -355,7 +355,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Disconnects all remote process connections.
 	/// HRESULT CoDisconnectObject(LPUNKNOWN pUnk, DWORD dwReserved);
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(27)]
 	private uint CoDisconnectObject(uint pUnk, uint dwReserved)
 	{
 		_logger.LogInformation("[Ole32] CoDisconnectObject(pUnk=0x{PUnk:X8}, dwReserved=0x{DwReserved:X})", 
@@ -367,7 +367,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Registers or revokes a message filter.
 	/// HRESULT CoRegisterMessageFilter(LPMESSAGEFILTER lpMessageFilter, LPMESSAGEFILTER *lplpMessageFilter);
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(61)]
 	private uint CoRegisterMessageFilter(uint lpMessageFilter, uint lplpMessageFilter)
 	{
 		_logger.LogInformation("[Ole32] CoRegisterMessageFilter(lpMessageFilter=0x{LpMessageFilter:X8}, lplpMessageFilter=0x{LplpMessageFilter:X8})",
@@ -386,7 +386,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Frees libraries that are no longer in use.
 	/// void CoFreeUnusedLibraries();
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(30)]
 	private uint CoFreeUnusedLibraries()
 	{
 		_logger.LogInformation("[Ole32] CoFreeUnusedLibraries called");
@@ -397,7 +397,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Allocates a block of memory using the COM task allocator.
 	/// LPVOID CoTaskMemAlloc(SIZE_T cb);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(74)]
 	private uint CoTaskMemAlloc(uint cb)
 	{
 		_logger.LogInformation("[Ole32] CoTaskMemAlloc(cb={Cb})", cb);
@@ -423,7 +423,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Frees a block of memory allocated by CoTaskMemAlloc.
 	/// void CoTaskMemFree(LPVOID pv);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(75)]
 	private uint CoTaskMemFree(uint pv)
 	{
 		_logger.LogInformation("[Ole32] CoTaskMemFree(pv=0x{Pv:X8})", pv);
@@ -448,7 +448,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Initializes the OLE library.
 	/// HRESULT OleInitialize(LPVOID pvReserved);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(191)]
 	private uint OleInitialize(uint pvReserved)
 	{
 		_logger.LogInformation("[Ole32] OleInitialize(pvReserved=0x{PvReserved:X8})", pvReserved);
@@ -466,7 +466,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Uninitializes the OLE library.
 	/// void OleUninitialize();
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(214)]
 	private uint OleUninitialize()
 	{
 		_logger.LogInformation("[Ole32] OleUninitialize called");
@@ -478,7 +478,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Flushes the clipboard.
 	/// HRESULT OleFlushClipboard();
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(186)]
 	private uint OleFlushClipboard()
 	{
 		_logger.LogInformation("[Ole32] OleFlushClipboard called");
@@ -489,7 +489,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Determines whether the data object pointer previously placed on the clipboard is still on the clipboard.
 	/// HRESULT OleIsCurrentClipboard(LPDATAOBJECT pDataObj);
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(193)]
 	private uint OleIsCurrentClipboard(uint pDataObj)
 	{
 		_logger.LogInformation("[Ole32] OleIsCurrentClipboard(pDataObj=0x{PDataObj:X8})", pDataObj);
@@ -500,7 +500,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Creates a byte array object on global memory.
 	/// HRESULT CreateILockBytesOnHGlobal(HGLOBAL hGlobal, BOOL fDeleteOnRelease, LPLOCKBYTES *pplkbyt);
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(90)]
 	private uint CreateILockBytesOnHGlobal(uint hGlobal, uint fDeleteOnRelease, uint pplkbyt)
 	{
 		_logger.LogInformation("[Ole32] CreateILockBytesOnHGlobal(hGlobal=0x{HGlobal:X8}, fDeleteOnRelease={FDeleteOnRelease}, pplkbyt=0x{Pplkbyt:X8})",
@@ -519,7 +519,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Creates a compound file storage object on a byte array object.
 	/// HRESULT StgCreateDocfileOnILockBytes(ILockBytes *plkbyt, DWORD grfMode, DWORD reserved, IStorage **ppstgOpen);
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(241)]
 	private uint StgCreateDocfileOnILockBytes(uint plkbyt, uint grfMode, uint reserved, uint ppstgOpen)
 	{
 		_logger.LogInformation("[Ole32] StgCreateDocfileOnILockBytes(plkbyt=0x{Plkbyt:X8}, grfMode=0x{GrfMode:X}, reserved={Reserved}, ppstgOpen=0x{PpstgOpen:X8})",
@@ -538,7 +538,7 @@ public class Ole32Module : IWin32ModuleUnsafe
 	/// Opens an existing storage object on a byte array.
 	/// HRESULT StgOpenStorageOnILockBytes(ILockBytes *plkbyt, IStorage *pstgPriority, DWORD grfMode, SNB snbExclude, DWORD reserved, IStorage **ppstgOpen);
 	/// </summary>
-	[DllModuleExport(24)]
+	[DllModuleExport(250)]
 	private uint StgOpenStorageOnILockBytes(uint plkbyt, uint pstgPriority, uint grfMode, uint snbExclude, uint reserved, uint ppstgOpen)
 	{
 		_logger.LogInformation("[Ole32] StgOpenStorageOnILockBytes(plkbyt=0x{Plkbyt:X8}, pstgPriority=0x{PstgPriority:X8}, grfMode=0x{GrfMode:X}, ppstgOpen=0x{PpstgOpen:X8})",
