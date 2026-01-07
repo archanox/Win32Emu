@@ -1062,14 +1062,6 @@ public sealed class Emulator : IDisposable
         var iterationCount = 0ul;
         var lastLogTime = DateTime.UtcNow;
         
-        // Infinite loop detection removed - no longer track same EIP iterations
-        var lastProgressEip = 0u;
-        var sameEipCount = 0ul; // Keep for debug logging but don't enforce limits
-        
-        // Infinite loop detection removed - was causing false positives and performance overhead
-        // Applications with legitimate long-running initialization (like ign_teas) were being stopped
-        var iterationsSinceLastSyscall = 0ul; // Still track for diagnostics but don't enforce limits
-        
         // Throttle noisy warning logs to reduce spam
         var lastHeapEipWarning = 0u;
         var consecutiveHeapExecutions = 0ul; // Track consecutive executions in heap to detect stuck execution
@@ -1082,10 +1074,8 @@ public sealed class Emulator : IDisposable
         while (!_stopRequested && !_env!.ExitRequested)
         {
             iterationCount++;
-            iterationsSinceLastSyscall++;
             
-            // Infinite loop detection - check every PROGRESS_LOG_INTERVAL iterations
-            // This check runs regardless of log level since it affects emulation behavior
+            // Log progress periodically for debugging
             if (iterationCount % PROGRESS_LOG_INTERVAL == 0)
             {
                 var now = DateTime.UtcNow;
@@ -1093,18 +1083,12 @@ public sealed class Emulator : IDisposable
                 var progressEip = _cpu!.GetEip();
                 var progressEsp = _cpu.GetRegister("ESP");
                 
-                // Infinite loop detection removed - don't check EIP or syscall frequency
-                // This was causing false positives for legitimate initialization loops
-                // EIP changed - reset counter and log progress for debugging
-                sameEipCount = (progressEip == lastProgressEip) ? sameEipCount + PROGRESS_LOG_INTERVAL : 0;
-                
                 if (_logger.IsEnabled(LogLevel.Debug))
                 {
                     _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
                         iterationCount, elapsed, progressEip, progressEsp);
                 }
                 
-                lastProgressEip = progressEip;
                 lastLogTime = now;
             }
             
@@ -1466,7 +1450,6 @@ public sealed class Emulator : IDisposable
                 // Use async syscall handler to support async Win32 API implementations
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
-                iterationsSinceLastSyscall = 0; // Reset counter on syscall
                 continue; // Continue to next iteration, let CPU execute RET
             }
 
@@ -1513,11 +1496,6 @@ public sealed class Emulator : IDisposable
                     _logger,
                     "COM vtable",
                     _image).ConfigureAwait(false);
-                
-                // Reset syscall counter - COM vtable calls (DirectDraw, DirectInput, DirectSound) are
-                // equivalent to Win32 API calls and should prevent false infinite loop detection.
-                // Without this, games that heavily use COM APIs would be falsely detected as stuck.
-                iterationsSinceLastSyscall = 0;
                 
                 var espAfter = _cpu.GetRegister("ESP");
                 var eipAfter = _cpu.GetEip();
