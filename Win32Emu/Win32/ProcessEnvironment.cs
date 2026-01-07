@@ -477,10 +477,21 @@ public class ProcessEnvironment
 		}
 		
 		// Build command line: quoted exe path + space + args (if any)
+		// IMPORTANT: Windows C runtime expects command line to be properly null-terminated
+		// When no arguments are provided, we need to ensure there's a null terminator after the exe name
 		var cmdLine = args.Length > 0 
 			? $"\"{exePath}\" {string.Join(" ", args)}"
 			: $"\"{exePath}\"";
-		CommandLinePtr = WriteAnsiString(cmdLine + '\0');
+		
+		// Write command line with explicit double null termination for safety
+		// The C runtime parse_cmdline function reads until it hits a null terminator
+		var cmdLineBytes = Encoding.ASCII.GetBytes(cmdLine);
+		var cmdLineAddr = SimpleAlloc((uint)(cmdLineBytes.Length + 2)); // +2 for safety (double null)
+		Memory.WriteBytes(cmdLineAddr, cmdLineBytes);
+		Memory.Write8(cmdLineAddr + (ulong)cmdLineBytes.Length, 0); // First null terminator
+		Memory.Write8(cmdLineAddr + (ulong)cmdLineBytes.Length + 1, 0); // Second null terminator for safety
+		CommandLinePtr = cmdLineAddr;
+		
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');
 		ModuleFileNameLength = (uint)exePath.Length;
 

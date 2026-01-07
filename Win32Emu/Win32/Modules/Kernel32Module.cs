@@ -2578,7 +2578,8 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				// Write the Windows-style path back to memory
 				var bytes = Encoding.ASCII.GetBytes(windowsPath);
 				_env.MemWriteBytes(ptr, bytes);
-				_env.MemWriteBytes(ptr + (uint)bytes.Length, [0]); // Null terminator
+				// Ensure proper null termination
+				_env.MemWriteBytes(ptr + (uint)bytes.Length, [0, 0]); // Double null terminator
 
 				// Update logging to show the converted path
 				_logger.LogInformation("[Kernel32] GetCommandLineA returning 0x{Ptr:X8}: \"{CmdLine}\" (converted from \"{OrigPath}\")",
