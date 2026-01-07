@@ -1792,7 +1792,8 @@ public sealed class Emulator : IDisposable
                 // Most legitimate initialization loops complete within 1-5M instructions
                 if (i % 1000000 == 0)
                 {
-                    _logger.LogInformation("[Loop Detection] Emulator has executed {InstructionCount} million instructions. EIP=0x{Eip:X8}", i / 1000000, eip);
+                    var millions = i / 1000000; // Intentional integer division to display instruction count in millions
+                    _logger.LogInformation("[Loop Detection] Emulator has executed {InstructionCount} million instructions. EIP=0x{Eip:X8}", millions, eip);
                     _logger.LogInformation("[Loop Detection] This may be normal for applications with intensive initialization (e.g., texture loading, file processing).");
                     _logger.LogInformation("[Loop Detection] The emulator will continue running. If unresponsive after several minutes, consider stopping.");
                 }
