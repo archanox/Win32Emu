@@ -860,14 +860,25 @@ public sealed class Emulator : IDisposable
 
         _logger.LogInformation("[Emulator] Patching MSVCRT data imports");
 
+        // MSVCRT data imports are global variables, not functions
+        // We need to allocate memory for these globals and initialize them
+        // _acmdln: global variable containing command line pointer
+        // _wcmdln: global variable containing wide command line pointer
+        
+        // Allocate and initialize _acmdln global variable
+        var acmdlnGlobal = _env.HeapAlloc(0, 4);  // Allocate 4 bytes for pointer
+        _env.MemWrite32(acmdlnGlobal, _env.CommandLinePtr);
+        
+        // Allocate and initialize _wcmdln global variable
+        var wcmdlnGlobal = _env.HeapAlloc(0, 4);  // Allocate 4 bytes for pointer
+        _env.MemWrite32(wcmdlnGlobal, _env.CommandLinePtrW);
+
         // Define MSVCRT data imports that need patching
-        // Format: (import name, actual value to write)
+        // Format: (import name, actual address to write to IAT)
         var dataImports = new[]
         {
-            ("_acmdln", _env.CommandLinePtr),           // Pointer to ANSI command line string
-            ("_wcmdln", _env.CommandLinePtrW),          // Pointer to Unicode command line string
-            ("__p__acmdln", _env.CommandLinePtr),       // Alternative name for _acmdln
-            ("__p__wcmdln", _env.CommandLinePtrW)       // Alternative name for _wcmdln
+            ("_acmdln", acmdlnGlobal),      // IAT entry should point to the global variable
+            ("_wcmdln", wcmdlnGlobal),      // IAT entry should point to the global variable
         };
 
         // Iterate through all imports to find MSVCRT data imports
