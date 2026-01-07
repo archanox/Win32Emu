@@ -46,6 +46,14 @@ public class JitCpu : IAsyncCpu
 	private const uint MAX_VALUE_8BIT = 0xFF;
 	private const uint MAX_VALUE_16BIT = 0xFFFF;
 	
+	// Debug logging for specific address ranges - enabled via environment variable
+	// WIN32EMU_DEBUG_EIP_START and WIN32EMU_DEBUG_EIP_END
+	private readonly uint _debugEipStart;
+	private readonly uint _debugEipEnd;
+	private readonly bool _debugEipRangeEnabled;
+	private int _debugInsnCount = 0;
+	private const int MAX_DEBUG_INSTRUCTIONS = 10000; // Limit to prevent log spam
+	
 	// MMX state - shares physical registers with FPU (MM0-MM7 alias to ST(0)-ST(7))
 	// Each MMX register is 64 bits
 	// NOTE: In real hardware, MMX and FPU share the same physical registers. This implementation
@@ -156,6 +164,19 @@ public class JitCpu : IAsyncCpu
 		_forceInterpreterMode = forceInterpreterMode;
 		_reader = new SimpleMemoryCodeReader(this);
 		_decoder = Decoder.Create(bitness, _reader, decoderOptions);
+		
+		// Initialize debug EIP range from environment variables
+		var debugStartStr = Environment.GetEnvironmentVariable("WIN32EMU_DEBUG_EIP_START");
+		var debugEndStr = Environment.GetEnvironmentVariable("WIN32EMU_DEBUG_EIP_END");
+		if (!string.IsNullOrEmpty(debugStartStr) && !string.IsNullOrEmpty(debugEndStr))
+		{
+			if (uint.TryParse(debugStartStr, System.Globalization.NumberStyles.HexNumber, null, out _debugEipStart) &&
+			    uint.TryParse(debugEndStr, System.Globalization.NumberStyles.HexNumber, null, out _debugEipEnd))
+			{
+				_debugEipRangeEnabled = true;
+				_logger.LogInformation("[JitCpu] Debug logging enabled for EIP range 0x{Start:X8} - 0x{End:X8}", _debugEipStart, _debugEipEnd);
+			}
+		}
 		
 		// Detect WASM environment
 		_isWasmEnvironment = RuntimeEnvironment.IsWasm;
@@ -559,6 +580,27 @@ public class JitCpu : IAsyncCpu
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		
+		// Debug logging for specific EIP range (enabled via environment variables)
+		var shouldDebugLog = _debugEipRangeEnabled && _debugInsnCount < MAX_DEBUG_INSTRUCTIONS &&
+		                     oldEip >= _debugEipStart && oldEip <= _debugEipEnd;
+		
+		if (shouldDebugLog)
+		{
+			_debugInsnCount++;
+			// Log instruction with register state for comparison/jump instructions
+			if (insn.Mnemonic == Mnemonic.Cmp || insn.Mnemonic == Mnemonic.Test ||
+			    insn.Mnemonic.ToString().StartsWith("J") || // All conditional jumps
+			    insn.Mnemonic == Mnemonic.Mov && insn.Op0Kind == OpKind.Memory) // Memory writes that might be pointer updates
+			{
+				_logger.LogInformation("[DEBUG] EIP=0x{Eip:X8} {Insn} | EAX=0x{Eax:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} EBX=0x{Ebx:X8} ESP=0x{Esp:X8} EBP=0x{Ebp:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8} | FLAGS=0x{Eflags:X8} [ZF={Zf} CF={Cf} SF={Sf} OF={Of}]",
+					oldEip, insn.ToString(), _eax, _ecx, _edx, _ebx, _esp, _ebp, _esi, _edi, _eflags,
+					(_eflags & FLAG_ZF) != 0 ? 1 : 0,
+					(_eflags & FLAG_CF) != 0 ? 1 : 0,
+					(_eflags & FLAG_SF) != 0 ? 1 : 0,
+					(_eflags & FLAG_OF) != 0 ? 1 : 0);
+			}
+		}
+		
 		// Log invalid instructions with more details for debugging
 		if (insn.Mnemonic == Mnemonic.INVALID)
 		{
@@ -725,6 +767,17 @@ public class JitCpu : IAsyncCpu
 				break;
 			case Mnemonic.Cmp:
 				ExecCmp(insn, mem);
+				if (shouldDebugLog)
+				{
+					_logger.LogInformation("[DEBUG] After CMP: FLAGS=0x{Eflags:X8} [ZF={Zf} CF={Cf} SF={Sf} OF={Of} PF={Pf} AF={Af}]",
+						_eflags,
+						(_eflags & FLAG_ZF) != 0 ? 1 : 0,
+						(_eflags & FLAG_CF) != 0 ? 1 : 0,
+						(_eflags & FLAG_SF) != 0 ? 1 : 0,
+						(_eflags & FLAG_OF) != 0 ? 1 : 0,
+						(_eflags & FLAG_PF) != 0 ? 1 : 0,
+						(_eflags & FLAG_AF) != 0 ? 1 : 0);
+				}
 				break;
 			
 			// === Logic Instructions ===
@@ -739,6 +792,16 @@ public class JitCpu : IAsyncCpu
 				break;
 			case Mnemonic.Test:
 				ExecTest(insn, mem);
+				if (shouldDebugLog)
+				{
+					_logger.LogInformation("[DEBUG] After TEST: FLAGS=0x{Eflags:X8} [ZF={Zf} CF={Cf} SF={Sf} OF={Of} PF={Pf}]",
+						_eflags,
+						(_eflags & FLAG_ZF) != 0 ? 1 : 0,
+						(_eflags & FLAG_CF) != 0 ? 1 : 0,
+						(_eflags & FLAG_SF) != 0 ? 1 : 0,
+						(_eflags & FLAG_OF) != 0 ? 1 : 0,
+						(_eflags & FLAG_PF) != 0 ? 1 : 0);
+				}
 				break;
 			case Mnemonic.Not:
 				ExecNot(insn, mem);
@@ -1632,6 +1695,15 @@ public class JitCpu : IAsyncCpu
 
 	// Flag bit positions (same as IcedCpu)
 	private const int Cf = 0, Pf = 2, Af = 4, Zf = 6, Sf = 7, Df = 10, Of = 11;
+	
+	// Flag bit masks for testing flags
+	private const uint FLAG_CF = 1u << 0;   // Carry Flag
+	private const uint FLAG_PF = 1u << 2;   // Parity Flag
+	private const uint FLAG_AF = 1u << 4;   // Auxiliary Flag
+	private const uint FLAG_ZF = 1u << 6;   // Zero Flag
+	private const uint FLAG_SF = 1u << 7;   // Sign Flag
+	private const uint FLAG_DF = 1u << 10;  // Direction Flag
+	private const uint FLAG_OF = 1u << 11;  // Overflow Flag
 
 	// Flag helper methods
 	private bool GetFlag(int bit) => (_eflags & (1u << bit)) != 0;
