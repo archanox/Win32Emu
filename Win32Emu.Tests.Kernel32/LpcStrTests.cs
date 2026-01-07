@@ -90,7 +90,7 @@ public sealed class LpcStrTests : IDisposable
 	}
 
 	[Fact]
-	public void LpcStr_ToString_ReturnsStringValue()
+	public void LpcStr_Read_WithMemoryProvided_ReturnsStringValue()
 	{
 		// Arrange
 		const uint address = 0x1000;
@@ -101,7 +101,7 @@ public sealed class LpcStrTests : IDisposable
 		var lpcStr = new LpcStr(address, _memory);
 
 		// Act
-		var result = lpcStr.ToString();
+		var result = lpcStr.Read();
 
 		// Assert
 		Assert.NotNull(result);
@@ -172,27 +172,14 @@ public sealed class LpcStrTests : IDisposable
 	}
 
 	[Fact]
-	public void LpcStr_ToString_WithNullPointer_ReturnsNull()
-	{
-		// Arrange
-		var lpcStr = new LpcStr(0, _memory);
-
-		// Act
-		var result = lpcStr.ToString();
-
-		// Assert
-		Assert.Null(result);
-	}
-
-	[Fact]
-	public void LpcStr_WithoutMemory_ToString_ReturnsNull()
+	public void LpcStr_Read_WithoutMemoryProvided_ReturnsNull()
 	{
 		// Arrange
 		const uint address = 0x1000;
 		var lpcStr = new LpcStr(address); // No memory provided
 
 		// Act
-		var result = lpcStr.ToString();
+		var result = lpcStr.Read();
 
 		// Assert
 		Assert.Null(result);

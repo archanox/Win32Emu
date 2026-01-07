@@ -50,20 +50,6 @@ public readonly struct LpcWStr(uint address, VirtualMemory? memory = null)
 	}
 
 	/// <summary>
-	/// Returns the string value from memory, or null if the pointer is null.
-	/// </summary>
-	/// <remarks>
-	/// DEPRECATED: This method only works when memory was provided in the constructor.
-	/// When LpcWStr is created via implicit conversion from uint, it lacks the _memory reference
-	/// and this method will return null. Use Read(memory) instead.
-	/// </remarks>
-	[Obsolete("Use Read(memory) instead. ToString() only works when memory was provided in constructor.", true)]
-	public override string? ToString()
-	{
-		return Read();
-	}
-
-	/// <summary>
 	/// Implicit conversion from uint address to LpcWStr.
 	/// </summary>
 	public static implicit operator LpcWStr(uint address) => new(address);
