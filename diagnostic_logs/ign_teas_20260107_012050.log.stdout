@@ -1,0 +1,92 @@
+Using launch settings from /home/runner/work/Win32Emu/Win32Emu/Win32Emu.Gui/Properties/launchSettings.json...
+Warning: Could not enable file logging: File not found: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260107_012050.log
+info: Win32Emu.Emulator[0]
+      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_20260107_012050.log
+info: Win32Emu.Emulator[0]
+      Creating virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] VHD disk formatted with FAT32
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Created and formatted Vhd disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (536870912 bytes)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (Read-Write)
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Created directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      Created root directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Starting copy of 29 files to virtual disk
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 1/29: IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS.EXE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='IGN_TEAS.EXE'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN_TEAS.EXE (290816 bytes) [1/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 2/29: README.TXT
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\README.TXT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='README.TXT'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\README.TXT
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied README.TXT (2662 bytes) [2/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Created directory: \ign_teas\DATA
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 3/29: IGN3.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN3.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN3.TEX'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN3.TEX
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN3.TEX (65536 bytes) [3/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 4/29: IGN.PSQ
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.PSQ'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.PSQ'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN.PSQ
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.PSQ (288 bytes) [4/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 5/29: IGN6.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN6.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN6.DPS'
+dbug: Win32Emu.Emulator[0]
+      [DiskVFS] Opened file: \ign_teas\DATA\IGN6.DPS
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN6.DPS (23059 bytes) [5/29]
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas
+dbug: Win32Emu.Emulator[0]
+      Created directory: \ign_teas\DATA
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 6/29: IGN.PFM
