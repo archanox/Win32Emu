@@ -483,13 +483,12 @@ public class ProcessEnvironment
 			? $"\"{exePath}\" {string.Join(" ", args)}"
 			: $"\"{exePath}\"";
 		
-		// Write command line with explicit double null termination for safety
+		// Write command line with explicit null termination
 		// The C runtime parse_cmdline function reads until it hits a null terminator
 		var cmdLineBytes = Encoding.ASCII.GetBytes(cmdLine);
-		var cmdLineAddr = SimpleAlloc((uint)(cmdLineBytes.Length + 2)); // +2 for safety (double null)
+		var cmdLineAddr = SimpleAlloc((uint)(cmdLineBytes.Length + 1)); // +1 for null terminator
 		Memory.WriteBytes(cmdLineAddr, cmdLineBytes);
-		Memory.Write8(cmdLineAddr + (ulong)cmdLineBytes.Length, 0); // First null terminator
-		Memory.Write8(cmdLineAddr + (ulong)cmdLineBytes.Length + 1, 0); // Second null terminator for safety
+		Memory.Write8(cmdLineAddr + (ulong)cmdLineBytes.Length, 0); // Null terminator
 		CommandLinePtr = cmdLineAddr;
 		
 		ModuleFileNamePtr = WriteAnsiString(exePath + '\0');

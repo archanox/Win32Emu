@@ -82,6 +82,9 @@ public class JitCpu : IAsyncCpu
 	private const uint DEFAULT_STACK_LIMIT = 0x00100000;  // 1 MB (bottom of stack)
 	private const uint DEFAULT_STACK_BASE = 0x01000000;   // 16 MB (top of stack)
 	
+	// Maximum instruction bytes to display for invalid instruction debugging
+	private const int MAX_INVALID_INSN_BYTES = 16;
+	
 	// Image base from PE header (used for validation of indirect calls/jumps)
 	private readonly uint _imageBase;
 	
@@ -168,14 +171,13 @@ public class JitCpu : IAsyncCpu
 		// Initialize debug EIP range from environment variables
 		var debugStartStr = Environment.GetEnvironmentVariable("WIN32EMU_DEBUG_EIP_START");
 		var debugEndStr = Environment.GetEnvironmentVariable("WIN32EMU_DEBUG_EIP_END");
-		if (!string.IsNullOrEmpty(debugStartStr) && !string.IsNullOrEmpty(debugEndStr))
+		if (!string.IsNullOrEmpty(debugStartStr) &&
+		    !string.IsNullOrEmpty(debugEndStr) &&
+		    uint.TryParse(debugStartStr, System.Globalization.NumberStyles.HexNumber, null, out _debugEipStart) &&
+		    uint.TryParse(debugEndStr, System.Globalization.NumberStyles.HexNumber, null, out _debugEipEnd))
 		{
-			if (uint.TryParse(debugStartStr, System.Globalization.NumberStyles.HexNumber, null, out _debugEipStart) &&
-			    uint.TryParse(debugEndStr, System.Globalization.NumberStyles.HexNumber, null, out _debugEipEnd))
-			{
-				_debugEipRangeEnabled = true;
-				_logger.LogInformation("[JitCpu] Debug logging enabled for EIP range 0x{Start:X8} - 0x{End:X8}", _debugEipStart, _debugEipEnd);
-			}
+			_debugEipRangeEnabled = true;
+			_logger.LogInformation("[JitCpu] Debug logging enabled for EIP range 0x{Start:X8} - 0x{End:X8}", _debugEipStart, _debugEipEnd);
 		}
 		
 		// Detect WASM environment
@@ -588,9 +590,19 @@ public class JitCpu : IAsyncCpu
 		{
 			_debugInsnCount++;
 			// Log instruction with register state for comparison/jump instructions
-			if (insn.Mnemonic == Mnemonic.Cmp || insn.Mnemonic == Mnemonic.Test ||
-			    insn.Mnemonic.ToString().StartsWith("J") || // All conditional jumps
-			    insn.Mnemonic == Mnemonic.Mov && insn.Op0Kind == OpKind.Memory) // Memory writes that might be pointer updates
+			var mnemonic = insn.Mnemonic;
+			var isConditionalJump =
+				mnemonic is Mnemonic.Ja or Mnemonic.Jae or Mnemonic.Jb or Mnemonic.Jbe or
+				           Mnemonic.Jc or Mnemonic.Jcxz or Mnemonic.Je or Mnemonic.Jecxz or
+				           Mnemonic.Jg or Mnemonic.Jge or Mnemonic.Jl or Mnemonic.Jle or
+				           Mnemonic.Jna or Mnemonic.Jnae or Mnemonic.Jnb or Mnemonic.Jnbe or
+				           Mnemonic.Jnc or Mnemonic.Jne or Mnemonic.Jng or Mnemonic.Jnge or
+				           Mnemonic.Jnl or Mnemonic.Jnle or Mnemonic.Jno or Mnemonic.Jnp or
+				           Mnemonic.Jns or Mnemonic.Jnz or Mnemonic.Jo or Mnemonic.Jp or
+				           Mnemonic.Jpe or Mnemonic.Jpo or Mnemonic.Js or Mnemonic.Jz;
+			if (mnemonic == Mnemonic.Cmp || mnemonic == Mnemonic.Test ||
+			    isConditionalJump || // All conditional jumps
+			    mnemonic == Mnemonic.Mov && insn.Op0Kind == OpKind.Memory) // Memory writes that might be pointer updates
 			{
 				_logger.LogInformation("[DEBUG] EIP=0x{Eip:X8} {Insn} | EAX=0x{Eax:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} EBX=0x{Ebx:X8} ESP=0x{Esp:X8} EBP=0x{Ebp:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8} | FLAGS=0x{Eflags:X8} [ZF={Zf} CF={Cf} SF={Sf} OF={Of}]",
 					oldEip, insn.ToString(), _eax, _ecx, _edx, _ebx, _esp, _ebp, _esi, _edi, _eflags,
@@ -607,14 +619,23 @@ public class JitCpu : IAsyncCpu
 			// Read the bytes at the current EIP for debugging
 			try
 			{
-				var maxBytes = (int)Math.Min(16, mem.Size - (ulong)_eip);
-				var bytes = new byte[maxBytes];
-				for (int i = 0; i < maxBytes; i++)
+				var eipAsUlong = (ulong)_eip;
+				if (eipAsUlong >= mem.Size)
 				{
-					bytes[i] = mem.Read8((ulong)(_eip + i));
+					_logger.LogError("[JitCpu] INVALID instruction at EIP=0x{Eip:X8}, but EIP is outside of memory bounds (Size=0x{MemSize:X}).", oldEip, mem.Size);
 				}
-				var bytesHex = BitConverter.ToString(bytes).Replace("-", " ");
-				_logger.LogError("[JitCpu] INVALID instruction at EIP=0x{Eip:X8}. Bytes: {Bytes}", oldEip, bytesHex);
+				else
+				{
+					var remaining = mem.Size - eipAsUlong;
+					var maxBytes = (int)Math.Min((ulong)MAX_INVALID_INSN_BYTES, remaining);
+					var bytes = new byte[maxBytes];
+					for (int i = 0; i < maxBytes; i++)
+					{
+						bytes[i] = mem.Read8(eipAsUlong + (ulong)i);
+					}
+					var bytesHex = BitConverter.ToString(bytes).Replace("-", " ");
+					_logger.LogError("[JitCpu] INVALID instruction at EIP=0x{Eip:X8}. Bytes: {Bytes}", oldEip, bytesHex);
+				}
 			}
 			catch (Exception ex)
 			{
