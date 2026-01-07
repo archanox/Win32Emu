@@ -721,6 +721,12 @@ public sealed class Emulator : IDisposable
         _env.InitializeMainThread(_cpu);
         LogDebug("[Loader] Main thread initialized");
 
+        // Patch IAT entries for MSVCRT data imports
+        // Some MSVCRT symbols like _acmdln and _wcmdln are DATA imports (pointers to variables)
+        // not function imports. The PE loader treats them as functions and writes synthetic addresses.
+        // We need to patch these IAT entries with the actual data pointers after module registration.
+        PatchMsvcrtDataImports();
+
         // Execute TLS callbacks if present
         // TLS callbacks must be executed AFTER all modules are registered but BEFORE the main entry point
         // Use synchronous wrapper for compatibility with synchronous LoadExecutable
@@ -837,6 +843,106 @@ public sealed class Emulator : IDisposable
         _cpu.SetRegister("ESP", originalEsp);
         
         _logger.LogInformation("[Emulator] TLS callbacks execution complete");
+    }
+
+    /// <summary>
+    /// Patches IAT entries for MSVCRT data imports (like _acmdln, _wcmdln).
+    /// These are DATA imports (pointers to variables), not function imports.
+    /// The PE loader treats them as functions and writes synthetic addresses,
+    /// but they need to contain the actual data pointers for C runtime to work correctly.
+    /// </summary>
+    private void PatchMsvcrtDataImports()
+    {
+        if (_image == null || _vm == null || _env == null)
+        {
+            return;
+        }
+
+        _logger.LogInformation("[Emulator] Patching MSVCRT data imports");
+
+        // Define MSVCRT data imports that need patching
+        // Format: (import name, actual value to write)
+        var dataImports = new[]
+        {
+            ("_acmdln", _env.CommandLinePtr),           // Pointer to ANSI command line string
+            ("_wcmdln", _env.CommandLinePtrW),          // Pointer to Unicode command line string
+            ("__p__acmdln", _env.CommandLinePtr),       // Alternative name for _acmdln
+            ("__p__wcmdln", _env.CommandLinePtrW)       // Alternative name for _wcmdln
+        };
+
+        // Iterate through all imports to find MSVCRT data imports
+        var importMap = _image.ImportAddressMap;
+        if (importMap == null)
+        {
+            _logger.LogWarning("[Emulator] No import map available for IAT patching");
+            return;
+        }
+
+        var patchCount = 0;
+        foreach (var kvp in importMap)
+        {
+            var syntheticAddr = kvp.Key;
+            var (dll, name) = kvp.Value;
+            
+            // Check if this is a MSVCRT data import
+            if (!dll.Equals("MSVCRT.DLL", StringComparison.OrdinalIgnoreCase) &&
+                !dll.Equals("MSVCRT", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // Find matching data import
+            foreach (var (importName, actualValue) in dataImports)
+            {
+                if (!name.Equals(importName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                // Find the IAT entry that contains this synthetic address
+                // We need to search through the IAT to find where this synthetic address is written
+                var iatEntryMap = _image.IatEntryMap;
+                if (iatEntryMap == null)
+                {
+                    _logger.LogWarning("[Emulator] No IAT entry map available");
+                    continue;
+                }
+
+                // Find the IAT entry VA that maps to this synthetic address
+                uint iatVa = 0;
+                foreach (var (entryVa, expectedSynth) in iatEntryMap)
+                {
+                    if (expectedSynth == syntheticAddr)
+                    {
+                        iatVa = entryVa;
+                        break;
+                    }
+                }
+
+                if (iatVa == 0)
+                {
+                    _logger.LogWarning("[Emulator] Could not find IAT entry for {Dll}!{Name} (synthetic 0x{Synth:X8})",
+                        dll, name, syntheticAddr);
+                    continue;
+                }
+
+                // Patch the IAT entry with the actual data pointer
+                _vm.Write32(iatVa, actualValue);
+                patchCount++;
+
+                _logger.LogInformation("[Emulator] Patched IAT entry at 0x{IatVa:X8}: {Dll}!{Name} = 0x{Value:X8} (was synthetic 0x{Synth:X8})",
+                    iatVa, dll, name, actualValue, syntheticAddr);
+            }
+        }
+
+        if (patchCount > 0)
+        {
+            _logger.LogInformation("[Emulator] Patched {Count} MSVCRT data import(s)", patchCount);
+        }
+        else
+        {
+            _logger.LogDebug("[Emulator] No MSVCRT data imports found to patch");
+        }
     }
 
     /// <summary>
