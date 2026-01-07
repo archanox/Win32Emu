@@ -559,6 +559,27 @@ public class JitCpu : IAsyncCpu
 		_decoder.IP = _eip;
 		var insn = _decoder.Decode();
 		
+		// Log invalid instructions with more details for debugging
+		if (insn.Mnemonic == Mnemonic.INVALID)
+		{
+			// Read the bytes at the current EIP for debugging
+			try
+			{
+				var maxBytes = (int)Math.Min(16, mem.Size - (ulong)_eip);
+				var bytes = new byte[maxBytes];
+				for (int i = 0; i < maxBytes; i++)
+				{
+					bytes[i] = mem.Read8((ulong)(_eip + i));
+				}
+				var bytesHex = BitConverter.ToString(bytes).Replace("-", " ");
+				_logger.LogError("[JitCpu] INVALID instruction at EIP=0x{Eip:X8}. Bytes: {Bytes}", oldEip, bytesHex);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[JitCpu] INVALID instruction at EIP=0x{Eip:X8}. Could not read bytes.", oldEip);
+			}
+		}
+		
 		// Update EIP - decoder has advanced by instruction length
 		_eip = (uint)_decoder.IP;
 		
