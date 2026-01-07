@@ -1062,20 +1062,13 @@ public sealed class Emulator : IDisposable
         var iterationCount = 0ul;
         var lastLogTime = DateTime.UtcNow;
         
-        // Infinite loop detection - track EIP to detect stuck loops
+        // Infinite loop detection removed - no longer track same EIP iterations
         var lastProgressEip = 0u;
-        var sameEipCount = 0ul;
-        // Select platform-appropriate threshold for same EIP detection
-        var maxSameEipIterations = PlatformHelpers.IsWasm
-            ? MAX_SAME_EIP_ITERATIONS_WASM
-            : MAX_SAME_EIP_ITERATIONS_NATIVE;
+        var sameEipCount = 0ul; // Keep for debug logging but don't enforce limits
         
-        // Secondary infinite loop detection - track iterations since last syscall
-        // This catches loops that cycle through multiple instructions but never call Win32 APIs
-        var iterationsSinceLastSyscall = 0ul;
-        var maxIterationsWithoutSyscall = PlatformHelpers.IsWasm
-            ? MAX_ITERATIONS_WITHOUT_SYSCALL_WASM
-            : MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE;
+        // Infinite loop detection removed - was causing false positives and performance overhead
+        // Applications with legitimate long-running initialization (like ign_teas) were being stopped
+        var iterationsSinceLastSyscall = 0ul; // Still track for diagnostics but don't enforce limits
         
         // Throttle noisy warning logs to reduce spam
         var lastHeapEipWarning = 0u;
@@ -1100,52 +1093,15 @@ public sealed class Emulator : IDisposable
                 var progressEip = _cpu!.GetEip();
                 var progressEsp = _cpu.GetRegister("ESP");
                 
-                // Check if we're stuck at the same EIP
-                if (progressEip == lastProgressEip)
-                {
-                    sameEipCount += PROGRESS_LOG_INTERVAL;
-                    
-                    // Only log every STUCK_EIP_LOG_INTERVAL iterations when stuck to reduce spam
-                    if (sameEipCount % STUCK_EIP_LOG_INTERVAL == 0)
-                    {
-                        _logger.LogWarning("[Emulator] Possible infinite loop: {SameEipCount} iterations at EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
-                            sameEipCount, progressEip, progressEsp);
-                    }
-                    
-                    // Stop execution if we've been stuck too long
-                    if (sameEipCount >= maxSameEipIterations)
-                    {
-                        _logger.LogError("[Emulator] INFINITE LOOP DETECTED: Stuck at EIP=0x{Eip:X8} for {Iterations} iterations. Stopping emulation.", 
-                            progressEip, sameEipCount);
-                        break;
-                    }
-                }
-                else
-                {
-                    // EIP changed - reset counter and log progress
-                    sameEipCount = 0;
-                    if (_logger.IsEnabled(LogLevel.Debug))
-                    {
-                        _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
-                            iterationCount, elapsed, progressEip, progressEsp);
-                    }
-                }
+                // Infinite loop detection removed - don't check EIP or syscall frequency
+                // This was causing false positives for legitimate initialization loops
+                // EIP changed - reset counter and log progress for debugging
+                sameEipCount = (progressEip == lastProgressEip) ? sameEipCount + PROGRESS_LOG_INTERVAL : 0;
                 
-                // Check if we've been running too long without making a Win32 API call
-                // This catches infinite loops that cycle through multiple instructions
-                if (iterationsSinceLastSyscall >= maxIterationsWithoutSyscall)
+                if (_logger.IsEnabled(LogLevel.Debug))
                 {
-                    _logger.LogError("[Emulator] INFINITE LOOP DETECTED: {Iterations} iterations without a syscall. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}. Stopping emulation.", 
-                        iterationsSinceLastSyscall, progressEip, progressEsp);
-                    _logger.LogError("[Emulator] This may indicate: 1) Tight CPU-bound loop, 2) Busy-wait polling, 3) Data processing loop. Check decompilation at EIP address.");
-                    break;
-                }
-                
-                // Warn about long-running loops without syscalls (diagnostic for games like ign_teas)
-                if (PlatformHelpers.IsWasm && iterationsSinceLastSyscall % 1000000 == 0 && iterationsSinceLastSyscall > 0)
-                {
-                    _logger.LogWarning("[Emulator] Long-running loop: {Iterations} iterations without syscall at EIP=0x{Eip:X8}. Game may be in tight data processing loop.", 
-                        iterationsSinceLastSyscall, progressEip);
+                    _logger.LogDebug("[Emulator] Progress: {Iterations} iterations ({Elapsed:F2}ms), EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                        iterationCount, elapsed, progressEip, progressEsp);
                 }
                 
                 lastProgressEip = progressEip;
@@ -1781,23 +1737,10 @@ public sealed class Emulator : IDisposable
                 LogDebug($"[CRT] Instruction {i} at EIP=0x{currentEip:X8} ESP=0x{esp:X8} EBP=0x{ebp:X8} EAX=0x{eax:X8}");
             }
             
-            // Log when we see the same EIP range repeatedly (likely a loop)
-            if (i % 10000 == 0 && i > 0)
-            {
-                var eip = _cpu!.GetEip();
-                LogDebug($"[Loop Check] Instruction {i}: EIP=0x{eip:X8}");
-                
-                // Warn the user if execution seems stuck after many instructions
-                // Reduced warning frequency from every 100k to every 1M to reduce log spam
-                // Most legitimate initialization loops complete within 1-5M instructions
-                if (i % 1000000 == 0)
-                {
-                    var millions = i / 1000000; // Intentional integer division to display instruction count in millions
-                    _logger.LogInformation("[Loop Detection] Emulator has executed {InstructionCount} million instructions. EIP=0x{Eip:X8}", millions, eip);
-                    _logger.LogInformation("[Loop Detection] This may be normal for applications with intensive initialization (e.g., texture loading, file processing).");
-                    _logger.LogInformation("[Loop Detection] The emulator will continue running. If unresponsive after several minutes, consider stopping.");
-                }
-            }
+            // Loop detection removed to improve performance
+            // The every-10k-instruction check was causing significant overhead
+            // Applications with legitimate long-running initialization (like ign_teas)
+            // were being slowed down by the GetEip() calls and modulo operations
 
             try
             {
