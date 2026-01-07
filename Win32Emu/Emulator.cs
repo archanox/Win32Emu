@@ -1788,10 +1788,13 @@ public sealed class Emulator : IDisposable
                 LogDebug($"[Loop Check] Instruction {i}: EIP=0x{eip:X8}");
                 
                 // Warn the user if execution seems stuck after many instructions
-                if (i % 100000 == 0)
+                // Reduced warning frequency from every 100k to every 1M to reduce log spam
+                // Most legitimate initialization loops complete within 1-5M instructions
+                if (i % 1000000 == 0)
                 {
-                    _logger.LogWarning("[Loop Detection] Emulator has executed {InstructionCount} instructions and may be stuck in a loop. EIP=0x{Eip:X8}", i, eip);
-                    _logger.LogWarning("[Loop Detection] If the program is not responding, you may need to stop it. Check the documentation for known issues with this executable.");
+                    _logger.LogInformation("[Loop Detection] Emulator has executed {InstructionCount} million instructions. EIP=0x{Eip:X8}", i / 1000000, eip);
+                    _logger.LogInformation("[Loop Detection] This may be normal for applications with intensive initialization (e.g., texture loading, file processing).");
+                    _logger.LogInformation("[Loop Detection] The emulator will continue running. If unresponsive after several minutes, consider stopping.");
                 }
             }
 
