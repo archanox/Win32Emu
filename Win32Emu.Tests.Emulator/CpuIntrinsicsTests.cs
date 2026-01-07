@@ -216,6 +216,46 @@ public class CpuIntrinsicsTests : IDisposable
         Assert.True(edxFeatures > 0, "EDX features should include at least basic CPU features");
     }
 
+    [Fact]
+    public void CPUID_AllFunctions_ShouldWorkWithJitCpu()
+    {
+        // This test verifies that CPUID implementation in JitCpu properly
+        // uses CpuIntrinsics to report features that can be emulated
+
+        // Test function 0 - Get vendor string
+        _helper.SetReg("EAX", 0);
+        _helper.WriteCode(0x0F, 0xA2);
+        _helper.ExecuteInstruction();
+        var maxFunc = _helper.GetReg("EAX");
+        Assert.True(maxFunc >= 7, "CPUID function 0 should report max function >= 7");
+
+        // Test function 1 - Get features
+        _helper.SetReg("EAX", 1);
+        _helper.WriteCode(0x0F, 0xA2);
+        _helper.ExecuteInstruction();
+        var ecx1 = _helper.GetReg("ECX");
+        var edx1 = _helper.GetReg("EDX");
+        
+        // Verify it matches what CpuIntrinsics reports
+        Assert.Equal(CpuIntrinsics.GetCpuidEcxFeatures(), ecx1);
+        Assert.Equal(CpuIntrinsics.GetCpuidEdxFeatures(), edx1);
+
+        // Test function 7 subfunction 0 - Extended features
+        _helper.SetReg("EAX", 7);
+        _helper.SetReg("ECX", 0);
+        _helper.WriteCode(0x0F, 0xA2);
+        _helper.ExecuteInstruction();
+        var ebx7 = _helper.GetReg("EBX");
+        Assert.Equal(CpuIntrinsics.GetCpuidExtendedEbxFeatures(), ebx7);
+
+        // Test function 0x80000001 - Extended features
+        _helper.SetReg("EAX", 0x80000001);
+        _helper.WriteCode(0x0F, 0xA2);
+        _helper.ExecuteInstruction();
+        var ecx80000001 = _helper.GetReg("ECX");
+        Assert.Equal(CpuIntrinsics.GetCpuid80000001EcxFeatures(), ecx80000001);
+    }
+
     public void Dispose()
     {
         _helper?.Dispose();
