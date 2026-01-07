@@ -4737,7 +4737,7 @@ namespace Win32Emu.Win32.Modules
 							var strAddr = args.UInt32(argIndex++);
 							if (strAddr != 0)
 							{
-								var str = new LpcStr(strAddr, _env.Memory).ToString() ?? string.Empty;
+								var str = new LpcStr(strAddr).Read(_env.Memory) ?? string.Empty;
 								result.Append(str);
 							}
 							else
@@ -4820,7 +4820,7 @@ namespace Win32Emu.Win32.Modules
 							currentArgPtr += 4;
 							if (strAddr != 0)
 							{
-								var str = new LpcStr(strAddr, _env.Memory).ToString() ?? string.Empty;
+								var str = new LpcStr(strAddr).Read(_env.Memory) ?? string.Empty;
 								result.Append(str);
 							}
 							else
