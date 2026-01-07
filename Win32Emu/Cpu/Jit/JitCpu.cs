@@ -3842,7 +3842,7 @@ public class JitCpu : IAsyncCpu
 				_ecx = 0x6C65746E; // "ntel"
 				break;
 			case 1: // Get processor info and feature bits
-				_eax = 0x00000600; // Family 6, Model 0, Stepping 0 (more realistic than Family 15)
+				_eax = 0x00000600; // Family 6, Model 0, Stepping 0
 				_ebx = 0x00000800; // Brand index, CLFLUSH size, etc.
 				// Use CpuIntrinsics to report actual capabilities (or software fallbacks)
 				// Since SimdIntrinsicsHelper has software fallbacks for all SIMD ops,
@@ -3873,7 +3873,7 @@ public class JitCpu : IAsyncCpu
 				_eax = 0x00000600; // Extended processor signature
 				_ebx = 0;
 				_ecx = CpuIntrinsics.GetCpuid80000001EcxFeatures();
-				_edx = 0; // Extended feature flags in EDX
+				_edx = 0; // Extended feature flags in EDX (not currently implemented)
 				break;
 			default:
 				_eax = _ebx = _ecx = _edx = 0;
