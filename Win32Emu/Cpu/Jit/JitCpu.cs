@@ -3831,20 +3831,49 @@ public class JitCpu : IAsyncCpu
 		// CPUID - CPU Identification
 		// Returns CPU information based on EAX input
 		uint function = _eax;
+		uint subFunction = _ecx;
 		
 		switch (function)
 		{
 			case 0: // Get vendor string
-				_eax = 1; // Maximum supported function
+				_eax = 7; // Maximum supported function (extended to support function 7)
 				_ebx = 0x756E6547; // "Genu"
 				_edx = 0x49656E69; // "ineI"
 				_ecx = 0x6C65746E; // "ntel"
 				break;
 			case 1: // Get processor info and feature bits
-				_eax = 0x00000F00; // Family 15, Model 0, Stepping 0
+				_eax = 0x00000600; // Family 6, Model 0, Stepping 0 (more realistic than Family 15)
 				_ebx = 0x00000800; // Brand index, CLFLUSH size, etc.
-				_ecx = 0x00000001; // Feature flags (SSE3, etc.)
-				_edx = 0x078BFBFF; // Feature flags (FPU, TSC, MSR, etc.)
+				// Use CpuIntrinsics to report actual capabilities (or software fallbacks)
+				// Since SimdIntrinsicsHelper has software fallbacks for all SIMD ops,
+				// we always report SIMD features as supported
+				_ecx = CpuIntrinsics.GetCpuidEcxFeatures();
+				_edx = CpuIntrinsics.GetCpuidEdxFeatures();
+				break;
+			case 7: // Extended features (sub-function in ECX)
+				if (subFunction == 0)
+				{
+					_eax = 0; // Maximum sub-function
+					_ebx = CpuIntrinsics.GetCpuidExtendedEbxFeatures();
+					_ecx = 0; // Reserved
+					_edx = 0; // Reserved
+				}
+				else
+				{
+					_eax = _ebx = _ecx = _edx = 0;
+				}
+				break;
+			case 0x80000000: // Get maximum extended function
+				_eax = 0x80000001; // Maximum extended function
+				_ebx = 0;
+				_ecx = 0;
+				_edx = 0;
+				break;
+			case 0x80000001: // Extended processor info and features
+				_eax = 0x00000600; // Extended processor signature
+				_ebx = 0;
+				_ecx = CpuIntrinsics.GetCpuid80000001EcxFeatures();
+				_edx = 0; // Extended feature flags in EDX
 				break;
 			default:
 				_eax = _ebx = _ecx = _edx = 0;
