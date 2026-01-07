@@ -593,13 +593,11 @@ public class JitCpu : IAsyncCpu
 			var mnemonic = insn.Mnemonic;
 			var isConditionalJump =
 				mnemonic is Mnemonic.Ja or Mnemonic.Jae or Mnemonic.Jb or Mnemonic.Jbe or
-				           Mnemonic.Jc or Mnemonic.Jcxz or Mnemonic.Je or Mnemonic.Jecxz or
+				           Mnemonic.Jcxz or Mnemonic.Je or Mnemonic.Jecxz or
 				           Mnemonic.Jg or Mnemonic.Jge or Mnemonic.Jl or Mnemonic.Jle or
-				           Mnemonic.Jna or Mnemonic.Jnae or Mnemonic.Jnb or Mnemonic.Jnbe or
-				           Mnemonic.Jnc or Mnemonic.Jne or Mnemonic.Jng or Mnemonic.Jnge or
-				           Mnemonic.Jnl or Mnemonic.Jnle or Mnemonic.Jno or Mnemonic.Jnp or
-				           Mnemonic.Jns or Mnemonic.Jnz or Mnemonic.Jo or Mnemonic.Jp or
-				           Mnemonic.Jpe or Mnemonic.Jpo or Mnemonic.Js or Mnemonic.Jz;
+				           Mnemonic.Jne or Mnemonic.Jno or Mnemonic.Jnp or
+				           Mnemonic.Jns or Mnemonic.Jo or Mnemonic.Jp or
+				           Mnemonic.Js;
 			if (mnemonic == Mnemonic.Cmp || mnemonic == Mnemonic.Test ||
 			    isConditionalJump || // All conditional jumps
 			    mnemonic == Mnemonic.Mov && insn.Op0Kind == OpKind.Memory) // Memory writes that might be pointer updates
