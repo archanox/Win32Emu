@@ -620,27 +620,58 @@ class CppToCsTranspiler
 
 	private string MapCppTypeToCSharp(string cppType)
 	{
+		// Remove const, volatile, and pointer/reference markers for mapping
+		var cleanType = cppType
+			.Replace("const", "")
+			.Replace("volatile", "")
+			.Replace("*", "")
+			.Replace("&", "")
+			.Replace("unsigned", "")
+			.Replace("signed", "")
+			.Trim();
+		
 		// Map C++ types to C# equivalents
-		return cppType switch
+		return cleanType switch
 		{
 			"void" => "void",
-			"int" => "int",
-			"unsigned int" => "uint",
+			"int" => cppType.Contains("unsigned") ? "uint" : "int",
+			"char" => cppType.Contains("unsigned") ? "byte" : "sbyte",
+			"short" => cppType.Contains("unsigned") ? "ushort" : "short",
+			"long" => cppType.Contains("unsigned") ? "uint" : "int",
+			"__int8" => cppType.Contains("unsigned") ? "byte" : "sbyte",
+			"__int16" => cppType.Contains("unsigned") ? "ushort" : "short",
+			"__int32" => cppType.Contains("unsigned") ? "uint" : "int",
+			"__int64" => cppType.Contains("unsigned") ? "ulong" : "long",
+			"float" => "float",
+			"double" => "double",
+			"bool" => "bool",
+			"BYTE" => "byte",
+			"WORD" => "ushort",
 			"DWORD" => "uint",
+			"QWORD" => "ulong",
 			"BOOL" => "int",
 			"HWND" => "uint",
 			"HINSTANCE" => "uint",
+			"HMODULE" => "uint",
+			"HDC" => "uint",
+			"HANDLE" => "uint",
 			"LPSTR" => "string",
 			"LPCSTR" => "string",
-			"__int16" => "short",
-			"__int64" => "long",
-			_ => "uint" // Default to uint for pointers/handles
+			"LPWSTR" => "string",
+			"LPCWSTR" => "string",
+			"LPVOID" => "uint",
+			"PVOID" => "uint",
+			"_DWORD" => "uint",
+			"_WORD" => "ushort",
+			"_BYTE" => "byte",
+			"_QWORD" => "ulong",
+			_ => cppType.Contains("*") ? "uint" : "uint" // Default to uint for pointers/handles
 		};
 	}
 
 	private string MapParametersToCSharp(string cppParams)
 	{
-		if (string.IsNullOrWhiteSpace(cppParams) || cppParams == "void")
+		if (string.IsNullOrWhiteSpace(cppParams) || cppParams.Trim() == "void" || cppParams == "void")
 		{
 			return "";
 		}
@@ -652,6 +683,11 @@ class CppToCsTranspiler
 		for (var i = 0; i < parameters.Length; i++)
 		{
 			var param = parameters[i].Trim();
+			
+			// Skip void parameters
+			if (param == "void" || string.IsNullOrWhiteSpace(param))
+				continue;
+			
 			// Simple type extraction (this is a basic implementation)
 			var parts = param.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 			if (parts.Length >= 2)
@@ -661,10 +697,11 @@ class CppToCsTranspiler
 				var csType = MapCppTypeToCSharp(type);
 				csParams.Add($"{csType} {name}");
 			}
-			else
+			else if (parts.Length == 1)
 			{
-				// If we can't parse properly, use generic parameter
-				csParams.Add($"uint param{i}");
+				// Just a type, no name - generate parameter name
+				var csType = MapCppTypeToCSharp(parts[0]);
+				csParams.Add($"{csType} param{i}");
 			}
 		}
 
@@ -715,6 +752,58 @@ class CppToCsTranspiler
 			return $"return {csValue};";
 		}
 		
+		// Handle while statements
+		if (line.StartsWith("while "))
+		{
+			var condMatch = Regex.Match(line, @"^while\s*\(\s*(.+?)\s*\)$");
+			if (condMatch.Success)
+			{
+				var condition = condMatch.Groups[1].Value;
+				var csCondition = TranspileExpression(condition, variables, func);
+				return $"while ({csCondition})";
+			}
+		}
+		
+		// Handle do keyword
+		if (line == "do")
+		{
+			return "do";
+		}
+		
+		// Handle for loops
+		if (line.StartsWith("for "))
+		{
+			var forMatch = Regex.Match(line, @"^for\s*\(\s*(.+?)\s*;\s*(.+?)\s*;\s*(.+?)\s*\)$");
+			if (forMatch.Success)
+			{
+				var init = forMatch.Groups[1].Value.Trim();
+				var condition = forMatch.Groups[2].Value.Trim();
+				var increment = forMatch.Groups[3].Value.Trim();
+				
+				// Try to transpile each part
+				string csInit;
+				if (init.Contains("="))
+				{
+					csInit = TranspileLine(init + ";", variables, func).TrimEnd(';');
+				}
+				else
+				{
+					csInit = init;
+				}
+				
+				var csCondition = TranspileExpression(condition, variables, func);
+				var csIncrement = increment; // Keep as-is for now
+				
+				return $"for ({csInit}; {csCondition}; {csIncrement})";
+			}
+		}
+		
+		// Handle break and continue
+		if (line == "break")
+			return "break;";
+		if (line == "continue")
+			return "continue;";
+		
 		// Handle variable declarations
 		// Pattern: type varname = value; or type varname;
 		var declMatch = Regex.Match(line, @"^([\w\s\*]+)\s+(\w+)(\s*=\s*(.+))?$");
@@ -724,6 +813,10 @@ class CppToCsTranspiler
 			var varName = declMatch.Groups[2].Value;
 			var hasInit = declMatch.Groups[3].Success;
 			var initValue = hasInit ? declMatch.Groups[4].Value.Trim() : "";
+			
+			// Skip if it looks like a label (ends with colon in original)
+			if (cppLine.TrimEnd().EndsWith(":"))
+				return $"// TODO: Transpile label: {cppLine}";
 			
 			// Map type
 			var csType = MapCppTypeToCSharp(cppType);
@@ -740,15 +833,48 @@ class CppToCsTranspiler
 			}
 		}
 		
-		// Handle assignment statements
-		// Pattern: varname = value;
-		var assignMatch = Regex.Match(line, @"^(\w+)\s*=\s*(.+)$");
+		// Handle compound assignments (+=, -=, *=, /=, etc.)
+		var compoundMatch = Regex.Match(line, @"^([\w\[\]\.]+)\s*([+\-*/%&|^]|<<|>>)=\s*(.+)$");
+		if (compoundMatch.Success)
+		{
+			var varName = compoundMatch.Groups[1].Value;
+			var op = compoundMatch.Groups[2].Value;
+			var value = compoundMatch.Groups[3].Value.Trim();
+			var csValue = TranspileExpression(value, variables, func);
+			return $"{varName} {op}= {csValue};";
+		}
+		
+		// Handle assignment statements (including array and member access)
+		// Pattern: varname = value; or varname[index] = value; or obj.member = value;
+		var assignMatch = Regex.Match(line, @"^([\w\[\]\.]+)\s*=\s*(.+)$");
 		if (assignMatch.Success)
 		{
 			var varName = assignMatch.Groups[1].Value;
 			var value = assignMatch.Groups[2].Value.Trim();
 			var csValue = TranspileExpression(value, variables, func);
 			return $"{varName} = {csValue};";
+		}
+		
+		// Handle increment/decrement (++, --)
+		if (Regex.IsMatch(line, @"^([\w\[\]\.]+)\+\+$"))
+		{
+			var varName = line.Substring(0, line.Length - 2);
+			return $"{varName}++;";
+		}
+		if (Regex.IsMatch(line, @"^([\w\[\]\.]+)--$"))
+		{
+			var varName = line.Substring(0, line.Length - 2);
+			return $"{varName}--;";
+		}
+		if (Regex.IsMatch(line, @"^\+\+([\w\[\]\.]+)$"))
+		{
+			var varName = line.Substring(2);
+			return $"++{varName};";
+		}
+		if (Regex.IsMatch(line, @"^--([\w\[\]\.]+)$"))
+		{
+			var varName = line.Substring(2);
+			return $"--{varName};";
 		}
 		
 		// Handle if statements
@@ -761,6 +887,24 @@ class CppToCsTranspiler
 				var csCondition = TranspileExpression(condition, variables, func);
 				return $"if ({csCondition})";
 			}
+		}
+		
+		// Handle else if
+		if (line.StartsWith("else if "))
+		{
+			var condMatch = Regex.Match(line, @"^else\s+if\s*\(\s*(.+?)\s*\)$");
+			if (condMatch.Success)
+			{
+				var condition = condMatch.Groups[1].Value;
+				var csCondition = TranspileExpression(condition, variables, func);
+				return $"else if ({csCondition})";
+			}
+		}
+		
+		// Handle else
+		if (line == "else")
+		{
+			return "else";
 		}
 		
 		// Handle function calls
@@ -778,7 +922,7 @@ class CppToCsTranspiler
 				return $"_env.CallWin32Api(\"{funcName}\"{(string.IsNullOrEmpty(csArgs) ? "" : ", " + csArgs)});";
 			}
 			// Check if it's a call to another decompiled function
-			else if (funcName.StartsWith("sub_"))
+			else if (funcName.StartsWith("sub_") || funcName.StartsWith("FUN_"))
 			{
 				var address = ExtractAddressFromName(funcName);
 				var csArgs = TranspileArguments(args, variables, func);
@@ -818,6 +962,9 @@ class CppToCsTranspiler
 		if (expr == "FALSE" || expr == "false")
 			return "false";
 		
+		// Handle casts - remove them for simplicity
+		expr = Regex.Replace(expr, @"\([\w\s\*]+\)\s*", "");
+		
 		// Handle function calls in expressions
 		var callMatch = Regex.Match(expr, @"^(\w+)\s*\((.*?)\)$");
 		if (callMatch.Success)
@@ -830,7 +977,7 @@ class CppToCsTranspiler
 				var csArgs = TranspileArguments(args, variables, func);
 				return $"_env.CallWin32Api<uint>(\"{funcName}\"{(string.IsNullOrEmpty(csArgs) ? "" : ", " + csArgs)})";
 			}
-			else if (funcName.StartsWith("sub_"))
+			else if (funcName.StartsWith("sub_") || funcName.StartsWith("FUN_"))
 			{
 				var address = ExtractAddressFromName(funcName);
 				var csArgs = TranspileArguments(args, variables, func);
@@ -841,31 +988,81 @@ class CppToCsTranspiler
 		// Handle dereferencing and pointer operations
 		expr = expr.Replace("->", ".");
 		
-		// Handle comparison operators (convert to C# style)
-		expr = expr.Replace("!=", "!=");
-		expr = expr.Replace("==", "==");
+		// Handle ternary operator
+		var ternaryMatch = Regex.Match(expr, @"^(.+?)\s*\?\s*(.+?)\s*:\s*(.+?)$");
+		if (ternaryMatch.Success)
+		{
+			var condition = TranspileExpression(ternaryMatch.Groups[1].Value, variables, func);
+			var trueValue = TranspileExpression(ternaryMatch.Groups[2].Value, variables, func);
+			var falseValue = TranspileExpression(ternaryMatch.Groups[3].Value, variables, func);
+			return $"({condition} ? {trueValue} : {falseValue})";
+		}
 		
 		// Handle negation
-		if (expr.StartsWith("!"))
+		if (expr.StartsWith("!") && !expr.StartsWith("!="))
 		{
 			var inner = TranspileExpression(expr.Substring(1), variables, func);
 			return $"!{inner}";
 		}
 		
-		// Handle binary operators
-		foreach (var op in new[] { "&&", "||", "+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=" })
+		// Handle binary operators - process in order of precedence
+		// Must check longer operators first (>>=, <<=, >>, <<, >=, <=) before shorter ones (>, <)
+		foreach (var op in new[] { "&&", "||", "<<", ">>", "<=", ">=", "==", "!=", "+", "-", "*", "/", "%", "&", "|", "^", "<", ">" })
 		{
-			var parts = expr.Split(new[] { op }, 2, StringSplitOptions.None);
-			if (parts.Length == 2)
+			// Use a more careful split that respects parentheses
+			var splitIndex = FindOperatorSplit(expr, op);
+			if (splitIndex >= 0)
 			{
-				var left = TranspileExpression(parts[0].Trim(), variables, func);
-				var right = TranspileExpression(parts[1].Trim(), variables, func);
-				return $"{left} {op} {right}";
+				var left = expr.Substring(0, splitIndex).Trim();
+				var right = expr.Substring(splitIndex + op.Length).Trim();
+				
+				var leftCs = TranspileExpression(left, variables, func);
+				var rightCs = TranspileExpression(right, variables, func);
+				return $"{leftCs} {op} {rightCs}";
 			}
 		}
 		
 		// Default: return as-is
 		return expr;
+	}
+	
+	private int FindOperatorSplit(string expr, string op)
+	{
+		int depth = 0;
+		int i = 0;
+		
+		while (i <= expr.Length - op.Length)
+		{
+			var ch = expr[i];
+			
+			if (ch == '(' || ch == '[' || ch == '{')
+				depth++;
+			else if (ch == ')' || ch == ']' || ch == '}')
+				depth--;
+			else if (depth == 0 && expr.Substring(i, op.Length) == op)
+			{
+				// Make sure it's not part of a longer operator
+				// e.g., don't match > in >> or >= 
+				if (op == ">" || op == "<")
+				{
+					// Check if followed by = or another > or <
+					if (i + 1 < expr.Length)
+					{
+						var nextChar = expr[i + 1];
+						if (nextChar == '=' || nextChar == op[0])
+							{
+								i++;
+								continue;
+							}
+					}
+				}
+				return i;
+			}
+			
+			i++;
+		}
+		
+		return -1;
 	}
 	
 	private string TranspileArguments(string cppArgs, HashSet<string> variables, FunctionInfo func)

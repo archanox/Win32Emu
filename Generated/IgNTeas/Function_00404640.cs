@@ -25,7 +25,7 @@ namespace IgNTeas.Generated
 		{
 			if (dword_43CCDC())
 			return dword_43CD10();
-			// TODO: Transpile: else
+			else
 			return 0;
 		}
 

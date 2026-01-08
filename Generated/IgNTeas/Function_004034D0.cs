@@ -31,7 +31,7 @@ namespace IgNTeas.Generated
 			v1 = Time;
 			dword_41C830 = v1;
 			if (dword_43C7A4)
-			// TODO: Transpile: dword_41C824 += Time - v1;
+			dword_41C824 += Time - v1;
 			dword_41C830 = Time;
 			return dword_41C824;
 		}

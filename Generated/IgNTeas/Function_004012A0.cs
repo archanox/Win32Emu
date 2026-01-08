@@ -29,18 +29,18 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v3; // ecx
 			if (dword_41C030 == 1)
 			{
-			// TODO: Transpile: for ( i = sub_403910(); i; i = sub_403910() )
+			for (i = CallFunction(0x00403910); i; i = sub_403910())
 			{
-			v1 = CallFunction(0x00401080, (__int16 * )dword_43C3CC, dword_43C3FC);
+			v1 = CallFunction(0x00401080, dword_43C3CC, dword_43C3FC);
 			if (dword_43C3FC > v1)
 			{
-			if (dword_41C200[ +  + dword_41C520] ==  - 1)
+			if (dword_41C200[++dword_41C520] == -1)
 			dword_41C520 = 9;
-			CallFunction(0x00401000, (__int16 * )dword_43C3D8[dword_41C200[dword_41C520]], dword_43C3A0[dword_41C200[dword_41C520]]);
-			CallFunction(0x00401080, (__int16 * )(dword_43C3CC + 2 * v1), dword_43C3FC - v1);
+			CallFunction(0x00401000, dword_43C3D8[dword_41C200[dword_41C520]], dword_43C3A0[dword_41C200[dword_41C520]]);
+			CallFunction(0x00401080, (dword_43C3CC + 2 * v1), dword_43C3FC - v1);
 			}
-			CallFunction(0x004013C0, (_BYTE * ) * i, dword_43C3CC, i[2], 0);
-			v2 = (_BYTE * )i[1];
+			CallFunction(0x004013C0,  * i, dword_43C3CC, i[2], 0);
+			v2 = i[1];
 			if (v2)
 			{
 			v3 = i[3];

@@ -40,46 +40,46 @@ namespace IgNTeas.Generated
 			{
 			if (v10 == 1)
 			{
-			if (!CallFunction(0x004061A0, (int)a7))
+			if (!sub_4061A0)
 			return 0;
-			if (!CallFunction(0x00406050, (int)a7, 3))
+			if (!CallFunction(0x00406050, a7, 3))
 			return 0;
 			}
 			}
-			// TODO: Transpile: else if ( !sub_406050((int)a7, 3) )
+			else if (!CallFunction(0x00406050, a7, 3))
 			{
 			return 0;
 			}
-			v11 = (char * )(a3 + a2 * a4 + a1);
+			v11 = (a3 + a2 * a4 + a1);
 			v17 = a7[6];
 			v12 = a7[5] + a9 * v17 + a8;
 			v16 =  - v12 & 3;
-			v15 = ((_BYTE)v12 + (_BYTE)a5) & 3;
-			v18 = (int)(a5 - v15 - v16) / 4;
+			v15 = (v12 + a5) & 3;
+			v18 = (a5 - v15 - v16) / 4;
 			v13 = a6;
 			if (a6 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			// TODO: Transpile: qmemcpy((void *)v12, v11, v16);
 			// TODO: Transpile: qmemcpy((void *)(v12 + v16), &v11[v16], 4 * v18);
 			// TODO: Transpile: qmemcpy((void *)(v12 + v16 + 4 * v18), &v11[4 * v18 + v16], v15);
-			// TODO: Transpile: v11 += a2;
-			// TODO: Transpile: v12 += v17;
-			// TODO: Transpile: --v13;
+			v11 += a2;
+			v12 += v17;
+			--v13;
 			}
-			// TODO: Transpile: while ( v13 );
+			while (v13)
 			}
 			if (a7[3] != v14)
 			{
 			if (v14)
 			{
-			if (!CallFunction(0x004061A0, (int)a7))
+			if (!sub_4061A0)
 			return 0;
-			if (!CallFunction(0x00406050, (int)a7, v14))
+			if (!CallFunction(0x00406050, a7, v14))
 			return 0;
 			}
-			// TODO: Transpile: else if ( !sub_4061A0((int)a7) )
+			else if (!sub_4061A0)
 			{
 			return 0;
 			}

@@ -40,41 +40,41 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v15; // eax
 			// TODO: Transpile: _DWORD *v16; // [esp+10h] [ebp-4h]
 			v1 = a1[2];
-			if (v1 > 0 && v1 < = 256)
+			if (v1 > 0 && v1 <= 256)
 			{
 			v2 = a1[1];
-			if (v2 > 0 && v2 < = 256)
+			if (v2 > 0 && v2 <= 256)
 			{
-			v3 = (int * )dword_444B28;
+			v3 = dword_444B28;
 			v4 = a1[4];
 			if (dword_444B28)
 			{
-			// TODO: Transpile: while ( v3[2] != (v4 & 0xFFFF0000) )
+			while (v3[2] != (v4 & 0xFFFF0000))
 			{
-			v3 = (int * )v3[5];
+			v3 = v3[5];
 			if (!v3)
 			// TODO: Transpile: return;
 			}
-			v5 = (_DWORD * )v3[3];
-			// TODO: Transpile: while ( v5[2] != (a1[4] & 0xFFFFFF00) )
+			v5 = v3[3];
+			while (v5[2] != (a1[4] & 0xFFFFFF00))
 			{
-			v5 = (_DWORD * )v5[5];
+			v5 = v5[5];
 			if (!v5)
 			// TODO: Transpile: return;
 			}
-			v6 = (_DWORD * )v5[3];
-			// TODO: Transpile: while ( v6[2] != v4 )
+			v6 = v5[3];
+			while (v6[2] != v4)
 			{
-			v6 = (_DWORD * )v6[5];
+			v6 = v6[5];
 			if (!v6)
 			// TODO: Transpile: return;
 			}
 			v16 = 0;
 			v7 =  * (&dword_444C40 + v1);
-			// TODO: Transpile: while ( (_DWORD *)v7[1] != v5 )
+			while (v7[1] != v5)
 			{
 			v16 = v7;
-			v7 = (_DWORD * ) * v7;
+			v7 =  * v7;
 			if (!v7)
 			// TODO: Transpile: return;
 			}
@@ -84,13 +84,13 @@ namespace IgNTeas.Generated
 			v14 = v6[4];
 			if (v14)
 			// TODO: Transpile: *(_DWORD *)(v14 + 20) = v8;
-			// TODO: Transpile: else
-			// TODO: Transpile: v5[3] = v8;
+			else
+			v5[3] = v8;
 			v15 = v6[5];
 			if (v15)
 			// TODO: Transpile: *(_DWORD *)(v15 + 16) = v6[4];
 			}
-			// TODO: Transpile: else
+			else
 			{
 			v9 = v5[5];
 			if (v9 || v5[4])
@@ -98,28 +98,28 @@ namespace IgNTeas.Generated
 			v12 = v5[4];
 			if (v12)
 			// TODO: Transpile: *(_DWORD *)(v12 + 20) = v9;
-			// TODO: Transpile: else
-			// TODO: Transpile: v3[3] = v9;
+			else
+			v3[3] = v9;
 			v13 = v5[5];
 			if (v13)
 			// TODO: Transpile: *(_DWORD *)(v13 + 16) = v5[4];
 			}
-			// TODO: Transpile: else
+			else
 			{
 			CallFunction(0x00406F40, v3[2]);
 			v10 = v3[4];
 			v11 = v3 + 5;
 			if (v10)
 			// TODO: Transpile: *(_DWORD *)(v10 + 20) = *v11;
-			// TODO: Transpile: else
-			dword_444B28 = (void * ) * v11;
+			else
+			dword_444B28 =  * v11;
 			if ( * v11)
 			// TODO: Transpile: *(_DWORD *)(*v11 + 16) = v3[4];
 			CallFunction(0x00406570, v3);
 			}
 			if (v16)
 			// TODO: Transpile: *v16 = *v7;
-			// TODO: Transpile: else
+			else
 			// TODO: Transpile: *(&dword_444C40 + a1[2]) = (void *)*v7;
 			CallFunction(0x00406570, v7);
 			CallFunction(0x00406570, v5);

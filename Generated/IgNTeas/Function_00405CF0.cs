@@ -27,12 +27,12 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: _DWORD v10[4]; // [esp+8h] [ebp-10h] BYREF
 			if (! * a1 || ! * a6)
 			return 0;
-			// TODO: Transpile: v10[0] = a2;
-			// TODO: Transpile: v10[1] = a3;
+			v10[0] = a2;
+			v10[1] = a3;
 			v8 = a6[11];
-			// TODO: Transpile: v10[2] = a4 + a2;
-			// TODO: Transpile: v10[3] = a3 + a5;
-			return ( * (int (__stdcall *  * )(int, int, int, _DWORD, _DWORD * , int))( * (_DWORD * )v8 + 28))(v8, a7, a8, a1[11], v10, 16) == 0;
+			v10[2] = a4 + a2;
+			v10[3] = a3 + a5;
+			return (*(int (int, int, int, _DWORD, _DWORD *, int))(*v8 + 28))(v8, a7, a8, a1[11], v10, 16) == 0;
 		}
 
 		/// <summary>

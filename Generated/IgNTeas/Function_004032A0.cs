@@ -42,7 +42,7 @@ namespace IgNTeas.Generated
 			dword_41C82C = 1;
 			return 0;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			dword_41C7B0 = CallFunction(0x004034D0);
 			CallFunction(0x00402410);

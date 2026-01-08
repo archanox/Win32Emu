@@ -25,17 +25,17 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: _DWORD *v0; // ecx
 			// TODO: Transpile: int *v1; // eax
-			v0 = &unk_447038;
-			v1 = (int * )&unk_4450B8;
-			dword_44CDF8 = (int)&dword_446FF8;
-			// TODO: Transpile: do
+			v0 =  & unk_447038;
+			v1 =  & unk_4450B8;
+			dword_44CDF8 =  & dword_446FF8;
+			do
 			{
 			// TODO: Transpile: *v1++ = (int)v0;
 			// TODO: Transpile: *v0 = 0;
-			// TODO: Transpile: v0 += 3;
+			v0 += 3;
 			}
-			// TODO: Transpile: while ( v1 < &dword_446FF8 );
-			CallFunction(0x004067E0, &dword_446FF8, 0);
+			while (v1 <  & dword_446FF8)
+			CallFunction(0x004067E0,  & dword_446FF8, 0);
 			return 1;
 		}
 

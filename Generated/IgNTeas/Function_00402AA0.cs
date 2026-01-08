@@ -37,18 +37,18 @@ namespace IgNTeas.Generated
 			CallFunction(0x004030C0, dword_4528B4 + 8, dbl_41C550);
 			if (dbl_41C550 < 0.0)
 			{
-			// TODO: Transpile: ++dword_41C548;
+			++dword_41C548;
 			dword_41C560 = 1;
 			CallFunction(0x00402F70, 1);
 			}
 			}
-			v1 = (_DWORD * )(dword_4528C8 + 12 * dword_41C538);
+			v1 = (dword_4528C8 + 12 * dword_41C538);
 			v2 = dword_41C53C +  * v1;
 			dword_41C53C = a1 - dword_41C540;
 			v3 = v1[1];
-			if (a1 - dword_41C540 > = v3)
+			if (a1 - dword_41C540 >= v3)
 			{
-			// TODO: Transpile: dword_41C540 += v3;
+			dword_41C540 += v3;
 			dword_41C53C = 0;
 			if (dword_452958 / 12 ==  +  + dword_41C538)
 			dword_41C538 = 0;
@@ -61,7 +61,7 @@ namespace IgNTeas.Generated
 			dword_452994 = 0;
 			dword_452998 = dword_41C558 - 1;
 			dword_45299C = dword_41C55C - 1;
-			CallFunction(0x00402E10, (int)&dword_452980);
+			CallFunction(0x00402E10,  & dword_452980);
 			if (dword_41C560)
 			{
 			CallFunction(0x00402F00, 0, 57, 40, 40, 0, 0, 320, dword_41C558, dword_452948 + 846);
@@ -69,7 +69,7 @@ namespace IgNTeas.Generated
 			CallFunction(0x00402F00, 0, 97, 40, 40, 0, dword_41C55C - 40, 320, dword_41C558, dword_452948 + 846);
 			CallFunction(0x00402F00, 40, 97, 40, 40, dword_41C558 - 40, dword_41C55C - 40, 320, dword_41C558, dword_452948 + 846);
 			}
-			// TODO: Transpile: else
+			else
 			{
 			CallFunction(0x00402F00, 0, 0, 20, 20, 0, 0, 320, dword_41C558, dword_452948 + 846);
 			CallFunction(0x00402F00, 20, 0, 20, 20, dword_41C558 - 20, 0, 320, dword_41C558, dword_452948 + 846);
@@ -77,7 +77,7 @@ namespace IgNTeas.Generated
 			CallFunction(0x00402F00, 20, 20, 20, 20, dword_41C558 - 20, dword_41C55C - 20, 320, dword_41C558, dword_452948 + 846);
 			}
 			CallFunction(0x00402F00, 40, 0, 173, 57, (dword_41C558 - 173) / 2, 2 * dword_41C55C / 200, 320, dword_41C558, dword_452948 + 846);
-			CallFunction(0x00404600, dword_4528B0, dword_41C558, 0, 0, dword_41C558, dword_41C55C, (int)&unk_43C7F8, 0, 0);
+			CallFunction(0x00404600, dword_4528B0, dword_41C558, 0, 0, dword_41C558, dword_41C55C,  & unk_43C7F8, 0, 0);
 			// TODO: Transpile: operator delete(&unk_43C7F8);
 			return 0;
 		}

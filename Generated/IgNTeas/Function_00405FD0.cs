@@ -25,19 +25,19 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: int v2; // eax
 			// TODO: Transpile: _BYTE v3[4]; // [esp+8h] [ebp-4h] BYREF
-			if ( * (_DWORD * )(a1 + 40) != 1)
+			if ( * (a1 + 40) != 1)
 			return 0;
-			if (! * (_DWORD * )a1)
+			if (! * a1)
 			return 0;
 			// TODO: Transpile: (*(void (__stdcall **)(_DWORD, _BYTE *))(**(_DWORD **)(a1 + 44) + 56))(*(_DWORD *)(a1 + 44), v3);
 			if ((v3[0] & 0x10) == 0)
 			return 0;
-			// TODO: Transpile: do
-			v2 = ( * (int (__stdcall *  * )(int, _DWORD, _DWORD))( * (_DWORD * )dword_43C914 + 44))(;
+			do
+			v2 = (*(int (int, _DWORD, _DWORD))(*dword_43C914 + 44))(;
 			// TODO: Transpile: dword_43C914,
 			// TODO: Transpile: *(_DWORD *)(a1 + 44),
 			// TODO: Transpile: 0);
-			// TODO: Transpile: while ( v2 == -2005532132 );
+			while (v2 == -2005532132)
 			return v2 == 0;
 		}
 

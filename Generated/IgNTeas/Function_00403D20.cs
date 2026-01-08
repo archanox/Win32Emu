@@ -58,24 +58,24 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: _DWORD v33[2]; // [esp+B4h] [ebp-74h] BYREF
 			// TODO: Transpile: int v34; // [esp+BCh] [ebp-6Ch]
 			// TODO: Transpile: _DWORD v35[24]; // [esp+C8h] [ebp-60h] BYREF
-			// TODO: Transpile: v30[1] = 2;
-			// TODO: Transpile: v30[4] = 2;
-			// TODO: Transpile: v30[5] = 2;
-			// TODO: Transpile: v31[0] = 22050;
-			// TODO: Transpile: v31[1] = 22050;
-			// TODO: Transpile: v31[3] = 22050;
-			// TODO: Transpile: v31[2] = 44100;
-			// TODO: Transpile: v31[4] = 22050;
-			// TODO: Transpile: v31[5] = 44100;
-			// TODO: Transpile: v32[0] = 16;
-			// TODO: Transpile: v32[1] = 16;
-			// TODO: Transpile: v30[0] = 1;
-			// TODO: Transpile: v30[2] = 1;
-			// TODO: Transpile: v30[3] = 1;
-			// TODO: Transpile: v32[2] = 16;
-			// TODO: Transpile: v32[3] = 8;
-			// TODO: Transpile: v32[4] = 8;
-			// TODO: Transpile: v32[5] = 8;
+			v30[1] = 2;
+			v30[4] = 2;
+			v30[5] = 2;
+			v31[0] = 22050;
+			v31[1] = 22050;
+			v31[3] = 22050;
+			v31[2] = 44100;
+			v31[4] = 22050;
+			v31[5] = 44100;
+			v32[0] = 16;
+			v32[1] = 16;
+			v30[0] = 1;
+			v30[2] = 1;
+			v30[3] = 1;
+			v32[2] = 16;
+			v32[3] = 8;
+			v32[4] = 8;
+			v32[5] = 8;
 			if (dword_41C848 == 1)
 			return 0;
 			dword_453094 = 4;
@@ -83,20 +83,20 @@ namespace IgNTeas.Generated
 			dword_4530A0 = 0;
 			dword_43C7D8 = 0;
 			dword_41C848 = 0;
-			if (_env.CallWin32Api<uint>("DirectSoundCreate", 0, &ppDS, 0))
+			if (_env.CallWin32Api<uint>("DirectSoundCreate", 0,  & ppDS, 0))
 			return 0;
-			if (ppDS.lpVtbl.SetCooperativeLevel(ppDS, (HWND)dword_41C7AC, 4))
+			if (ppDS.lpVtbl.SetCooperativeLevel(ppDS, dword_41C7AC, 4))
 			{
-			if (!ppDS.lpVtbl.SetCooperativeLevel(ppDS, (HWND)dword_41C7AC, 3))
+			if (!ppDS.lpVtbl.SetCooperativeLevel(ppDS, dword_41C7AC, 3))
 			{
 			v28 = 0;
 			v25 = 20;
 			v26 = 1;
 			v27 = 0;
 			v29 = 0;
-			if (!ppDS.lpVtbl.CreateSoundBuffer(ppDS, (LPCDSBUFFERDESC)&v25, (LPDIRECTSOUNDBUFFER * )&dword_4530C0, 0))
+			if (!ppDS.lpVtbl.CreateSoundBuffer(ppDS, &v25, &dword_4530C0, 0))
 			{
-			// TODO: Transpile: for ( i = 0; i < 6; ++i )
+			for (i = 0; i < 6; ++i)
 			{
 			v1 = v30[i];
 			v2 = v32[i];
@@ -112,11 +112,11 @@ namespace IgNTeas.Generated
 			v19 = v3;
 			// TODO: Transpile: LOWORD(v24) = v4 / 8;
 			v21 = v24;
-			dword_43C7F0 = (unsigned __int16)v24;
-			v5 = v3 * (unsigned __int16)v24;
+			dword_43C7F0 = v24;
+			v5 = v3 * v24;
 			v23 = v3 / 0x64;
 			v20 = v5;
-			v6 = ( * (int (__stdcall *  * )(int, __int16 * ))( * (_DWORD * )dword_4530C0 + 56))(dword_4530C0, &v17);
+			v6 = (*(int (int, __int16 *))(*dword_4530C0 + 56))(dword_4530C0, &v17);
 			dword_453080 = v3;
 			v7 = v30[i];
 			dword_453084 = v2;
@@ -132,11 +132,11 @@ namespace IgNTeas.Generated
 			dword_43C7F4 = v5;
 			v28 = 0;
 			v27 = v5;
-			v29 = &v17;
+			v29 =  & v17;
 			v25 = 20;
 			v26 = 232;
 			v17 = 1;
-			v6 = ppDS.lpVtbl.CreateSoundBuffer(ppDS, (LPCDSBUFFERDESC)&v25, (LPDIRECTSOUNDBUFFER * )&dword_4530A0, 0);
+			v6 = ppDS.lpVtbl.CreateSoundBuffer(ppDS, &v25, &dword_4530A0, 0);
 			if (v6)
 			return 0;
 			i = 6;
@@ -145,16 +145,16 @@ namespace IgNTeas.Generated
 			if (!v6)
 			{
 			dword_45308C = v23;
-			// TODO: Transpile: v33[0] = 20;
-			if (!( * (int (__stdcall *  * )(int, _DWORD * ))( * (_DWORD * )dword_4530A0 + 12))(dword_4530A0, v33))
+			v33[0] = 20;
+			if (!(*(int (int, _DWORD *))(*dword_4530A0 + 12))(dword_4530A0, v33))
 			{
 			dword_43C7F4 = v34;
 			dword_43C7C4 = dword_43C7F0 * v23 * (dword_453098 + 27);
 			// TODO: Transpile: memset(v35, 0, sizeof(v35));
-			// TODO: Transpile: v35[0] = 96;
-			if (!ppDS.lpVtbl.GetCaps(ppDS, (LPDSCAPS)v35) && (v35[1] & 0x20) == 0)
+			v35[0] = 96;
+			if (!ppDS.lpVtbl.GetCaps(ppDS, v35) && (v35[1] & 0x20) == 0)
 			dword_43C7C4 = dword_43C7F0 * v23 * (dword_453098 + 2);
-			if ((int)(dword_43C7F4 - dword_43C7F0 * v23) < dword_43C7C4)
+			if ((dword_43C7F4 - dword_43C7F0 * v23) < dword_43C7C4)
 			dword_43C7C4 = dword_43C7F4 - dword_43C7F0 * v23;
 			dword_43C7E0 = 0;
 			// TODO: Transpile: (*(void (__stdcall **)(int, _DWORD, _DWORD, int))(*(_DWORD *)dword_4530C0 + 48))(dword_4530C0, 0, 0, 1);
@@ -174,9 +174,9 @@ namespace IgNTeas.Generated
 			v26 = 1;
 			v27 = 0;
 			v29 = 0;
-			if (ppDS.lpVtbl.CreateSoundBuffer(ppDS, (LPCDSBUFFERDESC)&v25, (LPDIRECTSOUNDBUFFER * )&dword_4530C0, 0))
+			if (ppDS.lpVtbl.CreateSoundBuffer(ppDS, &v25, &dword_4530C0, 0))
 			return 0;
-			// TODO: Transpile: for ( j = 0; j < 6; ++j )
+			for (j = 0; j < 6; ++j)
 			{
 			v10 = v30[j];
 			v11 = v32[j];
@@ -189,7 +189,7 @@ namespace IgNTeas.Generated
 			v13 = v12 / 0x64;
 			dword_43C7F0 = v21;
 			v20 = v21 * v12;
-			v14 = ( * (int (__stdcall *  * )(int, __int16 * ))( * (_DWORD * )dword_4530C0 + 56))(dword_4530C0, &v17);
+			v14 = (*(int (int, __int16 *))(*dword_4530C0 + 56))(dword_4530C0, &v17);
 			dword_453080 = v31[j];
 			dword_453088 = v10 - 1;
 			dword_453084 = v11;
@@ -199,8 +199,8 @@ namespace IgNTeas.Generated
 			}
 			if (v14)
 			return 0;
-			// TODO: Transpile: v33[0] = 20;
-			if (( * (int (__stdcall *  * )(int, _DWORD * ))( * (_DWORD * )dword_4530C0 + 12))(dword_4530C0, v33))
+			v33[0] = 20;
+			if ((*(int (int, _DWORD *))(*dword_4530C0 + 12))(dword_4530C0, v33))
 			return 0;
 			dword_45308C = v13;
 			dword_43C7F4 = v34;

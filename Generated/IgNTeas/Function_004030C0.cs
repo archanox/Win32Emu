@@ -21,20 +21,20 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x004030C0
 		/// </summary>
 		[OriginalAddress(0x004030C0)]
-		public void Execute(int a1, uint a2)
+		public void Execute(int a1, double a2)
 		{
 			// TODO: Transpile: int i; // edi
 			// TODO: Transpile: unsigned __int8 v4; // c0
 			// TODO: Transpile: unsigned __int8 v5; // c3
 			// TODO: Transpile: double v6; // [esp+10h] [ebp-8h]
-			// TODO: Transpile: for ( i = 0; i < 768; *((_BYTE *)&dword_43C464 + i + 3) = (__int64)v6 )
+			for (i = 0; i < 768; *((_BYTE *)&dword_43C464 + i + 3) = (__int64)v6)
 			{
-			v6 = (double) * (unsigned __int8 * )(i + a1) * a2;
+			v6 =  * (i + a1) * a2;
 			if (!(v4 | v5))
 			v6 = 255.0;
 			if (v6 < 0.0)
 			v6 = 0.0;
-			// TODO: Transpile: ++i;
+			++i;
 			}
 			// TODO: Transpile: operator delete(&unk_43C468);
 		}

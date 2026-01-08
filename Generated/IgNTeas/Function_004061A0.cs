@@ -23,11 +23,11 @@ namespace IgNTeas.Generated
 		[OriginalAddress(0x004061A0)]
 		public int Execute(int a1)
 		{
-			if (! * (_DWORD * )a1)
+			if (! * a1)
 			return 0;
-			if (! * (_DWORD * )(a1 + 8))
+			if (! * (a1 + 8))
 			return 1;
-			if (( * (int (__stdcall *  * )(_DWORD, int))( *  * (_DWORD *  * )(a1 + 44) + 128))( * (_DWORD * )(a1 + 44), a1 + 44))
+			if ((*(int (_DWORD, int))(**(a1 + 44) + 128))(*(a1 + 44), a1 + 44))
 			return 0;
 			// TODO: Transpile: *(_DWORD *)(a1 + 8) = 0;
 			// TODO: Transpile: *(_DWORD *)(a1 + 12) = 0;

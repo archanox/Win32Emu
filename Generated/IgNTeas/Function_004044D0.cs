@@ -21,12 +21,12 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x004044D0
 		/// </summary>
 		[OriginalAddress(0x004044D0)]
-		public int Execute(uint FileName)
+		public int Execute(sbyte FileName)
 		{
 			// TODO: Transpile: FILE *v1; // esi
 			// TODO: Transpile: int v2; // edi
 			v1 = fopen(FileName, aR);
-			v2 = CallFunction(0x00404490, v1);
+			v2 = sub_404490;
 			// TODO: Transpile: fclose(v1);
 			return v2;
 		}

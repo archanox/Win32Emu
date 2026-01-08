@@ -21,7 +21,7 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x004065A0
 		/// </summary>
 		[OriginalAddress(0x004065A0)]
-		public void Execute(uint a1, uint a2)
+		public void Execute(byte a1, uint a2)
 		{
 			// TODO: Transpile: int v2; // esi
 			// TODO: Transpile: signed int v3; // esi
@@ -33,17 +33,17 @@ namespace IgNTeas.Generated
 			{
 			if ( * a1)
 			{
-			// TODO: Transpile: do
-			// TODO: Transpile: ++v2;
-			// TODO: Transpile: while ( a1[v2] );
+			do
+			++v2;
+			while (a1[v2])
 			}
 			v3 = v2 + 1;
-			v4 = (char * )sub_406470(v3);
+			v4 = sub_406470;
 			// TODO: Transpile: *a2 = v4;
-			// TODO: Transpile: for ( i = 0; i < v3; v4[i - 1] = v6 )
-			v6 = a1[i +  + ];
+			for (i = 0; i < v3; v4[i - 1] = v6)
+			v6 = a1[i++];
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: *a2 = 0;
 			}

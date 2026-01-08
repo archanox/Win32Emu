@@ -25,16 +25,16 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: int v1; // edx
 			// TODO: Transpile: *a1 = dword_43EB64;
-			// TODO: Transpile: a1[1] = dword_43EB70;
-			// TODO: Transpile: a1[2] = dword_43EB6C;
+			a1[1] = dword_43EB70;
+			a1[2] = dword_43EB6C;
 			v1 = dword_43EA2C;
-			// TODO: Transpile: a1[8] = 3;
-			// TODO: Transpile: a1[7] = v1;
-			// TODO: Transpile: a1[9] = dword_41C958;
-			// TODO: Transpile: a1[3] = dword_43EB58;
-			// TODO: Transpile: a1[4] = dword_43EB5C;
-			// TODO: Transpile: a1[5] = dword_43EB60;
-			// TODO: Transpile: a1[6] = dword_43EB68;
+			a1[8] = 3;
+			a1[7] = v1;
+			a1[9] = dword_41C958;
+			a1[3] = dword_43EB58;
+			a1[4] = dword_43EB5C;
+			a1[5] = dword_43EB60;
+			a1[6] = dword_43EB68;
 			return 1;
 		}
 

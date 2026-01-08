@@ -29,21 +29,21 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v7; // esi
 			// TODO: Transpile: int v8; // eax
 			v3 = a1 + 8;
-			v4 =  * (_DWORD * )(a1 + 4) / 16;
-			dword_43C410 = (int)sub_403630(dword_452A10, 32 * v4);
+			v4 =  * (a1 + 4) / 16;
+			dword_43C410 = CallFunction(0x00403630, dword_452A10, 32 * v4);
 			if (!dword_43C410)
 			return -1;
 			if (v4 > 0)
 			{
 			v6 = 0;
-			// TODO: Transpile: do
+			do
 			{
 			v7 = v3 + 4;
-			// TODO: Transpile: v6 += 32;
+			v6 += 32;
 			// TODO: Transpile: *(_DWORD *)(dword_43C410 + v6 - 32) = *(__int16 *)(v7 - 4) << 8;
-			// TODO: Transpile: v7 += 6;
-			v8 =  * (__int16 * )(v7 - 8) <  < 8;
-			// TODO: Transpile: v7 += 4;
+			v7 += 6;
+			v8 =  * (v7 - 8) << 8;
+			v7 += 4;
 			// TODO: Transpile: *(_DWORD *)(dword_43C410 + v6 - 28) = v8;
 			// TODO: Transpile: LOWORD(v8) = *(_WORD *)(v7 - 10);
 			v3 = v7 + 2;
@@ -52,10 +52,10 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: *(_DWORD *)(dword_43C410 + v6 - 16) = *(unsigned __int16 *)(v3 - 8) << 8;
 			// TODO: Transpile: *(_DWORD *)(dword_43C410 + v6 - 12) = *(unsigned __int16 *)(v3 - 6) << 8;
 			// TODO: Transpile: *(_DWORD *)(dword_43C410 + v6 - 8) = *(_DWORD *)(a2 + 4 * *(unsigned __int16 *)(v3 - 4));
-			// TODO: Transpile: --v4;
+			--v4;
 			// TODO: Transpile: *(_DWORD *)(dword_43C410 + v6 - 4) = *(_DWORD *)(a3 + 4 * *(unsigned __int16 *)(v3 - 2));
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			return 0;
 		}

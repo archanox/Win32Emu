@@ -25,9 +25,9 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: int result; // eax
 			if (a4 != a2)
-			return ((a1 - a3) <  < 8) / (a2 - a4);
+			return ((a1 - a3) << 8) / (a2 - a4);
 			result = -2147418112;
-			if (a3 > = a1)
+			if (a3 >= a1)
 			return 2147418112;
 			return result;
 		}

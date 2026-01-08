@@ -26,7 +26,7 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: _BYTE v3[4]; // [esp+0h] [ebp-10h] BYREF
 			// TODO: Transpile: _BYTE v4[12]; // [esp+4h] [ebp-Ch] BYREF
 			// TODO: Transpile: __strgtold12(v4, v3, a2, 0, 0, 0, 0);
-			return CallFunction(0x00415EB0, (int)v4, a1);
+			return CallFunction(0x00415EB0, v4, a1);
 		}
 
 		/// <summary>

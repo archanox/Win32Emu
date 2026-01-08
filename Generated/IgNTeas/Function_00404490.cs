@@ -25,9 +25,9 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: int v1; // edi
 			// TODO: Transpile: int v2; // ebx
-			v1 = ftell(Stream);
+			v1 = ftell;
 			// TODO: Transpile: fseek(Stream, 0, 2);
-			v2 = ftell(Stream);
+			v2 = ftell;
 			// TODO: Transpile: fseek(Stream, v1, 0);
 			return v2;
 		}

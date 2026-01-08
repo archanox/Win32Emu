@@ -28,7 +28,7 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int SystemMetrics; // [esp-4h] [ebp-10h]
 			// TODO: Transpile: int v8; // [esp+0h] [ebp-Ch]
 			// TODO: Transpile: int v9; // [esp+4h] [ebp-8h]
-			if (Msg < = 0x1C)
+			if (Msg <= 0x1C)
 			{
 			if (Msg != 28)
 			{
@@ -47,8 +47,8 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: case 5u:
 			if (dword_41C79C)
 			{
-			SystemMetrics = _env.CallWin32Api<uint>("GetSystemMetrics", 1);
-			v5 = _env.CallWin32Api<uint>("GetSystemMetrics", 0);
+			SystemMetrics = GetSystemMetrics;
+			v5 = GetSystemMetrics;
 			// TODO: Transpile: SetRect(&Point, 0, 0, v5, SystemMetrics);
 			uint LABEL_23;
 			}
@@ -56,7 +56,7 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: GetClientRect(hWnd, &Point);
 			// TODO: Transpile: ClientToScreen(hWnd, (LPPOINT)&Point);
 			// TODO: Transpile: ClientToScreen(hWnd, (LPPOINT)&Point.right);
-			// TODO: Transpile: break;
+			break;
 			// TODO: Transpile: default:
 			uint LABEL_23;
 			}
@@ -86,7 +86,7 @@ namespace IgNTeas.Generated
 			}
 			if (dword_41C79C)
 			// TODO: Transpile: SetCursor(0);
-			// TODO: Transpile: else
+			else
 			// TODO: Transpile: SetCursor(hCursor);
 			return 1;
 		}

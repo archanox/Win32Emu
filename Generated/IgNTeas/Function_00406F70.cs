@@ -26,19 +26,19 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: void *v1; // eax
 			// TODO: Transpile: int v2; // ecx
 			// TODO: Transpile: int result; // eax
-			v1 = CallFunction(0x00406470, 0x80u);
+			v1 = sub_406470;
 			v2 = 0;
-			// TODO: Transpile: a1[3] = v1;
-			// TODO: Transpile: do
+			a1[3] = v1;
+			do
 			{
-			// TODO: Transpile: v2 += 8;
+			v2 += 8;
 			// TODO: Transpile: *(_DWORD *)(a1[3] + v2 - 8) = 0;
 			result = a1[3];
 			// TODO: Transpile: *(_DWORD *)(result + v2 - 4) = 0;
 			}
-			// TODO: Transpile: while ( v2 < 128 );
-			// TODO: Transpile: a1[2] = 15;
-			// TODO: Transpile: a1[1] = 0;
+			while (v2 < 128)
+			a1[2] = 15;
+			a1[1] = 0;
 			// TODO: Transpile: *a1 = 16;
 			return result;
 		}

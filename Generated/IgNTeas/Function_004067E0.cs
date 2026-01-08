@@ -26,14 +26,14 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int result; // eax
 			// TODO: Transpile: const void *v3; // esi
 			result = a2;
-			if (a2 > 0 && a2 < dword_445070 && (v3 = * (const void *  * )(dword_445074 + 4 * a2)) != 0)
+			if (a2 > 0 && a2 < dword_445070 && (v3 = *(dword_445074 + 4 * a2)) != 0)
 			{
 			// TODO: Transpile: qmemcpy(a1, v3, 0x40u);
-			// TODO: Transpile: a1[6] = 0;
-			// TODO: Transpile: a1[7] = 0;
+			a1[6] = 0;
+			a1[7] = 0;
 			return 0;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: qmemcpy(a1, &dword_444870, 0x40u);
 			}

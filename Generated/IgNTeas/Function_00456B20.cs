@@ -34,22 +34,22 @@ namespace IgNTeas.Generated
 			{
 			v0 = 0x7FFFFFFF;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: LODWORD(v1) = 0;
 			// TODO: Transpile: HIDWORD(v1) = dword_43A920 - dword_43A918;
-			v0 = (unsigned int)(v1 / (unsigned int)(dword_43A928 - dword_43A918)) >  > 1;
+			v0 = (v1 / (dword_43A928 - dword_43A918)) >> 1;
 			}
-			v2 = ((unsigned __int64)(v0 * (__int64)(2 * (dword_43A924 - dword_43A914))) >  > 32) - (dword_43A91C - dword_43A914);
-			if (v2 > = - 3 && v2 < = 3)
-			v2 = 4 * ((v2 >  > 2) | 1);
+			v2 = ((v0 * (2 * (dword_43A924 - dword_43A914))) >> 32) - (dword_43A91C - dword_43A914);
+			if (v2 >= -3 && v2 <= 3)
+			v2 = 4 * ((v2 >> 2) | 1);
 			dword_43A960 = v2;
-			dword_43A9A4 = (unsigned __int64)(v0 * (__int64)(2 * (dword_43A940 - dword_43A930))) >  > 32;
-			v3 = dword_43A92C + ((unsigned __int64)(v0 * (__int64)(2 * (dword_43A93C - dword_43A92C))) >  > 32) - dword_43A934;
+			dword_43A9A4 = (v0 * (2 * (dword_43A940 - dword_43A930))) >> 32;
+			v3 = dword_43A92C + ((v0 * (2 * (dword_43A93C - dword_43A92C))) >> 32) - dword_43A934;
 			// TODO: Transpile: LODWORD(v4) = v3 << 16;
 			// TODO: Transpile: HIDWORD(v4) = v3 >> 16;
 			dword_43A950 = v4 / v2;
-			dword_43A968 =  - dword_43A950 >  > 3;
+			dword_43A968 =  - dword_43A950 >> 3;
 			dword_43A96C = 2 * dword_43A968;
 			dword_43A970 = 3 * dword_43A968;
 			dword_43A974 = 4 * dword_43A968;
@@ -59,11 +59,11 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: LODWORD(v4) = (dword_43A930 + dword_43A9A4 - dword_43A938) << 16;
 			// TODO: Transpile: HIDWORD(v4) = (dword_43A930 + dword_43A9A4 - dword_43A938) >> 16;
 			dword_43A954 = v4 / v2;
-			v5 = __ROR4__( - dword_43A950, 16);
+			v5 = __ROR4__(-dword_43A950, 16);
 			byte_43A944 = v5;
 			// TODO: Transpile: LOWORD(v5) = (unsigned int)-dword_43A954 >> 8;
 			dword_43A948 = v5;
-			result =  - dword_43A954 >  > 3;
+			result =  - dword_43A954 >> 3;
 			dword_43A988 = result;
 			dword_43A98C = 2 * result;
 			dword_43A990 = 3 * result;

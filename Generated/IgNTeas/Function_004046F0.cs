@@ -26,16 +26,16 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v3; // edx
 			// TODO: Transpile: _DWORD v4[5]; // [esp+24h] [ebp-24h] BYREF
 			// TODO: Transpile: _DWORD v5[4]; // [esp+38h] [ebp-10h] BYREF
-			// TODO: Transpile: v5[0] = 1864182625;
-			// TODO: Transpile: v4[0] = 20;
-			// TODO: Transpile: v4[1] = 16;
-			// TODO: Transpile: v5[1] = unk_41B1B4;
-			// TODO: Transpile: v5[2] = unk_41B1B8;
-			// TODO: Transpile: v5[3] = unk_41B1BC;
-			// TODO: Transpile: v4[2] = 0;
-			// TODO: Transpile: v4[3] = 0;
-			// TODO: Transpile: v4[4] = 32;
-			if (_env.CallWin32Api<uint>("DirectInputCreateA", hInstance, 768, &dword_43CEB0, 0))
+			v5[0] = 1864182625;
+			v4[0] = 20;
+			v4[1] = 16;
+			v5[1] = unk_41B1B4;
+			v5[2] = unk_41B1B8;
+			v5[3] = unk_41B1BC;
+			v4[2] = 0;
+			v4[3] = 0;
+			v4[4] = 32;
+			if (_env.CallWin32Api<uint>("DirectInputCreateA", hInstance, 768,  & dword_43CEB0, 0))
 			return 0;
 			// TODO: Transpile: if ( (*(int (__stdcall **)(int, _DWORD *, int *, _DWORD))(*(_DWORD *)dword_43CEB0 + 12))(
 			// TODO: Transpile: dword_43CEB0,
@@ -45,26 +45,26 @@ namespace IgNTeas.Generated
 			{
 			return 0;
 			}
-			if (( * (int (__stdcall *  * )(int, int * ))( * (_DWORD * )dword_43D1BC + 44))(dword_43D1BC, dword_40A480))
+			if ((*(int (int, int *))(*dword_43D1BC + 44))(dword_43D1BC, dword_40A480))
 			return 0;
-			if (( * (int (__stdcall *  * )(int, HWND, int))( * (_DWORD * )dword_43D1BC + 52))(dword_43D1BC, hWnd, 6))
+			if ((*(int (int, HWND, int))(*dword_43D1BC + 52))(dword_43D1BC, hWnd, 6))
 			return 0;
-			if (( * (int (__stdcall *  * )(int, int, _DWORD * ))( * (_DWORD * )dword_43D1BC + 24))(dword_43D1BC, 1, v4))
+			if ((*(int (int, int, _DWORD *))(*dword_43D1BC + 24))(dword_43D1BC, 1, v4))
 			return 0;
-			dword_43D1C0 = ( * (int (__stdcall *  * )(int))( * (_DWORD * )dword_43D1BC + 28))(dword_43D1BC) > = 0;
+			dword_43D1C0 = (*(*dword_43D1BC + 28)) >= 0;
 			v3 = 0;
-			dword_43CD60 = (int)&unk_43CD68;
+			dword_43CD60 =  & unk_43CD68;
 			// TODO: Transpile: memset(&unk_43CD68, 0xFFu, 0x40u);
 			byte_43CDA8 = 0;
 			// TODO: Transpile: memset(byte_43CEB8, 0, sizeof(byte_43CEB8));
 			// TODO: Transpile: memset(byte_43CDB0, 0, sizeof(byte_43CDB0));
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: byte_43CFB8[v3] = 0;
-			// TODO: Transpile: dword_43D1C8[v3] = 0;
+			byte_43CFB8[v3] = 0;
+			dword_43D1C8[v3] = 0;
 			// TODO: Transpile: byte_43D0B8[v3++] = 0;
 			}
-			// TODO: Transpile: while ( v3 < 256 );
+			while (v3 < 256)
 			dword_43CEB4 = a1;
 			dword_43D1C4 = a2;
 			dword_43D1B8 = dword_41C7B0;

@@ -32,45 +32,45 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: void ***v8; // [esp+18h] [ebp-Ch]
 			// TODO: Transpile: int v9; // [esp+1Ch] [ebp-8h]
 			// TODO: Transpile: int v10; // [esp+20h] [ebp-4h]
-			v8 = (void *  *  * )dword_4530D0[a1];
+			v8 = dword_4530D0[a1];
 			v7 = v8 + 16;
 			v10 = 64;
-			// TODO: Transpile: do
+			do
 			{
 			if ( * v7)
 			{
 			v1 =  * v7;
 			Block =  * v7;
 			v9 = 64;
-			// TODO: Transpile: do
+			do
 			{
 			v2 =  * v1;
 			if ( * v1)
 			{
 			v3 = v2 + 1;
 			v4 = 16;
-			// TODO: Transpile: do
+			do
 			{
 			if ( * v3)
 			// TODO: Transpile: free((void *)*(v3 - 1));
-			// TODO: Transpile: v3 += 2;
-			// TODO: Transpile: --v4;
+			v3 += 2;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			// TODO: Transpile: free(v2);
 			}
-			// TODO: Transpile: ++v1;
-			// TODO: Transpile: --v9;
+			++v1;
+			--v9;
 			}
-			// TODO: Transpile: while ( v9 );
+			while (v9)
 			// TODO: Transpile: free(Block);
 			}
-			// TODO: Transpile: ++v7;
-			// TODO: Transpile: --v10;
+			++v7;
+			--v10;
 			}
-			// TODO: Transpile: while ( v10 );
+			while (v10)
 			// TODO: Transpile: free(v8);
-			// TODO: Transpile: dword_4530D0[a1] = 0;
+			dword_4530D0[a1] = 0;
 			return 1;
 		}
 

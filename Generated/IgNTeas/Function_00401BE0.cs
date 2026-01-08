@@ -25,9 +25,9 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: int v1; // ecx
 			// TODO: Transpile: int result; // eax
-			v1 =  * (_DWORD * )(a1 + 4);
+			v1 =  * (a1 + 4);
 			result = 6 * v1;
-			if (6 * v1 > (int)Size)
+			if (6 * v1 > Size)
 			Size = 6 * v1;
 			return result;
 		}

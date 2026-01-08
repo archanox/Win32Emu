@@ -39,75 +39,75 @@ namespace IgNTeas.Generated
 			v0 = 0;
 			v1 = dword_43D1C8;
 			v11 = 32;
-			// TODO: Transpile: do
+			do
 			{
 			if (byte_43CDB0[v0] == 1)
 			{
 			v2 = dword_43D1C4 + dword_43CEB4;
 			v3 = dword_41C7B0 +  * v1 - dword_43D1B8;
 			// TODO: Transpile: *v1 = v3;
-			if (v2 < = v3)
+			if (v2 <= v3)
 			{
 			v4 = v3 - dword_43D1C4;
-			// TODO: Transpile: byte_43CEB8[v0] = 1;
+			byte_43CEB8[v0] = 1;
 			// TODO: Transpile: *v1 = v4;
 			}
 			}
-			// TODO: Transpile: ++v1;
-			// TODO: Transpile: ++v0;
+			++v1;
+			++v0;
 			}
-			// TODO: Transpile: while ( v1 < &dword_43D5C8 );
-			v5 = ( * (int (__stdcall *  * )(int, int, _BYTE * , int * , _DWORD))( * (_DWORD * )dword_43D1BC + 40))(;
+			while (v1 <  & dword_43D5C8)
+			v5 = (*(int (int, int, _BYTE *, int *, _DWORD))(*dword_43D1BC + 40))(;
 			// TODO: Transpile: dword_43D1BC,
 			// TODO: Transpile: 16,
 			// TODO: Transpile: v12,
 			// TODO: Transpile: &v11,
 			// TODO: Transpile: 0);
-			if (v5 ==  - 2147024866)
+			if (v5 == -2147024866)
 			{
 			dword_43D1C0 = 0;
-			result = ( * (int (__stdcall *  * )(int))( * (_DWORD * )dword_43D1BC + 28))(dword_43D1BC);
-			if (result > = 0)
+			result = (*(int )(*dword_43D1BC + 28));
+			if (result >= 0)
 			dword_43D1C0 = 1;
 			}
-			// TODO: Transpile: else
+			else
 			{
-			if (v5 < = 1)
+			if (v5 <= 1)
 			{
 			v7 = 0;
 			if (v11 > 0)
 			{
 			v8 = v12;
-			// TODO: Transpile: do
+			do
 			{
-			v9 = (unsigned __int8) * v8;
+			v9 =  * v8;
 			if ((v8[1] & 0x80) != 0)
 			{
-			// TODO: Transpile: byte_43CDB0[v9] = 1;
+			byte_43CDB0[v9] = 1;
 			if (!byte_43D0B8[v9])
 			{
-			// TODO: Transpile: byte_43CFB8[v9] = 1;
-			// TODO: Transpile: byte_43D0B8[v9] = 1;
+			byte_43CFB8[v9] = 1;
+			byte_43D0B8[v9] = 1;
 			}
 			if (!dword_43D1C8[v9])
-			// TODO: Transpile: byte_43CEB8[v9] = 1;
+			byte_43CEB8[v9] = 1;
 			CallFunction(0x00404AA0, 1, v9);
-			CallFunction(0x00404AC0, 1, (unsigned __int8) * v8);
+			CallFunction(0x00404AC0, 1,  * v8);
 			}
-			// TODO: Transpile: else
+			else
 			{
-			v10 = (unsigned __int8) * v8;
-			// TODO: Transpile: byte_43CDB0[v9] = 0;
-			// TODO: Transpile: byte_43CFB8[v9] = 0;
-			// TODO: Transpile: byte_43D0B8[v9] = 0;
-			// TODO: Transpile: byte_43CEB8[v9] = 0;
-			// TODO: Transpile: dword_43D1C8[v9] = 0;
+			v10 =  * v8;
+			byte_43CDB0[v9] = 0;
+			byte_43CFB8[v9] = 0;
+			byte_43D0B8[v9] = 0;
+			byte_43CEB8[v9] = 0;
+			dword_43D1C8[v9] = 0;
 			CallFunction(0x00404AA0, 0, v10);
 			}
-			// TODO: Transpile: v8 += 4;
-			// TODO: Transpile: ++v7;
+			v8 += 4;
+			++v7;
 			}
-			// TODO: Transpile: while ( v7 < v11 );
+			while (v7 < v11)
 			}
 			}
 			dword_43D1B8 = dword_41C7B0;

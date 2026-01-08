@@ -41,80 +41,80 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v15; // ecx
 			// TODO: Transpile: char *v16; // [esp-Ch] [ebp-1Ch]
 			v0 = 0;
-			dword_4528B8 = (int)sub_4043A0(aDataIgnPfm);
-			dword_4528C8 = (int)sub_4043A0(aDataIgnPsq);
-			dword_4528B4 = (int)sub_4043A0(aDataIgnCol);
-			dword_452948 = (int)sub_4043A0(aDataIgn0Pic);
-			// TODO: Transpile: dword_4529D0[0] = (int)sub_4043A0(aDataIgn1Pic);
-			dword_4529D4 = (int)sub_4043A0(aDataIgn2Pic);
-			dword_4529D8 = (int)sub_4043A0(aDataIgn4Pic);
-			dword_4529DC = (int)sub_4043A0(aDataIgn3Pic);
+			dword_4528B8 = sub_4043A0;
+			dword_4528C8 = sub_4043A0;
+			dword_4528B4 = sub_4043A0;
+			dword_452948 = sub_4043A0;
+			dword_4529D0[0] = sub_4043A0;
+			dword_4529D4 = sub_4043A0;
+			dword_4529D8 = sub_4043A0;
+			dword_4529DC = sub_4043A0;
 			dword_452A00 = (dword_452A00 + 0xFFFF) & 0xFFFF0000;
 			v1 = aDataIgn1Tex;
-			CallFunction(0x00404320, FileName, (void * )dword_452A00, 0x10000u, 0);
-			v2 = (char * )((dword_4529F8 + 0xFFFF) & 0xFFFF0000);
-			// TODO: Transpile: do
+			CallFunction(0x00404320, FileName, dword_452A00, 0x10000u, 0);
+			v2 = ((dword_4529F8 + 0xFFFF) & 0xFFFF0000);
+			do
 			{
-			v3 = CallFunction(0x004044D0, v1);
+			v3 = sub_4044D0;
 			v4 = v3;
-			if (v3 < = 0)
+			if (v3 <= 0)
 			// TODO: Transpile: exit(0);
 			if (v3 > 0x100000)
 			v4 = 0x100000;
 			CallFunction(0x00404320, v1, v2, v4, 0);
 			if (v4 > 0)
 			{
-			v5 = &dword_4528D0[v0];
-			v6 = (unsigned int)(v4 + 0xFFFF) >  > 16;
-			// TODO: Transpile: v0 += v6;
-			// TODO: Transpile: do
+			v5 =  & dword_4528D0[v0];
+			v6 = (v4 + 0xFFFF) >> 16;
+			v0 += v6;
+			do
 			{
 			// TODO: Transpile: *v5++ = (int)v2;
-			// TODO: Transpile: v2 += 0x10000;
-			// TODO: Transpile: --v6;
+			v2 += 0x10000;
+			--v6;
 			}
-			// TODO: Transpile: while ( v6 );
+			while (v6)
 			}
-			// TODO: Transpile: v1 += 50;
+			v1 += 50;
 			}
-			// TODO: Transpile: while ( v1 < aDataIgnShd );
+			while (v1 < aDataIgnShd)
 			v7 = 0;
-			// TODO: Transpile: dword_4528D0[v0] = 0;
-			v16 = (char * )((dword_45295C + 0xFFFF) & 0xFFFF0000);
-			dword_452970 = (int)v16;
+			dword_4528D0[v0] = 0;
+			v16 = ((dword_45295C + 0xFFFF) & 0xFFFF0000);
+			dword_452970 = v16;
 			v8 = v16 + 0x10000;
 			CallFunction(0x00404320, aDataIgnShd, v16, 0x10000u, 0);
-			dword_452974 = (int)v8;
-			// TODO: Transpile: do
+			dword_452974 = v8;
+			do
 			// TODO: Transpile: *v8++ = v7++;
-			// TODO: Transpile: while ( v7 < 256 );
+			while (v7 < 256)
 			v10 = 1;
-			// TODO: Transpile: do
+			do
 			{
 			// TODO: Transpile: LOBYTE(v9) = v10;
 			// TODO: Transpile: BYTE1(v9) = v10++;
-			v11 = v9 <  < 16;
+			v11 = v9 << 16;
 			// TODO: Transpile: LOWORD(v11) = v9;
 			// TODO: Transpile: memset32(v8, v11, 0x40u);
 			// TODO: Transpile: HIWORD(v9) = 0;
-			// TODO: Transpile: v8 += 256;
+			v8 += 256;
 			}
-			// TODO: Transpile: while ( v10 < 256 );
+			while (v10 < 256)
 			v12 = 0;
 			v13 = 0;
 			dword_452978 = 0;
 			dword_4528C0 = (dword_4528C0 + 0xFFFF) & 0xFFFF0000;
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: for ( result = 0; result < 256; ++result )
+			for (result = 0; result < 256; ++result)
 			{
 			v15 = v12 + result;
 			// TODO: Transpile: *(_BYTE *)(v15 + dword_4528C0) = v13;
 			}
-			// TODO: Transpile: v12 += 256;
-			// TODO: Transpile: ++v13;
+			v12 += 256;
+			++v13;
 			}
-			// TODO: Transpile: while ( v12 < 0x10000 );
+			while (v12 < 0x10000)
 			return result;
 		}
 

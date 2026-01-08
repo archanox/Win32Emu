@@ -23,20 +23,20 @@ namespace IgNTeas.Generated
 		[OriginalAddress(0x004050C0)]
 		public int Execute()
 		{
-			dword_41C97C =  *  * (_DWORD *  * )dword_43EA34;
-			dword_41C980 =  * (_DWORD * )( * (_DWORD * )dword_43EA34 + 4);
-			dword_41C984 =  *  * (_DWORD *  * )(dword_43EA34 + 4);
-			dword_41C988 =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 4) + 4);
-			dword_41C98C =  *  * (_DWORD *  * )(dword_43EA34 + 8);
-			dword_41C990 =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 8) + 4);
-			dword_41C994 =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 12) + 8);
-			dword_41C998 =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 12) + 12);
-			dword_41C99C =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 12) + 16);
-			dword_41C9A0 =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 12) + 20);
-			dword_41C9A4 =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 12) + 24);
-			dword_41C9A8 =  * (_DWORD * )( * (_DWORD * )(dword_43EA34 + 12) + 28);
-			dword_41C9AC =  *  * (_DWORD *  * )(dword_43EA34 + 12);
-			return CallFunction(0x00408040, &dword_41C978);
+			dword_41C97C =  *  * dword_43EA34;
+			dword_41C980 =  * (*dword_43EA34 + 4);
+			dword_41C984 =  *  * (dword_43EA34 + 4);
+			dword_41C988 =  * (*(dword_43EA34 + 4) + 4);
+			dword_41C98C =  *  * (dword_43EA34 + 8);
+			dword_41C990 =  * (*(dword_43EA34 + 8) + 4);
+			dword_41C994 =  * (*(dword_43EA34 + 12) + 8);
+			dword_41C998 =  * (*(dword_43EA34 + 12) + 12);
+			dword_41C99C =  * (*(dword_43EA34 + 12) + 16);
+			dword_41C9A0 =  * (*(dword_43EA34 + 12) + 20);
+			dword_41C9A4 =  * (*(dword_43EA34 + 12) + 24);
+			dword_41C9A8 =  * (*(dword_43EA34 + 12) + 28);
+			dword_41C9AC =  *  * (dword_43EA34 + 12);
+			return CallFunction(0x00408040,  & dword_41C978);
 		}
 
 		/// <summary>

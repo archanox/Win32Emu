@@ -21,7 +21,7 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x00404500
 		/// </summary>
 		[OriginalAddress(0x00404500)]
-		public int Execute(uint FileName)
+		public int Execute(sbyte FileName)
 		{
 			// TODO: Transpile: FILE *v1; // eax
 			v1 = fopen(FileName, aR);

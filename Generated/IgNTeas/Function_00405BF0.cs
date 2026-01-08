@@ -28,8 +28,8 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int *v2; // esi
 			if (!dword_41C79C && dword_41C9E8)
 			// TODO: Transpile: (*(void (__stdcall **)(int))(*(_DWORD *)dword_41C9E8 + 8))(dword_41C9E8);
-			v0 = &dword_43C914;
-			// TODO: Transpile: do
+			v0 =  & dword_43C914;
+			do
 			{
 			if (!dword_41C79C &&  * v0)
 			{
@@ -37,11 +37,11 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: *v0 = 0;
 			// TODO: Transpile: *(v0 - 11) = 0;
 			}
-			// TODO: Transpile: v0 += 12;
+			v0 += 12;
 			}
-			// TODO: Transpile: while ( v0 < dword_43C944 );
-			v1 = (int * )&unk_43C824;
-			// TODO: Transpile: do
+			while (v0 < dword_43C944)
+			v1 =  & unk_43C824;
+			do
 			{
 			if (!dword_41C79C &&  * v1)
 			{
@@ -49,11 +49,11 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: *v1 = 0;
 			// TODO: Transpile: *(v1 - 11) = 0;
 			}
-			// TODO: Transpile: v1 += 12;
+			v1 += 12;
 			}
-			// TODO: Transpile: while ( v1 < &dword_43C914 );
+			while (v1 <  & dword_43C914)
 			v2 = dword_43C944;
-			// TODO: Transpile: do
+			do
 			{
 			if ( * v2)
 			{
@@ -61,9 +61,9 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: *v2 = 0;
 			// TODO: Transpile: *(v2 - 11) = 0;
 			}
-			// TODO: Transpile: v2 += 12;
+			v2 += 12;
 			}
-			// TODO: Transpile: while ( v2 < &dword_43CD04 );
+			while (v2 <  & dword_43CD04)
 			if (dword_41C79C && dword_43EF78)
 			{
 			// TODO: Transpile: (*(void (__stdcall **)(int))(*(_DWORD *)dword_43EF78 + 8))(dword_43EF78);

@@ -30,21 +30,21 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v5; // eax
 			v0 = 0;
 			v1 = aDataIgn1Dps;
-			// TODO: Transpile: do
+			do
 			{
-			v2 = CallFunction(0x004044D0, v1);
-			// TODO: Transpile: dword_43C3A0[v0] = v2;
+			v2 = sub_4044D0;
+			dword_43C3A0[v0] = v2;
 			if (v2 < 768)
 			return 0;
-			v3 = CallFunction(0x004043A0, v1);
-			// TODO: Transpile: dword_43C3D8[v0] = (int)v3;
+			v3 = sub_4043A0;
+			dword_43C3D8[v0] = v3;
 			if (!v3)
 			return 0;
-			// TODO: Transpile: ++v0;
-			// TODO: Transpile: v1 += 50;
+			++v0;
+			v1 += 50;
 			}
-			// TODO: Transpile: while ( v1 < byte_41C1FA );
-			CallFunction(0x00401000, (__int16 * )dword_43C3D8[dword_41C200[dword_41C520]], dword_43C3A0[dword_41C200[dword_41C520]]);
+			while (v1 < byte_41C1FA)
+			CallFunction(0x00401000, dword_43C3D8[dword_41C200[dword_41C520]], dword_43C3A0[dword_41C200[dword_41C520]]);
 			dword_453098 = 20;
 			if (CallFunction(0x00403D20) != 1)
 			return 0;
@@ -53,11 +53,11 @@ namespace IgNTeas.Generated
 			dword_43C3D0 = dword_453090;
 			v5 = dword_45308C;
 			dword_43C3FC = dword_45308C;
-			if (dword_453080 > = 44000)
+			if (dword_453080 >= 44000)
 			v5 = dword_45308C / 2;
 			dword_43C3FC = v5;
 			dword_43C3C4 = dword_453080;
-			dword_43C3CC = (int)sub_403630(0, 2 * v5);
+			dword_43C3CC = CallFunction(0x00403630, 0, 2 * v5);
 			if (!dword_43C3CC)
 			return 0;
 			dword_41C030 = 1;

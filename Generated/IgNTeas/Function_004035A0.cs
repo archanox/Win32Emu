@@ -21,7 +21,7 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x004035A0
 		/// </summary>
 		[OriginalAddress(0x004035A0)]
-		public int Execute(uint a1)
+		public int Execute(byte a1)
 		{
 			// TODO: Transpile: int *v1; // eax
 			// TODO: Transpile: int v2; // esi
@@ -29,37 +29,37 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v5; // edi
 			v1 = dword_4530D0;
 			v2 = 0;
-			// TODO: Transpile: do
+			do
 			{
 			if (! * v1)
-			// TODO: Transpile: break;
-			// TODO: Transpile: ++v1;
-			// TODO: Transpile: ++v2;
+			break;
+			++v1;
+			++v2;
 			}
-			// TODO: Transpile: while ( v1 < &dword_4534D0 );
+			while (v1 <  & dword_4534D0)
 			if (v2 == 256)
 			return -1;
-			v4 = malloc(0x140u);
+			v4 = malloc;
 			if (!v4)
 			return -1;
-			// TODO: Transpile: dword_4530D0[v2] = (int)v4;
+			dword_4530D0[v2] = v4;
 			if (a1)
 			{
 			v5 = 0;
 			if ( * a1)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			if (v5 > = 63)
-			// TODO: Transpile: break;
-			// TODO: Transpile: v4[v5] = a1[v5];
-			// TODO: Transpile: ++v5;
+			if (v5 >= 63)
+			break;
+			v4[v5] = a1[v5];
+			++v5;
 			}
-			// TODO: Transpile: while ( a1[v5] );
+			while (a1[v5])
 			}
-			// TODO: Transpile: v4[v5] = 0;
+			v4[v5] = 0;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: *v4 = 0;
 			}

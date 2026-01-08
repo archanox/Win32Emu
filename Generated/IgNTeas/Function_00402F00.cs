@@ -34,18 +34,18 @@ namespace IgNTeas.Generated
 			v11 = a4;
 			if (a4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: for ( i = 0; i < a3; *(_BYTE *)(v10 + i - 1) = *(_BYTE *)(v13 + v14 + dword_452A00) )
+			for (i = 0; i < a3; *(_BYTE *)(v10 + i - 1) = *(_BYTE *)(v13 + v14 + dword_452A00))
 			{
-			v13 =  * (unsigned __int8 * )(v10 + i);
-			v14 =  * (unsigned __int8 * )(v9 + i +  + ) <  < 8;
+			v13 =  * (v10 + i);
+			v14 =  * (v9 + i++) << 8;
 			}
-			// TODO: Transpile: v9 += a7;
-			// TODO: Transpile: v10 += a8;
-			// TODO: Transpile: --v11;
+			v9 += a7;
+			v10 += a8;
+			--v11;
 			}
-			// TODO: Transpile: while ( v11 );
+			while (v11)
 			}
 		}
 
