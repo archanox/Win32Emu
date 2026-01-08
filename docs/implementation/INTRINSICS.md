@@ -75,15 +75,15 @@ if (CpuIntrinsics.HasPackedSimd)
 
 ## CPUID Emulation
 
-The CPUID instruction returns feature flags based on what the emulator can support. Since `SimdIntrinsicsHelper` provides software fallbacks for all SIMD operations, SIMD features are always reported as supported regardless of host CPU capabilities. The actual execution will use hardware acceleration when available on the host, or fall back to software implementation when not available.
+The CPUID instruction returns feature flags for x86 SIMD and extended instructions that the emulator can provide. Since `SimdIntrinsicsHelper` provides software fallbacks for all SIMD operations, these features are always reported as supported regardless of the host CPU architecture. The actual execution automatically uses hardware acceleration when available or falls back to software implementation.
 
 This means:
 - **x86 host with SSE/AVX**: Uses native x86 intrinsics for maximum performance
-- **ARM host**: Uses NEON intrinsics to accelerate x86 SIMD operations
-- **WebAssembly host**: Uses Wasm SIMD intrinsics when available
-- **Any host without SIMD**: Uses software fallback implementation
+- **ARM host**: Uses NEON intrinsics to accelerate x86 SIMD operations when possible, otherwise uses software fallback
+- **WebAssembly host**: Uses Wasm SIMD intrinsics when available, otherwise uses software fallback
+- **Any host without specific SIMD features**: Uses software fallback implementation
 
-The guest code always sees the same CPU capabilities regardless of the host, ensuring consistent behavior.
+The guest code always sees the same x86 CPU capabilities (SSE, SSE2, SSE3, SSSE3, SSE4.1, SSE4.2, AVX, AVX2, POPCNT, LZCNT, etc.) regardless of the host platform, ensuring consistent behavior across all platforms.
 
 ### Function 0: Get Vendor String
 - Returns "GenuineIntel" vendor string

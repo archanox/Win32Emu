@@ -3844,17 +3844,38 @@ public class JitCpu : IAsyncCpu
 			case 1: // Get processor info and feature bits
 				_eax = 0x00000600; // Family 6, Model 0, Stepping 0
 				_ebx = 0x00000800; // Brand index, CLFLUSH size, etc.
-				// Use CpuIntrinsics to report actual capabilities (or software fallbacks)
-				// Since SimdIntrinsicsHelper has software fallbacks for all SIMD ops,
-				// we always report SIMD features as supported
-				_ecx = CpuIntrinsics.GetCpuidEcxFeatures();
-				_edx = CpuIntrinsics.GetCpuidEdxFeatures();
+				
+				// Report SIMD features that the emulator can provide through hardware or software fallbacks
+				// SimdIntrinsicsHelper provides software fallbacks for all these operations
+				_ecx = 0;
+				_ecx |= 1U << 0;       // SSE3
+				_ecx |= 1U << 1;       // PCLMULQDQ
+				_ecx |= 1U << 9;       // SSSE3
+				_ecx |= 1U << 12;      // FMA
+				_ecx |= 1U << 19;      // SSE4.1
+				_ecx |= 1U << 20;      // SSE4.2
+				_ecx |= 1U << 23;      // POPCNT
+				_ecx |= 1U << 25;      // AES
+				_ecx |= 1U << 28;      // AVX
+				
+				_edx = 0;
+				_edx |= 1U << 0;       // FPU (always supported)
+				_edx |= 1U << 4;       // TSC (RDTSC)
+				_edx |= 1U << 5;       // MSR (RDMSR/WRMSR)
+				_edx |= 1U << 8;       // CMPXCHG8B
+				_edx |= 1U << 15;      // CMOV
+				_edx |= 1U << 25;      // SSE
+				_edx |= 1U << 26;      // SSE2
 				break;
 			case 7: // Extended features (sub-function in ECX)
 				if (subFunction == 0)
 				{
 					_eax = 0; // Maximum sub-function
-					_ebx = CpuIntrinsics.GetCpuidExtendedEbxFeatures();
+					// Report extended features that the emulator can provide
+					_ebx = 0;
+					_ebx |= 1U << 3;   // BMI1
+					_ebx |= 1U << 5;   // AVX2
+					_ebx |= 1U << 8;   // BMI2
 					_ecx = 0; // Reserved
 					_edx = 0; // Reserved
 				}
@@ -3872,7 +3893,9 @@ public class JitCpu : IAsyncCpu
 			case 0x80000001: // Extended processor info and features
 				_eax = 0x00000600; // Extended processor signature
 				_ebx = 0;
-				_ecx = CpuIntrinsics.GetCpuid80000001EcxFeatures();
+				// Report LZCNT which has software fallback in SimdIntrinsicsHelper
+				_ecx = 0;
+				_ecx |= 1U << 5;   // LZCNT
 				_edx = 0; // Extended feature flags in EDX (not currently implemented)
 				break;
 			default:

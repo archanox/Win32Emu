@@ -217,10 +217,10 @@ public class CpuIntrinsicsTests : IDisposable
     }
 
     [Fact]
-    public void CPUID_AllFunctions_ShouldWorkWithJitCpu()
+    public void CPUID_AllFunctions_ShouldReportEmulatedFeatures()
     {
-        // This test verifies that CPUID implementation in JitCpu properly
-        // uses CpuIntrinsics to report features that can be emulated
+        // This test verifies that CPUID reports x86 SIMD features that the emulator
+        // can provide through software fallbacks, regardless of host platform
 
         // Test function 0 - Get vendor string
         _helper.SetReg("EAX", 0);
@@ -236,9 +236,17 @@ public class CpuIntrinsicsTests : IDisposable
         var ecx1 = _helper.GetReg("ECX");
         var edx1 = _helper.GetReg("EDX");
         
-        // Verify it matches what CpuIntrinsics reports
-        Assert.Equal(CpuIntrinsics.GetCpuidEcxFeatures(), ecx1);
-        Assert.Equal(CpuIntrinsics.GetCpuidEdxFeatures(), edx1);
+        // Verify SIMD features are reported (these have software fallbacks)
+        Assert.True((ecx1 & (1U << 0)) != 0, "SSE3 should be reported");
+        Assert.True((ecx1 & (1U << 9)) != 0, "SSSE3 should be reported");
+        Assert.True((ecx1 & (1U << 19)) != 0, "SSE4.1 should be reported");
+        Assert.True((ecx1 & (1U << 20)) != 0, "SSE4.2 should be reported");
+        Assert.True((ecx1 & (1U << 23)) != 0, "POPCNT should be reported");
+        Assert.True((ecx1 & (1U << 28)) != 0, "AVX should be reported");
+        
+        Assert.True((edx1 & (1U << 0)) != 0, "FPU should be reported");
+        Assert.True((edx1 & (1U << 25)) != 0, "SSE should be reported");
+        Assert.True((edx1 & (1U << 26)) != 0, "SSE2 should be reported");
 
         // Test function 7 subfunction 0 - Extended features
         _helper.SetReg("EAX", 7);
@@ -246,14 +254,16 @@ public class CpuIntrinsicsTests : IDisposable
         _helper.WriteCode(0x0F, 0xA2);
         _helper.ExecuteInstruction();
         var ebx7 = _helper.GetReg("EBX");
-        Assert.Equal(CpuIntrinsics.GetCpuidExtendedEbxFeatures(), ebx7);
+        Assert.True((ebx7 & (1U << 3)) != 0, "BMI1 should be reported");
+        Assert.True((ebx7 & (1U << 5)) != 0, "AVX2 should be reported");
+        Assert.True((ebx7 & (1U << 8)) != 0, "BMI2 should be reported");
 
         // Test function 0x80000001 - Extended features
         _helper.SetReg("EAX", 0x80000001);
         _helper.WriteCode(0x0F, 0xA2);
         _helper.ExecuteInstruction();
         var ecx80000001 = _helper.GetReg("ECX");
-        Assert.Equal(CpuIntrinsics.GetCpuid80000001EcxFeatures(), ecx80000001);
+        Assert.True((ecx80000001 & (1U << 5)) != 0, "LZCNT should be reported");
     }
 
     public void Dispose()
