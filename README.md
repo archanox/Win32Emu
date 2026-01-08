@@ -174,6 +174,9 @@ This is a **proof-of-concept** implementation. The Win32Emu core library current
 - Adapt CPU emulation to work without native intrinsics or provide fallbacks
 - Handle file I/O through browser APIs (IndexedDB, FileSystem API)
 
+**Performance Note:**
+WASM mode uses interpreter-based CPU emulation (IcedCpu) which is approximately 870x slower than native JIT compilation. Games with CPU-intensive initialization (e.g., large lookup table generation) may timeout before reaching rendering. For such games, native builds are recommended. See [docs/investigation/IGN_TEAS_TRANSPILED_DIAGNOSIS_SUMMARY.md](docs/investigation/IGN_TEAS_TRANSPILED_DIAGNOSIS_SUMMARY.md) for detailed analysis.
+
 **Use Cases:**
 - Test emulator compatibility on mobile devices
 - Share emulated applications via URL
