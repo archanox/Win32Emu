@@ -19,6 +19,7 @@ public class JitCpu : IAsyncCpu
 {
 	private readonly VirtualMemory _mem;
 	private readonly ILogger _logger;
+	private Win32.ProcessEnvironment? _processEnvironment; // For transpiled function support
 	
 	// CPU state - same as IcedCpu
 	private uint _eax, _ebx, _ecx, _edx, _esi, _edi, _ebp, _esp, _eip, _eflags;
@@ -211,6 +212,15 @@ public class JitCpu : IAsyncCpu
 			_logger.LogInformation("[JitCpu] Instruction analyzer enabled");
 		}
 	}
+	
+	/// <summary>
+	/// Sets the ProcessEnvironment for accessing transpiled functions
+	/// </summary>
+	public void SetProcessEnvironment(Win32.ProcessEnvironment env)
+	{
+		_processEnvironment = env;
+		_logger.LogDebug("[JitCpu] ProcessEnvironment set for transpiled function support");
+	}
 
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
@@ -383,6 +393,38 @@ public class JitCpu : IAsyncCpu
 
 	public async Task<CpuStepResult> ExecuteBlockAsync(VirtualMemory mem)
 	{
+		// Check for transpiled function first (if available)
+		if (_processEnvironment?.TranspiledFunctionProvider != null && 
+		    _processEnvironment.TranspiledFunctionProvider.HasFunction(_eip))
+		{
+			_logger.LogDebug("[JitCpu] Transpiled function available at EIP=0x{EIP:X8}, executing C# version", _eip);
+			
+			if (_processEnvironment.TranspiledFunctionProvider.TryExecuteFunction(_eip, _processEnvironment, out var result))
+			{
+				// Update CPU state after transpiled function execution
+				// For now, assume function returns an int in EAX and updates EIP appropriately
+				if (result is int intResult)
+				{
+					_eax = (uint)intResult;
+					_logger.LogDebug("[JitCpu] Transpiled function returned: {Result} (EAX=0x{EAX:X8})", result, _eax);
+				}
+				
+				// Advance EIP past the function call (assume standard ret instruction)
+				// In a real implementation, this would be handled by the transpiled code itself
+				// For minimal integration, we'll just mark as successful step
+				return new CpuStepResult 
+				{ 
+					IsHalt = false, 
+					IsDosInterrupt = false,
+					InstructionLength = 0  // Transpiled function handled control flow
+				};
+			}
+			else
+			{
+				_logger.LogWarning("[JitCpu] Transpiled function execution failed at EIP=0x{EIP:X8}, falling back to JIT", _eip);
+			}
+		}
+		
 		// In WASM environment or when interpreter mode is forced, JIT compilation is not available/desired
 		// Fall back to single instruction interpretation
 		if (_isWasmEnvironment || _forceInterpreterMode)

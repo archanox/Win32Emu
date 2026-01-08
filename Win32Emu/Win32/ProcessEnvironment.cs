@@ -85,6 +85,13 @@ public class ProcessEnvironment
 	/// </summary>
 	public ApiCallTracer? ApiCallTracer => _apiCallTracer;
 	
+	// Transpiled function provider for hybrid execution (C# + JIT)
+	/// <summary>
+	/// Gets the transpiled function provider for this process environment, if enabled.
+	/// Allows execution of pre-compiled C# functions instead of JIT compiling x86 code.
+	/// </summary>
+	public TranspiledFunctionProvider? TranspiledFunctionProvider { get; private set; }
+	
 	// Memory layout information (set by Emulator after initialization)
 	/// <summary>
 	/// Gets the stack base address (top of stack, highest address). Stack grows downward from this address.
@@ -137,6 +144,7 @@ public class ProcessEnvironment
 		_messageDispatcher = new MessageDispatcher(_logger);
 		ThreadScheduler = new ThreadScheduler(_logger);
 		SynchronizationManager = new SynchronizationManager(_logger);
+		TranspiledFunctionProvider = new TranspiledFunctionProvider(_logger);
 		
 		// Initialize console handles by default (most applications expect these to exist)
 		// Applications can call FreeConsole() if they don't want a console
