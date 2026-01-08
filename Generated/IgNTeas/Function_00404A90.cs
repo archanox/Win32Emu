@@ -21,9 +21,9 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x00404A90
 		/// </summary>
 		[OriginalAddress(0x00404A90)]
-		public int Execute(uint a1)
+		public int Execute(byte a1)
 		{
-			return (unsigned __int8)byte_43CDB0[a1];
+			return byte_43CDB0[a1];
 		}
 
 		/// <summary>

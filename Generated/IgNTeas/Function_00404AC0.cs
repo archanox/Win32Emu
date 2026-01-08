@@ -26,14 +26,14 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int result; // eax
 			// TODO: Transpile: char v3; // cl
 			result = a2;
-			if (a2 < = 83)
+			if (a2 <= 83)
 			{
 			v3 = byte_41C898[a2];
 			// TODO: Transpile: *(_BYTE *)dword_43CD60 = v3;
 			result = dword_43CD60;
 			// TODO: Transpile: *(_BYTE *)(dword_43CD60 + 32) = v3;
-			if ((_UNKNOWN * ) +  + dword_43CD60 == &unk_43CD88)
-			dword_43CD60 = (int)&unk_43CD68;
+			if ( +  + dword_43CD60 ==  & unk_43CD88)
+			dword_43CD60 =  & unk_43CD68;
 			}
 			return result;
 		}

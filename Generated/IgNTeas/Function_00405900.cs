@@ -35,8 +35,8 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v10; // [esp+28h] [ebp-74h] BYREF
 			// TODO: Transpile: int v11; // [esp+2Ch] [ebp-70h] BYREF
 			// TODO: Transpile: _DWORD v12[27]; // [esp+30h] [ebp-6Ch] BYREF
-			v0 = &dword_43C914;
-			// TODO: Transpile: do
+			v0 =  & dword_43C914;
+			do
 			{
 			if (dword_41C79C &&  * v0)
 			{
@@ -44,11 +44,11 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: *v0 = 0;
 			// TODO: Transpile: *(v0 - 11) = 0;
 			}
-			// TODO: Transpile: v0 += 12;
+			v0 += 12;
 			}
-			// TODO: Transpile: while ( v0 < dword_43C944 );
+			while (v0 < dword_43C944)
 			v1 = dword_43C944;
-			// TODO: Transpile: do
+			do
 			{
 			if ( * v1)
 			{
@@ -56,9 +56,9 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: *v1 = 0;
 			// TODO: Transpile: *(v1 - 11) = 0;
 			}
-			// TODO: Transpile: v1 += 12;
+			v1 += 12;
 			}
-			// TODO: Transpile: while ( v1 < &dword_43CD04 );
+			while (v1 <  & dword_43CD04)
 			if (dword_41C79C && dword_43EF78)
 			{
 			// TODO: Transpile: (*(void (__stdcall **)(int))(*(_DWORD *)dword_43EF78 + 8))(dword_43EF78);
@@ -68,20 +68,20 @@ namespace IgNTeas.Generated
 			if (dword_41C79C && lpDD.lpVtbl.SetDisplayMode(lpDD, dword_41C870, dword_41C874, dword_41C878))
 			return 0;
 			// TODO: Transpile: memset(v12, 0, sizeof(v12));
-			// TODO: Transpile: v12[0] = 108;
+			v12[0] = 108;
 			if (!dword_41C79C)
 			uint LABEL_27;
-			// TODO: Transpile: v12[5] = dword_41C87C;
-			// TODO: Transpile: v12[1] = 33;
-			// TODO: Transpile: v12[26] = 536;
-			if (lpDD.lpVtbl.CreateSurface(lpDD, (LPDDSURFACEDESC)v12, (LPDIRECTDRAWSURFACE * )&dword_43C914, 0))
+			v12[5] = dword_41C87C;
+			v12[1] = 33;
+			v12[26] = 536;
+			if (lpDD.lpVtbl.CreateSurface(lpDD, v12, &dword_43C914, 0))
 			return 0;
 			dword_43C8E8 = 1;
 			dword_43C8EC = 1;
 			dword_43C904 = dword_41C870;
 			dword_43C908 = dword_41C874;
 			dword_43C90C = dword_41C878;
-			if (dword_41C87C > = 5)
+			if (dword_41C87C >= 5)
 			{
 			_env.CallWin32Api("MessageBoxA", hWnd, Text, 0, 0);
 			return 0;
@@ -89,26 +89,26 @@ namespace IgNTeas.Generated
 			if (dword_41C87C > 0)
 			{
 			v3 = 0;
-			v4 = (int * )&unk_43C824;
+			v4 =  & unk_43C824;
 			v10 = dword_43C914;
 			v11 = 4;
-			// TODO: Transpile: while ( 1 )
+			while (1)
 			{
-			if (v4 != (int * )&unk_43C824)
+			if (v4 !=  & unk_43C824)
 			v11 = 16;
-			if (( * (int (__stdcall *  * )(int, int * , int * ))( * (_DWORD * )v10 + 48))(v10, &v11, &v10))
-			// TODO: Transpile: break;
+			if ((*(int (int, int *, int *))(*v10 + 48))(v10, &v11, &v10))
+			break;
 			v5 = dword_41C870;
 			// TODO: Transpile: *v4 = v10;
 			v6 = dword_41C874;
 			// TODO: Transpile: *(v4 - 11) = 1;
 			v7 = dword_41C878;
 			// TODO: Transpile: *(v4 - 10) = 1;
-			// TODO: Transpile: v4 += 12;
-			// TODO: Transpile: ++v3;
+			v4 += 12;
+			++v3;
 			// TODO: Transpile: *(v4 - 16) = v5;
 			// TODO: Transpile: *(v4 - 15) = v6;
-			v8 = dword_41C87C < = v3;
+			v8 = dword_41C87C <= v3;
 			// TODO: Transpile: *(v4 - 14) = v7;
 			if (v8)
 			uint LABEL_27;
@@ -116,11 +116,11 @@ namespace IgNTeas.Generated
 			_env.CallWin32Api("MessageBoxA", hWnd, aBackbufferCoul, 0, 0);
 			return 0;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: LABEL_27:
-			// TODO: Transpile: v12[1] = 7;
-			// TODO: Transpile: v12[26] = 64;
+			v12[1] = 7;
+			v12[26] = 64;
 			if (!dword_41C79C)
 			uint LABEL_37;
 			if (dword_43EF78)
@@ -131,22 +131,22 @@ namespace IgNTeas.Generated
 			byte_43F380 = 0;
 			byte_43F381 = 0;
 			byte_43F382 = 0;
-			v9 = &unk_43F384;
-			// TODO: Transpile: do
+			v9 =  & unk_43F384;
+			do
 			{
 			// TODO: Transpile: *v9 = -1;
-			// TODO: Transpile: v9 += 4;
+			v9 += 4;
 			// TODO: Transpile: *(v9 - 3) = -1;
 			// TODO: Transpile: *(v9 - 2) = -1;
 			}
-			// TODO: Transpile: while ( v9 < (_BYTE *)&lpDD );
-			if (lpDD.lpVtbl.CreatePalette(lpDD, 68, (LPPALETTEENTRY)&byte_43F380, (LPDIRECTDRAWPALETTE * )&dword_43EF78, 0))
+			while (v9 <  & lpDD)
+			if (lpDD.lpVtbl.CreatePalette(lpDD, 68, &byte_43F380, &dword_43EF78, 0))
 			return 0;
-			if (( * (int (__stdcall *  * )(int, int))( * (_DWORD * )dword_43C914 + 124))(dword_43C914, dword_43EF78))
+			if ((*(int (int, int))(*dword_43C914 + 124))(dword_43C914, dword_43EF78))
 			{
 			return 0;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: LABEL_37:
 			CallFunction(0x00406250);

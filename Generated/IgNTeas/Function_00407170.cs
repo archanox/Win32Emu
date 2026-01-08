@@ -21,7 +21,7 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x00407170
 		/// </summary>
 		[OriginalAddress(0x00407170)]
-		public uint Execute(int a1, int a2, int a3, uint a4)
+		public sbyte Execute(int a1, int a2, int a3, byte a4)
 		{
 			return CallFunction(0x0040901F, a3, a4, a1, a2);
 		}

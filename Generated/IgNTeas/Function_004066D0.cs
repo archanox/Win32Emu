@@ -23,7 +23,7 @@ namespace IgNTeas.Generated
 		[OriginalAddress(0x004066D0)]
 		public int Execute()
 		{
-			dword_444870 = (int)aDefault_0;
+			dword_444870 = aDefault_0;
 			dword_444874 = 0;
 			dword_444878 = 0;
 			dword_44487C = 0;

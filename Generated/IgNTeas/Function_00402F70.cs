@@ -36,11 +36,11 @@ namespace IgNTeas.Generated
 			dword_41C55C = 480;
 			}
 			CallFunction(0x004030C0, dword_4528B4 + 8, 0.0);
-			// TODO: Transpile: for ( i = 0; i < 307200; *(_BYTE *)(dword_4528B0 + i - 1) = 0 )
-			// TODO: Transpile: ++i;
-			CallFunction(0x00404600, dword_4528B0, dword_41C558, 0, 0, dword_41C558, dword_41C55C, (int)&unk_43C7F8, 0, 0);
+			for (i = 0; i < 307200; *(_BYTE *)(dword_4528B0 + i - 1) = 0)
+			++i;
+			CallFunction(0x00404600, dword_4528B0, dword_41C558, 0, 0, dword_41C558, dword_41C55C,  & unk_43C7F8, 0, 0);
 			// TODO: Transpile: operator delete(&unk_43C7F8);
-			CallFunction(0x00404600, dword_4528B0, dword_41C558, 0, 0, dword_41C558, dword_41C55C, (int)&unk_43C7F8, 0, 0);
+			CallFunction(0x00404600, dword_4528B0, dword_41C558, 0, 0, dword_41C558, dword_41C55C,  & unk_43C7F8, 0, 0);
 			dword_41C870 = dword_41C558;
 			dword_41C878 = 8;
 			dword_41C87C = 1;

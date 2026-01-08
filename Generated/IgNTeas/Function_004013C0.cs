@@ -21,7 +21,7 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x004013C0
 		/// </summary>
 		[OriginalAddress(0x004013C0)]
-		public int Execute(uint a1, int a2, int a3, int a4)
+		public int Execute(byte a1, int a2, int a3, int a4)
 		{
 			// TODO: Transpile: int v4; // esi
 			// TODO: Transpile: int v5; // edi
@@ -53,13 +53,13 @@ namespace IgNTeas.Generated
 			v6 = a4;
 			v5 = v28;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			v5 = a3 % 2;
 			v4 = a3 / 2;
 			v6 = a4 / 2;
 			}
-			v7 = (__int16 * )(a2 + 2 * v6);
+			v7 = (a2 + 2 * v6);
 			if (dword_43C400 == 16)
 			{
 			if (dword_43C3C8 == 1 && !dword_43C3D0 && dword_43C3C4 < 44000)
@@ -68,41 +68,41 @@ namespace IgNTeas.Generated
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			v10 =  * v7 ^ 0x8000;
-			// TODO: Transpile: v9 += 4;
+			v9 += 4;
 			// TODO: Transpile: *((_WORD *)v9 - 2) = v10;
-			// TODO: Transpile: ++v7;
+			++v7;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = v10;
-			// TODO: Transpile: --v4;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_101;
 			}
 			if (dword_43C400 != 16)
 			uint LABEL_25;
-			if (dword_43C3C8 == 1 && !dword_43C3D0 && dword_43C3C4 > = 44000)
+			if (dword_43C3C8 == 1 && !dword_43C3D0 && dword_43C3C4 >= 44000)
 			{
 			v8 = a1;
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			v11 =  * v7 ^ 0x8000;
 			v12 = v9 + 4;
 			// TODO: Transpile: *((_WORD *)v12 - 2) = v11;
-			// TODO: Transpile: v12 += 2;
+			v12 += 2;
 			// TODO: Transpile: *((_WORD *)v12 - 2) = v11;
 			v9 = v12 + 2;
 			// TODO: Transpile: *((_WORD *)v9 - 2) = v11;
-			// TODO: Transpile: ++v7;
+			++v7;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = v11;
-			// TODO: Transpile: --v4;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_101;
 			}
@@ -115,44 +115,44 @@ namespace IgNTeas.Generated
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			v13 =  * v7;
 			v14 = v9 + 2;
 			// TODO: Transpile: *((_WORD *)v14 - 1) = *v7;
 			v9 = v14 + 2;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = v13;
-			// TODO: Transpile: ++v7;
-			// TODO: Transpile: --v4;
+			++v7;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_101;
 			}
 			// TODO: Transpile: LABEL_25:
 			if (dword_43C400 != 16)
 			uint LABEL_39;
-			if (dword_43C3C8 == 1 && dword_43C3D0 == 1 && dword_43C3C4 > = 44000)
+			if (dword_43C3C8 == 1 && dword_43C3D0 == 1 && dword_43C3C4 >= 44000)
 			{
 			v8 = a1;
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			v15 =  * v7;
 			v16 = v9 + 2;
 			// TODO: Transpile: *((_WORD *)v16 - 1) = *v7;
-			// TODO: Transpile: v16 += 2;
+			v16 += 2;
 			// TODO: Transpile: *((_WORD *)v16 - 1) = v15;
-			// TODO: Transpile: v16 += 2;
+			v16 += 2;
 			// TODO: Transpile: *((_WORD *)v16 - 1) = v15;
 			v9 = v16 + 2;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = v15;
-			// TODO: Transpile: ++v7;
-			// TODO: Transpile: --v4;
+			++v7;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_101;
 			}
@@ -165,34 +165,34 @@ namespace IgNTeas.Generated
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: v9 += 2;
-			v17 =  * v7 +  + ^ 0x8000;
+			v9 += 2;
+			v17 =  * v7 +  +  ^ 0x8000;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = v17;
-			// TODO: Transpile: --v4;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_101;
 			}
 			// TODO: Transpile: LABEL_39:
 			if (dword_43C400 != 16)
 			uint LABEL_53;
-			if (!dword_43C3C8 && !dword_43C3D0 && dword_43C3C4 > = 44000)
+			if (!dword_43C3C8 && !dword_43C3D0 && dword_43C3C4 >= 44000)
 			{
 			v8 = a1;
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: v9 += 4;
+			v9 += 4;
 			// TODO: Transpile: *((_WORD *)v9 - 2) = *v7++ ^ 0x8000;
-			// TODO: Transpile: --v4;
+			--v4;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = *(v7 - 1) ^ 0x8000;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_101;
 			}
@@ -205,13 +205,13 @@ namespace IgNTeas.Generated
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: v9 += 2;
+			v9 += 2;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = *v7++;
-			// TODO: Transpile: --v4;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_101;
 			}
@@ -226,37 +226,37 @@ namespace IgNTeas.Generated
 			v8 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: v8 += 2;
-			v20 = HIBYTE( * v7 +  + ) ^ 0x80;
+			v8 += 2;
+			v20 = HIBYTE(*v7++) ^ 0x80;
 			// TODO: Transpile: *(v8 - 2) = v20;
-			// TODO: Transpile: --v4;
+			--v4;
 			// TODO: Transpile: *(v8 - 1) = HIBYTE(*(v7 - 1)) ^ 0x80;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_100;
 			}
 			if (dword_43C400 != 8)
 			uint LABEL_81;
-			if (dword_43C3C8 == 1 && !dword_43C3D0 && dword_43C3C4 > = 44000)
+			if (dword_43C3C8 == 1 && !dword_43C3D0 && dword_43C3C4 >= 44000)
 			{
 			v8 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			v21 = HIBYTE( * v7) ^ 0x80;
-			// TODO: Transpile: v8 += 4;
-			// TODO: Transpile: ++v7;
-			// TODO: Transpile: --v4;
+			v21 = HIBYTE ^ 0x80;
+			v8 += 4;
+			++v7;
+			--v4;
 			// TODO: Transpile: *(v8 - 4) = v21;
 			// TODO: Transpile: *(v8 - 3) = v21;
 			// TODO: Transpile: *(v8 - 2) = v21;
 			// TODO: Transpile: *(v8 - 1) = v21;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_100;
 			}
@@ -268,39 +268,39 @@ namespace IgNTeas.Generated
 			v8 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			v22 =  * v7;
-			// TODO: Transpile: v8 += 2;
-			// TODO: Transpile: ++v7;
-			// TODO: Transpile: --v4;
+			v8 += 2;
+			++v7;
+			--v4;
 			// TODO: Transpile: *(v8 - 2) = HIBYTE(v22);
 			// TODO: Transpile: *(v8 - 1) = HIBYTE(*(v7 - 1));
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_100;
 			}
 			// TODO: Transpile: LABEL_81:
 			if (dword_43C400 != 8)
 			uint LABEL_93;
-			if (dword_43C3C8 == 1 && dword_43C3D0 == 1 && dword_43C3C4 > = 44000)
+			if (dword_43C3C8 == 1 && dword_43C3D0 == 1 && dword_43C3C4 >= 44000)
 			{
 			v8 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			v23 =  * ((_BYTE * )v7 +  +  + 1);
+			v23 =  * (v7++ + 1);
 			v24 = v8 + 3;
 			// TODO: Transpile: *(v24 - 3) = v23;
 			// TODO: Transpile: *(v24 - 2) = v23;
 			// TODO: Transpile: *(v24 - 1) = v23;
 			// TODO: Transpile: *v24 = v23;
 			v8 = v24 + 1;
-			// TODO: Transpile: --v4;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_100;
 			}
@@ -312,14 +312,14 @@ namespace IgNTeas.Generated
 			v8 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: ++v8;
-			v25 =  * v7 +  +  >  > 8;
-			// TODO: Transpile: --v4;
+			++v8;
+			v25 =  * v7 +  +  >> 8;
+			--v4;
 			// TODO: Transpile: *(v8 - 1) = v25 ^ 0x80;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_100;
 			}
@@ -329,7 +329,7 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: LABEL_99:
 			v8 = a1;
 			// TODO: Transpile: LABEL_100:
-			v9 = (_BYTE * )v28;
+			v9 = v28;
 			uint LABEL_101;
 			}
 			// TODO: Transpile: LABEL_94:
@@ -338,15 +338,15 @@ namespace IgNTeas.Generated
 			v8 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			v26 =  * v7;
-			// TODO: Transpile: ++v8;
-			// TODO: Transpile: ++v7;
-			// TODO: Transpile: --v4;
+			++v8;
+			++v7;
+			--v4;
 			// TODO: Transpile: *(v8 - 1) = HIBYTE(v26);
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			uint LABEL_100;
 			}
@@ -356,19 +356,19 @@ namespace IgNTeas.Generated
 			v9 = a1;
 			if (v4 > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
 			v18 = v9 + 2;
 			// TODO: Transpile: *((_WORD *)v18 - 1) = *v7;
 			v9 = v18 + 2;
 			v19 =  * v7 +  + ;
 			// TODO: Transpile: *((_WORD *)v9 - 1) = v19;
-			// TODO: Transpile: --v4;
+			--v4;
 			}
-			// TODO: Transpile: while ( v4 );
+			while (v4)
 			}
 			// TODO: Transpile: LABEL_101:
-			if (dword_43C3C4 > = 44000 && v5 == 1)
+			if (dword_43C3C4 >= 44000 && v5 == 1)
 			{
 			if (dword_43C400 == 16)
 			v8 = v9;
@@ -376,11 +376,11 @@ namespace IgNTeas.Generated
 			{
 			// TODO: Transpile: *v8 = *(v8 - 1);
 			}
-			// TODO: Transpile: else if ( dword_43C400 != 16 || dword_43C3C8 )
+			else if (dword_43C400 != 16 || dword_43C3C8)
 			{
 			// TODO: Transpile: *(_DWORD *)v8 = *((_DWORD *)v8 - 1);
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: *(_WORD *)v8 = *((_WORD *)v8 - 1);
 			}

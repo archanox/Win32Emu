@@ -23,7 +23,7 @@ namespace IgNTeas.Generated
 		[OriginalAddress(0x00406F40)]
 		public void Execute(int a1)
 		{
-			CallFunction(0x00406570,  * (void *  * )(a1 - 4));
+			CallFunction(0x00406570,  * (a1 - 4));
 		}
 
 		/// <summary>

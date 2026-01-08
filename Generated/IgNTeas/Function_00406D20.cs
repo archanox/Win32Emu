@@ -25,10 +25,10 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: char *v2; // eax
 			// TODO: Transpile: unsigned int v3; // edx
-			v2 = (char * )sub_406470(a2 + a1 + 4);
-			v3 = (unsigned int)(v2 + 4) % a2;
+			v2 = CallFunction(0x00406470, a2 + a1 + 4);
+			v3 = (v2 + 4) % a2;
 			// TODO: Transpile: *(_DWORD *)&v2[a2 - v3] = v2;
-			return (int)&v2[a2 - v3 + 4];
+			return  & v2[a2 - v3 + 4];
 		}
 
 		/// <summary>

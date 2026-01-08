@@ -30,60 +30,60 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int *i; // ebp
 			// TODO: Transpile: int v9; // eax
 			v3 = 0;
-			dword_452A10 = CallFunction(0x004035A0, aScriptPlayer);
-			if (dword_452A10 ==  - 1)
+			dword_452A10 = sub_4035A0;
+			if (dword_452A10 == -1)
 			return -1;
 			v5 = a3;
 			if ( * a3)
 			{
 			v6 = dword_43C420;
-			// TODO: Transpile: do
+			do
 			{
-			if (v6 > = (int * )&Size)
-			// TODO: Transpile: break;
+			if (v6 >=  & Size)
+			break;
 			v7 =  * v5 +  + ;
 			// TODO: Transpile: *v6++ = v7;
 			}
-			// TODO: Transpile: while ( *v5 );
+			while ( * v5)
 			}
-			// TODO: Transpile: for ( i = a1; *i != 2021157228; i = (int *)((char *)i + i[1] + 8) )
+			for (i = a1;  * i != 2021157228; i = (int *)((char *)i + i[1] + 8))
 			{
 			v9 =  * i;
 			if ( * i > 825256300)
 			{
 			if (v9 == 842033516)
 			{
-			CallFunction(0x00401C20, (int)i, a2);
+			CallFunction(0x00401C20, i, a2);
 			}
-			// TODO: Transpile: else
+			else
 			{
 			if (v9 != 858810732)
 			return -1;
-			CallFunction(0x00401D20, (int)i, a2, (int)dword_43C420);
+			CallFunction(0x00401D20, i, a2, dword_43C420);
 			}
 			}
-			// TODO: Transpile: else if ( *i == 825256300 )
+			else if ( * i == 825256300)
 			{
-			CallFunction(0x00401C00, (int)i);
+			CallFunction(0x00401C00, i);
 			}
-			// TODO: Transpile: else
+			else
 			{
 			if (v9 != 808479084)
 			return -1;
-			// TODO: Transpile: ++v3;
-			CallFunction(0x00401BE0, (int)i);
+			++v3;
+			CallFunction(0x00401BE0, i);
 			}
 			}
-			dword_43C414 = (int)sub_403630(dword_452A10, (int)Size / 4);
+			dword_43C414 = CallFunction(0x00403630, dword_452A10, Size / 4);
 			if (!dword_43C414)
 			return -1;
-			dword_43C464 = (int)sub_403630(dword_452A10, Size);
+			dword_43C464 = CallFunction(0x00403630, dword_452A10, Size);
 			if (!dword_43C464)
 			return -1;
-			dword_43C418 = (int)sub_403630(dword_452A10, dword_43C40C);
+			dword_43C418 = CallFunction(0x00403630, dword_452A10, dword_43C40C);
 			if (!dword_43C418)
 			return -1;
-			dword_43C408 = (int)sub_403630(dword_452A10, 12 * v3);
+			dword_43C408 = CallFunction(0x00403630, dword_452A10, 12 * v3);
 			if (!dword_43C408)
 			return -1;
 			CallFunction(0x00401B60, a1);

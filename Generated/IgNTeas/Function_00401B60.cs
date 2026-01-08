@@ -32,25 +32,25 @@ namespace IgNTeas.Generated
 			if ( * a1 != 2021157228)
 			{
 			v2 = 0;
-			v3 = (_DWORD * )v5;
+			v3 = v5;
 			v4 = v5;
-			// TODO: Transpile: do
+			do
 			{
 			if ( * v1 == 808479084)
 			{
 			// TODO: Transpile: *(_DWORD *)(dword_43C408 + v2) = v1 + 2;
-			// TODO: Transpile: v2 += 12;
+			v2 += 12;
 			// TODO: Transpile: *(_DWORD *)(dword_43C408 + v2 - 8) = v3;
 			// TODO: Transpile: *(_DWORD *)(dword_43C408 + v2 - 4) = v4;
 			}
-			// TODO: Transpile: else if ( *v1 == 825256300 )
+			else if ( * v1 == 825256300)
 			{
 			v3 = v1 + 2;
 			v4 = v1[1] / 4;
 			}
-			v1 = (_DWORD * )((char * )v1 + v1[1] + 8);
+			v1 = (v1 + v1[1] + 8);
 			}
-			// TODO: Transpile: while ( *v1 != 2021157228 );
+			while ( * v1 != 2021157228)
 			}
 		}
 

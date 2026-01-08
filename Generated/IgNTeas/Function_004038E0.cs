@@ -24,7 +24,7 @@ namespace IgNTeas.Generated
 		public int Execute()
 		{
 			// TODO: Transpile: int i; // esi
-			// TODO: Transpile: for ( i = 0; i < 256; ++i )
+			for (i = 0; i < 256; ++i)
 			{
 			if (dword_4530D0[i])
 			CallFunction(0x00403820, i);

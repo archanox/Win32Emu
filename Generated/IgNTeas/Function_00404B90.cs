@@ -29,21 +29,21 @@ namespace IgNTeas.Generated
 			return 1;
 			v1 = 0;
 			dword_41C910 = 0;
-			// TODO: Transpile: do
+			do
 			{
 			if (dword_43E0C0[v1] == 1 && dword_43E700[v1] == 0x10000)
 			{
-			// TODO: Transpile: dword_43E0C0[v1] = 0;
+			dword_43E0C0[v1] = 0;
 			// TODO: Transpile: ((void (__cdecl *)(int))dword_43E3E0[v1])(dword_43D8F0[v1]);
 			}
-			// TODO: Transpile: ++v1;
+			++v1;
 			}
-			// TODO: Transpile: while ( v1 < 200 );
-			// TODO: Transpile: for ( i = 0; i < 200; ++i )
+			while (v1 < 200)
+			for (i = 0; i < 200; ++i)
 			{
 			if (dword_43E0C0[i] == 1 && dword_43E700[i] == 0x20000)
 			{
-			// TODO: Transpile: dword_43E0C0[i] = 0;
+			dword_43E0C0[i] = 0;
 			// TODO: Transpile: ((void (__cdecl *)(int))dword_43E3E0[i])(dword_43D8F0[i]);
 			}
 			}

@@ -31,58 +31,58 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: _DWORD *v6; // [esp+10h] [ebp-48h]
 			// TODO: Transpile: int v7; // [esp+14h] [ebp-44h]
 			// TODO: Transpile: _DWORD v8[16]; // [esp+18h] [ebp-40h] BYREF
-			// TODO: Transpile: while ( a1[2] > 0 )
+			while (a1[2] > 0)
 			{
 			v1 = a1[2];
 			if (v1 > 256)
-			// TODO: Transpile: break;
+			break;
 			v2 = a1[1];
-			if (v2 < = 0 || v2 > 256)
-			// TODO: Transpile: break;
+			if (v2 <= 0 || v2 > 256)
+			break;
 			v3 =  * (&dword_444C40 + v1);
 			if (v3)
 			{
-			// TODO: Transpile: while ( 1 )
+			while (1)
 			{
 			v4 = v3[1];
-			v7 = CallFunction(0x00406D50, a1[1],  * (int *  * )(v4 + 12));
+			v7 = CallFunction(0x00406D50, a1[1],  * (v4 + 12));
 			if (v7)
-			// TODO: Transpile: break;
-			v3 = (_DWORD * ) * v3;
+			break;
+			v3 =  * v3;
 			if (!v3)
 			{
-			CallFunction(0x00406BA0, a1[2], (int *  * )dword_444B28);
+			CallFunction(0x00406BA0, a1[2], dword_444B28);
 			uint LABEL_15;
 			}
 			}
-			if (v7 ==  - 1)
+			if (v7 == -1)
 			{
-			v6 = CallFunction(0x00406470, 0x18u);
+			v6 = sub_406470;
 			// TODO: Transpile: qmemcpy(v6, &dword_4448E8, 0x18u);
-			// TODO: Transpile: v6[1] = a1[1];
-			// TODO: Transpile: v6[2] = *v6 + *(_DWORD *)(v4 + 8);
-			v5 =  * (_DWORD * )(v4 + 12);
-			// TODO: Transpile: v6[5] = v5;
+			v6[1] = a1[1];
+			v6[2] =  * v6 +  * (v4 + 8);
+			v5 =  * (v4 + 12);
+			v6[5] = v5;
 			if (v5)
 			// TODO: Transpile: *(_DWORD *)(v5 + 16) = v6;
 			// TODO: Transpile: *(_DWORD *)(v4 + 12) = v6;
 			}
-			// TODO: Transpile: else
+			else
 			{
-			v6 = CallFunction(0x00406470, 0x18u);
+			v6 = sub_406470;
 			// TODO: Transpile: qmemcpy(v6, &dword_4448E8, 0x18u);
 			// TODO: Transpile: *v6 = *(_DWORD *)(v7 + 4);
-			// TODO: Transpile: v6[1] = *(_DWORD *)(v7 + 4) + a1[1];
-			// TODO: Transpile: v6[2] = *v6 + *(_DWORD *)(v4 + 8);
-			CallFunction(0x00406B70, v7, (int)v6,  * (_DWORD * )(v7 + 20));
+			v6[1] =  * (v7 + 4) + a1[1];
+			v6[2] =  * v6 +  * (v4 + 8);
+			CallFunction(0x00406B70, v7, v6,  * (v7 + 20));
 			}
 			// TODO: Transpile: qmemcpy(v8, a1, sizeof(v8));
-			// TODO: Transpile: a1[4] = v6[2];
-			// TODO: Transpile: a1[5] = 256;
-			CallFunction(0x004067A0, v8, (int)a1);
+			a1[4] = v6[2];
+			a1[5] = 256;
+			CallFunction(0x004067A0, v8, a1);
 			// TODO: Transpile: return;
 			}
-			CallFunction(0x00406BA0, v1, (int *  * )dword_444B28);
+			CallFunction(0x00406BA0, v1, dword_444B28);
 			// TODO: Transpile: LABEL_15:
 			// TODO: Transpile: ;
 			}

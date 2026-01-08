@@ -53,19 +53,19 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: _DWORD v28[27]; // [esp+50h] [ebp-6Ch] BYREF
 			CallFunction(0x00404530);
 			v20 = hInstance;
-			SystemMetrics = _env.CallWin32Api<uint>("GetSystemMetrics", 1);
-			v0 = _env.CallWin32Api<uint>("GetSystemMetrics", 0);
+			SystemMetrics = GetSystemMetrics;
+			v0 = GetSystemMetrics;
 			hWnd = _env.CallWin32Api<uint>("CreateWindowExA", 0x40000u, ClassName, WindowName, 0x80080000, 0, 0, v0, SystemMetrics, 0, 0, v20, 0);
-			dword_41C7AC = (int)hWnd;
+			dword_41C7AC = hWnd;
 			if (!hWnd)
 			return 0;
 			_env.CallWin32Api("UpdateWindow", hWnd);
 			// TODO: Transpile: SetFocus(hWnd);
-			if (_env.CallWin32Api<uint>("DirectDrawCreate", 0, &lpDD, 0))
+			if (_env.CallWin32Api<uint>("DirectDrawCreate", 0,  & lpDD, 0))
 			return 0;
 			if (dword_41C79C)
 			v2 = lpDD.lpVtbl.SetCooperativeLevel(lpDD, hWnd, 83);
-			// TODO: Transpile: else
+			else
 			v2 = lpDD.lpVtbl.SetCooperativeLevel(lpDD, hWnd, 8);
 			if (v2)
 			return 0;
@@ -74,65 +74,65 @@ namespace IgNTeas.Generated
 			if (lpDD.lpVtbl.SetDisplayMode(lpDD, dword_41C870, dword_41C874, dword_41C878))
 			return 0;
 			}
-			// TODO: Transpile: else
+			else
 			{
-			DC = _env.CallWin32Api<uint>("GetDC", 0);
+			DC = GetDC;
 			DeviceCaps = GetDeviceCaps(DC, 12);
 			dword_41C9EC = GetDeviceCaps(DC, 14) * DeviceCaps;
 			_env.CallWin32Api("ReleaseDC", 0, DC);
-			WindowLongA = GetWindowLongA(hWnd, - 16);
+			WindowLongA = GetWindowLongA(hWnd, -16);
 			// TODO: Transpile: SetWindowLongA(hWnd, -16, WindowLongA & 0x7F39FFFF | 0xC60000);
 			// TODO: Transpile: SetRect(&rc, 0, 0, 640, 480);
-			v22 = GetWindowLongA(hWnd, - 20);
-			v21 = GetMenu(hWnd) != 0;
-			v6 = GetWindowLongA(hWnd, - 16);
+			v22 = GetWindowLongA(hWnd, -20);
+			v21 = GetMenu != 0;
+			v6 = GetWindowLongA(hWnd, -16);
 			// TODO: Transpile: AdjustWindowRectEx(&rc, v6, v21, v22);
 			// TODO: Transpile: SetWindowPos(hWnd, 0, 0, 0, rc.right - rc.left, rc.bottom - rc.top, 0x16u);
 			// TODO: Transpile: SetWindowPos(hWnd, (HWND)0xFFFFFFFE, 0, 0, 0, 0, 0x13u);
 			// TODO: Transpile: SystemParametersInfoA(0x30u, 0, &pvParam, 0);
 			// TODO: Transpile: GetWindowRect(hWnd, &rc);
 			if (rc.left < pvParam)
-			// TODO: Transpile: rc.left = pvParam;
+			rc.left = pvParam;
 			if (rc.top < v27)
-			// TODO: Transpile: rc.top = v27;
+			rc.top = v27;
 			// TODO: Transpile: SetWindowPos(hWnd, 0, rc.left, rc.top, 0, 0, 0x15u);
 			}
 			// TODO: Transpile: memset(v28, 0, sizeof(v28));
-			// TODO: Transpile: v28[0] = 108;
+			v28[0] = 108;
 			if (dword_41C79C)
 			{
-			// TODO: Transpile: v28[5] = dword_41C87C;
-			// TODO: Transpile: v28[1] = 33;
-			// TODO: Transpile: v28[26] = 536;
-			if (lpDD.lpVtbl.CreateSurface(lpDD, (LPDDSURFACEDESC)v28, (LPDIRECTDRAWSURFACE * )&dword_43C914, 0))
+			v28[5] = dword_41C87C;
+			v28[1] = 33;
+			v28[26] = 536;
+			if (lpDD.lpVtbl.CreateSurface(lpDD, v28, &dword_43C914, 0))
 			return 0;
 			dword_43C8E8 = 1;
 			dword_43C8EC = 1;
 			dword_43C904 = dword_41C870;
 			dword_43C908 = dword_41C874;
 			dword_43C90C = dword_41C878;
-			if (dword_41C87C > = 5)
+			if (dword_41C87C >= 5)
 			uint LABEL_22;
 			if (dword_41C87C > 0)
 			{
 			v7 = 0;
-			v8 = (int * )&unk_43C824;
+			v8 =  & unk_43C824;
 			v23 = dword_43C914;
 			v25 = 4;
-			// TODO: Transpile: while ( 1 )
+			while (1)
 			{
-			if (v8 != (int * )&unk_43C824)
+			if (v8 !=  & unk_43C824)
 			v25 = 16;
-			if (( * (int (__stdcall *  * )(int, int * , int * ))( * (_DWORD * )v23 + 48))(v23, &v25, &v23))
-			// TODO: Transpile: break;
+			if ((*(int (int, int *, int *))(*v23 + 48))(v23, &v25, &v23))
+			break;
 			v9 = dword_41C870;
 			// TODO: Transpile: *v8 = v23;
 			v10 = dword_41C874;
 			// TODO: Transpile: *(v8 - 11) = 1;
 			v11 = dword_41C878;
 			// TODO: Transpile: *(v8 - 10) = 1;
-			// TODO: Transpile: v8 += 12;
-			// TODO: Transpile: ++v7;
+			v8 += 12;
+			++v7;
 			// TODO: Transpile: *(v8 - 16) = v9;
 			// TODO: Transpile: *(v8 - 15) = v10;
 			v12 = v7 < dword_41C87C;
@@ -144,22 +144,22 @@ namespace IgNTeas.Generated
 			return 0;
 			}
 			}
-			// TODO: Transpile: else
+			else
 			{
-			// TODO: Transpile: v28[1] = 1;
-			// TODO: Transpile: v28[26] = 512;
-			if (lpDD.lpVtbl.CreateSurface(lpDD, (LPDDSURFACEDESC)v28, (LPDIRECTDRAWSURFACE * )&dword_43C914, 0))
+			v28[1] = 1;
+			v28[26] = 512;
+			if (lpDD.lpVtbl.CreateSurface(lpDD, v28, &dword_43C914, 0))
 			return 0;
 			dword_43C8E8 = 1;
 			dword_43C8EC = 1;
 			dword_43C904 = dword_41C870;
 			dword_43C908 = dword_41C874;
-			// TODO: Transpile: v28[1] = 7;
-			// TODO: Transpile: v28[26] = 64;
-			// TODO: Transpile: v28[3] = 640;
-			// TODO: Transpile: v28[2] = 480;
+			v28[1] = 7;
+			v28[26] = 64;
+			v28[3] = 640;
+			v28[2] = 480;
 			dword_43C90C = dword_41C878;
-			if (dword_41C87C > = 5)
+			if (dword_41C87C >= 5)
 			{
 			// TODO: Transpile: LABEL_22:
 			_env.CallWin32Api("MessageBoxA", hWnd, Text, 0, 0);
@@ -168,8 +168,8 @@ namespace IgNTeas.Generated
 			if (dword_41C87C > 0)
 			{
 			v14 = 0;
-			v15 = (LPDIRECTDRAWSURFACE * )&unk_43C824;
-			// TODO: Transpile: while ( !lpDD->lpVtbl->CreateSurface(lpDD, (LPDDSURFACEDESC)v28, v15, 0) )
+			v15 =  & unk_43C824;
+			while (!lpDD.lpVtbl.CreateSurface(lpDD, v28, v15, 0))
 			{
 			// TODO: Transpile: *(v15 - 11) = (LPDIRECTDRAWSURFACE)1;
 			v16 = dword_41C870;
@@ -178,25 +178,25 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: *(v15 - 4) = (LPDIRECTDRAWSURFACE)v16;
 			v18 = dword_41C878;
 			// TODO: Transpile: *(v15 - 3) = (LPDIRECTDRAWSURFACE)v17;
-			// TODO: Transpile: v15 += 12;
-			// TODO: Transpile: ++v14;
+			v15 += 12;
+			++v14;
 			// TODO: Transpile: *(v15 - 14) = (LPDIRECTDRAWSURFACE)v18;
-			if (v14 > = dword_41C87C)
+			if (v14 >= dword_41C87C)
 			uint LABEL_44;
 			}
 			return 0;
 			}
 			// TODO: Transpile: LABEL_44:
-			if (lpDD.lpVtbl.CreateClipper(lpDD, 0, (LPDIRECTDRAWCLIPPER * )&dword_41C9E8, 0))
+			if (lpDD.lpVtbl.CreateClipper(lpDD, 0, &dword_41C9E8, 0))
 			return 0;
-			if (( * (int (__stdcall *  * )(int, _DWORD, HWND))( * (_DWORD * )dword_41C9E8 + 32))(dword_41C9E8, 0, hWnd))
+			if ((*(int (int, _DWORD, HWND))(*dword_41C9E8 + 32))(dword_41C9E8, 0, hWnd))
 			return 0;
-			if (( * (int (__stdcall *  * )(int, int))( * (_DWORD * )dword_43C914 + 112))(dword_43C914, dword_41C9E8))
+			if ((*(int (int, int))(*dword_43C914 + 112))(dword_43C914, dword_41C9E8))
 			return 1;
 			}
 			// TODO: Transpile: LABEL_29:
-			// TODO: Transpile: v28[1] = 7;
-			// TODO: Transpile: v28[26] = 64;
+			v28[1] = 7;
+			v28[26] = 64;
 			if (!dword_41C79C)
 			uint LABEL_53;
 			if (dword_43EF78)
@@ -207,17 +207,17 @@ namespace IgNTeas.Generated
 			byte_43EB78 = 0;
 			byte_43EB79 = 0;
 			byte_43EB7A = 0;
-			v13 = (int * )&unk_43EB7C;
-			// TODO: Transpile: do
+			v13 =  & unk_43EB7C;
+			do
 			{
 			// TODO: Transpile: *(_BYTE *)v13++ = -1;
 			// TODO: Transpile: *((_BYTE *)v13 - 3) = -1;
 			// TODO: Transpile: *((_BYTE *)v13 - 2) = -1;
 			}
-			// TODO: Transpile: while ( v13 < &dword_43EF78 );
-			if (lpDD.lpVtbl.CreatePalette(lpDD, 68, (LPPALETTEENTRY)&byte_43EB78, (LPDIRECTDRAWPALETTE * )&dword_43EF78, 0))
+			while (v13 <  & dword_43EF78)
+			if (lpDD.lpVtbl.CreatePalette(lpDD, 68, &byte_43EB78, &dword_43EF78, 0))
 			return 0;
-			if (( * (int (__stdcall *  * )(int, int))( * (_DWORD * )dword_43C914 + 124))(dword_43C914, dword_43EF78))
+			if ((*(int (int, int))(*dword_43C914 + 124))(dword_43C914, dword_43EF78))
 			return 0;
 			// TODO: Transpile: LABEL_53:
 			CallFunction(0x00406250);

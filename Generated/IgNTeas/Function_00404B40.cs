@@ -29,12 +29,12 @@ namespace IgNTeas.Generated
 			v1 = 0;
 			dword_41C910 = 1;
 			// TODO: Transpile: memset(dword_43E0C0, 0, 0x320u);
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: ++v1;
-			// TODO: Transpile: word_43DC0E[v1] = v1;
+			++v1;
+			word_43DC0E[v1] = v1;
 			}
-			// TODO: Transpile: while ( v1 < 200 );
+			while (v1 < 200)
 			word_43EA20 = 0;
 			return 1;
 		}

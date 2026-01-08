@@ -21,7 +21,7 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x00404FB0
 		/// </summary>
 		[OriginalAddress(0x00404FB0)]
-		public int Execute(int a1, int a2, uint a3)
+		public int Execute(int a1, int a2, float a3)
 		{
 			// TODO: Transpile: long double v3; // st7
 			// TODO: Transpile: double v4; // st6
@@ -31,14 +31,14 @@ namespace IgNTeas.Generated
 			if (a3)
 			{
 			v3 = a3[1];
-			v4 = (double)(int)(__int64)( * a3 * 65536.0);
-			dword_43EA48 = (__int64)(cos(v3) * v4);
-			dword_43EA4C = (__int64)(v4 * sin(v3));
+			v4 = (*a3 * 65536.0);
+			dword_43EA48 = (cos* v4);
+			dword_43EA4C = (v4 * sin);
 			dword_43EA50 = dword_43EA4C;
-			dword_41C970 = (int)&dword_43EA48;
+			dword_41C970 =  & dword_43EA48;
 			dword_43EA54 = dword_43EA48;
 			}
-			dword_43EA34 = (int)&dword_41C968;
+			dword_43EA34 =  & dword_41C968;
 			CallFunction(0x00405170);
 			return 1;
 		}

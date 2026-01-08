@@ -21,7 +21,7 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x00404320
 		/// </summary>
 		[OriginalAddress(0x00404320)]
-		public int Execute(uint FileName, void Buffer, uint ElementCount, int a4)
+		public int Execute(sbyte FileName, void Buffer, uint ElementCount, int a4)
 		{
 			// TODO: Transpile: FILE *v4; // edi
 			// TODO: Transpile: fpos_t Position; // [esp+8h] [ebp-8h] BYREF

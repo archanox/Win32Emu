@@ -27,15 +27,15 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v2; // ecx
 			// TODO: Transpile: int *v3; // esi
 			// TODO: Transpile: int v4; // eax
-			// TODO: Transpile: for ( i = a1; *i; i = v3 + 1 )
+			for (i = a1;  * i; i = v3 + 1)
 			{
 			v2 =  * i;
 			v3 = i + 1;
 			// TODO: Transpile: nullsub_1(v2);
-			// TODO: Transpile: while ( *v3 )
+			while ( * v3)
 			{
 			v4 =  * v3 +  + ;
-			// TODO: Transpile: for ( dword_43EA34 = v4; *(_DWORD *)dword_43EA34; dword_43EA34 += 4 * dword_41C964 )
+			for (dword_43EA34 = v4;  * dword_43EA34; dword_43EA34 += 4 * dword_41C964)
 			CallFunction(0x004050C0);
 			}
 			}

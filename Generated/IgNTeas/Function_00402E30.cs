@@ -25,7 +25,7 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: int v0; // eax
 			CallFunction(0x00404910);
-			if (CallFunction(0x00404A90, 0x1Cu) == 1 || CallFunction(0x00404A90, 0x39u) == 1 || CallFunction(0x00404A90, 1u) == 1)
+			if (sub_404A90 == 1 || sub_404A90 == 1 || sub_404A90 == 1)
 			{
 			v0 = dword_41C548;
 			if (dword_41C548 == 1)
@@ -34,12 +34,12 @@ namespace IgNTeas.Generated
 			if (v0 == 3)
 			dword_41C548 = 4;
 			}
-			if (CallFunction(0x00404A90, 0x4Au) == 1 && dword_41C560)
+			if (sub_404A90 == 1 && dword_41C560)
 			{
 			CallFunction(0x00402F70, 0);
 			CallFunction(0x004030C0, dword_4528B4 + 8, 1.0);
 			}
-			if (CallFunction(0x00404A90, 0x4Eu) == 1 && dword_41C560 != 1)
+			if (sub_404A90 == 1 && dword_41C560 != 1)
 			{
 			CallFunction(0x00402F70, 1);
 			CallFunction(0x004030C0, dword_4528B4 + 8, 1.0);

@@ -37,23 +37,23 @@ namespace IgNTeas.Generated
 			v1 = CallFunction(0x00402840, 1.0);
 			v0 = dword_41C548;
 			if (v1 == 1)
-			// TODO: Transpile: ++dword_41C544;
+			++dword_41C544;
 			if (dword_41C544 != 3)
 			{
 			// TODO: Transpile: LABEL_6:
 			v2 = dword_41C7B0;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			v0 = dword_41C548 + 1;
 			v2 = dword_41C7B0;
-			dbl_452950 = (double)dword_41C7B0 * 0.02;
+			dbl_452950 = dword_41C7B0 * 0.02;
 			}
 			dword_41C548 = v0;
 			if (v0 == 1 || v0 == 2)
 			{
-			dbl_452A08 = (double)v2 * 0.02 - dbl_452950;
-			CallFunction(0x00402AA0, (__int64)dbl_452A08);
+			dbl_452A08 = v2 * 0.02 - dbl_452950;
+			CallFunction(0x00402AA0, dbl_452A08);
 			v0 = dword_41C548;
 			}
 			dword_41C548 = v0;

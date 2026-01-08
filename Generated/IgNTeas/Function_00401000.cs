@@ -31,15 +31,15 @@ namespace IgNTeas.Generated
 			v3 = dword_452A20;
 			v4 = a1;
 			v5 = word_452E30;
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: ++v3;
+			++v3;
 			// TODO: Transpile: *v5++ = *v4++;
 			// TODO: Transpile: *(v3 - 1) = 16 * *((char *)a1 + ++v2 + 511);
 			}
-			// TODO: Transpile: while ( v5 < &word_453030 );
+			while (v5 <  & word_453030)
 			dword_452E20 = 128;
-			dword_453034 = (int)(a1 + 384);
+			dword_453034 = (a1 + 384);
 			word_453030 = 0;
 			dword_453038 = 2 * a2 - 1536;
 			dword_45303C = 0;

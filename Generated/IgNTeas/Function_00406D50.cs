@@ -26,20 +26,20 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int result; // eax
 			// TODO: Transpile: int *v3; // edx
 			// TODO: Transpile: int v4; // esi
-			result = (int)a2;
+			result = a2;
 			if (!a2)
 			return -1;
-			if ( * a2 > = a1)
+			if ( * a2 >= a1)
 			return -1;
-			// TODO: Transpile: while ( 1 )
+			while (1)
 			{
-			v3 =  * (int *  * )(result + 20);
+			v3 =  * (result + 20);
 			v4 = 256;
 			if (v3)
 			v4 =  * v3;
-			if (v4 -  * (_DWORD * )(result + 4) > = a1)
-			// TODO: Transpile: break;
-			result =  * (_DWORD * )(result + 20);
+			if (v4 -  * (result + 4) >= a1)
+			break;
+			result =  * (result + 20);
 			if (!v3)
 			return 0;
 			}

@@ -31,34 +31,34 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v6; // ebx
 			// TODO: Transpile: int v7; // edx
 			// TODO: Transpile: int v8; // ecx
-			v1 =  * (int *  * )(a1 + 12);
-			v2 = malloc(4 *  * (_DWORD * )(a1 + 8) + 4000);
+			v1 =  * (a1 + 12);
+			v2 = malloc(4 * *(a1 + 8) + 4000);
 			v3 = 0;
 			// TODO: Transpile: *(_DWORD *)(a1 + 12) = v2;
-			if ( * (int * )(a1 + 8) > 0)
+			if ( * (a1 + 8) > 0)
 			{
 			v4 = v1;
 			v5 = 0;
-			// TODO: Transpile: do
+			do
 			{
 			v6 =  * v4 +  + ;
-			// TODO: Transpile: v5 += 4;
-			// TODO: Transpile: ++v3;
+			v5 += 4;
+			++v3;
 			// TODO: Transpile: *(_DWORD *)(*(_DWORD *)(a1 + 12) + v5 - 4) = v6;
 			}
-			// TODO: Transpile: while ( *(_DWORD *)(a1 + 8) > v3 );
+			while ( * (a1 + 8) > v3)
 			}
-			v7 =  * (_DWORD * )(a1 + 8);
+			v7 =  * (a1 + 8);
 			if (v7 + 1000 > v7)
 			{
 			v8 = 4 * v7;
-			// TODO: Transpile: do
+			do
 			{
-			// TODO: Transpile: v8 += 4;
-			// TODO: Transpile: ++v7;
+			v8 += 4;
+			++v7;
 			// TODO: Transpile: *(_DWORD *)(*(_DWORD *)(a1 + 12) + v8 - 4) = 0;
 			}
-			// TODO: Transpile: while ( *(_DWORD *)(a1 + 8) + 1000 > v7 );
+			while ( * (a1 + 8) + 1000 > v7)
 			}
 			// TODO: Transpile: *(_DWORD *)(a1 + 8) += 1000;
 			// TODO: Transpile: free(v1);

@@ -26,9 +26,9 @@ namespace IgNTeas.Generated
 			dword_44CE2C = 0;
 			if (!dword_41CA54)
 			{
-			dword_44CE38 = (int)malloc(0x20D8u);
-			dword_44CE3C = (int)malloc(0x20D8u);
-			dword_44CE40 = (int)malloc(0x20D8u);
+			dword_44CE38 = malloc;
+			dword_44CE3C = malloc;
+			dword_44CE40 = malloc;
 			dword_41CA54 = 1;
 			}
 		}

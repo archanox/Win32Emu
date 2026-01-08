@@ -42,16 +42,16 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: int v16; // edi
 			// TODO: Transpile: int v17; // ecx
 			result = dword_453044;
-			if (dword_41CAC0 > = dword_453044)
+			if (dword_41CAC0 >= dword_453044)
 			{
 			result = dword_453058;
-			if (dword_41CAB0 < = dword_453058)
+			if (dword_41CAB0 <= dword_453058)
 			{
 			result = dword_453064;
-			if (dword_44CEB8 < = dword_453064)
+			if (dword_44CEB8 <= dword_453064)
 			{
 			result = dword_44CED8;
-			if (dword_453060 < = dword_44CED8)
+			if (dword_453060 <= dword_44CED8)
 			{
 			CallFunction(0x00456000);
 			CallFunction(0x00407F80, dword_41CAE0, dword_41CADC, dword_44CEA8);
@@ -65,9 +65,9 @@ namespace IgNTeas.Generated
 			dword_44CEF4 = dword_41CAC8;
 			dword_44CEF8 = dword_41CACC;
 			dword_44CEFC = dword_41CAD0;
-			if (v1 < = v2)
+			if (v1 <= v2)
 			{
-			CallFunction(0x00456520, (int * )dword_44CEBC, &dword_44CEE0);
+			CallFunction(0x00456520, dword_44CEBC,  & dword_44CEE0);
 			dword_44CEE0 = dword_41CAAC;
 			dword_44CEE4 = dword_41CAB0;
 			dword_44CEE8 = dword_41CABC;
@@ -76,7 +76,7 @@ namespace IgNTeas.Generated
 			dword_44CEF4 = dword_41CAC8;
 			dword_44CEF8 = dword_41CAD4;
 			dword_44CEFC = dword_41CAD8;
-			CallFunction(0x00456640, (int * )dword_44CEC0, &dword_44CEE0);
+			CallFunction(0x00456640, dword_44CEC0,  & dword_44CEE0);
 			dword_44CEE0 = dword_41CAB4;
 			dword_44CEE4 = dword_41CAB8;
 			dword_44CEE8 = dword_41CABC;
@@ -85,70 +85,70 @@ namespace IgNTeas.Generated
 			dword_44CEF4 = dword_41CAD0;
 			dword_44CEF8 = dword_41CAD4;
 			dword_44CEFC = dword_41CAD8;
-			CallFunction(0x00456520, (int * )dword_44CEC4, &dword_44CEE0);
+			CallFunction(0x00456520, dword_44CEC4,  & dword_44CEE0);
 			v11 = 0;
 			v12 = 0;
-			// TODO: Transpile: dword_44CEB4 += dword_45305C * *(_DWORD *)dword_44CEC0;
-			if ( * (int * )(dword_44CEBC + 4) > 0)
+			dword_44CEB4 += dword_45305C *  * dword_44CEC0;
+			if ( * (dword_44CEBC + 4) > 0)
 			{
-			// TODO: Transpile: do
+			do
 			{
-			v13 =  * (_DWORD * )(v11 + dword_44CEC0 + 16);
-			if (dword_453054 < = v13)
+			v13 =  * (v11 + dword_44CEC0 + 16);
+			if (dword_453054 <= v13)
 			// TODO: Transpile: sub_407FA0(
 			// TODO: Transpile: v13 + dword_44CEB4 + 1,
 			// TODO: Transpile: *(_DWORD *)(v11 + dword_44CEBC + 16) - v13 - 1,
 			// TODO: Transpile: (*(_DWORD *)(v11 + dword_44CEBC + 12) << 24) + (unsigned __int16)*(_DWORD *)(v11 + dword_44CEBC + 8),
 			// TODO: Transpile: (unsigned __int64)*(int *)(v11 + dword_44CEBC + 12) >> 8,
 			// TODO: Transpile: (_BYTE *)(v11 + dword_44CEC0 + 8));
-			// TODO: Transpile: else
+			else
 			// TODO: Transpile: sub_407FC0(
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: *(_DWORD *)(v11 + dword_44CEBC + 16) - dword_453054,
 			// TODO: Transpile: (*(_DWORD *)(v11 + dword_44CEBC + 12) << 24) + (unsigned __int16)*(_DWORD *)(v11 + dword_44CEBC + 8),
 			// TODO: Transpile: (_BYTE *)((unsigned __int64)*(int *)(v11 + dword_44CEBC + 12) >> 8));
-			// TODO: Transpile: v11 += 12;
-			// TODO: Transpile: ++v12;
-			// TODO: Transpile: dword_44CEB4 += dword_45305C;
+			v11 += 12;
+			++v12;
+			dword_44CEB4 += dword_45305C;
 			}
-			// TODO: Transpile: while ( *(_DWORD *)(dword_44CEBC + 4) > v12 );
+			while ( * (dword_44CEBC + 4) > v12)
 			}
 			result = dword_44CEC4;
 			v14 = 0;
 			v15 = 0;
-			if ( * (int * )(dword_44CEC4 + 4) > 0)
+			if ( * (dword_44CEC4 + 4) > 0)
 			{
 			v16 = 12 * v12;
-			// TODO: Transpile: do
+			do
 			{
-			v17 =  * (_DWORD * )(v16 + dword_44CEC0 + 16);
-			if (dword_453054 < = v17)
+			v17 =  * (v16 + dword_44CEC0 + 16);
+			if (dword_453054 <= v17)
 			// TODO: Transpile: sub_407FA0(
 			// TODO: Transpile: v17 + dword_44CEB4 + 1,
 			// TODO: Transpile: *(_DWORD *)(v14 + dword_44CEC4 + 16) - v17 - 1,
 			// TODO: Transpile: (*(_DWORD *)(v14 + dword_44CEC4 + 12) << 24) + (unsigned __int16)*(_DWORD *)(v14 + dword_44CEC4 + 8),
 			// TODO: Transpile: (unsigned __int64)*(int *)(v14 + dword_44CEC4 + 12) >> 8,
 			// TODO: Transpile: (_BYTE *)(v16 + dword_44CEC0 + 8));
-			// TODO: Transpile: else
+			else
 			// TODO: Transpile: sub_407FC0(
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: *(_DWORD *)(v14 + dword_44CEC4 + 16) - dword_453054,
 			// TODO: Transpile: (*(_DWORD *)(v14 + dword_44CEC4 + 12) << 24) + (unsigned __int16)*(_DWORD *)(v14 + dword_44CEC4 + 8),
 			// TODO: Transpile: (_BYTE *)((unsigned __int64)*(int *)(v14 + dword_44CEC4 + 12) >> 8));
-			// TODO: Transpile: v16 += 12;
-			// TODO: Transpile: dword_44CEB4 += dword_45305C;
+			v16 += 12;
+			dword_44CEB4 += dword_45305C;
 			result = dword_44CEC4;
-			// TODO: Transpile: v14 += 12;
-			// TODO: Transpile: ++v15;
+			v14 += 12;
+			++v15;
 			}
-			// TODO: Transpile: while ( *(_DWORD *)(dword_44CEC4 + 4) > v15 );
+			while ( * (dword_44CEC4 + 4) > v15)
 			}
 			}
-			// TODO: Transpile: else
+			else
 			{
-			CallFunction(0x00456640, (int * )dword_44CEBC, &dword_44CEE0);
+			CallFunction(0x00456640, dword_44CEBC,  & dword_44CEE0);
 			dword_44CEE0 = dword_41CAAC;
 			dword_44CEE4 = dword_41CAB0;
 			dword_44CEE8 = dword_41CABC;
@@ -157,7 +157,7 @@ namespace IgNTeas.Generated
 			dword_44CEF4 = dword_41CAC8;
 			dword_44CEF8 = dword_41CAD4;
 			dword_44CEFC = dword_41CAD8;
-			CallFunction(0x00456520, (int * )dword_44CEC0, &dword_44CEE0);
+			CallFunction(0x00456520, dword_44CEC0,  & dword_44CEE0);
 			dword_44CEE0 = dword_41CAB4;
 			dword_44CEE4 = dword_41CAB8;
 			dword_44CEE8 = dword_41CABC;
@@ -166,66 +166,66 @@ namespace IgNTeas.Generated
 			dword_44CEF4 = dword_41CAD0;
 			dword_44CEF8 = dword_41CAD4;
 			dword_44CEFC = dword_41CAD8;
-			CallFunction(0x00456640, (int * )dword_44CEC4, &dword_44CEE0);
+			CallFunction(0x00456640, dword_44CEC4,  & dword_44CEE0);
 			v3 = 0;
-			// TODO: Transpile: dword_44CEB4 += dword_45305C * *(_DWORD *)dword_44CEBC;
-			if ( * (int * )(dword_44CEBC + 4) > 0)
+			dword_44CEB4 += dword_45305C *  * dword_44CEBC;
+			if ( * (dword_44CEBC + 4) > 0)
 			{
 			v4 = 0;
-			// TODO: Transpile: do
+			do
 			{
-			v5 =  * (_DWORD * )(v4 + dword_44CEBC + 16);
-			if (dword_453054 < = v5)
+			v5 =  * (v4 + dword_44CEBC + 16);
+			if (dword_453054 <= v5)
 			// TODO: Transpile: sub_407FA0(
 			// TODO: Transpile: v5 + dword_44CEB4 + 1,
 			// TODO: Transpile: *(_DWORD *)(v4 + dword_44CEC0 + 16) - v5 - 1,
 			// TODO: Transpile: (*(_DWORD *)(v4 + dword_44CEC0 + 12) << 24) + (unsigned __int16)*(_DWORD *)(v4 + dword_44CEC0 + 8),
 			// TODO: Transpile: (unsigned __int64)*(int *)(v4 + dword_44CEC0 + 12) >> 8,
 			// TODO: Transpile: (_BYTE *)(v4 + dword_44CEBC + 8));
-			// TODO: Transpile: else
+			else
 			// TODO: Transpile: sub_407FC0(
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: *(_DWORD *)(v4 + dword_44CEC0 + 16) - dword_453054,
 			// TODO: Transpile: (*(_DWORD *)(v4 + dword_44CEC0 + 12) << 24) + (unsigned __int16)*(_DWORD *)(v4 + dword_44CEC0 + 8),
 			// TODO: Transpile: (_BYTE *)((unsigned __int64)*(int *)(v4 + dword_44CEC0 + 12) >> 8));
-			// TODO: Transpile: v4 += 12;
-			// TODO: Transpile: ++v3;
-			// TODO: Transpile: dword_44CEB4 += dword_45305C;
+			v4 += 12;
+			++v3;
+			dword_44CEB4 += dword_45305C;
 			}
-			// TODO: Transpile: while ( *(_DWORD *)(dword_44CEBC + 4) > v3 );
+			while ( * (dword_44CEBC + 4) > v3)
 			}
 			v6 = 0;
 			result = dword_44CEC4;
-			if ( * (int * )(dword_44CEC4 + 4) > 0)
+			if ( * (dword_44CEC4 + 4) > 0)
 			{
 			v7 = 3 * v3;
 			v8 = 0;
 			v9 = 4 * v7;
-			// TODO: Transpile: do
+			do
 			{
-			v10 =  * (_DWORD * )(v8 + dword_44CEC4 + 16);
-			if (dword_453054 < = v10)
+			v10 =  * (v8 + dword_44CEC4 + 16);
+			if (dword_453054 <= v10)
 			// TODO: Transpile: sub_407FA0(
 			// TODO: Transpile: v10 + dword_44CEB4 + 1,
 			// TODO: Transpile: *(_DWORD *)(v9 + dword_44CEC0 + 16) - v10 - 1,
 			// TODO: Transpile: (*(_DWORD *)(v9 + dword_44CEC0 + 12) << 24) + (unsigned __int16)*(_DWORD *)(v9 + dword_44CEC0 + 8),
 			// TODO: Transpile: (unsigned __int64)*(int *)(v9 + dword_44CEC0 + 12) >> 8,
 			// TODO: Transpile: (_BYTE *)(v8 + dword_44CEC4 + 8));
-			// TODO: Transpile: else
+			else
 			// TODO: Transpile: sub_407FC0(
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: dword_44CEB4 + dword_453054,
 			// TODO: Transpile: *(_DWORD *)(v9 + dword_44CEC0 + 16) - dword_453054,
 			// TODO: Transpile: (*(_DWORD *)(v9 + dword_44CEC0 + 12) << 24) + (unsigned __int16)*(_DWORD *)(v9 + dword_44CEC0 + 8),
 			// TODO: Transpile: (_BYTE *)((unsigned __int64)*(int *)(v9 + dword_44CEC0 + 12) >> 8));
-			// TODO: Transpile: v9 += 12;
-			// TODO: Transpile: dword_44CEB4 += dword_45305C;
+			v9 += 12;
+			dword_44CEB4 += dword_45305C;
 			result = dword_44CEC4;
-			// TODO: Transpile: v8 += 12;
-			// TODO: Transpile: ++v6;
+			v8 += 12;
+			++v6;
 			}
-			// TODO: Transpile: while ( *(_DWORD *)(dword_44CEC4 + 4) > v6 );
+			while ( * (dword_44CEC4 + 4) > v6)
 			}
 			}
 			}

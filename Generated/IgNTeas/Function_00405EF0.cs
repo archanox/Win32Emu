@@ -35,35 +35,35 @@ namespace IgNTeas.Generated
 			{
 			if (v2 == 1)
 			{
-			if (!CallFunction(0x004061A0, (int)a1))
+			if (!sub_4061A0)
 			return 0;
-			if (!CallFunction(0x00406050, (int)a1, 3))
+			if (!CallFunction(0x00406050, a1, 3))
 			return 0;
 			}
 			}
-			// TODO: Transpile: else if ( !sub_406050((int)a1, 3) )
+			else if (!CallFunction(0x00406050, a1, 3))
 			{
 			return 0;
 			}
 			v3 = a1[5];
-			// TODO: Transpile: for ( i = 0; a1[8] > i; ++i )
+			for (i = 0; a1[8] > i; ++i)
 			{
-			// TODO: Transpile: for ( j = 0; a1[7] > j; *(_DWORD *)(v3 + 4 * v6) = 0 )
+			for (j = 0; a1[7] > j; *(_DWORD *)(v3 + 4 * v6) = 0)
 			{
 			v6 = j + i * a1[6];
-			// TODO: Transpile: ++j;
+			++j;
 			}
 			}
 			if (a1[3] != v2)
 			{
 			if (v2)
 			{
-			if (!CallFunction(0x004061A0, (int)a1))
+			if (!sub_4061A0)
 			return 0;
-			if (!CallFunction(0x00406050, (int)a1, v2))
+			if (!CallFunction(0x00406050, a1, v2))
 			return 0;
 			}
-			// TODO: Transpile: else if ( !sub_4061A0((int)a1) )
+			else if (!sub_4061A0)
 			{
 			return 0;
 			}

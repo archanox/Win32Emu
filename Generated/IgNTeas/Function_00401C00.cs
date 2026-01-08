@@ -24,9 +24,9 @@ namespace IgNTeas.Generated
 		public int Execute(int a1)
 		{
 			// TODO: Transpile: int result; // eax
-			result = 2 *  * (_DWORD * )(a1 + 4);
-			if ((int)dword_43C40C < result)
-			dword_43C40C = 2 *  * (_DWORD * )(a1 + 4);
+			result = 2 *  * (a1 + 4);
+			if (dword_43C40C < result)
+			dword_43C40C = 2 *  * (a1 + 4);
 			return result;
 		}
 

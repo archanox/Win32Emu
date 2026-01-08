@@ -21,24 +21,24 @@ namespace IgNTeas.Generated
 		/// Execute function at 0x004061F0
 		/// </summary>
 		[OriginalAddress(0x004061F0)]
-		public int Execute(uint a1)
+		public int Execute(sbyte a1)
 		{
 			// TODO: Transpile: char *v3; // eax
 			// TODO: Transpile: char v4; // dl
 			if (!dword_43EF78)
 			return 0;
-			v3 = (char * )&unk_43EF80;
-			// TODO: Transpile: do
+			v3 =  & unk_43EF80;
+			do
 			{
 			v4 =  * a1;
-			// TODO: Transpile: a1 += 3;
+			a1 += 3;
 			// TODO: Transpile: *v3 = v4;
-			// TODO: Transpile: v3 += 4;
+			v3 += 4;
 			// TODO: Transpile: *(v3 - 3) = *(a1 - 2);
 			// TODO: Transpile: *(v3 - 2) = *(a1 - 1);
 			}
-			// TODO: Transpile: while ( v3 < &byte_43F380 );
-			return ( * (int (__stdcall *  * )(int, _DWORD, _DWORD, int, void * ))( * (_DWORD * )dword_43EF78 + 24))(;
+			while (v3 <  & byte_43F380)
+			return (*(int (int, _DWORD, _DWORD, int, void *))(*dword_43EF78 + 24))(;
 			// TODO: Transpile: dword_43EF78,
 			// TODO: Transpile: 0,
 			// TODO: Transpile: 0,

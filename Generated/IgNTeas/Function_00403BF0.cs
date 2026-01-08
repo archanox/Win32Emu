@@ -33,11 +33,11 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: dword_43C7E8,
 			// TODO: Transpile: dword_43C7D4,
 			// TODO: Transpile: dword_43C7EC);
-			// TODO: Transpile: for ( dword_43C7E0 += dword_43C7F0 * dword_45308C; dword_43C7F4 <= dword_43C7E0; dword_43C7E0 -= dword_43C7F4 )
+			for (dword_43C7E0 += dword_43C7F0 * dword_45308C; dword_43C7F4 <= dword_43C7E0; dword_43C7E0 -= dword_43C7F4)
 			// TODO: Transpile: ;
 			return 0;
 			}
-			// TODO: Transpile: else
+			else
 			{
 			// TODO: Transpile: (*(void (__stdcall **)(int, int, int, int, int))(*(_DWORD *)dword_4530A0 + 76))(
 			// TODO: Transpile: dword_4530A0,
@@ -45,7 +45,7 @@ namespace IgNTeas.Generated
 			// TODO: Transpile: dword_43C7E8,
 			// TODO: Transpile: dword_43C7D4,
 			// TODO: Transpile: dword_43C7EC);
-			// TODO: Transpile: for ( dword_43C7E0 += dword_43C7F0 * dword_45308C; dword_43C7F4 <= dword_43C7E0; dword_43C7E0 -= dword_43C7F4 )
+			for (dword_43C7E0 += dword_43C7F0 * dword_45308C; dword_43C7F4 <= dword_43C7E0; dword_43C7E0 -= dword_43C7F4)
 			// TODO: Transpile: ;
 			return 0;
 			}

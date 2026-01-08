@@ -24,11 +24,11 @@ namespace IgNTeas.Generated
 		public int Execute()
 		{
 			// TODO: Transpile: int result; // eax
-			CallFunction(0x004019D0, (int * )dword_4528B8, (int)dword_4528D0, &dword_452970);
+			CallFunction(0x004019D0, dword_4528B8, dword_4528D0,  & dword_452970);
 			CallFunction(0x00402F70, 1);
 			CallFunction(0x004030C0, dword_4528B4 + 8, dbl_41C550);
 			CallFunction(0x00402A80, dword_41C55C, dword_41C558, dword_41C558, dword_41C55C);
-			result = CallFunction(0x004044D0, aDataIgnPsq);
+			result = sub_4044D0;
 			dword_452958 = result;
 			return result;
 		}

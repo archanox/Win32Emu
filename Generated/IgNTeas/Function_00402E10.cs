@@ -23,7 +23,7 @@ namespace IgNTeas.Generated
 		[OriginalAddress(0x00402E10)]
 		public int Execute(int a1)
 		{
-			return CallFunction(0x0040A519, a1);
+			return sub_40A519;
 		}
 
 		/// <summary>

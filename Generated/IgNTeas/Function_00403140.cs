@@ -25,41 +25,41 @@ namespace IgNTeas.Generated
 		{
 			// TODO: Transpile: struct tagMSG Msg; // [esp+10h] [ebp-44h] BYREF
 			// TODO: Transpile: WNDCLASSA WndClass; // [esp+2Ch] [ebp-28h] BYREF
-			dword_43C7C0 = (int)&unk_41B1C0;
+			dword_43C7C0 =  & unk_41B1C0;
 			// TODO: Transpile: ::hInstance = hInstance;
-			hCursor = _env.CallWin32Api<uint>("LoadCursorA", 0, (LPCSTR)0x7F00);
-			// TODO: Transpile: WndClass.cbClsExtra = 0;
-			// TODO: Transpile: WndClass.cbWndExtra = 0;
-			// TODO: Transpile: WndClass.hInstance = ::hInstance;
-			// TODO: Transpile: WndClass.style = 8;
-			// TODO: Transpile: WndClass.lpfnWndProc = (WNDPROC)sub_403340;
-			// TODO: Transpile: WndClass.hIcon = LoadIconA(0, (LPCSTR)0x7F00);
-			// TODO: Transpile: WndClass.hCursor = hCursor;
-			// TODO: Transpile: WndClass.hbrBackground = (HBRUSH)GetStockObject(4);
-			// TODO: Transpile: WndClass.lpszMenuName = 0;
-			// TODO: Transpile: WndClass.lpszClassName = ClassName;
-			if (!_env.CallWin32Api<uint>("RegisterClassA", &WndClass))
+			hCursor = _env.CallWin32Api<uint>("LoadCursorA", 0, 0x7F00);
+			WndClass.cbClsExtra = 0;
+			WndClass.cbWndExtra = 0;
+			WndClass.hInstance = ::hInstance;
+			WndClass.style = 8;
+			WndClass.lpfnWndProc = sub_403340;
+			WndClass.hIcon = _env.CallWin32Api<uint>("LoadIconA", 0, 0x7F00);
+			WndClass.hCursor = hCursor;
+			WndClass.hbrBackground = GetStockObject;
+			WndClass.lpszMenuName = 0;
+			WndClass.lpszClassName = ClassName;
+			if (!_env.CallWin32Api<uint>("RegisterClassA",  & WndClass))
 			return 0;
 			// TODO: Transpile: timeBeginPeriod(1u);
 			CallFunction(0x00404B00);
 			if (!CallFunction(0x00403510))
 			return 0;
-			// TODO: Transpile: while ( dword_43C7A4 )
+			while (dword_43C7A4)
 			{
 			if (PeekMessageA(&Msg, 0, 0, 0, 0))
 			{
-			if (!_env.CallWin32Api<uint>("GetMessageA", &Msg, 0, 0, 0))
+			if (!_env.CallWin32Api<uint>("GetMessageA",  & Msg, 0, 0, 0))
 			return Msg.wParam;
 			// TODO: Transpile: LABEL_8:
-			_env.CallWin32Api("TranslateMessage", &Msg);
-			_env.CallWin32Api("DispatchMessageA", &Msg);
+			_env.CallWin32Api("TranslateMessage",  & Msg);
+			_env.CallWin32Api("DispatchMessageA",  & Msg);
 			}
-			// TODO: Transpile: else if ( !sub_4032A0() )
+			else if (!CallFunction(0x004032A0))
 			{
 			CallFunction(0x00403540);
 			}
 			}
-			if (_env.CallWin32Api<uint>("GetMessageA", &Msg, 0, 0, 0))
+			if (_env.CallWin32Api<uint>("GetMessageA",  & Msg, 0, 0, 0))
 			uint LABEL_8;
 			return Msg.wParam;
 		}
