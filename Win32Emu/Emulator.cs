@@ -1367,8 +1367,25 @@ public sealed class Emulator : IDisposable
                 throw; // Re-throw to stop emulation
             }
             
-            // IGN_TEAS diagnostic logging removed - issue was diagnosed as WASM performance bottleneck
-            // See docs/investigation/IGN_TEAS_FINDINGS_REPORT.md for analysis
+            // IGN_TEAS diagnostic logging - investigating infinite loop after GetModuleFileNameA
+            // The game returns from GetModuleFileNameA to 0x004123B8 and then enters a loop
+            // Previous investigation found it cycles through: 0x00412551 → 0x004125E9 → 0x0041251D → 0x00412554
+            var eipNow = _cpu.GetEip();
+            if (eipNow >= 0x00412300 && eipNow <= 0x00412700)
+            {
+                // Log every instruction in this critical range
+                var esp = _cpu.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                var eax = _cpu.GetRegister("EAX");
+                var ebx = _cpu.GetRegister("EBX");
+                var ecx = _cpu.GetRegister("ECX");
+                var edx = _cpu.GetRegister("EDX");
+                var esi = _cpu.GetRegister("ESI");
+                var edi = _cpu.GetRegister("EDI");
+                
+                _logger.LogInformation("[IGN_TEAS Loop] Iteration {Iter}: EIP 0x{Before:X8}→0x{After:X8}, ESP=0x{ESP:X8}, EBP=0x{EBP:X8}, EAX=0x{EAX:X8}, EBX=0x{EBX:X8}, ECX=0x{ECX:X8}, EDX=0x{EDX:X8}, ESI=0x{ESI:X8}, EDI=0x{EDI:X8}",
+                    iterationCount, eipBeforeStep, eipNow, esp, ebp, eax, ebx, ecx, edx, esi, edi);
+            }
             
             // Instruction-level tracing for debugging
             if (_instructionTraceCount > 0)
