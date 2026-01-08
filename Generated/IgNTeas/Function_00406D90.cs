@@ -51,44 +51,60 @@ namespace IgNTeas.Generated
 			{
 			while (v3[2] != (v4 & 0xFFFF0000))
 			{
-			v3 = v3[5];
-			if (!v3)
-			// TODO: Transpile: return;
+				v3 = v3[5];
+				if (!v3)
+				{
+					return;
+				}
 			}
 			v5 = v3[3];
 			while (v5[2] != (a1[4] & 0xFFFFFF00))
 			{
-			v5 = v5[5];
-			if (!v5)
-			// TODO: Transpile: return;
+				v5 = v5[5];
+				if (!v5)
+				{
+					return;
+				}
 			}
 			v6 = v5[3];
 			while (v6[2] != v4)
 			{
-			v6 = v6[5];
-			if (!v6)
-			// TODO: Transpile: return;
+				v6 = v6[5];
+				if (!v6)
+				{
+					return;
+				}
 			}
 			v16 = 0;
 			v7 =  * (&dword_444C40 + v1);
 			while (v7[1] != v5)
 			{
-			v16 = v7;
-			v7 =  * v7;
-			if (!v7)
-			// TODO: Transpile: return;
+				v16 = v7;
+				v7 = *v7;
+				if (!v7)
+				{
+					return;
+				}
 			}
 			v8 = v6[5];
 			if (v8 || v6[4])
 			{
 			v14 = v6[4];
 			if (v14)
-			// TODO: Transpile: *(_DWORD *)(v14 + 20) = v8;
+			{
+				// TODO: Manual fix needed - complex pointer cast: *(_DWORD *)(v14 + 20) = v8;
+				_env.Memory.WriteUInt32(v14 + 20, v8);
+			}
 			else
-			v5[3] = v8;
+			{
+				v5[3] = v8;
+			}
 			v15 = v6[5];
 			if (v15)
-			// TODO: Transpile: *(_DWORD *)(v15 + 16) = v6[4];
+			{
+				// TODO: Manual fix needed - complex pointer cast: *(_DWORD *)(v15 + 16) = v6[4];
+				_env.Memory.WriteUInt32(v15 + 16, v6[4]);
+			}
 			}
 			else
 			{
@@ -97,12 +113,20 @@ namespace IgNTeas.Generated
 			{
 			v12 = v5[4];
 			if (v12)
-			// TODO: Transpile: *(_DWORD *)(v12 + 20) = v9;
+			{
+				// TODO: Manual fix needed - complex pointer cast: *(_DWORD *)(v12 + 20) = v9;
+				_env.Memory.WriteUInt32(v12 + 20, v9);
+			}
 			else
-			v3[3] = v9;
+			{
+				v3[3] = v9;
+			}
 			v13 = v5[5];
 			if (v13)
-			// TODO: Transpile: *(_DWORD *)(v13 + 16) = v5[4];
+			{
+				// TODO: Manual fix needed - complex pointer cast: *(_DWORD *)(v13 + 16) = v5[4];
+				_env.Memory.WriteUInt32(v13 + 16, v5[4]);
+			}
 			}
 			else
 			{
@@ -110,17 +134,31 @@ namespace IgNTeas.Generated
 			v10 = v3[4];
 			v11 = v3 + 5;
 			if (v10)
-			// TODO: Transpile: *(_DWORD *)(v10 + 20) = *v11;
+			{
+				// TODO: Manual fix needed - complex pointer cast: *(_DWORD *)(v10 + 20) = *v11;
+				_env.Memory.WriteUInt32(v10 + 20, *v11);
+			}
 			else
-			dword_444B28 =  * v11;
-			if ( * v11)
-			// TODO: Transpile: *(_DWORD *)(*v11 + 16) = v3[4];
+			{
+				dword_444B28 = *v11;
+			}
+			if (*v11)
+			{
+				// TODO: Manual fix needed - complex pointer cast: *(_DWORD *)(*v11 + 16) = v3[4];
+				_env.Memory.WriteUInt32(*v11 + 16, v3[4]);
+			}
 			CallFunction(0x00406570, v3);
 			}
 			if (v16)
-			// TODO: Transpile: *v16 = *v7;
+			{
+				// TODO: Manual fix needed - pointer assignment: *v16 = *v7;
+				*v16 = *v7;
+			}
 			else
-			// TODO: Transpile: *(&dword_444C40 + a1[2]) = (void *)*v7;
+			{
+				// TODO: Manual fix needed - complex pointer cast: *(&dword_444C40 + a1[2]) = (void *)*v7;
+				// This requires understanding the actual memory layout
+			}
 			CallFunction(0x00406570, v7);
 			CallFunction(0x00406570, v5);
 			}
