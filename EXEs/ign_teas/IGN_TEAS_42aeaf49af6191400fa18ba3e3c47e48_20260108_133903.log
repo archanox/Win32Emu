@@ -1,0 +1,356 @@
+﻿2026-01-08 13:39:03.526 [INFO] Win32Emu.Emulator: Logging to file: loop_debug.log
+2026-01-08 13:39:03.529 [INFO] Win32Emu.Emulator: Using existing virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+2026-01-08 13:39:03.529 [INFO] Win32Emu.Emulator: Using virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+2026-01-08 13:39:03.529 [INFO] Win32Emu.Emulator: Executable VFS path: C:\ign_teas\IGN_TEAS.EXE
+2026-01-08 13:39:03.536 [INFO] Win32Emu.Emulator: [Loader] Extracting executable from virtual disk: C:\ign_teas\IGN_TEAS.EXE
+2026-01-08 13:39:03.590 [INFO] Win32Emu.Emulator: [DiskVFS] Mounted VHD: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (Read-Write)
+2026-01-08 13:39:03.596 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS.EXE'
+2026-01-08 13:39:03.602 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\ign_teas\IGN_TEAS.EXE'
+2026-01-08 13:39:03.606 [INFO] Win32Emu.Emulator: [Loader] Extracted 290816 bytes from virtual disk
+2026-01-08 13:39:03.614 [INFO] Win32Emu.Emulator: [DiskVFS] Disposed
+2026-01-08 13:39:03.614 [INFO] Win32Emu.Emulator: [Loader] Host OS: Ubuntu 24.04.3 LTS
+2026-01-08 13:39:03.614 [INFO] Win32Emu.Emulator: [Loader] Host OS Architecture: X64
+2026-01-08 13:39:03.614 [INFO] Win32Emu.Emulator: [Loader] Host Process Architecture: X64
+2026-01-08 13:39:03.614 [INFO] Win32Emu.Emulator: [Loader] Host Framework: .NET 10.0.1
+2026-01-08 13:39:03.614 [INFO] Win32Emu.Emulator: [Loader] Host Runtime Identifier: linux-x64
+2026-01-08 13:39:03.615 [INFO] Win32Emu.Emulator: [Memory] Configured size: 256 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
+2026-01-08 13:39:03.623 [INFO] Win32Emu.Emulator: [Loader] Detected format: PE32
+2026-01-08 13:39:03.636 [INFO] Win32Emu.Emulator: [Loader] Created syscall dispatcher at 0x0E000000
+2026-01-08 13:39:03.640 [INFO] Win32Emu.Emulator: [Loader] Processing imports from DLL: USER32.dll (30 symbols)
+2026-01-08 13:39:03.643 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!ClientToScreen -> IAT VA 0x004552E0 = synthetic 0x0F000000
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!DispatchMessageA -> IAT VA 0x004552E4 = synthetic 0x0F000010
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!SetRect -> IAT VA 0x004552E8 = synthetic 0x0F000020
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!GetMessageA -> IAT VA 0x004552EC = synthetic 0x0F000030
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!PeekMessageA -> IAT VA 0x004552F0 = synthetic 0x0F000040
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!RegisterClassA -> IAT VA 0x004552F4 = synthetic 0x0F000050
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!LoadIconA -> IAT VA 0x004552F8 = synthetic 0x0F000060
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!LoadCursorA -> IAT VA 0x004552FC = synthetic 0x0F000070
+2026-01-08 13:39:03.644 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!DefWindowProcA -> IAT VA 0x00455300 = synthetic 0x0F000080
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!DestroyWindow -> IAT VA 0x00455304 = synthetic 0x0F000090
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!SetCursor -> IAT VA 0x00455308 = synthetic 0x0F0000A0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!PostMessageA -> IAT VA 0x0045530C = synthetic 0x0F0000B0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!PostQuitMessage -> IAT VA 0x00455310 = synthetic 0x0F0000C0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!GetSystemMetrics -> IAT VA 0x00455314 = synthetic 0x0F0000D0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!GetClientRect -> IAT VA 0x00455318 = synthetic 0x0F0000E0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!SetWindowPos -> IAT VA 0x0045531C = synthetic 0x0F0000F0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!AdjustWindowRectEx -> IAT VA 0x00455320 = synthetic 0x0F000100
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!CreateWindowExA -> IAT VA 0x00455324 = synthetic 0x0F000110
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!UpdateWindow -> IAT VA 0x00455328 = synthetic 0x0F000120
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!TranslateMessage -> IAT VA 0x0045532C = synthetic 0x0F000130
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!GetDC -> IAT VA 0x00455330 = synthetic 0x0F000140
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!ShowWindow -> IAT VA 0x00455334 = synthetic 0x0F000150
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!MessageBoxA -> IAT VA 0x00455338 = synthetic 0x0F000160
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!GetWindowRect -> IAT VA 0x0045533C = synthetic 0x0F000170
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!SystemParametersInfoA -> IAT VA 0x00455340 = synthetic 0x0F000180
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!ReleaseDC -> IAT VA 0x00455344 = synthetic 0x0F000190
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!SetFocus -> IAT VA 0x00455348 = synthetic 0x0F0001A0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!GetMenu -> IAT VA 0x0045534C = synthetic 0x0F0001B0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!SetWindowLongA -> IAT VA 0x00455350 = synthetic 0x0F0001C0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: USER32.DLL!GetWindowLongA -> IAT VA 0x00455354 = synthetic 0x0F0001D0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Processing imports from DLL: GDI32.dll (2 symbols)
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: GDI32.DLL!GetDeviceCaps -> IAT VA 0x00455220 = synthetic 0x0F0001E0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: GDI32.DLL!GetStockObject -> IAT VA 0x00455224 = synthetic 0x0F0001F0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Processing imports from DLL: DDRAW.dll (1 symbols)
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: DDRAW.DLL!DirectDrawCreate -> IAT VA 0x00455208 = synthetic 0x0F000200
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Processing imports from DLL: DSOUND.dll (1 symbols)
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: DSOUND.DLL!DirectSoundCreate -> IAT VA 0x00455218 = synthetic 0x0F000210
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Processing imports from DLL: DINPUT.dll (1 symbols)
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: DINPUT.DLL!DirectInputCreateA -> IAT VA 0x00455210 = synthetic 0x0F000220
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Processing imports from DLL: WINMM.dll (4 symbols)
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: WINMM.DLL!timeGetTime -> IAT VA 0x0045535C = synthetic 0x0F000230
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: WINMM.DLL!timeBeginPeriod -> IAT VA 0x00455360 = synthetic 0x0F000240
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: WINMM.DLL!timeEndPeriod -> IAT VA 0x00455364 = synthetic 0x0F000250
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: WINMM.DLL!timeKillEvent -> IAT VA 0x00455368 = synthetic 0x0F000260
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Processing imports from DLL: KERNEL32.dll (44 symbols)
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetModuleFileNameA -> IAT VA 0x0045522C = synthetic 0x0F000270
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetEnvironmentStringsW -> IAT VA 0x00455230 = synthetic 0x0F000280
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!WideCharToMultiByte -> IAT VA 0x00455234 = synthetic 0x0F000290
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetStringTypeA -> IAT VA 0x00455238 = synthetic 0x0F0002A0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!CreateFileA -> IAT VA 0x0045523C = synthetic 0x0F0002B0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!FlushFileBuffers -> IAT VA 0x00455240 = synthetic 0x0F0002C0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!SetStdHandle -> IAT VA 0x00455244 = synthetic 0x0F0002D0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!LoadLibraryA -> IAT VA 0x00455248 = synthetic 0x0F0002E0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!SetFilePointer -> IAT VA 0x0045524C = synthetic 0x0F0002F0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!ReadFile -> IAT VA 0x00455250 = synthetic 0x0F000300
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!CloseHandle -> IAT VA 0x00455254 = synthetic 0x0F000310
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!VirtualAlloc -> IAT VA 0x00455258 = synthetic 0x0F000320
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!WriteFile -> IAT VA 0x0045525C = synthetic 0x0F000330
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!VirtualFree -> IAT VA 0x00455260 = synthetic 0x0F000340
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!RaiseException -> IAT VA 0x00455264 = synthetic 0x0F000350
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!SetEndOfFile -> IAT VA 0x00455268 = synthetic 0x0F000360
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!LCMapStringW -> IAT VA 0x0045526C = synthetic 0x0F000370
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!LCMapStringA -> IAT VA 0x00455270 = synthetic 0x0F000380
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetStringTypeW -> IAT VA 0x00455274 = synthetic 0x0F000390
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!ExitProcess -> IAT VA 0x00455278 = synthetic 0x0F0003A0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!TerminateProcess -> IAT VA 0x0045527C = synthetic 0x0F0003B0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetCurrentProcess -> IAT VA 0x00455280 = synthetic 0x0F0003C0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetModuleHandleA -> IAT VA 0x00455284 = synthetic 0x0F0003D0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetStartupInfoA -> IAT VA 0x00455288 = synthetic 0x0F0003E0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetCommandLineA -> IAT VA 0x0045528C = synthetic 0x0F0003F0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetVersion -> IAT VA 0x00455290 = synthetic 0x0F000400
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!HeapAlloc -> IAT VA 0x00455294 = synthetic 0x0F000410
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!HeapFree -> IAT VA 0x00455298 = synthetic 0x0F000420
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetLastError -> IAT VA 0x0045529C = synthetic 0x0F000430
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!HeapDestroy -> IAT VA 0x004552A0 = synthetic 0x0F000440
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!HeapCreate -> IAT VA 0x004552A4 = synthetic 0x0F000450
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetProcAddress -> IAT VA 0x004552A8 = synthetic 0x0F000460
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!RtlUnwind -> IAT VA 0x004552AC = synthetic 0x0F000470
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!UnhandledExceptionFilter -> IAT VA 0x004552B0 = synthetic 0x0F000480
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetFileType -> IAT VA 0x004552B4 = synthetic 0x0F000490
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!FreeEnvironmentStringsA -> IAT VA 0x004552B8 = synthetic 0x0F0004A0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!MultiByteToWideChar -> IAT VA 0x004552BC = synthetic 0x0F0004B0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetEnvironmentStrings -> IAT VA 0x004552C0 = synthetic 0x0F0004C0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!FreeEnvironmentStringsW -> IAT VA 0x004552C4 = synthetic 0x0F0004D0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!SetHandleCount -> IAT VA 0x004552C8 = synthetic 0x0F0004E0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetStdHandle -> IAT VA 0x004552CC = synthetic 0x0F0004F0
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetCPInfo -> IAT VA 0x004552D0 = synthetic 0x0F000500
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetACP -> IAT VA 0x004552D4 = synthetic 0x0F000510
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Mapped import: KERNEL32.DLL!GetOEMCP -> IAT VA 0x004552D8 = synthetic 0x0F000520
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] Import mapping complete: 83 imports mapped to addresses 0x0F000000 - 0x0F000520
+2026-01-08 13:39:03.645 [INFO] Win32Emu.Emulator: [Loader] IAT verification passed: all 83 entries are correct
+2026-01-08 13:39:03.646 [INFO] Win32Emu.Emulator: [Loader] Registered 83 IAT entries for runtime protection
+2026-01-08 13:39:03.650 [INFO] Win32Emu.Emulator: [Loader] Extracted 8 sections from PE file
+2026-01-08 13:39:03.656 [INFO] Win32Emu.Emulator: [ProcessEnvironment] Console allocated - stdin=0x00000001, stdout=0x00000002, stderr=0x00000003
+2026-01-08 13:39:03.687 [INFO] Win32Emu.Emulator: [RegistryHive] Created in-memory hive: SYSTEM
+2026-01-08 13:39:03.687 [INFO] Win32Emu.Emulator: [RegistryHive] Created in-memory hive: SOFTWARE
+2026-01-08 13:39:03.687 [INFO] Win32Emu.Emulator: [RegistryHive] Created in-memory hive: NTUSER.DAT
+2026-01-08 13:39:03.687 [INFO] Win32Emu.Emulator: [RegistryHive] Initialized 3 registry hives
+2026-01-08 13:39:03.696 [INFO] Win32Emu.Emulator: [RegistryHive] Initialized system environment variables
+2026-01-08 13:39:03.696 [INFO] Win32Emu.Emulator: [RegistryHive] Initialized user environment variables
+2026-01-08 13:39:03.696 [INFO] Win32Emu.Emulator: [ProcessEnv] Registry hive initialized
+2026-01-08 13:39:03.701 [INFO] Win32Emu.Emulator: [ProcessEnv] Synced environment variables from registry
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: BUTTON with WndProc=0x0D000000
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: EDIT with WndProc=0x0D000001
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: STATIC with WndProc=0x0D000002
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: LISTBOX with WndProc=0x0D000003
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: COMBOBOX with WndProc=0x0D000004
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: SCROLLBAR with WndProc=0x0D000005
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: MDICLIENT with WndProc=0x0D000006
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: COMBOLBOX with WndProc=0x0D000007
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: DDEMLEVENT with WndProc=0x0D000008
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: MESSAGE with WndProc=0x0D000009
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: #32768 with WndProc=0x0D00000A
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: #32769 with WndProc=0x0D00000B
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: #32770 with WndProc=0x0D00000C
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: #32771 with WndProc=0x0D00000D
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [ProcessEnv] Pre-registered standard control class: #32772 with WndProc=0x0D00000E
+2026-01-08 13:39:03.702 [INFO] Win32Emu.Emulator: [Loader] Initializing virtual file system with disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+2026-01-08 13:39:03.704 [INFO] Win32Emu.Emulator: [DiskVFS] Mounted VHD: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (Read-Write)
+2026-01-08 13:39:03.704 [INFO] Win32Emu.Emulator: [ProcessEnv] Virtual File System initialized with disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [RegistryHive] Disposed registry hive manager
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SYSTEM'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32\Config', filename='SYSTEM'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32\Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32', filename='Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows', filename='System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Invalid path (no separator): '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32\Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [RegistryHive] Created in-memory hive: SYSTEM
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SOFTWARE'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32\Config', filename='SOFTWARE'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32\Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32', filename='Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows', filename='System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Invalid path (no separator): '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32\Config'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [RegistryHive] Created in-memory hive: SOFTWARE
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Users\User\NTUSER.DAT'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Users\User', filename='NTUSER.DAT'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Users\User'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Users\User'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Checking directory='\Users', filename='User'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Users'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Searching for '\Users'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Invalid path (no separator): '\Users'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Users'
+2026-01-08 13:39:03.705 [INFO] Win32Emu.Emulator: [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Users\User'
+2026-01-08 13:39:03.706 [INFO] Win32Emu.Emulator: [RegistryHive] Created in-memory hive: NTUSER.DAT
+2026-01-08 13:39:03.706 [INFO] Win32Emu.Emulator: [RegistryHive] Initialized 3 registry hives
+2026-01-08 13:39:03.706 [INFO] Win32Emu.Emulator: [RegistryHive] Initialized system environment variables
+2026-01-08 13:39:03.706 [INFO] Win32Emu.Emulator: [RegistryHive] Initialized user environment variables
+2026-01-08 13:39:03.706 [INFO] Win32Emu.Emulator: [ProcessEnv] Registry hive initialized
+2026-01-08 13:39:03.707 [INFO] Win32Emu.Emulator: [ProcessEnv] Synced environment variables from registry
+2026-01-08 13:39:03.707 [INFO] Win32Emu.Emulator: [Loader] Virtual file system initialized successfully (disk)
+2026-01-08 13:39:03.708 [INFO] Win32Emu.Emulator: [ProcessEnv] Registered main executable: C:\ign_teas\IGN_TEAS.EXE at 0x00400000
+2026-01-08 13:39:03.708 [INFO] Win32Emu.Emulator: [ProcessEnv] Set current directory to: C:\ign_teas
+2026-01-08 13:39:03.710 [INFO] Win32Emu.Emulator: [ProcessEnv] TEB allocated at 0x00470040
+2026-01-08 13:39:03.711 [INFO] Win32Emu.Emulator: [ProcessEnv] PEB allocated at 0x00471040
+2026-01-08 13:39:03.711 [INFO] Win32Emu.Emulator: [ProcessEnvironment] Detected GUI subsystem, no console allocated
+2026-01-08 13:39:03.737 [INFO] Win32Emu.Emulator: [RtlJitCache] Initialized RTL-based JIT cache at /tmp/Win32Emu/RtlJitCache
+2026-01-08 13:39:03.737 [INFO] Win32Emu.Emulator: [RtlJitCache] C# source code will be saved to /tmp/Win32Emu/RtlJitCache/Source
+2026-01-08 13:39:03.737 [INFO] Win32Emu.Emulator: [JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation
+2026-01-08 13:39:03.738 [INFO] Win32Emu.Emulator: [JitCache] Initialized with cache directory: /tmp/Win32Emu/JitCache
+2026-01-08 13:39:03.738 [INFO] Win32Emu.Emulator: [JitCpu] Metadata cache initialized for block analysis metadata persistence
+2026-01-08 13:39:03.738 [INFO] Win32Emu.Emulator: [Loader] Unified JitCpu backend enabled (JIT compilation: True, Interpreter mode: False)
+2026-01-08 13:39:03.738 [INFO] Win32Emu.Emulator: [JitCpu] Set executable path: C:\ign_teas\IGN_TEAS.EXE
+2026-01-08 13:39:03.738 [INFO] Win32Emu.Emulator: [Loader] JIT cache: Set executable path to C:\ign_teas\IGN_TEAS.EXE
+2026-01-08 13:39:03.741 [INFO] Win32Emu.Emulator: [RtlJitCache] No cache metadata found for C:\ign_teas\IGN_TEAS.EXE
+2026-01-08 13:39:03.742 [INFO] Win32Emu.Emulator: [JitCpu] RTL cache loaded: 0 blocks from /tmp/Win32Emu/RtlJitCache/Source
+2026-01-08 13:39:03.742 [INFO] Win32Emu.Emulator: [JitCache] No cache file found for C:\ign_teas\IGN_TEAS.EXE
+2026-01-08 13:39:03.745 [INFO] Win32Emu.Emulator: [JitCpu] Metadata cache loaded: 0 blocks, 0 instructions
+2026-01-08 13:39:03.745 [INFO] Win32Emu.Emulator: [Loader] Selected CPU Emulator: JitCpu
+2026-01-08 13:39:03.746 [INFO] Win32Emu.Emulator: [Loader] Stack initialized: Base=0x00200000 Limit=0x00100000 ESP=0x001FF000 Reserve=0x100000 Commit=0x1000
+2026-01-08 13:39:03.746 [INFO] Win32Emu.Emulator: [Loader] Heap base: 0x00470000
+2026-01-08 13:39:03.755 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+2026-01-08 13:39:03.755 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc: allocated at 0x00473000, size=0x00001000, reserve=False, commit=True, topDown=False
+2026-01-08 13:39:03.755 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+2026-01-08 13:39:03.755 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc: allocated at 0x00474000, size=0x00001000, reserve=False, commit=True, topDown=False
+2026-01-08 13:39:03.755 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+2026-01-08 13:39:03.755 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc: allocated at 0x00475000, size=0x00001000, reserve=False, commit=True, topDown=False
+2026-01-08 13:39:03.759 [INFO] Win32Emu.Emulator: [ThreadScheduler] Initialized main thread 1 (handle=0x00001000)
+2026-01-08 13:39:03.759 [INFO] Win32Emu.Emulator: [ProcessEnv] Main thread initialized with ID=1
+2026-01-08 13:39:03.760 [INFO] Win32Emu.Emulator: [Emulator] Checking for executable-specific workarounds
+2026-01-08 13:39:03.761 [INFO] Win32Emu.Emulator: [Emulator] IGN_TEAS.EXE detected - enabled IGN_TEAS_DEBUG environment variable
+2026-01-08 13:39:03.779 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetVersion from stub at 0x0F000400
+2026-01-08 13:39:03.779 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF7C = 0x00410FFC
+2026-01-08 13:39:03.780 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetVersion at EIP=0x0E000002 ESP=0x001FEF7C stack=FC 0F 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+2026-01-08 13:39:03.783 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetVersion at EIP=0x0E000002 ESP=0x001FEF7C stack=FC 0F 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+2026-01-08 13:39:03.808 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetVersion returned 0x040003B6, argBytes=0
+2026-01-08 13:39:03.808 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF7C = 0x00410FFC
+2026-01-08 13:39:03.810 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!HeapCreate from stub at 0x0F000450
+2026-01-08 13:39:03.811 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF6C = 0x00412C6F
+2026-01-08 13:39:03.811 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!HeapCreate at EIP=0x0E000002 ESP=0x001FEF6C stack=6F 2C 41 00 01 00 00 00 00 10 00 00 00 00 00 00
+2026-01-08 13:39:03.811 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!HeapCreate at EIP=0x0E000002 ESP=0x001FEF6C stack=6F 2C 41 00 01 00 00 00 00 10 00 00 00 00 00 00
+2026-01-08 13:39:03.811 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!HeapCreate returned 0x00476000, argBytes=12
+2026-01-08 13:39:03.811 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF6C = 0x00412C6F
+2026-01-08 13:39:03.812 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!VirtualAlloc from stub at 0x0F000320
+2026-01-08 13:39:03.812 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF54 = 0x00413018
+2026-01-08 13:39:03.812 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=18 30 41 00 00 00 00 00 00 00 40 00 00 20 00 00
+2026-01-08 13:39:03.812 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=18 30 41 00 00 00 00 00 00 00 40 00 00 20 00 00
+2026-01-08 13:39:03.812 [INFO] Win32Emu.Emulator: [Kernel32] VirtualAlloc(lpAddress=0x00000000, dwSize=0x00400000, alloc=0x00002000, protect=0x00000004)
+2026-01-08 13:39:03.812 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00400000, alloc=0x00002000, prot=0x00000004)
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc: allocated at 0x00480000, size=0x00400000, reserve=True, commit=False, topDown=False
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Kernel32] VirtualAlloc -> 0x00480000
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!VirtualAlloc returned 0x00480000, argBytes=16
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF54 = 0x00413018
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!VirtualAlloc from stub at 0x0F000320
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF54 = 0x00413031
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=31 30 41 00 00 00 48 00 00 00 01 00 00 10 00 00
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=31 30 41 00 00 00 48 00 00 00 01 00 00 10 00 00
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Kernel32] VirtualAlloc(lpAddress=0x00480000, dwSize=0x00010000, alloc=0x00001000, protect=0x00000004)
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc(lp=0x00480000, size=0x00010000, alloc=0x00001000, prot=0x00000004)
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc: Re-committing already allocated region at 0x00480000
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [ProcessEnv] VirtualAlloc: Allocated 0x10000 bytes at specific address 0x00480000 (reserve=False, commit=True)
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Kernel32] VirtualAlloc -> 0x00480000
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!VirtualAlloc returned 0x00480000, argBytes=16
+2026-01-08 13:39:03.813 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF54 = 0x00413031
+2026-01-08 13:39:03.836 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F0003E0
+2026-01-08 13:39:03.836 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412AEE
+2026-01-08 13:39:03.836 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF20 stack=EE 2A 41 00 38 EF 1F 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.836 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF20 stack=EE 2A 41 00 38 EF 1F 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.837 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4
+2026-01-08 13:39:03.837 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412AEE
+2026-01-08 13:39:03.837 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0004F0
+2026-01-08 13:39:03.837 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+2026-01-08 13:39:03.837 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F6 FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.837 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F6 FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.837 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000001, argBytes=4
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 01 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 01 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000002, argBytes=4
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0004F0
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F5 FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F5 FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000002, argBytes=4
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 02 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 02 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000002, argBytes=4
+2026-01-08 13:39:03.838 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0004F0
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F4 FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F4 FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000003, argBytes=4
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 03 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 03 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000002, argBytes=4
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!SetHandleCount from stub at 0x0F0004E0
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C50
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF20 stack=50 2C 41 00 20 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF20 stack=50 2C 41 00 20 00 00 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!SetHandleCount returned 0x00000020, argBytes=4
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C50
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetACP from stub at 0x0F000510
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004127C1
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetACP at EIP=0x0E000002 ESP=0x001FEF44 stack=C1 27 41 00 FD FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetACP at EIP=0x0E000002 ESP=0x001FEF44 stack=C1 27 41 00 FD FF FF FF FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetACP returned 0x0000FDE9, argBytes=0
+2026-01-08 13:39:03.839 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004127C1
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F000500
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF40 = 0x0041281A
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF40 stack=1A 28 41 00 E9 FD 00 00 60 EF 1F 00 FC EF 1F 00
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF40 stack=1A 28 41 00 E9 FD 00 00 60 EF 1F 00 FC EF 1F 00
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF60
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: [Kernel32] GetCPInfo: actualCodePage=Utf8
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8
+2026-01-08 13:39:03.840 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF40 = 0x0041281A
+2026-01-08 13:39:03.860 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetCommandLineA from stub at 0x0F0003F0
+2026-01-08 13:39:03.860 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF7C = 0x0041105B
+2026-01-08 13:39:03.860 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF7C stack=5B 10 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+2026-01-08 13:39:03.860 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF7C stack=5B 10 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+2026-01-08 13:39:03.862 [INFO] Win32Emu.Emulator: [Kernel32] GetCommandLineA returning 0x00470000: ""C:\ign_teas\IGN_TEAS.EXE""
+2026-01-08 13:39:03.862 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetCommandLineA returned 0x00470000, argBytes=0
+2026-01-08 13:39:03.862 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF7C = 0x0041105B
+2026-01-08 13:39:03.862 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetEnvironmentStringsW from stub at 0x0F000280
+2026-01-08 13:39:03.862 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF64 = 0x0041263B
+2026-01-08 13:39:03.862 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=3B 26 41 00 FC EF 1F 00 00 00 00 00 00 00 00 00
+2026-01-08 13:39:03.862 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=3B 26 41 00 FC EF 1F 00 00 00 00 00 00 00 00 00
+2026-01-08 13:39:03.868 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetEnvironmentStringsW returned 0x00880000, argBytes=0
+2026-01-08 13:39:03.868 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF64 = 0x0041263B
+2026-01-08 13:39:03.870 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000290
+2026-01-08 13:39:03.870 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004126C6
+2026-01-08 13:39:03.871 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=C6 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+2026-01-08 13:39:03.871 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=C6 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+2026-01-08 13:39:03.871 [INFO] Win32Emu.Emulator: [Kernel32] WideCharToMultiByte: CP=Acp cchWide=329 lpWide=0x00880000 cbMulti=0 lpMulti=0x00000000
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Kernel32] WideCharToMultiByte: Read 329 chars (specified count)
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Kernel32] WideCharToMultiByte: Returning size 329
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000149, argBytes=32
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004126C6
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000290
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004126ED
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=ED 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=ED 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Kernel32] WideCharToMultiByte: CP=Acp cchWide=329 lpWide=0x00880000 cbMulti=329 lpMulti=0x00480200
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Kernel32] WideCharToMultiByte: Read 329 chars (specified count)
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000149, argBytes=32
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004126ED
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!FreeEnvironmentStringsW from stub at 0x0F0004D0
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF60 = 0x00412703
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF60 stack=03 27 41 00 00 00 88 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.872 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF60 stack=03 27 41 00 00 00 88 00 FC EF 1F 00 00 00 00 00
+2026-01-08 13:39:03.873 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!FreeEnvironmentStringsW returned 0x00000001, argBytes=4
+2026-01-08 13:39:03.873 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF60 = 0x00412703
+2026-01-08 13:39:03.873 [INFO] Win32Emu.Emulator: [Syscall] KERNEL32.DLL!GetModuleFileNameA from stub at 0x0F000270
+2026-01-08 13:39:03.873 [INFO] Win32Emu.Emulator: [Syscall] BEFORE API: Return address at 0x001FEF5C = 0x004123B8
+2026-01-08 13:39:03.873 [INFO] Win32Emu.Emulator: Dispatching async KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=B8 23 41 00 00 00 00 00 60 27 45 00 04 01 00 00
+2026-01-08 13:39:03.873 [INFO] Win32Emu.Emulator: Dispatching KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=B8 23 41 00 00 00 00 00 60 27 45 00 04 01 00 00
+2026-01-08 13:39:03.873 [INFO] Win32Emu.Emulator: [Kernel32] GetModuleFileNameA called: h=0x00000000 lp=0x00452760 n=260
+2026-01-08 13:39:03.874 [INFO] Win32Emu.Emulator: [Kernel32] GetModuleFileNameA returning 24
+2026-01-08 13:39:03.874 [INFO] Win32Emu.Emulator: [Dispatcher] KERNEL32.DLL!GetModuleFileNameA returned 0x00000018, argBytes=12
+2026-01-08 13:39:03.874 [INFO] Win32Emu.Emulator: [Syscall] AFTER API: Return address at 0x001FEF5C = 0x004123B8
