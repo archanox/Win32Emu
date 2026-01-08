@@ -399,25 +399,20 @@ public class JitCpu : IAsyncCpu
 		{
 			_logger.LogDebug("[JitCpu] Transpiled function available at EIP=0x{EIP:X8}, executing C# version", _eip);
 			
-			if (_processEnvironment.TranspiledFunctionProvider.TryExecuteFunction(_eip, _processEnvironment, out var result))
+			if (_processEnvironment.TranspiledFunctionProvider.TryExecuteFunction(_eip, _processEnvironment, out var funcResult))
 			{
 				// Update CPU state after transpiled function execution
 				// For now, assume function returns an int in EAX and updates EIP appropriately
-				if (result is int intResult)
+				if (funcResult is int intResult)
 				{
 					_eax = (uint)intResult;
-					_logger.LogDebug("[JitCpu] Transpiled function returned: {Result} (EAX=0x{EAX:X8})", result, _eax);
+					_logger.LogDebug("[JitCpu] Transpiled function returned: {Result} (EAX=0x{EAX:X8})", funcResult, _eax);
 				}
 				
 				// Advance EIP past the function call (assume standard ret instruction)
 				// In a real implementation, this would be handled by the transpiled code itself
 				// For minimal integration, we'll just mark as successful step
-				return new CpuStepResult 
-				{ 
-					IsHalt = false, 
-					IsDosInterrupt = false,
-					InstructionLength = 0  // Transpiled function handled control flow
-				};
+				return new CpuStepResult(IsCall: false, CallTarget: 0, IsSyscall: false, IsDosInterrupt: false);
 			}
 			else
 			{
