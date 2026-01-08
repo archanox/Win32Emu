@@ -114,6 +114,10 @@ class Program
 				Directory.CreateDirectory(cacheDir);
 				await transpiler.GenerateJitCacheAsync(functions, cacheDir, exePath);
 				logger.LogInformation("Generated JIT cache in: {Dir}", cacheDir);
+				
+				// Generate JIT integration code
+				await transpiler.GenerateJitIntegrationAsync(functions, outputDir, namespaceName, logger);
+				logger.LogInformation("Generated JIT integration code");
 			}
 
 			// Generate project file
@@ -321,6 +325,187 @@ class CppToCsTranspiler
 		await File.WriteAllTextAsync(metadataPath, metadata.ToString());
 		
 		_logger.LogInformation("Generated JIT cache metadata: {Path}", metadataPath);
+	}
+	
+	public async Task GenerateJitIntegrationAsync(List<FunctionInfo> functions, string outputDir, string namespaceName, ILogger logger)
+	{
+		// Generate a loader class that can integrate with the JIT system
+		var sb = new StringBuilder();
+		
+		sb.AppendLine("using System;");
+		sb.AppendLine("using System.Collections.Generic;");
+		sb.AppendLine("using System.Reflection;");
+		sb.AppendLine("using Microsoft.Extensions.Logging;");
+		sb.AppendLine("using Win32Emu;");
+		sb.AppendLine();
+		sb.AppendLine($"namespace {namespaceName}");
+		sb.AppendLine("{");
+		sb.AppendLine("\t/// <summary>");
+		sb.AppendLine("\t/// JIT integration loader for transpiled functions");
+		sb.AppendLine("\t/// </summary>");
+		sb.AppendLine("\tpublic class TranspiledFunctionLoader");
+		sb.AppendLine("\t{");
+		sb.AppendLine("\t\tprivate readonly Dictionary<uint, Func<EmulatorEnvironment, object[], object>> _functions = new();");
+		sb.AppendLine("\t\tprivate readonly ILogger? _logger;");
+		sb.AppendLine();
+		sb.AppendLine("\t\tpublic TranspiledFunctionLoader(ILogger? logger = null)");
+		sb.AppendLine("\t\t{");
+		sb.AppendLine("\t\t\t_logger = logger;");
+		sb.AppendLine("\t\t\tLoadFunctions();");
+		sb.AppendLine("\t\t}");
+		sb.AppendLine();
+		sb.AppendLine("\t\tprivate void LoadFunctions()");
+		sb.AppendLine("\t\t{");
+		
+		// Generate registration for each function
+		foreach (var func in functions)
+		{
+			sb.AppendLine($"\t\t\t// Register function at 0x{func.Address:X8} ({func.Name})");
+			sb.AppendLine($"\t\t\t_functions[0x{func.Address:X8}u] = (env, args) =>");
+			sb.AppendLine("\t\t\t{");
+			sb.AppendLine($"\t\t\t\tvar instance = new Function_{func.Address:X8}(env);");
+			sb.AppendLine("\t\t\t\treturn instance.Execute();");
+			sb.AppendLine("\t\t\t};");
+			sb.AppendLine();
+		}
+		
+		sb.AppendLine("\t\t\t_logger?.LogInformation(\"Loaded {Count} transpiled functions\", _functions.Count);");
+		sb.AppendLine("\t\t}");
+		sb.AppendLine();
+		sb.AppendLine("\t\t/// <summary>");
+		sb.AppendLine("\t\t/// Try to execute a transpiled function at the given address");
+		sb.AppendLine("\t\t/// </summary>");
+		sb.AppendLine("\t\tpublic bool TryExecuteFunction(uint address, EmulatorEnvironment env, object[] args, out object? result)");
+		sb.AppendLine("\t\t{");
+		sb.AppendLine("\t\t\tif (_functions.TryGetValue(address, out var func))");
+		sb.AppendLine("\t\t\t{");
+		sb.AppendLine("\t\t\t\ttry");
+		sb.AppendLine("\t\t\t\t{");
+		sb.AppendLine("\t\t\t\t\tresult = func(env, args);");
+		sb.AppendLine("\t\t\t\t\treturn true;");
+		sb.AppendLine("\t\t\t\t}");
+		sb.AppendLine("\t\t\t\tcatch (Exception ex)");
+		sb.AppendLine("\t\t\t\t{");
+		sb.AppendLine("\t\t\t\t\t_logger?.LogError(ex, \"Error executing transpiled function at 0x{Address:X8}\", address);");
+		sb.AppendLine("\t\t\t\t\tresult = null;");
+		sb.AppendLine("\t\t\t\t\treturn false;");
+		sb.AppendLine("\t\t\t\t}");
+		sb.AppendLine("\t\t\t}");
+		sb.AppendLine("\t\t\tresult = null;");
+		sb.AppendLine("\t\t\treturn false;");
+		sb.AppendLine("\t\t}");
+		sb.AppendLine();
+		sb.AppendLine("\t\t/// <summary>");
+		sb.AppendLine("\t\t/// Check if a transpiled function exists at the given address");
+		sb.AppendLine("\t\t/// </summary>");
+		sb.AppendLine("\t\tpublic bool HasFunction(uint address)");
+		sb.AppendLine("\t\t{");
+		sb.AppendLine("\t\t\treturn _functions.ContainsKey(address);");
+		sb.AppendLine("\t\t}");
+		sb.AppendLine();
+		sb.AppendLine("\t\t/// <summary>");
+		sb.AppendLine("\t\t/// Get all registered function addresses");
+		sb.AppendLine("\t\t/// </summary>");
+		sb.AppendLine("\t\tpublic IEnumerable<uint> GetFunctionAddresses()");
+		sb.AppendLine("\t\t{");
+		sb.AppendLine("\t\t\treturn _functions.Keys;");
+		sb.AppendLine("\t\t}");
+		sb.AppendLine("\t}");
+		sb.AppendLine("}");
+		
+		var filePath = Path.Combine(outputDir, "TranspiledFunctionLoader.cs");
+		await File.WriteAllTextAsync(filePath, sb.ToString());
+		logger.LogDebug("Generated JIT integration loader: {Path}", filePath);
+		
+		// Generate usage documentation
+		await GenerateJitUsageDocAsync(outputDir, namespaceName, functions.Count, logger);
+	}
+	
+	private async Task GenerateJitUsageDocAsync(string outputDir, string namespaceName, int functionCount, ILogger logger)
+	{
+		var doc = new StringBuilder();
+		
+		doc.AppendLine("# JIT Integration Usage");
+		doc.AppendLine();
+		doc.AppendLine("## Overview");
+		doc.AppendLine();
+		doc.AppendLine($"This project contains {functionCount} transpiled C# functions that can be integrated with Win32Emu's JIT system.");
+		doc.AppendLine();
+		doc.AppendLine("## Loading Transpiled Functions");
+		doc.AppendLine();
+		doc.AppendLine("```csharp");
+		doc.AppendLine("using Win32Emu;");
+		doc.AppendLine($"using {namespaceName};");
+		doc.AppendLine();
+		doc.AppendLine("// Create the function loader");
+		doc.AppendLine("var loader = new TranspiledFunctionLoader(logger);");
+		doc.AppendLine();
+		doc.AppendLine("// Check if a function is available");
+		doc.AppendLine("if (loader.HasFunction(0x004032A0))");
+		doc.AppendLine("{");
+		doc.AppendLine("    Console.WriteLine(\"Initialization function available\");");
+		doc.AppendLine("}");
+		doc.AppendLine();
+		doc.AppendLine("// Execute a transpiled function");
+		doc.AppendLine("if (loader.TryExecuteFunction(0x004032A0, env, Array.Empty<object>(), out var result))");
+		doc.AppendLine("{");
+		doc.AppendLine("    Console.WriteLine($\"Function returned: {result}\");");
+		doc.AppendLine("}");
+		doc.AppendLine("```");
+		doc.AppendLine();
+		doc.AppendLine("## Integration with JitCpu");
+		doc.AppendLine();
+		doc.AppendLine("To integrate with the JIT CPU, you can modify the emulator to check for transpiled functions before JIT compiling:");
+		doc.AppendLine();
+		doc.AppendLine("```csharp");
+		doc.AppendLine("// In your emulator initialization");
+		doc.AppendLine($"var transpiledLoader = new {namespaceName}.TranspiledFunctionLoader(logger);");
+		doc.AppendLine();
+		doc.AppendLine("// Before executing a block at an address:");
+		doc.AppendLine("if (transpiledLoader.HasFunction(eip))");
+		doc.AppendLine("{");
+		doc.AppendLine("    // Execute the transpiled C# version instead of JIT compiling");
+		doc.AppendLine("    if (transpiledLoader.TryExecuteFunction(eip, env, Array.Empty<object>(), out var result))");
+		doc.AppendLine("    {");
+		doc.AppendLine("        // Update CPU state based on result");
+		doc.AppendLine("        // Set EIP to return address, etc.");
+		doc.AppendLine("        return;");
+		doc.AppendLine("    }");
+		doc.AppendLine("}");
+		doc.AppendLine();
+		doc.AppendLine("// Otherwise, proceed with normal JIT compilation");
+		doc.AppendLine("await cpu.ExecuteBlockAsync(memory);");
+		doc.AppendLine("```");
+		doc.AppendLine();
+		doc.AppendLine("## Compiled Assembly");
+		doc.AppendLine();
+		doc.AppendLine("You can also compile this project into a DLL and load it dynamically:");
+		doc.AppendLine();
+		doc.AppendLine("```bash");
+		doc.AppendLine("# Build the transpiled functions");
+		doc.AppendLine("dotnet build -c Release");
+		doc.AppendLine();
+		doc.AppendLine("# Reference the DLL in your emulator project");
+		doc.AppendLine("# Or load it dynamically at runtime");
+		doc.AppendLine("```");
+		doc.AppendLine();
+		doc.AppendLine("## Benefits");
+		doc.AppendLine();
+		doc.AppendLine("- **Debugging**: Step through C# code in Visual Studio/dnSpy");
+		doc.AppendLine("- **Performance**: Pre-compiled C# executes faster than JIT compilation");
+		doc.AppendLine("- **Inspection**: Understand game logic without reverse engineering");
+		doc.AppendLine("- **Modification**: Easily modify behavior for testing/patching");
+		doc.AppendLine();
+		doc.AppendLine("## Limitations");
+		doc.AppendLine();
+		doc.AppendLine("- Global variables (dword_XXXXXX) need to be mapped to emulator memory");
+		doc.AppendLine("- Function calls to other transpiled functions need proper integration");
+		doc.AppendLine("- Complex pointer operations may need manual refinement");
+		doc.AppendLine("- Win32 API calls are routed through EmulatorEnvironment");
+		
+		var docPath = Path.Combine(outputDir, "JIT_INTEGRATION.md");
+		await File.WriteAllTextAsync(docPath, doc.ToString());
+		logger.LogDebug("Generated JIT usage documentation: {Path}", docPath);
 	}
 
 	private string GenerateCSharpFunction(FunctionInfo func)
