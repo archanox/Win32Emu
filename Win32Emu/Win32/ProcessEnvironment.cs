@@ -757,7 +757,9 @@ public class ProcessEnvironment
 			envBlock.Append('\0'); // null terminate each string
 		}
 		
-		// Add final null terminator for the block
+		// Add final double-null terminator for the block
+		// Windows environment blocks are terminated with TWO null characters
+		envBlock.Append('\0');
 		envBlock.Append('\0');
 		
 		// Convert to bytes and allocate memory
@@ -784,7 +786,9 @@ public class ProcessEnvironment
 			envBlock.Append('\0'); // null terminate each string
 		}
 		
-		// Add final null terminator for the block
+		// Add final double-null terminator for the block
+		// Windows environment blocks are terminated with TWO null characters
+		envBlock.Append('\0');
 		envBlock.Append('\0');
 		
 		// Convert to bytes and allocate memory
