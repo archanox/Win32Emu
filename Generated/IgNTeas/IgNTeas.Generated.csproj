@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>IgNTeas.Generated</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reference to Win32Emu for EmulatorEnvironment -->
+    <!-- Update path as needed -->
+    <!-- <ProjectReference Include="../../Win32Emu/Win32Emu.csproj" /> -->
+  </ItemGroup>
+
+</Project>

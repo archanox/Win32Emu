@@ -1,0 +1,645 @@
+# JIT Cache Metadata
+# Generated from decompilation
+# Executable: EXEs/ign_teas/IGN_TEAS.EXE
+# Functions: 128
+
+Function: sub_401000
+  Address: 0x00401000
+  ReturnType: int
+  Parameters: __int16 *a1, int a2
+
+Function: sub_4011A0
+  Address: 0x004011A0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4012A0
+  Address: 0x004012A0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4013A0
+  Address: 0x004013A0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4013C0
+  Address: 0x004013C0
+  ReturnType: int
+  Parameters: _BYTE *a1, int a2, int a3, int a4
+
+Function: sub_4019D0
+  Address: 0x004019D0
+  ReturnType: int
+  Parameters: int *a1, int a2, int *a3
+
+Function: sub_401B60
+  Address: 0x00401B60
+  ReturnType: void
+  Parameters: _DWORD *a1
+
+Function: sub_401BE0
+  Address: 0x00401BE0
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_401C00
+  Address: 0x00401C00
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_401C20
+  Address: 0x00401C20
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_401D20
+  Address: 0x00401D20
+  ReturnType: int
+  Parameters: int a1, int a2, int a3
+
+Function: sub_401E30
+  Address: 0x00401E30
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_4023F0
+  Address: 0x004023F0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_402410
+  Address: 0x00402410
+  ReturnType: int
+  Parameters: 
+
+Function: sub_402520
+  Address: 0x00402520
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4025D0
+  Address: 0x004025D0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4027D0
+  Address: 0x004027D0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_402840
+  Address: 0x00402840
+  ReturnType: int
+  Parameters: double a1
+
+Function: sub_402A80
+  Address: 0x00402A80
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4
+
+Function: sub_402AA0
+  Address: 0x00402AA0
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_402E10
+  Address: 0x00402E10
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_402E30
+  Address: 0x00402E30
+  ReturnType: void
+  Parameters: 
+
+Function: sub_402F00
+  Address: 0x00402F00
+  ReturnType: void
+  Parameters: int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9
+
+Function: sub_402F70
+  Address: 0x00402F70
+  ReturnType: void
+  Parameters: int a1
+
+Function: sub_4030C0
+  Address: 0x004030C0
+  ReturnType: void
+  Parameters: int a1, double a2
+
+Function: WinMain
+  Address: 0x00403140
+  ReturnType: int
+  Parameters: HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd
+
+Function: sub_4032A0
+  Address: 0x004032A0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_403340
+  Address: 0x00403340
+  ReturnType: LRESULT
+  Parameters: HWND hWnd, UINT Msg, int wParam, LPARAM lParam
+
+Function: sub_4034D0
+  Address: 0x004034D0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_403560
+  Address: 0x00403560
+  ReturnType: int
+  Parameters: 
+
+Function: sub_403570
+  Address: 0x00403570
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4035A0
+  Address: 0x004035A0
+  ReturnType: int
+  Parameters: _BYTE *a1
+
+Function: sub_403820
+  Address: 0x00403820
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_4038E0
+  Address: 0x004038E0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_403BF0
+  Address: 0x00403BF0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_403CB0
+  Address: 0x00403CB0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_403D20
+  Address: 0x00403D20
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404320
+  Address: 0x00404320
+  ReturnType: int
+  Parameters: char *FileName, void *Buffer, size_t ElementCount, int a4
+
+Function: sub_404490
+  Address: 0x00404490
+  ReturnType: int
+  Parameters: FILE *Stream
+
+Function: sub_4044D0
+  Address: 0x004044D0
+  ReturnType: int
+  Parameters: char *FileName
+
+Function: sub_404500
+  Address: 0x00404500
+  ReturnType: int
+  Parameters: char *FileName
+
+Function: sub_404530
+  Address: 0x00404530
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4045E0
+  Address: 0x004045E0
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_404600
+  Address: 0x00404600
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4, int a5, int a6, int a7, int a8, int a9
+
+Function: sub_404640
+  Address: 0x00404640
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404670
+  Address: 0x00404670
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4046B0
+  Address: 0x004046B0
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4, int a5
+
+Function: sub_4046E0
+  Address: 0x004046E0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4046F0
+  Address: 0x004046F0
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_404890
+  Address: 0x00404890
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404910
+  Address: 0x00404910
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404A90
+  Address: 0x00404A90
+  ReturnType: int
+  Parameters: unsigned __int8 a1
+
+Function: sub_404AA0
+  Address: 0x00404AA0
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_404AC0
+  Address: 0x00404AC0
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_404B00
+  Address: 0x00404B00
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404B30
+  Address: 0x00404B30
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404B40
+  Address: 0x00404B40
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404B90
+  Address: 0x00404B90
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404C30
+  Address: 0x00404C30
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404D20
+  Address: 0x00404D20
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404D30
+  Address: 0x00404D30
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404D40
+  Address: 0x00404D40
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404D50
+  Address: 0x00404D50
+  ReturnType: int
+  Parameters: 
+
+Function: sub_404D60
+  Address: 0x00404D60
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4, int a5
+
+Function: sub_404E20
+  Address: 0x00404E20
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4
+
+Function: sub_404F10
+  Address: 0x00404F10
+  ReturnType: int
+  Parameters: _DWORD *a1
+
+Function: sub_404FB0
+  Address: 0x00404FB0
+  ReturnType: int
+  Parameters: int a1, int a2, float *a3
+
+Function: sub_405050
+  Address: 0x00405050
+  ReturnType: int
+  Parameters: int *a1
+
+Function: sub_4050C0
+  Address: 0x004050C0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_405170
+  Address: 0x00405170
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4052C0
+  Address: 0x004052C0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4052D0
+  Address: 0x004052D0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_405900
+  Address: 0x00405900
+  ReturnType: int
+  Parameters: 
+
+Function: sub_405BF0
+  Address: 0x00405BF0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_405CE0
+  Address: 0x00405CE0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_405CF0
+  Address: 0x00405CF0
+  ReturnType: BOOL
+  Parameters: _DWORD *a1, int a2, int a3, int a4, int a5, _DWORD *a6, int a7, int a8
+
+Function: sub_405D60
+  Address: 0x00405D60
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4, int a5, int a6, _DWORD *a7, int a8, int a9
+
+Function: sub_405EF0
+  Address: 0x00405EF0
+  ReturnType: int
+  Parameters: _DWORD *a1
+
+Function: sub_405FD0
+  Address: 0x00405FD0
+  ReturnType: BOOL
+  Parameters: int a1
+
+Function: sub_406040
+  Address: 0x00406040
+  ReturnType: int
+  Parameters: 
+
+Function: sub_406050
+  Address: 0x00406050
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_4061A0
+  Address: 0x004061A0
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_4061F0
+  Address: 0x004061F0
+  ReturnType: BOOL
+  Parameters: char *a1
+
+Function: sub_406250
+  Address: 0x00406250
+  ReturnType: BOOL
+  Parameters: 
+
+Function: sub_406460
+  Address: 0x00406460
+  ReturnType: int
+  Parameters: 
+
+Function: sub_406490
+  Address: 0x00406490
+  ReturnType: void
+  Parameters: int a1
+
+Function: sub_406520
+  Address: 0x00406520
+  ReturnType: int
+  Parameters: 
+
+Function: sub_406570
+  Address: 0x00406570
+  ReturnType: void
+  Parameters: void *Block
+
+Function: sub_406590
+  Address: 0x00406590
+  ReturnType: void
+  Parameters: 
+
+Function: sub_4065A0
+  Address: 0x004065A0
+  ReturnType: void
+  Parameters: _BYTE *a1, _DWORD *a2
+
+Function: sub_4065F0
+  Address: 0x004065F0
+  ReturnType: __int64
+  Parameters: 
+
+Function: sub_406630
+  Address: 0x00406630
+  ReturnType: void
+  Parameters: 
+
+Function: sub_4066D0
+  Address: 0x004066D0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4067E0
+  Address: 0x004067E0
+  ReturnType: int
+  Parameters: _DWORD *a1, int a2
+
+Function: sub_406860
+  Address: 0x00406860
+  ReturnType: int
+  Parameters: const void *a1, int a2
+
+Function: sub_4069B0
+  Address: 0x004069B0
+  ReturnType: void
+  Parameters: int a1
+
+Function: sub_4069D0
+  Address: 0x004069D0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_406A10
+  Address: 0x00406A10
+  ReturnType: void
+  Parameters: int *a1
+
+Function: sub_406B70
+  Address: 0x00406B70
+  ReturnType: int
+  Parameters: int a1, int a2, int a3
+
+Function: sub_406D20
+  Address: 0x00406D20
+  ReturnType: int
+  Parameters: int a1, unsigned int a2
+
+Function: sub_406D50
+  Address: 0x00406D50
+  ReturnType: int
+  Parameters: int a1, int *a2
+
+Function: sub_406D90
+  Address: 0x00406D90
+  ReturnType: void
+  Parameters: _DWORD *a1
+
+Function: sub_406F40
+  Address: 0x00406F40
+  ReturnType: void
+  Parameters: int a1
+
+Function: sub_406F60
+  Address: 0x00406F60
+  ReturnType: int
+  Parameters: 
+
+Function: sub_406F70
+  Address: 0x00406F70
+  ReturnType: int
+  Parameters: _DWORD *a1
+
+Function: sub_406FC0
+  Address: 0x00406FC0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_4070F0
+  Address: 0x004070F0
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_407110
+  Address: 0x00407110
+  ReturnType: int
+  Parameters: _DWORD *a1, int a2
+
+Function: sub_407150
+  Address: 0x00407150
+  ReturnType: char
+  Parameters: int a1, int a2, int a3, char a4, _BYTE *a5
+
+Function: sub_407170
+  Address: 0x00407170
+  ReturnType: char
+  Parameters: int a1, int a2, int a3, _BYTE *a4
+
+Function: sub_407190
+  Address: 0x00407190
+  ReturnType: void
+  Parameters: 
+
+Function: sub_4071F0
+  Address: 0x004071F0
+  ReturnType: int
+  Parameters: _DWORD *a1
+
+Function: sub_407910
+  Address: 0x00407910
+  ReturnType: int
+  Parameters: int a1
+
+Function: sub_407F40
+  Address: 0x00407F40
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4
+
+Function: sub_407FA0
+  Address: 0x00407FA0
+  ReturnType: char
+  Parameters: int a1, int a2, int a3, char a4, _BYTE *a5
+
+Function: sub_407FE0
+  Address: 0x00407FE0
+  ReturnType: void
+  Parameters: 
+
+Function: sub_408040
+  Address: 0x00408040
+  ReturnType: int
+  Parameters: _DWORD *a1
+
+Function: sub_408750
+  Address: 0x00408750
+  ReturnType: int
+  Parameters: 
+
+Function: sub_408D70
+  Address: 0x00408D70
+  ReturnType: int
+  Parameters: int a1, int a2, int a3, int a4
+
+Function: sub_40FBA0
+  Address: 0x0040FBA0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_410E20
+  Address: 0x00410E20
+  ReturnType: int
+  Parameters: 
+
+Function: sub_415E90
+  Address: 0x00415E90
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_415EB0
+  Address: 0x00415EB0
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_415ED0
+  Address: 0x00415ED0
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_415F10
+  Address: 0x00415F10
+  ReturnType: int
+  Parameters: int a1, int a2
+
+Function: sub_419EA0
+  Address: 0x00419EA0
+  ReturnType: int
+  Parameters: 
+
+Function: sub_456000
+  Address: 0x00456000
+  ReturnType: int
+  Parameters: 
+
+Function: sub_456B20
+  Address: 0x00456B20
+  ReturnType: int
+  Parameters: 
+
