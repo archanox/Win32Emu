@@ -233,19 +233,27 @@ class CppToCsTranspiler
 	{
 		var functions = new List<FunctionInfo>();
 
-		// Parse function declarations
-		// Pattern: return_type [__cdecl|__stdcall|etc] function_name(params)
-		var functionPattern = @"(\w+)\s+(?:__(?:cdecl|stdcall|fastcall|thiscall))?\s*(\w+)\s*\((.*?)\)(?:\s*;\s*)?(?:\s*//\s*(.+))?";
-		var matches = Regex.Matches(decompCode, functionPattern, RegexOptions.Multiline);
+		// Parse function implementations with bodies
+		// Pattern: return_type [__cdecl|__stdcall|etc] function_name(params) { body }
+		var functionPattern = @"//-+\s*\(([0-9A-Fa-f]+)\)\s*-+\s*\n(.*?)\n\{(.*?)^\}";
+		var matches = Regex.Matches(decompCode, functionPattern, RegexOptions.Multiline | RegexOptions.Singleline);
 
-		_logger.LogDebug("Found {Count} potential function declarations", matches.Count);
+		_logger.LogDebug("Found {Count} function implementations with bodies", matches.Count);
 
 		foreach (Match match in matches)
 		{
-			var returnType = match.Groups[1].Value;
-			var functionName = match.Groups[2].Value;
-			var parameters = match.Groups[3].Value;
-			var comment = match.Groups.Count > 4 ? match.Groups[4].Value : "";
+			var addressStr = match.Groups[1].Value;
+			var signature = match.Groups[2].Value.Trim();
+			var body = match.Groups[3].Value;
+
+			// Parse the signature
+			var sigMatch = Regex.Match(signature, @"^(\w+)\s+(?:__(?:cdecl|stdcall|fastcall|thiscall))?\s*(\w+)\s*\((.*?)\)");
+			if (!sigMatch.Success)
+				continue;
+
+			var returnType = sigMatch.Groups[1].Value;
+			var functionName = sigMatch.Groups[2].Value;
+			var parameters = sigMatch.Groups[3].Value;
 
 			// Skip if it's a standard library function or external API
 			if (IsExternalFunction(functionName))
@@ -253,8 +261,8 @@ class CppToCsTranspiler
 				continue;
 			}
 
-			// Extract address from function name (e.g., sub_401000 -> 0x00401000)
-			var address = ExtractAddressFromName(functionName);
+			// Parse address
+			var address = Convert.ToUInt32(addressStr, 16);
 
 			functions.Add(new FunctionInfo
 			{
@@ -262,11 +270,12 @@ class CppToCsTranspiler
 				ReturnType = returnType,
 				Parameters = parameters,
 				Address = address,
-				Comment = comment
+				Comment = "",
+				Body = body
 			});
 		}
 
-		_logger.LogInformation("Parsed {Count} functions (excluding external APIs)", functions.Count);
+		_logger.LogInformation("Parsed {Count} functions with bodies (excluding external APIs)", functions.Count);
 		return functions;
 	}
 
@@ -362,9 +371,33 @@ class CppToCsTranspiler
 		
 		sb.AppendLine($"\t\tpublic {csReturnType} Execute({csParams})");
 		sb.AppendLine("\t\t{");
-		sb.AppendLine("\t\t\t// TODO: Implementation needs to be extracted from decompilation");
-		sb.AppendLine("\t\t\t// This is a placeholder for manual implementation");
-		sb.AppendLine("\t\t\tthrow new NotImplementedException(\"Function implementation not yet transpiled\");");
+		
+		// Transpile function body if available
+		if (!string.IsNullOrEmpty(func.Body))
+		{
+			var transpiledBody = TranspileFunctionBody(func.Body, func);
+			sb.Append(transpiledBody);
+		}
+		else
+		{
+			sb.AppendLine("\t\t\t// TODO: Implementation needs to be extracted from decompilation");
+			sb.AppendLine("\t\t\t// This is a placeholder for manual implementation");
+			sb.AppendLine("\t\t\tthrow new NotImplementedException(\"Function implementation not yet transpiled\");");
+		}
+		
+		sb.AppendLine("\t\t}");
+		
+		// Add helper method for calling other decompiled functions
+		sb.AppendLine();
+		sb.AppendLine("\t\t/// <summary>");
+		sb.AppendLine("\t\t/// Call another function at the specified address");
+		sb.AppendLine("\t\t/// </summary>");
+		sb.AppendLine("\t\tprivate uint CallFunction(uint address, params object[] args)");
+		sb.AppendLine("\t\t{");
+		sb.AppendLine("\t\t\t// TODO: Implement function calling mechanism");
+		sb.AppendLine("\t\t\t// This would need to interact with the emulator or other generated functions");
+		sb.AppendLine("\t\t\t_env.Logger?.LogWarning(\"CallFunction not yet implemented for address 0x{Address:X8}\", address);");
+		sb.AppendLine("\t\t\treturn 0;");
 		sb.AppendLine("\t\t}");
 		
 		// Close class and namespace
@@ -452,6 +485,274 @@ class CppToCsTranspiler
 
 		return string.Join(", ", csParams);
 	}
+
+	private string TranspileFunctionBody(string cppBody, FunctionInfo func)
+	{
+		var sb = new StringBuilder();
+		var lines = cppBody.Split('\n');
+		
+		// Track variables declared in the function
+		var variables = new HashSet<string>();
+		
+		foreach (var line in lines)
+		{
+			var trimmed = line.Trim();
+			
+			// Skip empty lines and comments
+			if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith("//"))
+			{
+				if (!string.IsNullOrWhiteSpace(trimmed))
+					sb.AppendLine($"\t\t\t{trimmed}");
+				continue;
+			}
+			
+			// Transpile the line
+			var csLine = TranspileLine(trimmed, variables, func);
+			if (!string.IsNullOrEmpty(csLine))
+			{
+				sb.AppendLine($"\t\t\t{csLine}");
+			}
+		}
+		
+		return sb.ToString();
+	}
+	
+	private string TranspileLine(string cppLine, HashSet<string> variables, FunctionInfo func)
+	{
+		// Remove trailing semicolon for processing
+		var line = cppLine.TrimEnd(';', ' ');
+		
+		// Handle return statements
+		if (line.StartsWith("return "))
+		{
+			var returnValue = line.Substring(7).Trim();
+			var csValue = TranspileExpression(returnValue, variables, func);
+			return $"return {csValue};";
+		}
+		
+		// Handle variable declarations
+		// Pattern: type varname = value; or type varname;
+		var declMatch = Regex.Match(line, @"^([\w\s\*]+)\s+(\w+)(\s*=\s*(.+))?$");
+		if (declMatch.Success)
+		{
+			var cppType = declMatch.Groups[1].Value.Trim();
+			var varName = declMatch.Groups[2].Value;
+			var hasInit = declMatch.Groups[3].Success;
+			var initValue = hasInit ? declMatch.Groups[4].Value.Trim() : "";
+			
+			// Map type
+			var csType = MapCppTypeToCSharp(cppType);
+			variables.Add(varName);
+			
+			if (hasInit)
+			{
+				var csValue = TranspileExpression(initValue, variables, func);
+				return $"{csType} {varName} = {csValue};";
+			}
+			else
+			{
+				return $"{csType} {varName};";
+			}
+		}
+		
+		// Handle assignment statements
+		// Pattern: varname = value;
+		var assignMatch = Regex.Match(line, @"^(\w+)\s*=\s*(.+)$");
+		if (assignMatch.Success)
+		{
+			var varName = assignMatch.Groups[1].Value;
+			var value = assignMatch.Groups[2].Value.Trim();
+			var csValue = TranspileExpression(value, variables, func);
+			return $"{varName} = {csValue};";
+		}
+		
+		// Handle if statements
+		if (line.StartsWith("if "))
+		{
+			var condMatch = Regex.Match(line, @"^if\s*\(\s*(.+?)\s*\)$");
+			if (condMatch.Success)
+			{
+				var condition = condMatch.Groups[1].Value;
+				var csCondition = TranspileExpression(condition, variables, func);
+				return $"if ({csCondition})";
+			}
+		}
+		
+		// Handle function calls
+		// Pattern: functionName(args);
+		var callMatch = Regex.Match(line, @"^(\w+)\s*\((.*)?\)$");
+		if (callMatch.Success)
+		{
+			var funcName = callMatch.Groups[1].Value;
+			var args = callMatch.Groups[2].Value;
+			
+			// Check if it's a Win32 API call
+			if (IsWin32ApiCall(funcName))
+			{
+				var csArgs = TranspileArguments(args, variables, func);
+				return $"_env.CallWin32Api(\"{funcName}\"{(string.IsNullOrEmpty(csArgs) ? "" : ", " + csArgs)});";
+			}
+			// Check if it's a call to another decompiled function
+			else if (funcName.StartsWith("sub_"))
+			{
+				var address = ExtractAddressFromName(funcName);
+				var csArgs = TranspileArguments(args, variables, func);
+				return $"CallFunction(0x{address:X8}{(string.IsNullOrEmpty(csArgs) ? "" : ", " + csArgs)});";
+			}
+		}
+		
+		// Handle block markers
+		if (line == "{")
+			return "{";
+		if (line == "}")
+			return "}";
+		
+		// Default: return line as comment
+		return $"// TODO: Transpile: {cppLine}";
+	}
+	
+	private string TranspileExpression(string cppExpr, HashSet<string> variables, FunctionInfo func)
+	{
+		var expr = cppExpr.Trim();
+		
+		// Handle numeric literals
+		if (Regex.IsMatch(expr, @"^-?\d+$"))
+			return expr;
+		
+		// Handle hex literals
+		if (Regex.IsMatch(expr, @"^0x[0-9A-Fa-f]+$"))
+			return expr;
+		
+		// Handle NULL
+		if (expr == "NULL" || expr == "0")
+			return "0";
+		
+		// Handle boolean expressions
+		if (expr == "TRUE" || expr == "true")
+			return "true";
+		if (expr == "FALSE" || expr == "false")
+			return "false";
+		
+		// Handle function calls in expressions
+		var callMatch = Regex.Match(expr, @"^(\w+)\s*\((.*?)\)$");
+		if (callMatch.Success)
+		{
+			var funcName = callMatch.Groups[1].Value;
+			var args = callMatch.Groups[2].Value;
+			
+			if (IsWin32ApiCall(funcName))
+			{
+				var csArgs = TranspileArguments(args, variables, func);
+				return $"_env.CallWin32Api<uint>(\"{funcName}\"{(string.IsNullOrEmpty(csArgs) ? "" : ", " + csArgs)})";
+			}
+			else if (funcName.StartsWith("sub_"))
+			{
+				var address = ExtractAddressFromName(funcName);
+				var csArgs = TranspileArguments(args, variables, func);
+				return $"CallFunction(0x{address:X8}{(string.IsNullOrEmpty(csArgs) ? "" : ", " + csArgs)})";
+			}
+		}
+		
+		// Handle dereferencing and pointer operations
+		expr = expr.Replace("->", ".");
+		
+		// Handle comparison operators (convert to C# style)
+		expr = expr.Replace("!=", "!=");
+		expr = expr.Replace("==", "==");
+		
+		// Handle negation
+		if (expr.StartsWith("!"))
+		{
+			var inner = TranspileExpression(expr.Substring(1), variables, func);
+			return $"!{inner}";
+		}
+		
+		// Handle binary operators
+		foreach (var op in new[] { "&&", "||", "+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=" })
+		{
+			var parts = expr.Split(new[] { op }, 2, StringSplitOptions.None);
+			if (parts.Length == 2)
+			{
+				var left = TranspileExpression(parts[0].Trim(), variables, func);
+				var right = TranspileExpression(parts[1].Trim(), variables, func);
+				return $"{left} {op} {right}";
+			}
+		}
+		
+		// Default: return as-is
+		return expr;
+	}
+	
+	private string TranspileArguments(string cppArgs, HashSet<string> variables, FunctionInfo func)
+	{
+		if (string.IsNullOrWhiteSpace(cppArgs))
+			return "";
+		
+		var args = SplitArguments(cppArgs);
+		var csArgs = new List<string>();
+		
+		foreach (var arg in args)
+		{
+			csArgs.Add(TranspileExpression(arg.Trim(), variables, func));
+		}
+		
+		return string.Join(", ", csArgs);
+	}
+	
+	private List<string> SplitArguments(string args)
+	{
+		var result = new List<string>();
+		var current = new StringBuilder();
+		int depth = 0;
+		
+		foreach (var ch in args)
+		{
+			if (ch == '(' || ch == '{' || ch == '[')
+			{
+				depth++;
+				current.Append(ch);
+			}
+			else if (ch == ')' || ch == '}' || ch == ']')
+			{
+				depth--;
+				current.Append(ch);
+			}
+			else if (ch == ',' && depth == 0)
+			{
+				result.Add(current.ToString());
+				current.Clear();
+			}
+			else
+			{
+				current.Append(ch);
+			}
+		}
+		
+		if (current.Length > 0)
+			result.Add(current.ToString());
+		
+		return result;
+	}
+	
+	private bool IsWin32ApiCall(string funcName)
+	{
+		var win32Apis = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+		{
+			"CreateWindowExA", "CreateWindowExW", "ShowWindow", "UpdateWindow",
+			"GetMessageA", "GetMessageW", "TranslateMessage", "DispatchMessageA", "DispatchMessageW",
+			"DefWindowProcA", "DefWindowProcW", "RegisterClassA", "RegisterClassW",
+			"LoadIconA", "LoadIconW", "LoadCursorA", "LoadCursorW",
+			"GetStockObject", "GetSystemMetrics",
+			"DirectDrawCreate", "DirectSoundCreate", "DirectInputCreateA",
+			"PostMessageA", "PostMessageW", "SendMessageA", "SendMessageW",
+			"GetDC", "ReleaseDC", "BeginPaint", "EndPaint",
+			"CreateFileA", "CreateFileW", "ReadFile", "WriteFile", "CloseHandle",
+			"GetLastError", "SetLastError",
+			"MessageBoxA", "MessageBoxW"
+		};
+		
+		return win32Apis.Contains(funcName);
+	}
 }
 
 /// <summary>
@@ -464,6 +765,7 @@ class FunctionInfo
 	public required string Parameters { get; set; }
 	public uint Address { get; set; }
 	public string Comment { get; set; } = "";
+	public string Body { get; set; } = "";
 }
 
 /// <summary>
