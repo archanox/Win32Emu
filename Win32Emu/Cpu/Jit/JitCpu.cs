@@ -5940,52 +5940,53 @@ public class JitCpu : IAsyncCpu
 		ulong dst = _mmx[mmRegDst];
 
 		// Perform the operation based on mnemonic
+		// Use MmxIntrinsicsHelper for hardware acceleration when available
 		switch (insn.Mnemonic)
 		{
 			// Packed Add
 			case Mnemonic.Paddb:
-				_mmx[mmRegDst] = MmxPaddB(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AddPackedBytes(dst, src);
 				break;
 			case Mnemonic.Paddw:
-				_mmx[mmRegDst] = MmxPaddW(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AddPackedWords(dst, src);
 				break;
 			case Mnemonic.Paddd:
-				_mmx[mmRegDst] = MmxPaddD(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AddPackedDwords(dst, src);
 				break;
 			case Mnemonic.Paddsb:
-				_mmx[mmRegDst] = MmxPaddSB(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AddPackedSignedBytesWithSaturation(dst, src);
 				break;
 			case Mnemonic.Paddsw:
-				_mmx[mmRegDst] = MmxPaddSW(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AddPackedSignedWordsWithSaturation(dst, src);
 				break;
 			case Mnemonic.Paddusb:
-				_mmx[mmRegDst] = MmxPaddUSB(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AddPackedUnsignedBytesWithSaturation(dst, src);
 				break;
 			case Mnemonic.Paddusw:
-				_mmx[mmRegDst] = MmxPaddUSW(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AddPackedUnsignedWordsWithSaturation(dst, src);
 				break;
 			
 			// Packed Subtract
 			case Mnemonic.Psubb:
-				_mmx[mmRegDst] = MmxPsubB(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.SubtractPackedBytes(dst, src);
 				break;
 			case Mnemonic.Psubw:
-				_mmx[mmRegDst] = MmxPsubW(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.SubtractPackedWords(dst, src);
 				break;
 			case Mnemonic.Psubd:
-				_mmx[mmRegDst] = MmxPsubD(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.SubtractPackedDwords(dst, src);
 				break;
 			case Mnemonic.Psubsb:
-				_mmx[mmRegDst] = MmxPsubSB(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.SubtractPackedSignedBytesWithSaturation(dst, src);
 				break;
 			case Mnemonic.Psubsw:
-				_mmx[mmRegDst] = MmxPsubSW(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.SubtractPackedSignedWordsWithSaturation(dst, src);
 				break;
 			case Mnemonic.Psubusb:
-				_mmx[mmRegDst] = MmxPsubUSB(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.SubtractPackedUnsignedBytesWithSaturation(dst, src);
 				break;
 			case Mnemonic.Psubusw:
-				_mmx[mmRegDst] = MmxPsubUSW(dst, src);
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.SubtractPackedUnsignedWordsWithSaturation(dst, src);
 				break;
 			
 			// Packed Multiply
@@ -6001,16 +6002,16 @@ public class JitCpu : IAsyncCpu
 			
 			// Logical Operations
 			case Mnemonic.Pand:
-				_mmx[mmRegDst] = dst & src;
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.And(dst, src);
 				break;
 			case Mnemonic.Pandn:
-				_mmx[mmRegDst] = (~dst) & src;
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.AndNot(dst, src);
 				break;
 			case Mnemonic.Por:
-				_mmx[mmRegDst] = dst | src;
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.Or(dst, src);
 				break;
 			case Mnemonic.Pxor:
-				_mmx[mmRegDst] = dst ^ src;
+				_mmx[mmRegDst] = MmxIntrinsicsHelper.Xor(dst, src);
 				break;
 			
 			// Comparison
