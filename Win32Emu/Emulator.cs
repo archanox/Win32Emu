@@ -548,6 +548,31 @@ public sealed class Emulator : IDisposable
         var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps, forceInterpreterMode: forceInterpreterMode);
         _cpu = jitCpu;
         
+        // Wire up ProcessEnvironment to JitCpu for transpiled function support
+        jitCpu.SetProcessEnvironment(_env);
+        
+        // Load transpiled functions if available (for ign_win.exe / ign_teas)
+        if (path.Contains("ign_win", StringComparison.OrdinalIgnoreCase) || path.Contains("ign_teas", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var transpiledDllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Generated", "IgNTeas", "bin", "Release", "net10.0", "IgNTeas.Generated.dll");
+                if (File.Exists(transpiledDllPath))
+                {
+                    _env.TranspiledFunctionProvider?.LoadFromAssembly(transpiledDllPath);
+                    _logger.LogInformation("[Loader] Loaded transpiled functions from {Path}", transpiledDllPath);
+                }
+                else
+                {
+                    _logger.LogDebug("[Loader] Transpiled functions not found at {Path} (this is optional)", transpiledDllPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "[Loader] Failed to load transpiled functions (non-fatal)");
+            }
+        }
+        
         _logger.LogInformation("[Loader] Unified JitCpu backend enabled (JIT compilation: {JitEnabled}, Interpreter mode: {InterpreterEnabled})", 
             jitCpu.SupportsJit, !jitCpu.SupportsJit);
         
