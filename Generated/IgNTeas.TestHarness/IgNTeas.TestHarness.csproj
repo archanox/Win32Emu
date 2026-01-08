@@ -1,22 +1,20 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>IgNTeas.Generated</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Reference to Win32Emu for EmulatorEnvironment -->
     <ProjectReference Include="../../Win32Emu/Win32Emu.csproj" />
+    <ProjectReference Include="../IgNTeas/IgNTeas.Generated.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Only include Function_004032A0.cs for now -->
-    <Compile Remove="*.cs" />
-    <Compile Include="Function_004032A0.cs" />
-    <None Include="*.cs" Exclude="Function_004032A0.cs" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.1" />
   </ItemGroup>
 
 </Project>
