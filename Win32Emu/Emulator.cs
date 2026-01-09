@@ -1549,6 +1549,27 @@ public sealed class Emulator : IDisposable
                 consecutiveHeapExecutions = 0;
             }
 
+            // Check for callback return marker addresses (0xDEADBEEF and similar)
+            // These should never be executed - they're return address markers for callbacks
+            if (eipBeforeStep >= 0xDEAD0000 && eipBeforeStep <= 0xDEADFFFF)
+            {
+                _logger.LogError("[Emulator] EIP=0x{Eip:X8} is in callback marker range (0xDEAD0000-0xDEADFFFF). This should never be executed!", eipBeforeStep);
+                _logger.LogError("[Emulator] This indicates a problem with callback return handling or stack corruption.");
+                var esp = _cpu.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                _logger.LogError("[Emulator] ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}", esp, ebp);
+                
+                // Try to read stack to diagnose the issue
+                try
+                {
+                    var retAddr = _vm!.Read32(esp);
+                    _logger.LogError("[Emulator] Top of stack [ESP]=0x{RetAddr:X8}", retAddr);
+                }
+                catch { }
+                
+                throw new InvalidOperationException($"EIP=0x{eipBeforeStep:X8} is in callback marker range. Callback return handling failed.");
+            }
+
             CpuStepResult step;
             try
             {
