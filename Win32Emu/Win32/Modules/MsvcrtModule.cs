@@ -16,6 +16,7 @@ namespace Win32Emu.Win32.Modules
 		private readonly PeImageLoader? _peLoader;
 		private readonly ILogger _logger;
 		private uint _cachedAcmdlnPtr = 0;
+		private uint _cachedWcmdlnPtr = 0;
 		
 		// CPU instance is set by TryInvokeUnsafe before calling exported methods
 		// Cannot be passed as parameter to [DllModuleExport] methods as it breaks source generation
@@ -227,6 +228,12 @@ namespace Win32Emu.Win32.Modules
 					return true;
 				case "_WCMDLN":
 					returnValue = _wcmdln();
+					return true;
+				case "__P__WCMDLN":
+					returnValue = __p__wcmdln();
+					return true;
+				case "_ENVIRON":
+					returnValue = _environ();
 					return true;
 				case "_ADJUST_FDIV":
 					returnValue = _adjust_fdiv();
@@ -816,6 +823,27 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[msvcrt] _wcmdln()");
 			// Return pointer to Unicode command line string
 			return _env.CommandLinePtrW;
+		}
+
+		private uint __p__wcmdln()
+		{
+			_logger.LogInformation("[msvcrt] __p__wcmdln()");
+			// Return pointer to pointer to Unicode command line string
+			// Cache to avoid memory leak from repeated allocations
+			if (_cachedWcmdlnPtr == 0)
+			{
+				_cachedWcmdlnPtr = _env.HeapAlloc(0, 4);
+				_env.MemWrite32(_cachedWcmdlnPtr, _env.CommandLinePtrW);
+			}
+			return _cachedWcmdlnPtr;
+		}
+
+		[DllModuleExport(0)]
+		private uint _environ()
+		{
+			_logger.LogInformation("[msvcrt] _environ()");
+			// Return pointer to environment block
+			return _env.GetEnvironmentStringsA();
 		}
 
 		[DllModuleExport(0)]
