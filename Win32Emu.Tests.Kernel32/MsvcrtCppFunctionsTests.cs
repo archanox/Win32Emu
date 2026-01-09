@@ -16,9 +16,9 @@ public sealed class MsvcrtCppFunctionsTests : IDisposable
 
 	public MsvcrtCppFunctionsTests()
 	{
-		_testEnv = new TestEnvironment();
+		_testEnv = new TestEnvironment(initializeDispatcher: true);
 		_msvcrt = new MsvcrtModule(_testEnv.ProcessEnv, 0x00400000, _testEnv.PeLoader, NullLogger.Instance);
-		_testEnv.Dispatcher.RegisterModule(_msvcrt);
+		_testEnv.Dispatcher!.RegisterModule(_msvcrt);
 	}
 
 	[Fact]

@@ -17,11 +17,11 @@ public sealed class DirectoryAndStringFunctionsTests : IDisposable
 
     public DirectoryAndStringFunctionsTests()
     {
-        _testEnv = new TestEnvironment();
+        _testEnv = new TestEnvironment(initializeDispatcher: true);
         
         // Register Advapi32 module for registry tests
         _advapi32 = new Advapi32Module(_testEnv.ProcessEnv, 0x00400000);
-        _testEnv.Dispatcher.RegisterModule(_advapi32);
+        _testEnv.Dispatcher!.RegisterModule(_advapi32);
     }
 
     [Fact]
