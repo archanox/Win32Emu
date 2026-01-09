@@ -77,8 +77,8 @@ test_environment.exe
 
 ### In Win32Emu
 ```bash
-dotnet run --project Win32Emu -- EXEs/NativeTests/Release/test_getmodulefilename.exe
-dotnet run --project Win32Emu -- EXEs/NativeTests/Release/test_environment.exe
+dotnet run --project Win32Emu.Gui --no-build -- --nogui EXEs/NativeTests/Release/test_getmodulefilename.exe
+dotnet run --project Win32Emu.Gui --no-build -- --nogui EXEs/NativeTests/Release/test_environment.exe
 ```
 
 ## Expected Behavior
@@ -111,8 +111,8 @@ test_environment.exe > windows_environment.txt
 
 2. Run the tests in Win32Emu and save output:
 ```bash
-dotnet run --project Win32Emu -- test_getmodulefilename.exe > emu_getmodulefilename.txt
-dotnet run --project Win32Emu -- test_environment.exe > emu_environment.txt
+dotnet run --no-build --project Win32Emu.Gui -- --nogui test_getmodulefilename.exe > emu_getmodulefilename.txt
+dotnet run --no-build --project Win32Emu.Gui -- --nogui test_environment.exe > emu_environment.txt
 ```
 
 3. Compare the outputs to identify any discrepancies
