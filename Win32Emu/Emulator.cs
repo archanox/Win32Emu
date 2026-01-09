@@ -953,42 +953,113 @@ public sealed class Emulator : IDisposable
         var upperName = name.ToUpperInvariant();
         
         // Handle MSVCRT data imports
-        if (upperDll == "MSVCRT.DLL" || upperDll == "MSVCRT")
+        if ((upperDll == "MSVCRT.DLL" || upperDll == "MSVCRT") &&
+            _dispatcher!.TryGetModule("MSVCRT.DLL", out var msvcrtModule) &&
+            msvcrtModule != null)
         {
-            if (_dispatcher!.TryGetModule("MSVCRT.DLL", out var msvcrtModule) && msvcrtModule != null)
+            switch (upperName)
             {
-                switch (upperName)
+                case "_IOB":
                 {
-                    case "_IOB":
+                    // Call __p__iob() to get the array address
+                    if (msvcrtModule.TryInvokeUnsafe("__P__IOB", _cpu!, _vm, out var address))
                     {
-                        // Call __p__iob() to get the array address
-                        if (msvcrtModule.TryInvokeUnsafe("__P__IOB", _cpu!, _vm, out var address))
-                        {
-                            _logger.LogDebug("[Loader] Got _iob address: 0x{Address:X8}", address);
-                            return address;
-                        }
-                        break;
+                        _logger.LogDebug("[Loader] Got _iob address: 0x{Address:X8}", address);
+                        return address;
                     }
-                    case "__MB_CUR_MAX":
+                    break;
+                }
+                case "__MB_CUR_MAX":
+                {
+                    // Call __p__mb_cur_max() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("__MB_CUR_MAX", _cpu!, _vm, out var address))
                     {
-                        // Call __p__mb_cur_max() to get the address
-                        if (msvcrtModule.TryInvokeUnsafe("__MB_CUR_MAX", _cpu!, _vm, out var address))
-                        {
-                            _logger.LogDebug("[Loader] Got __mb_cur_max address: 0x{Address:X8}", address);
-                            return address;
-                        }
-                        break;
+                        _logger.LogDebug("[Loader] Got __mb_cur_max address: 0x{Address:X8}", address);
+                        return address;
                     }
-                    case "__INITENV":
+                    break;
+                }
+                case "__INITENV":
+                {
+                    // Call __p___initenv() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("__P___INITENV", _cpu!, _vm, out var address))
                     {
-                        // Call __p___initenv() to get the address
-                        if (msvcrtModule.TryInvokeUnsafe("__P___INITENV", _cpu!, _vm, out var address))
-                        {
-                            _logger.LogDebug("[Loader] Got __initenv address: 0x{Address:X8}", address);
-                            return address;
-                        }
-                        break;
+                        _logger.LogDebug("[Loader] Got __initenv address: 0x{Address:X8}", address);
+                        return address;
                     }
+                    break;
+                }
+                case "__WINITENV":
+                {
+                    // Call __p___winitenv() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("__P___WINITENV", _cpu!, _vm, out var address))
+                    {
+                        _logger.LogDebug("[Loader] Got __winitenv address: 0x{Address:X8}", address);
+                        return address;
+                    }
+                    break;
+                }
+                case "_FMODE":
+                {
+                    // Call __p__fmode() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("__P__FMODE", _cpu!, _vm, out var address))
+                    {
+                        _logger.LogDebug("[Loader] Got _fmode address: 0x{Address:X8}", address);
+                        return address;
+                    }
+                    break;
+                }
+                case "_COMMODE":
+                {
+                    // Call __p__commode() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("__P__COMMODE", _cpu!, _vm, out var address))
+                    {
+                        _logger.LogDebug("[Loader] Got _commode address: 0x{Address:X8}", address);
+                        return address;
+                    }
+                    break;
+                }
+                case "_ACMDLN":
+                {
+                    // Call __p__acmdln() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("__P__ACMDLN", _cpu!, _vm, out var address))
+                    {
+                        _logger.LogDebug("[Loader] Got _acmdln address: 0x{Address:X8}", address);
+                        return address;
+                    }
+                    break;
+                }
+                case "_WCMDLN":
+                {
+                    // Call __p__wcmdln() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("__P__WCMDLN", _cpu!, _vm, out var address))
+                    {
+                        _logger.LogDebug("[Loader] Got _wcmdln address: 0x{Address:X8}", address);
+                        return address;
+                    }
+                    break;
+                }
+                case "_ENVIRON":
+                {
+                    // Call _environ() to get the address
+                    if (msvcrtModule.TryInvokeUnsafe("_ENVIRON", _cpu!, _vm, out var address))
+                    {
+                        _logger.LogDebug("[Loader] Got _environ address: 0x{Address:X8}", address);
+                        return address;
+                    }
+                    break;
+                }
+                case "__ARGC":
+                case "__ARGV":
+                case "__WARGV":
+                case "_PGMPTR":
+                case "_WPGMPTR":
+                {
+                    // These are set up by __getmainargs/__wgetmainargs and don't have __p__ accessors
+                    // For now, allocate placeholder memory
+                    var placeholder = _env!.HeapAlloc(0, 4);
+                    _logger.LogDebug("[Loader] Allocated placeholder for {Name} at 0x{Address:X8}", upperName, placeholder);
+                    return placeholder;
                 }
             }
         }
