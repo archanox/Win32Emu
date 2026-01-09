@@ -80,10 +80,23 @@ public record ExportMetadata
 	/// <summary>
 	/// Creates default metadata assuming stdcall with no arguments.
 	/// This is used as a safe default for exports without explicit metadata.
+	/// Appropriate for Windows API DLLs where undecorated exports are typically stdcall.
 	/// </summary>
 	public static ExportMetadata Default { get; } = new()
 	{
 		Convention = CallingConvention.Stdcall,
+		StackArgBytes = 0,
+		IsInferred = true
+	};
+
+	/// <summary>
+	/// Creates default metadata assuming cdecl with no arguments.
+	/// This is used for C-compiled executables where undecorated exports are typically cdecl.
+	/// Appropriate for executables like rvvm_i386.exe that are compiled with C compilers.
+	/// </summary>
+	public static ExportMetadata CdeclDefault { get; } = new()
+	{
+		Convention = CallingConvention.Cdecl,
 		StackArgBytes = 0,
 		IsInferred = true
 	};

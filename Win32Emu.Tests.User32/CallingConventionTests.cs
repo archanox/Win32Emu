@@ -157,6 +157,29 @@ namespace Win32Emu.Tests.User32
 		}
 
 		[Fact]
+		public void ExportMetadata_CdeclDefaultIsCdecl()
+		{
+			// Verify that CdeclDefault uses cdecl convention
+			// This is used for C-compiled executables
+			var cdeclDefaultMeta = ExportMetadata.CdeclDefault;
+			Assert.Equal(CallingConvention.Cdecl, cdeclDefaultMeta.Convention);
+			Assert.Equal(0, cdeclDefaultMeta.StackArgBytes);
+			Assert.True(cdeclDefaultMeta.IsInferred);
+		}
+
+		[Fact]
+		public void ExportMetadata_DefaultAndCdeclDefaultAreDifferent()
+		{
+			// Verify that Default (stdcall) and CdeclDefault (cdecl) are different
+			var defaultMeta = ExportMetadata.Default;
+			var cdeclDefaultMeta = ExportMetadata.CdeclDefault;
+			
+			Assert.NotEqual(defaultMeta.Convention, cdeclDefaultMeta.Convention);
+			Assert.Equal(CallingConvention.Stdcall, defaultMeta.Convention);
+			Assert.Equal(CallingConvention.Cdecl, cdeclDefaultMeta.Convention);
+		}
+
+		[Fact]
 		public void CallingConventionEnum_HasAllExpectedValues()
 		{
 			// Verify all calling conventions from x86 spec are present

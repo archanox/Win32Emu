@@ -698,6 +698,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// <summary>
 	/// Builds export metadata (calling convention, arg bytes) from PE exports.
 	/// Attempts to infer calling convention from export name decoration.
+	/// Detects C-compiled executables and uses appropriate defaults.
 	/// </summary>
 	private Dictionary<string, ExportMetadata> BuildExportMetadata(PEImage image, ILogger? logger)
 	{
@@ -708,6 +709,36 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			return metadata;
 		}
 
+		// First pass: count decorated vs undecorated exports to detect C-compiled executables
+		var totalExports = 0;
+		var undecoratedExports = 0;
+		
+		foreach (var export in image.Exports.Entries)
+		{
+			if (export.IsForwarder || string.IsNullOrEmpty(export.Name))
+			{
+				continue;
+			}
+			
+			totalExports++;
+			if (ExportMetadata.FromDecoratedName(export.Name) == null)
+			{
+				undecoratedExports++;
+			}
+		}
+		
+		// Heuristic: If 80% or more exports are undecorated, this is likely a C-compiled executable
+		// C-compiled executables typically use cdecl for all functions, while Windows DLLs use stdcall
+		var isCCompiledExecutable = totalExports > 0 && (undecoratedExports * 100 / totalExports) >= 80;
+		var defaultMeta = isCCompiledExecutable ? ExportMetadata.CdeclDefault : ExportMetadata.Default;
+		
+		if (isCCompiledExecutable)
+		{
+			logger?.LogInformation("[Loader] Detected C-compiled executable: {Undecorated}/{Total} exports are undecorated ({Percent}%), defaulting to cdecl",
+				undecoratedExports, totalExports, undecoratedExports * 100 / totalExports);
+		}
+
+		// Second pass: build metadata for each export
 		foreach (var export in image.Exports.Entries)
 		{
 			// Skip forwarded exports - they don't need metadata
@@ -734,13 +765,12 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			else
 			{
-				// No decoration found - use default (stdcall with 0 args)
-				// NOTE: This default may be incorrect. Undecorated exports often use cdecl
-				// (e.g., C runtime functions like malloc, printf). Manual configuration may be needed.
-				// This is expected behavior for C-compiled executables, so we log at Debug level to avoid log spam.
-				metadata[export.Name] = ExportMetadata.Default;
-				logger?.LogDebug("[Loader] Export '{Name}' has no decoration, using default {Convention} with {ArgBytes} bytes. This may be incorrect for cdecl functions.",
-					export.Name, ExportMetadata.Default.Convention, ExportMetadata.Default.StackArgBytes);
+				// No decoration found - use appropriate default based on executable type
+				// C-compiled executables (like rvvm_i386.exe) use cdecl by default
+				// Windows API DLLs use stdcall by default
+				metadata[export.Name] = defaultMeta;
+				logger?.LogDebug("[Loader] Export '{Name}' has no decoration, using default {Convention} with {ArgBytes} bytes",
+					export.Name, defaultMeta.Convention, defaultMeta.StackArgBytes);
 			}
 		}
 
