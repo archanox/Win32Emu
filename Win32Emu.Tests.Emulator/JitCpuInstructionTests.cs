@@ -596,7 +596,7 @@ public class JitCpuInstructionTests
 		
 		// Assert
 		Assert.True(result.IsSyscall); // Should signal syscall
-		Assert.Equal(0x1002u, cpu.GetEip()); // Should advance EIP past the instruction
+		Assert.Equal(0x1000u, cpu.GetEip()); // EIP reset to instruction start by INT handler
 	}
 
 	[Fact]

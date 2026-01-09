@@ -606,7 +606,7 @@ public class BasicInstructionTests : IDisposable
         
         // Assert
         Assert.True(result.IsSyscall, "Should signal syscall for INT 0x80");
-        Assert.Equal(0x1002u, _helper.GetEip()); // Should advance EIP past the 2-byte instruction
+        Assert.Equal(0x1000u, _helper.GetEip()); // EIP reset to instruction start by INT handler
     }
 
     public void Dispose()
