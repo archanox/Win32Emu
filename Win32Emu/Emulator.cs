@@ -979,6 +979,16 @@ public sealed class Emulator : IDisposable
                         }
                         break;
                     }
+                    case "__INITENV":
+                    {
+                        // Call __p___initenv() to get the address
+                        if (msvcrtModule.TryInvokeUnsafe("__P___INITENV", _cpu!, _vm, out var address))
+                        {
+                            _logger.LogDebug("[Loader] Got __initenv address: 0x{Address:X8}", address);
+                            return address;
+                        }
+                        break;
+                    }
                 }
             }
         }
