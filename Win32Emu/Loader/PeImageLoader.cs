@@ -398,6 +398,40 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			sizeOfUninitializedData);
 	}
 	
+	/// <summary>
+	/// Checks if an import is a data export (not a function) that should be treated specially
+	/// </summary>
+	public static bool IsKnownDataImport(string dllName, string importName)
+	{
+		var dll = dllName.ToUpperInvariant();
+		var name = importName.ToUpperInvariant();
+		
+		// MSVCRT data imports
+		if (dll == "MSVCRT.DLL" || dll == "MSVCRT")
+		{
+			return name switch
+			{
+				"_IOB" => true,              // FILE array for stdin/stdout/stderr
+				"__MB_CUR_MAX" => true,      // Maximum multibyte character length
+				"_ENVIRON" => true,          // Environment variables array pointer
+				"__INITENV" => true,         // Initial environment variables
+				"__WINITENV" => true,        // Initial environment variables (wide)
+				"_FMODE" => true,            // File mode
+				"_COMMODE" => true,          // Commit mode
+				"_ACMDLN" => true,           // Command line
+				"_WCMDLN" => true,           // Command line (wide)
+				"__ARGC" => true,            // Argument count
+				"__ARGV" => true,            // Argument vector
+				"__WARGV" => true,           // Argument vector (wide)
+				"_PGMPTR" => true,           // Program name
+				"_WPGMPTR" => true,          // Program name (wide)
+				_ => false
+			};
+		}
+		
+		return false;
+	}
+	
 	private (Dictionary<uint, (string dll, string name)> importMap, Dictionary<uint, uint> iatEntryMap) BuildImportMap(PEImage image, uint imageBase)
 	{
 		var map = new Dictionary<uint, (string dll, string name)>();
