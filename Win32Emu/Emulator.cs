@@ -746,6 +746,10 @@ public sealed class Emulator : IDisposable
         _env.InitializeMainThread(_cpu);
         LogDebug("[Loader] Main thread initialized");
 
+        // Fix up data imports after all modules are registered
+        // Some imports like _iob are data exports, not functions, and need special handling
+        FixupDataImports();
+
         // Execute TLS callbacks if present
         // TLS callbacks must be executed AFTER all modules are registered but BEFORE the main entry point
         // Use synchronous wrapper for compatibility with synchronous LoadExecutable
@@ -869,6 +873,119 @@ public sealed class Emulator : IDisposable
     /// These patches address issues like stack misalignment, incorrect function epilogues,
     /// or other compatibility problems that prevent the application from running correctly.
     /// </summary>
+    /// <summary>
+    /// Fixes up IAT entries for data imports after all modules are registered.
+    /// Some imports like _iob, __mb_cur_max are data exports, not functions.
+    /// The IAT entry should point to the actual data, not a function stub.
+    /// </summary>
+    private void FixupDataImports()
+    {
+        if (_image == null || _vm == null || _dispatcher == null)
+        {
+            return;
+        }
+
+        _logger.LogInformation("[Loader] Fixing up data imports");
+
+        // Get the import map from the image
+        var importMap = _image.ImportAddressMap;
+        if (importMap == null || importMap.Count == 0)
+        {
+            _logger.LogDebug("[Loader] No imports to fix up");
+            return;
+        }
+
+        var fixupCount = 0;
+        
+        // Iterate through all imports and check if they are data imports
+        foreach (var kvp in importMap)
+        {
+            var synthetic = kvp.Key;
+            var (dll, name) = kvp.Value;
+            
+            // Check if this is a known data import
+            if (PeImageLoader.IsKnownDataImport(dll, name))
+            {
+                _logger.LogInformation("[Loader] Fixing up data import: {Dll}!{Name} (synthetic=0x{Synthetic:X8})", dll, name, synthetic);
+                
+                // Get the actual data address from the module
+                var dataAddress = GetDataImportAddress(dll, name);
+                if (dataAddress != 0)
+                {
+                    // Find the IAT entry that points to this synthetic address and update it
+                    // The IAT entry currently points to the synthetic function stub
+                    // We need to replace it with the actual data address
+                    var iatEntryMap = _image.IatEntryMap;
+                    if (iatEntryMap != null)
+                    {
+                        foreach (var iatKvp in iatEntryMap)
+                        {
+                            var iatVa = iatKvp.Key;
+                            var expectedSynthetic = iatKvp.Value;
+                            
+                            if (expectedSynthetic == synthetic)
+                            {
+                                _logger.LogInformation("[Loader] Patching IAT entry at 0x{IatVa:X8}: 0x{Old:X8} -> 0x{New:X8}", 
+                                    iatVa, synthetic, dataAddress);
+                                _vm.Write32(iatVa, dataAddress);
+                                fixupCount++;
+                                break;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("[Loader] Failed to get data address for {Dll}!{Name}", dll, name);
+                }
+            }
+        }
+        
+        _logger.LogInformation("[Loader] Fixed up {Count} data import(s)", fixupCount);
+    }
+
+    /// <summary>
+    /// Gets the actual data address for a data import by calling the appropriate module function
+    /// </summary>
+    private uint GetDataImportAddress(string dll, string name)
+    {
+        var upperDll = dll.ToUpperInvariant();
+        var upperName = name.ToUpperInvariant();
+        
+        // Handle MSVCRT data imports
+        if (upperDll == "MSVCRT.DLL" || upperDll == "MSVCRT")
+        {
+            if (_dispatcher!.TryGetModule("MSVCRT.DLL", out var msvcrtModule) && msvcrtModule != null)
+            {
+                switch (upperName)
+                {
+                    case "_IOB":
+                    {
+                        // Call __p__iob() to get the array address
+                        if (msvcrtModule.TryInvokeUnsafe("__P__IOB", _cpu!, _vm, out var address))
+                        {
+                            _logger.LogDebug("[Loader] Got _iob address: 0x{Address:X8}", address);
+                            return address;
+                        }
+                        break;
+                    }
+                    case "__MB_CUR_MAX":
+                    {
+                        // Call __p__mb_cur_max() to get the address
+                        if (msvcrtModule.TryInvokeUnsafe("__MB_CUR_MAX", _cpu!, _vm, out var address))
+                        {
+                            _logger.LogDebug("[Loader] Got __mb_cur_max address: 0x{Address:X8}", address);
+                            return address;
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        
+        return 0;
+    }
+
     private void ApplyExecutableWorkarounds()
     {
         if (_image == null || _vm == null || _env == null)
