@@ -1955,5 +1955,30 @@ public static class NativeTypes
 		public uint lpTemplateName;     // Offset 72 - Pointer to template name
 	}
 
+	// lconv structure for locale-specific formatting (used by localeconv)
+	// Simplified version with only the most commonly used fields
+	[StructLayout(LayoutKind.Sequential, Pack = 1)]
+	public struct Lconv
+	{
+		public uint decimal_point;      // Offset 0 - "." for decimal point
+		public uint thousands_sep;      // Offset 4 - "" for thousands separator
+		public uint grouping;           // Offset 8 - "" for grouping
+		public uint int_curr_symbol;    // Offset 12 - "" for international currency symbol
+		public uint currency_symbol;    // Offset 16 - "" for local currency symbol
+		public uint mon_decimal_point;  // Offset 20 - "" for monetary decimal point
+		public uint mon_thousands_sep;  // Offset 24 - "" for monetary thousands separator
+		public uint mon_grouping;       // Offset 28 - "" for monetary grouping
+		public uint positive_sign;      // Offset 32 - "" for positive sign
+		public uint negative_sign;      // Offset 36 - "" for negative sign
+		public byte int_frac_digits;    // Offset 40 - 127 (CHAR_MAX) for intl fractional digits
+		public byte frac_digits;        // Offset 41 - 127 (CHAR_MAX) for local fractional digits
+		public byte p_cs_precedes;      // Offset 42 - 127 (CHAR_MAX)
+		public byte p_sep_by_space;     // Offset 43 - 127 (CHAR_MAX)
+		public byte n_cs_precedes;      // Offset 44 - 127 (CHAR_MAX)
+		public byte n_sep_by_space;     // Offset 45 - 127 (CHAR_MAX)
+		public byte p_sign_posn;        // Offset 46 - 127 (CHAR_MAX)
+		public byte n_sign_posn;        // Offset 47 - 127 (CHAR_MAX)
+	}
+
 	#endregion
 }

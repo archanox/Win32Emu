@@ -403,6 +403,24 @@ namespace Win32Emu.Win32.Modules
 				case "ATOI":
 					returnValue = (uint)atoi(a.LpcStr(0));
 					return true;
+				case "__MB_CUR_MAX":
+					returnValue = __mb_cur_max();
+					return true;
+				case "_ERRNO":
+					returnValue = _errno();
+					return true;
+				case "FPUTC":
+					returnValue = (uint)fputc(a.Int32(0), a.UInt32(1));
+					return true;
+				case "LOCALECONV":
+					returnValue = localeconv();
+					return true;
+				case "SETLOCALE":
+					returnValue = setlocale(a.Int32(0), a.UInt32(1));
+					return true;
+				case "STRERROR":
+					returnValue = strerror(a.Int32(0));
+					return true;
 				case "FWRITE":
 					returnValue = fwrite(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
@@ -1896,6 +1914,212 @@ namespace Win32Emu.Win32.Modules
 		}
 		
 		return -1; // Error
+	}
+
+	/// <summary>
+	/// __mb_cur_max - Get pointer to maximum multibyte character length
+	/// Returns a pointer to an integer containing the maximum number of bytes
+	/// in a multibyte character for the current locale
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint __mb_cur_max()
+	{
+		_logger.LogInformation("[msvcrt] __mb_cur_max()");
+		
+		// Allocate and cache pointer for __mb_cur_max value
+		// For C locale and most Western locales, this is 1
+		// For multibyte locales like UTF-8 or Shift-JIS, this would be higher
+		if (_mbCurMaxPtr == 0)
+		{
+			_mbCurMaxPtr = _env.HeapAlloc(0, 4);
+			// Set to 1 for default C locale (single-byte characters)
+			_env.Memory.Write32(_mbCurMaxPtr, 1);
+		}
+		
+		return _mbCurMaxPtr;
+	}
+	
+	// Cached pointer for __mb_cur_max
+	private uint _mbCurMaxPtr = 0;
+	
+	/// <summary>
+	/// _errno - Get pointer to thread-local errno value
+	/// Returns a pointer to the errno variable for the current thread
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint _errno()
+	{
+		_logger.LogInformation("[msvcrt] _errno()");
+		
+		// Allocate and cache pointer for errno value
+		// In a real implementation, this would be thread-local storage
+		if (_errnoPtr == 0)
+		{
+			_errnoPtr = _env.HeapAlloc(0, 4);
+			// Initialize to 0 (no error)
+			_env.Memory.Write32(_errnoPtr, 0);
+		}
+		
+		return _errnoPtr;
+	}
+	
+	// Cached pointer for errno
+	private uint _errnoPtr = 0;
+	
+	/// <summary>
+	/// fputc - Write a character to a stream
+	/// Writes the character c to the output stream
+	/// </summary>
+	[DllModuleExport(8)]
+	private int fputc(int c, uint stream)
+	{
+		_logger.LogInformation("[msvcrt] fputc(c={C} (0x{C:X2}), stream=0x{Stream:X8})", (char)c, c, stream);
+		
+		// Check if stream is stdout or stderr
+		if (_iobArrayPtr != 0)
+		{
+			var stdoutPtr = _iobArrayPtr + 32;
+			var stderrPtr = _iobArrayPtr + 64;
+			
+			if (stream == stdoutPtr)
+			{
+				// Write to stdout
+				_logger.LogDebug("[msvcrt] fputc detected stdout stream, writing to stdout");
+				_env.WriteToStdOutput(((char)c).ToString());
+				return c; // Return the character written
+			}
+			else if (stream == stderrPtr)
+			{
+				// Write to stderr
+				_logger.LogDebug("[msvcrt] fputc detected stderr stream, writing to stderr");
+				_env.WriteToStdOutput(((char)c).ToString());
+				return c; // Return the character written
+			}
+		}
+		
+		// For other streams, mark as needing flush if tracked
+		if (_fileStreams.TryGetValue(stream, out var fileInfo))
+		{
+			fileInfo.NeedsFlush = true;
+		}
+		
+		// Return the character written
+		return c;
+	}
+	
+	/// <summary>
+	/// localeconv - Get locale-specific formatting information
+	/// Returns a pointer to a structure containing locale-specific formatting information
+	/// </summary>
+	[DllModuleExport(0)]
+	private uint localeconv()
+	{
+		_logger.LogInformation("[msvcrt] localeconv()");
+		
+		// Allocate and cache pointer for lconv structure
+		if (_lconvPtr == 0)
+		{
+			var lconvSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeTypes.Lconv>();
+			_lconvPtr = _env.HeapAlloc(0, lconvSize);
+			
+			// Initialize lconv structure with default C locale values
+			var decimalPoint = _env.WriteAnsiString(".\0");
+			var emptyString = _env.WriteAnsiString("\0");
+			
+			// Write structure fields
+			_env.Memory.Write32(_lconvPtr + 0, decimalPoint);  // decimal_point = "."
+			_env.Memory.Write32(_lconvPtr + 4, emptyString);   // thousands_sep = ""
+			_env.Memory.Write32(_lconvPtr + 8, emptyString);   // grouping = ""
+			_env.Memory.Write32(_lconvPtr + 12, emptyString);  // int_curr_symbol = ""
+			_env.Memory.Write32(_lconvPtr + 16, emptyString);  // currency_symbol = ""
+			_env.Memory.Write32(_lconvPtr + 20, emptyString);  // mon_decimal_point = ""
+			_env.Memory.Write32(_lconvPtr + 24, emptyString);  // mon_thousands_sep = ""
+			_env.Memory.Write32(_lconvPtr + 28, emptyString);  // mon_grouping = ""
+			_env.Memory.Write32(_lconvPtr + 32, emptyString);  // positive_sign = ""
+			_env.Memory.Write32(_lconvPtr + 36, emptyString);  // negative_sign = ""
+			_env.MemWrite8(_lconvPtr + 40, 127);               // int_frac_digits = CHAR_MAX
+			_env.MemWrite8(_lconvPtr + 41, 127);               // frac_digits = CHAR_MAX
+			_env.MemWrite8(_lconvPtr + 42, 127);               // p_cs_precedes = CHAR_MAX
+			_env.MemWrite8(_lconvPtr + 43, 127);               // p_sep_by_space = CHAR_MAX
+			_env.MemWrite8(_lconvPtr + 44, 127);               // n_cs_precedes = CHAR_MAX
+			_env.MemWrite8(_lconvPtr + 45, 127);               // n_sep_by_space = CHAR_MAX
+			_env.MemWrite8(_lconvPtr + 46, 127);               // p_sign_posn = CHAR_MAX
+			_env.MemWrite8(_lconvPtr + 47, 127);               // n_sign_posn = CHAR_MAX
+		}
+		
+		return _lconvPtr;
+	}
+	
+	// Cached pointer for lconv structure
+	private uint _lconvPtr = 0;
+	
+	/// <summary>
+	/// setlocale - Set or query the program's locale
+	/// Sets locale information and returns the new locale string
+	/// </summary>
+	[DllModuleExport(8)]
+	private uint setlocale(int category, uint locale)
+	{
+		var localeStr = locale != 0 ? _env.ReadAnsiString(locale) : null;
+		_logger.LogInformation("[msvcrt] setlocale(category={Category}, locale=\"{Locale}\")", category, localeStr ?? "NULL");
+		
+		// If locale is NULL, return current locale
+		if (locale == 0)
+		{
+			// Return cached current locale string
+			if (_currentLocalePtr == 0)
+			{
+				_currentLocalePtr = _env.WriteAnsiString("C\0");
+			}
+			return _currentLocalePtr;
+		}
+		
+		// Set the locale
+		// For simplicity, we only support "C" and "" (empty string for C locale)
+		if (localeStr == "C" || localeStr == "" || localeStr == "POSIX")
+		{
+			// Return "C" locale
+			if (_currentLocalePtr == 0)
+			{
+				_currentLocalePtr = _env.WriteAnsiString("C\0");
+			}
+			return _currentLocalePtr;
+		}
+		
+		// Unsupported locale, return NULL
+		_logger.LogWarning("[msvcrt] setlocale: Unsupported locale \"{Locale}\", returning NULL", localeStr);
+		return 0;
+	}
+	
+	// Cached pointer for current locale string
+	private uint _currentLocalePtr = 0;
+	
+	/// <summary>
+	/// strerror - Get error message string for error number
+	/// Returns a pointer to a string describing the error number
+	/// </summary>
+	[DllModuleExport(4)]
+	private uint strerror(int errnum)
+	{
+		_logger.LogInformation("[msvcrt] strerror(errnum={Errnum})", errnum);
+		
+		// Map common errno values to error messages
+		// This is a simplified implementation with the most common errors
+		var errorMessage = errnum switch
+		{
+			0 => "No error",
+			2 => "No such file or directory", // ENOENT
+			13 => "Permission denied", // EACCES
+			EINVAL => "Invalid argument", // EINVAL (22)
+			28 => "No space left on device", // ENOSPC
+			_ => $"Error {errnum}"
+		};
+		
+		// Allocate memory for error string and cache it
+		// In a real implementation, this would use a static buffer per thread
+		var errorPtr = _env.WriteAnsiString(errorMessage + "\0");
+		
+		return errorPtr;
 	}
 
 	/// <summary>
