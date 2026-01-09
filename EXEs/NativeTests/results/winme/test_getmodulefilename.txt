@@ -1,0 +1,33 @@
+Testing GetModuleFileNameA
+==========================
+
+Test 1: GetModuleFileNameA with NULL handle
+  Result: 41
+  Buffer: D:\NATIVETESTS\TEST_GETMODULEFILENAME.EXE
+  LastError: 126
+  Status: PASS
+
+Test 2: GetModuleFileNameA with buffer size 10
+  Result: 9
+  Buffer: D:\NATIVE
+  LastError: 126 (should be 122 for ERROR_INSUFFICIENT_BUFFER)
+  Status: PASS
+
+Test 3: GetModuleFileNameA for kernel32.dll
+  Kernel32 Handle: 0xbff60000
+  Result: 30
+  Buffer: C:\WINDOWS\SYSTEM\KERNEL32.DLL
+  LastError: 126
+  Status: PASS
+
+Test 4: GetModuleFileNameA with buffer size 0
+  Result: 0 (should be 0)
+  LastError: 126
+  Status: PASS
+
+Test 5: GetModuleFileNameA with invalid handle 0xFFFFFFFF
+  Result: 0 (should be 0)
+  LastError: 87 (should be 87 for ERROR_INVALID_PARAMETER)
+  Status: PASS
+
+All GetModuleFileNameA tests completed.

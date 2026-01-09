@@ -1,0 +1,51 @@
+Testing Environment Variable Functions
+======================================
+
+Test 1: GetEnvironmentVariableA for PATH
+  Result: 29
+  Buffer: C:\WINDOWS;C:\WINDOWS\COMMAND
+  LastError: 126
+  Status: PASS
+
+Test 2: GetEnvironmentVariableA for non-existent variable
+  Result: 0 (should be 0)
+  LastError: 203 (should be 203 for ERROR_ENVVAR_NOT_FOUND)
+  Status: PASS
+
+Test 3: SetEnvironmentVariableA and GetEnvironmentVariableA
+  SetEnvironmentVariableA Result: 1
+  LastError after set: 203
+  GetEnvironmentVariableA Result: 12
+  Buffer: TestValue456
+  LastError after get: 203
+  Status: PASS
+
+Test 4: Update existing environment variable
+  SetEnvironmentVariableA Result: 1
+  GetEnvironmentVariableA Result: 15
+  Buffer: UpdatedValue789
+  Status: PASS
+
+Test 5: Delete environment variable with NULL value
+  SetEnvironmentVariableA(NULL) Result: 1
+  GetEnvironmentVariableA Result: 0 (should be 0)
+  LastError: 203 (should be 203 for ERROR_ENVVAR_NOT_FOUND)
+  Status: PASS
+
+Test 6: GetEnvironmentVariableA with buffer size 5
+  Result: 30 (should be required buffer size)
+  Buffer: 
+  LastError: 203
+  Status: PASS
+
+Test 7: GetEnvironmentVariableA with NULL buffer
+  Result: 30 (required buffer size including null terminator)
+  LastError: 203
+  Status: PASS
+
+Test 8: SetEnvironmentVariableA with empty name
+  Result: 1 (should be 0/FALSE)
+  LastError: 203
+  Status: FAIL
+
+All environment variable tests completed.
