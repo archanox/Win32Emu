@@ -1956,7 +1956,7 @@ public static class NativeTypes
 	}
 
 	// lconv structure for locale-specific formatting (used by localeconv)
-	// Simplified version with only the most commonly used fields
+	// POSIX-compatible version including all standard lconv fields
 	[StructLayout(LayoutKind.Sequential, Pack = 1)]
 	public struct Lconv
 	{

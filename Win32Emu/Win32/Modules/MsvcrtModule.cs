@@ -77,6 +77,13 @@ namespace Win32Emu.Win32.Modules
 		private uint _timezonePtr;
 		private uint _dstbiasPtr;
 		
+		// Cached pointers for locale functions (to avoid memory leak from repeated allocations)
+		private uint _lconvDecimalPointPtr = 0;
+		private uint _lconvEmptyStringPtr = 0;
+		
+		// Cached pointers for strerror (static buffer per POSIX specification)
+		private readonly Dictionary<int, uint> _errorStringCache = new();
+		
 		/// <summary>
 		/// Stream buffering mode
 		/// </summary>
@@ -1924,7 +1931,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(0)]
 	private uint __mb_cur_max()
 	{
-		_logger.LogInformation("[msvcrt] __mb_cur_max()");
+		_logger.LogDebug("[msvcrt] __mb_cur_max()");
 		
 		// Allocate and cache pointer for __mb_cur_max value
 		// For C locale and most Western locales, this is 1
@@ -1949,7 +1956,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(0)]
 	private uint _errno()
 	{
-		_logger.LogInformation("[msvcrt] _errno()");
+		_logger.LogDebug("[msvcrt] _errno()");
 		
 		// Allocate and cache pointer for errno value
 		// In a real implementation, this would be thread-local storage
@@ -1973,7 +1980,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8)]
 	private int fputc(int c, uint stream)
 	{
-		_logger.LogInformation("[msvcrt] fputc(c={C} (0x{C:X2}), stream=0x{Stream:X8})", (char)c, c, stream);
+		_logger.LogDebug("[msvcrt] fputc(c={C} (0x{C:X2}), stream=0x{Stream:X8})", (char)c, c, stream);
 		
 		// Check if stream is stdout or stderr
 		if (_iobArrayPtr != 0)
@@ -2014,7 +2021,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(0)]
 	private uint localeconv()
 	{
-		_logger.LogInformation("[msvcrt] localeconv()");
+		_logger.LogDebug("[msvcrt] localeconv()");
 		
 		// Allocate and cache pointer for lconv structure
 		if (_lconvPtr == 0)
@@ -2022,21 +2029,21 @@ namespace Win32Emu.Win32.Modules
 			var lconvSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<NativeTypes.Lconv>();
 			_lconvPtr = _env.HeapAlloc(0, lconvSize);
 			
-			// Initialize lconv structure with default C locale values
-			var decimalPoint = _env.WriteAnsiString(".\0");
-			var emptyString = _env.WriteAnsiString("\0");
+			// Initialize and cache string pointers for lconv structure with default C locale values
+			_lconvDecimalPointPtr = _env.WriteAnsiString(".\0");
+			_lconvEmptyStringPtr = _env.WriteAnsiString("\0");
 			
 			// Write structure fields
-			_env.Memory.Write32(_lconvPtr + 0, decimalPoint);  // decimal_point = "."
-			_env.Memory.Write32(_lconvPtr + 4, emptyString);   // thousands_sep = ""
-			_env.Memory.Write32(_lconvPtr + 8, emptyString);   // grouping = ""
-			_env.Memory.Write32(_lconvPtr + 12, emptyString);  // int_curr_symbol = ""
-			_env.Memory.Write32(_lconvPtr + 16, emptyString);  // currency_symbol = ""
-			_env.Memory.Write32(_lconvPtr + 20, emptyString);  // mon_decimal_point = ""
-			_env.Memory.Write32(_lconvPtr + 24, emptyString);  // mon_thousands_sep = ""
-			_env.Memory.Write32(_lconvPtr + 28, emptyString);  // mon_grouping = ""
-			_env.Memory.Write32(_lconvPtr + 32, emptyString);  // positive_sign = ""
-			_env.Memory.Write32(_lconvPtr + 36, emptyString);  // negative_sign = ""
+			_env.Memory.Write32(_lconvPtr + 0, _lconvDecimalPointPtr);  // decimal_point = "."
+			_env.Memory.Write32(_lconvPtr + 4, _lconvEmptyStringPtr);   // thousands_sep = ""
+			_env.Memory.Write32(_lconvPtr + 8, _lconvEmptyStringPtr);   // grouping = ""
+			_env.Memory.Write32(_lconvPtr + 12, _lconvEmptyStringPtr);  // int_curr_symbol = ""
+			_env.Memory.Write32(_lconvPtr + 16, _lconvEmptyStringPtr);  // currency_symbol = ""
+			_env.Memory.Write32(_lconvPtr + 20, _lconvEmptyStringPtr);  // mon_decimal_point = ""
+			_env.Memory.Write32(_lconvPtr + 24, _lconvEmptyStringPtr);  // mon_thousands_sep = ""
+			_env.Memory.Write32(_lconvPtr + 28, _lconvEmptyStringPtr);  // mon_grouping = ""
+			_env.Memory.Write32(_lconvPtr + 32, _lconvEmptyStringPtr);  // positive_sign = ""
+			_env.Memory.Write32(_lconvPtr + 36, _lconvEmptyStringPtr);  // negative_sign = ""
 			_env.MemWrite8(_lconvPtr + 40, 127);               // int_frac_digits = CHAR_MAX
 			_env.MemWrite8(_lconvPtr + 41, 127);               // frac_digits = CHAR_MAX
 			_env.MemWrite8(_lconvPtr + 42, 127);               // p_cs_precedes = CHAR_MAX
@@ -2061,7 +2068,7 @@ namespace Win32Emu.Win32.Modules
 	private uint setlocale(int category, uint locale)
 	{
 		var localeStr = locale != 0 ? _env.ReadAnsiString(locale) : null;
-		_logger.LogInformation("[msvcrt] setlocale(category={Category}, locale=\"{Locale}\")", category, localeStr ?? "NULL");
+		_logger.LogDebug("[msvcrt] setlocale(category={Category}, locale=\"{Locale}\")", category, localeStr ?? "NULL");
 		
 		// If locale is NULL, return current locale
 		if (locale == 0)
@@ -2097,11 +2104,18 @@ namespace Win32Emu.Win32.Modules
 	/// <summary>
 	/// strerror - Get error message string for error number
 	/// Returns a pointer to a string describing the error number
+	/// Per POSIX specification, returns pointer to static buffer (cached per error number)
 	/// </summary>
 	[DllModuleExport(4)]
 	private uint strerror(int errnum)
 	{
-		_logger.LogInformation("[msvcrt] strerror(errnum={Errnum})", errnum);
+		_logger.LogDebug("[msvcrt] strerror(errnum={Errnum})", errnum);
+		
+		// Check if we already have this error string cached
+		if (_errorStringCache.TryGetValue(errnum, out var cachedPtr))
+		{
+			return cachedPtr;
+		}
 		
 		// Map common errno values to error messages
 		// This is a simplified implementation with the most common errors
@@ -2115,9 +2129,9 @@ namespace Win32Emu.Win32.Modules
 			_ => $"Error {errnum}"
 		};
 		
-		// Allocate memory for error string and cache it
-		// In a real implementation, this would use a static buffer per thread
+		// Allocate memory for error string and cache it (static buffer per POSIX)
 		var errorPtr = _env.WriteAnsiString(errorMessage + "\0");
+		_errorStringCache[errnum] = errorPtr;
 		
 		return errorPtr;
 	}
