@@ -17,9 +17,9 @@ public sealed class ShlwapiTests : IDisposable
 
 	public ShlwapiTests()
 	{
-		_testEnv = new TestEnvironment();
+		_testEnv = new TestEnvironment(initializeDispatcher: true);
 		_shlwapi = new ShlwapiModule(_testEnv.ProcessEnv, 0x00400000, _testEnv.PeLoader, NullLogger.Instance);
-		_testEnv.Dispatcher.RegisterModule(_shlwapi);
+		_testEnv.Dispatcher!.RegisterModule(_shlwapi);
 	}
 
 	[Fact]
