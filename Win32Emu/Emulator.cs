@@ -1298,6 +1298,14 @@ public sealed class Emulator : IDisposable
         {
             iterationCount++;
             
+            // Debug: Log EIP at start of iteration to track changes
+            if (iterationCount <= 40)
+            {
+                var eipAtLoopStart = _cpu!.GetEip();
+                var espAtLoopStart = _cpu.GetRegister("ESP");
+                _logger.LogInformation("[Emulator] Iteration {Count} START: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAtLoopStart, espAtLoopStart);
+            }
+            
             // Log progress periodically for debugging
             if (iterationCount % PROGRESS_LOG_INTERVAL == 0)
             {
@@ -1711,7 +1719,8 @@ public sealed class Emulator : IDisposable
                 // Use async syscall handler to support async Win32 API implementations
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
-                _logger.LogInformation("[Emulator] Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}", _cpu.GetEip());
+                var espAfterSyscall = _cpu.GetRegister("ESP");
+                _logger.LogInformation("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, _cpu.GetEip(), espAfterSyscall);
                 continue; // Continue to next iteration, let CPU execute RET
             }
 

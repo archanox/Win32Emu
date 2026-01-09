@@ -957,6 +957,12 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			_logger.LogInformation("[msvcrt] _initterm: Executed {Success}/{Total} initializers successfully", successCount, initializerCount);
+			
+			// Debug: Check CPU state after _initterm completes
+			var eipAfterInitterm = _cpu?.GetEip() ?? 0;
+			var espAfterInitterm = _cpu?.GetRegister("ESP") ?? 0;
+			_logger.LogInformation("[msvcrt] _initterm: Returning to dispatcher. CPU state: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+				eipAfterInitterm, espAfterInitterm);
 		}
 
 		[DllModuleExport(8)]
@@ -3775,19 +3781,30 @@ namespace Win32Emu.Win32.Modules
 		var savedEip = _cpu.GetEip();
 		var savedEsp = _cpu.GetRegister("ESP");
 		var savedEbp = _cpu.GetRegister("EBP");
+		
+		_logger.LogInformation("[msvcrt] {LogContext}: ExecuteCallback - Saved CPU state: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}", 
+			logContext, savedEip, savedEsp, savedEbp);
 
 		try
 		{
 			// Set up stack for cdecl/stdcall convention
+			// IMPORTANT: We need to reserve space on the stack for the callback return marker
+			// without overwriting existing data. When this callback is invoked from within a syscall handler
+			// (like _initterm called from HandleSyscallAsync), the stack may have been adjusted and
+			// ESP-4 might contain important data (like the syscall dispatcher return address).
+			// So we decrement ESP by 8: 4 bytes for the marker, 4 bytes as safety buffer.
 			var esp = savedEsp;
 
-			// Push return address
-			esp -= 4;
+			// Push return address marker (leave 4-byte safety gap)
+			esp -= 8;
 			_env.Memory.Write32(esp, CALLBACK_RETURN_ADDRESS);
 
 			// Update CPU registers
 			_cpu.SetRegister("ESP", esp);
 			_cpu.SetEip(funcPtr);
+			
+			_logger.LogInformation("[msvcrt] {LogContext}: ExecuteCallback - Set up callback: EIP=0x{FuncPtr:X8}, ESP=0x{Esp:X8}, pushed return marker at 0x{MarkerAddr:X8}", 
+				logContext, funcPtr, esp, esp);
 
 			// Execute callback - keep running until we hit the return address
 			var steps = 0;
@@ -3859,9 +3876,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			// Always restore CPU state to return control to the API function caller
 			// This ensures the Win32 API function's execution context is preserved
+			_logger.LogInformation("[msvcrt] {LogContext}: ExecuteCallback finally - Restoring CPU state: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}", 
+				logContext, savedEip, savedEsp, savedEbp);
 			_cpu.SetEip(savedEip);
 			_cpu.SetRegister("ESP", savedEsp);
 			_cpu.SetRegister("EBP", savedEbp);
+			_logger.LogInformation("[msvcrt] {LogContext}: ExecuteCallback finally - Restored. Current EIP=0x{CurrentEip:X8}, ESP=0x{CurrentEsp:X8}", 
+				logContext, _cpu.GetEip(), _cpu.GetRegister("ESP"));
 		}
 	}
 }
