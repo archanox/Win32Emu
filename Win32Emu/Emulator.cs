@@ -1298,12 +1298,12 @@ public sealed class Emulator : IDisposable
         {
             iterationCount++;
             
-            // Debug: Log EIP at start of iteration to track changes
-            if (iterationCount <= 40)
+            // Debug: Log EIP at start of iteration to track changes (trace-only to avoid hot-path overhead)
+            if (iterationCount <= 40 && _logger.IsEnabled(LogLevel.Trace))
             {
                 var eipAtLoopStart = _cpu!.GetEip();
                 var espAtLoopStart = _cpu.GetRegister("ESP");
-                _logger.LogInformation("[Emulator] Iteration {Count} START: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAtLoopStart, espAtLoopStart);
+                _logger.LogTrace("[Emulator] Iteration {Count} START: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAtLoopStart, espAtLoopStart);
             }
             
             // Log progress periodically for debugging
@@ -1573,7 +1573,13 @@ public sealed class Emulator : IDisposable
                     var retAddr = _vm!.Read32(esp);
                     _logger.LogError("[Emulator] Top of stack [ESP]=0x{RetAddr:X8}", retAddr);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    _logger.LogError(
+                        ex,
+                        "[Emulator] Failed to read top of stack at ESP=0x{Esp:X8} while diagnosing callback marker execution.",
+                        esp);
+                }
                 
                 throw new InvalidOperationException($"EIP=0x{eipBeforeStep:X8} is in callback marker range. Callback return handling failed.");
             }
@@ -1720,7 +1726,7 @@ public sealed class Emulator : IDisposable
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
                 var espAfterSyscall = _cpu.GetRegister("ESP");
-                _logger.LogInformation("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, _cpu.GetEip(), espAfterSyscall);
+                _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, _cpu.GetEip(), espAfterSyscall);
                 continue; // Continue to next iteration, let CPU execute RET
             }
 
@@ -2483,7 +2489,7 @@ public sealed class Emulator : IDisposable
         // We need to advance it so execution continues at the RET instruction after the INT
         var eipAtInt = _cpu!.GetEip();
         _cpu.SetEip(eipAtInt + 2); // INT 0x80 is 2 bytes
-        _logger.LogInformation("[Syscall] Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", eipAtInt, _cpu.GetEip());
+        _logger.LogDebug("[Syscall] Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", eipAtInt, _cpu.GetEip());
         
         // The stack looks like:
         // [ESP+0] = return address to import stub (points to RET instruction after CALL)

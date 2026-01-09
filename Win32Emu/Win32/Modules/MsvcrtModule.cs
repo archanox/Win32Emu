@@ -3473,7 +3473,7 @@ namespace Win32Emu.Win32.Modules
 			// We need to advance it so execution continues at the RET instruction after the INT
 			var eipAtInt = cpu.GetEip();
 			cpu.SetEip(eipAtInt + 2); // INT 0x80 is 2 bytes
-			_logger.LogInformation("[msvcrt] {Context}: Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
+			_logger.LogDebug("[msvcrt] {Context}: Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
 				logContext, eipAtInt, cpu.GetEip());
 			
 			// Read the import stub info from the stack (same as HandleSyscallAsync in Emulator.cs)
@@ -3792,10 +3792,21 @@ namespace Win32Emu.Win32.Modules
 			// without overwriting existing data. When this callback is invoked from within a syscall handler
 			// (like _initterm called from HandleSyscallAsync), the stack may have been adjusted and
 			// ESP-4 might contain important data (like the syscall dispatcher return address).
-			// So we decrement ESP by 8: 4 bytes for the marker, 4 bytes as safety buffer.
+			// 
+			// Stack layout issue:
+			// - HandleSyscallAsync adjusts ESP by +4 for argument reading
+			// - This means ESP-4 points to the syscall dispatcher's return address
+			// - If we write the callback marker at ESP-4, we'd overwrite that critical address
+			// 
+			// Solution: Decrement ESP by 8 instead of 4:
+			// - 4 bytes for the callback return marker
+			// - 4 bytes as a safety buffer to avoid overwriting the return address
+			// 
+			// The 4-byte gap between savedEsp-4 and the marker at savedEsp-8 remains unused,
+			// but this is intentional to prevent stack corruption during nested syscalls.
 			var esp = savedEsp;
 
-			// Push return address marker (leave 4-byte safety gap)
+			// Push return address marker (with 4-byte safety gap above it)
 			esp -= 8;
 			_env.Memory.Write32(esp, CALLBACK_RETURN_ADDRESS);
 
@@ -3803,8 +3814,8 @@ namespace Win32Emu.Win32.Modules
 			_cpu.SetRegister("ESP", esp);
 			_cpu.SetEip(funcPtr);
 			
-			_logger.LogInformation("[msvcrt] {LogContext}: ExecuteCallback - Set up callback: EIP=0x{FuncPtr:X8}, ESP=0x{Esp:X8}, pushed return marker at 0x{MarkerAddr:X8}", 
-				logContext, funcPtr, esp, esp);
+			_logger.LogInformation("[msvcrt] {LogContext}: ExecuteCallback - Set up callback: EIP=0x{FuncPtr:X8}, ESP=0x{Esp:X8}, marker at ESP", 
+				logContext, funcPtr, esp);
 
 			// Execute callback - keep running until we hit the return address
 			var steps = 0;

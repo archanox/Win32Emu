@@ -737,7 +737,7 @@ public class JitCpu : IAsyncCpu
 				{
 					// INT 0x80 - Syscall dispatcher
 					isSyscall = true;
-					_logger.LogInformation("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
+					_logger.LogDebug("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
 					// Reset EIP to the instruction address (line 682 already advanced it past the INT)
 					// The syscall handler needs EIP to point AT the INT instruction, not past it
 					_eip = oldEip;
