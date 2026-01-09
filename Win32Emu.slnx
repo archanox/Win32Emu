@@ -52,6 +52,14 @@
     <File Path="logs/BasicDD.log" />
     <File Path="logs/IGN_TEAS.log" />
   </Folder>
+  <Folder Name="/Solution Items/NativeTests/">
+    <File Path="NativeTests\README.md" />
+    <File Path="NativeTests\Makefile" />
+    <File Path="NativeTests\test_getmodulefilename.c" />
+    <File Path="NativeTests\test_getmodulefilename.vcxproj" />
+    <File Path="NativeTests\test_environment.c" />
+    <File Path="NativeTests\test_environment.vcxproj" />
+  </Folder>
   <Project Path="Win32Emu.CallingConvention\Win32Emu.CallingConvention.csproj">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
