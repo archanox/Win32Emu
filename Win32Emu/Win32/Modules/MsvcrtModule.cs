@@ -3455,10 +3455,21 @@ namespace Win32Emu.Win32.Modules
 		stepDesc = null;
 		shouldBreak = false;
 
+		_logger.LogDebug("[msvcrt] {Context}: HandleNestedSyscalls called - step.IsSyscall={IsSyscall}, _image={HasImage}, _dispatcher={HasDispatcher}",
+			logContext, step.IsSyscall, _image != null, _dispatcher != null);
+
 		// Check for INT 0x80 syscalls (import stubs trigger INT 0x80)
 		// This is the most common case for nested syscalls in callbacks
 		if (step.IsSyscall && _image != null && _dispatcher != null)
 		{
+			// Advance EIP past the INT 0x80 instruction (2 bytes: CD 80)
+			// The JitCpu INT handler resets EIP to point AT the INT instruction for us to handle
+			// We need to advance it so execution continues at the RET instruction after the INT
+			var eipAtInt = cpu.GetEip();
+			cpu.SetEip(eipAtInt + 2); // INT 0x80 is 2 bytes
+			_logger.LogInformation("[msvcrt] {Context}: Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
+				logContext, eipAtInt, cpu.GetEip());
+			
 			// Read the import stub info from the stack (same as HandleSyscallAsync in Emulator.cs)
 			// Stack layout:
 			// [ESP+0] = return address to import stub (points to RET after CALL to syscall dispatcher)

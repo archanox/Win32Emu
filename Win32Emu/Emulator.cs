@@ -1690,6 +1690,7 @@ public sealed class Emulator : IDisposable
                 // Use async syscall handler to support async Win32 API implementations
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
+                _logger.LogInformation("[Emulator] Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}", _cpu.GetEip());
                 continue; // Continue to next iteration, let CPU execute RET
             }
 
@@ -2447,6 +2448,13 @@ public sealed class Emulator : IDisposable
     /// </summary>
     private async Task<bool> HandleSyscallAsync(CancellationToken cancellationToken = default)
     {
+        // Advance EIP past the INT 0x80 instruction (2 bytes: CD 80)
+        // The JitCpu INT handler resets EIP to point AT the INT instruction for us to handle
+        // We need to advance it so execution continues at the RET instruction after the INT
+        var eipAtInt = _cpu!.GetEip();
+        _cpu.SetEip(eipAtInt + 2); // INT 0x80 is 2 bytes
+        _logger.LogInformation("[Syscall] Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", eipAtInt, _cpu.GetEip());
+        
         // The stack looks like:
         // [ESP+0] = return address to import stub (points to RET instruction after CALL)
         // [ESP+4+] = function arguments (pushed by original caller)
@@ -2683,6 +2691,13 @@ public sealed class Emulator : IDisposable
     /// </summary>
     private async Task HandleDosInterruptAsync(CancellationToken cancellationToken = default)
     {
+        // Advance EIP past the INT 0x21 instruction (2 bytes: CD 21)
+        // The JitCpu INT handler resets EIP to point AT the INT instruction for us to handle
+        // We need to advance it so execution continues after the INT
+        var eipAtInt = _cpu!.GetEip();
+        _cpu.SetEip(eipAtInt + 2); // INT 0x21 is 2 bytes
+        _logger.LogDebug("[DOS INT 21h] Advanced EIP past INT 0x21: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", eipAtInt, _cpu.GetEip());
+        
         // DOS services are accessed via INT 21h with function number in AH
         var ah = (_cpu!.GetRegister("EAX") >> 8) & 0xFF;
         var al = _cpu.GetRegister("EAX") & 0xFF;
