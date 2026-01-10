@@ -2638,11 +2638,21 @@ public sealed class Emulator : IDisposable
                         _ => true
                     };
                     
-                    if (requiresCalleeCleanup && argBytes <= 0xFFFF)
+                    if (requiresCalleeCleanup)
                     {
                         // Stdcall-style functions: patch RET imm16 to clean up stack
                         // Note: Even functions with 0 arguments need consistent RET instruction
-                        if (opcode == 0xC2)
+                        
+                        if (argBytes > 0xFFFF)
+                        {
+                            // RET imm16 can only handle up to 65535 bytes (0xFFFF)
+                            // This is an extremely rare edge case (64KB+ of arguments)
+                            _logger.LogError("[Syscall] {Dll}!{Name} has argBytes={ArgBytes} which exceeds RET imm16 maximum (65535). " +
+                                "Cannot patch import stub for stack cleanup. This will likely cause stack corruption.",
+                                dll, name, argBytes);
+                            _patchedImportStubs.Add(importStubAddr);
+                        }
+                        else if (opcode == 0xC2)
                         {
                             _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
                             _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
@@ -2662,7 +2672,7 @@ public sealed class Emulator : IDisposable
                             _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) or RET (0xC3) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
                         }
                     }
-                    else if (!requiresCalleeCleanup)
+                    else
                     {
                         // Cdecl functions: ensure RET has no cleanup (caller will clean up)
                         if (opcode == 0xC2)
