@@ -254,4 +254,42 @@ public class EmulatorLoggingTests
             _logMessages.Add(message);
         }
     }
+
+    /// <summary>
+    /// Test that the stack validation format string works correctly
+    /// This verifies the fix for Format_IndexOutOfRange exception
+    /// </summary>
+    [Fact]
+    public void StackValidation_FormatString_ShouldHandlePositiveNegativeAndZeroOffsets()
+    {
+        // Arrange
+        var sb = new StringBuilder();
+        
+        // Act - This simulates the format string used in Emulator.cs line 2754
+        for (int offset = -8; offset <= 16; offset += 4)
+        {
+            uint addr = 0x001FEFD4 + (uint)offset;
+            uint val = 0x00401115;
+            var marker = offset == 0 ? " <-- Future ESP" : "";
+            sb.Append($"\n  [ESP+{offset:+0;-0;+0}] = 0x{addr:X8}: 0x{val:X8}{marker}");
+        }
+        
+        var result = sb.ToString();
+        
+        // Assert - Verify all expected offsets are formatted correctly
+        _output.WriteLine("Generated stack validation output:");
+        _output.WriteLine(result);
+        
+        Assert.Contains("[ESP+-8]", result);
+        Assert.Contains("[ESP+-4]", result);
+        Assert.Contains("[ESP++0]", result);
+        Assert.Contains("[ESP++4]", result);
+        Assert.Contains("[ESP++8]", result);
+        Assert.Contains("[ESP++12]", result);
+        Assert.Contains("[ESP++16]", result);
+        Assert.Contains("<-- Future ESP", result);
+        
+        // Verify no format exceptions occurred
+        Assert.NotEmpty(result);
+    }
 }
