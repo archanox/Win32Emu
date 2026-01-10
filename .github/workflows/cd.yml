@@ -25,21 +25,21 @@ jobs:
     - name: Restore dependencies
       run: dotnet restore
       
-    - name: Build Debug
-      run: dotnet build --configuration Debug --no-restore
+    - name: Build Release
+      run: dotnet build --configuration Release --no-restore
       
-    - name: Publish Linux x64 (Debug)
-      run: dotnet publish Win32Emu.Gui/Win32Emu.Gui.csproj -c Debug -r linux-x64 --self-contained -o publish/linux-x64
+    - name: Publish Linux x64
+      run: dotnet publish Win32Emu/Win32Emu.csproj -c Release -r linux-x64 --self-contained -o publish/linux-x64
       
-    - name: Publish Windows x64 (Debug)
-      run: dotnet publish Win32Emu.Gui/Win32Emu.Gui.csproj -c Debug -r win-x64 --self-contained -o publish/win-x64
+    - name: Publish Windows x64
+      run: dotnet publish Win32Emu/Win32Emu.csproj -c Release -r win-x64 --self-contained -o publish/win-x64
       
     - name: Create release archives
       run: |
         cd publish
-        tar -czf ../Win32Emu-linux-x64-debug.tar.gz linux-x64/
+        tar -czf ../Win32Emu-linux-x64.tar.gz linux-x64/
         cd win-x64
-        zip -r ../../Win32Emu-win-x64-debug.zip .
+        zip -r ../../Win32Emu-win-x64.zip .
         cd ../..
         
     - name: Extract release notes
@@ -66,7 +66,7 @@ jobs:
         draft: false
         prerelease: ${{ contains(steps.extract-notes.outputs.tag_name, 'alpha') || contains(steps.extract-notes.outputs.tag_name, 'beta') || contains(steps.extract-notes.outputs.tag_name, 'rc') }}
         files: |
-          Win32Emu-linux-x64-debug.tar.gz
-          Win32Emu-win-x64-debug.zip
+          Win32Emu-linux-x64.tar.gz
+          Win32Emu-win-x64.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
