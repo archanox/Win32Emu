@@ -2552,7 +2552,7 @@ public sealed class Emulator : IDisposable
             _cpu.SetRegister("ESP", esp + 4);
             
             // Use async dispatcher to support async Win32 API implementations (required for WASM)
-            var (success, ret, argBytes, _) = await _dispatcher!.TryInvokeAsync(dll, name, _cpu, _vm!, cancellationToken).ConfigureAwait(false);
+            var (success, ret, argBytes, callingConvention) = await _dispatcher!.TryInvokeAsync(dll, name, _cpu, _vm!, cancellationToken).ConfigureAwait(false);
             if (success)
             {
                 // DEBUG: Log stack contents after API call
@@ -2607,26 +2607,66 @@ public sealed class Emulator : IDisposable
                 // Uses logging level check instead of debug mode to allow selective enablement
                 CpuHelpers.ValidateRegisterState(_cpu, saved, _vm!.Size, _logger, $"Syscall {dll}!{name}", LogLevel.Debug);
                 
-                _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, CPU will execute RET naturally", ret, argBytes);
+                _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, calling convention={Convention}, CPU will execute RET naturally", 
+                    ret, argBytes, callingConvention?.ToString() ?? "unknown");
                 
-                // Patch the import stub's RET instruction with the correct argBytes value for stdcall cleanup
-                // The stub RET instruction is at importStubAddr + 5 (after the 5-byte CALL instruction)
-                // Format: RET imm16 = 0xC2 <low_byte> <high_byte>
+                // Patch the import stub's RET instruction based on calling convention
+                // For stdcall/fastcall/thiscall/pascal: Use RET imm16 to clean up stack (callee cleanup)
+                // For cdecl: Use RET (0xC3) with no cleanup (caller cleanup)
                 // Only patch if not already patched to avoid redundant memory writes
-                if (argBytes <= 0xFFFF && !_patchedImportStubs.Contains(importStubAddr))
+                if (!_patchedImportStubs.Contains(importStubAddr))
                 {
                     var retInstrAddr = importStubAddr + 5;
                     var opcode = _vm!.Read8(retInstrAddr);
-                    if (opcode == 0xC2)
+                    
+                    // Determine if this calling convention requires callee stack cleanup
+                    var requiresCalleeCleanup = callingConvention switch
                     {
-                        _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
-                        _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
-                        _patchedImportStubs.Add(importStubAddr);
-                        _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes}", retInstrAddr, argBytes);
+                        Loader.CallingConvention.Stdcall => true,
+                        Loader.CallingConvention.Fastcall => true,
+                        Loader.CallingConvention.Thiscall => true,
+                        Loader.CallingConvention.Pascal => true,
+                        Loader.CallingConvention.Cdecl => false,
+                        null => true, // Default to stdcall for unknown conventions (preserves existing behavior)
+                        _ => true
+                    };
+                    
+                    if (requiresCalleeCleanup && argBytes > 0 && argBytes <= 0xFFFF)
+                    {
+                        // Stdcall-style functions: patch RET imm16 to clean up stack
+                        if (opcode == 0xC2)
+                        {
+                            _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
+                            _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
+                            _patchedImportStubs.Add(importStubAddr);
+                            _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes} for {Convention} calling convention", 
+                                retInstrAddr, argBytes, callingConvention?.ToString() ?? "unknown");
+                        }
+                        else
+                        {
+                            _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                        }
                     }
-                    else
+                    else if (!requiresCalleeCleanup)
                     {
-                        _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                        // Cdecl functions: ensure RET has no cleanup (caller will clean up)
+                        if (opcode == 0xC2)
+                        {
+                            // Change RET imm16 (0xC2) to RET (0xC3) for cdecl
+                            _vm!.Write8(retInstrAddr, 0xC3);
+                            _patchedImportStubs.Add(importStubAddr);
+                            _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} to RET (0xC3) for cdecl calling convention (caller cleanup)", retInstrAddr);
+                        }
+                        else if (opcode == 0xC3)
+                        {
+                            // Already a plain RET, mark as patched
+                            _patchedImportStubs.Add(importStubAddr);
+                            _logger.LogDebug("[Syscall] RET at 0x{RetAddr:X8} already plain RET (0xC3) for cdecl calling convention", retInstrAddr);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("[Syscall] Expected RET (0xC3) or RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                        }
                     }
                 }
                 
