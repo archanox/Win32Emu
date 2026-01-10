@@ -100,23 +100,28 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 						foreach (var attr in exportAttrs)
 						{
 							string? exportName = null;
+							int callingConvention = 0; // Default (0 = DllCallingConvention.Default)
 							foreach (var named in attr.NamedArguments)
 							{
 								if (named.Key == "ExportName" && named.Value.Value != null)
 								{
 									exportName = (string)named.Value.Value;
-									break;
+								}
+								else if (named.Key == "CallingConvention" && named.Value.Value != null)
+								{
+									// Extract the integer value of the enum
+									callingConvention = (int)named.Value.Value;
 								}
 							}
 							
 							// Use ExportName if specified, otherwise use the C# method name
-							entries.Add(new ExportEntry(dllName, exportName ?? sym.Name, argBytes));
+							entries.Add(new ExportEntry(dllName, exportName ?? sym.Name, argBytes, callingConvention));
 						}
 						
 						// If no attributes found (shouldn't happen), return the method name as fallback
 						if (entries.Count == 0)
 						{
-							entries.Add(new ExportEntry(dllName, sym.Name, argBytes));
+							entries.Add(new ExportEntry(dllName, sym.Name, argBytes, 0)); // Default calling convention
 						}
 						
 						return entries;
@@ -193,6 +198,34 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 			sb.AppendLine(
 				"""
 				                default: argBytes = 0; return false;
+				            }
+				        }
+
+				        public static bool TryGetMetadata(string dll, string export, out int argBytes, out int callingConvention)
+				        {
+				            // Resolve ordinal-based export names (e.g., "ORDINAL_4") to actual method names
+				            export = DllModuleExportInfo.ResolveOrdinalExport(dll, export);
+				            
+				            switch ((dll.ToUpperInvariant(), export.ToUpperInvariant()))
+				            {
+				""");
+
+			foreach (var dllGroup in byDll)
+			{
+				var distinct = dllGroup
+					.GroupBy(e => e.MethodName)
+					.Select(g => g.First())
+					.OrderBy(e => e.MethodName);
+
+				foreach (var e in distinct)
+				{
+					sb.AppendLine($"                case (\"{e.DllName}\", \"{e.MethodName.ToUpperInvariant()}\"): argBytes = {e.ArgBytes}; callingConvention = {e.CallingConvention}; return true;");
+				}
+			}
+
+			sb.AppendLine(
+				"""
+				                default: argBytes = 0; callingConvention = 0; return false;
 				            }
 				        }
 				    }
@@ -648,11 +681,12 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		};
 	}
 
-	private readonly struct ExportEntry(string dllName, string methodName, int argBytes)
+	private readonly struct ExportEntry(string dllName, string methodName, int argBytes, int callingConvention)
 	{
 		public string DllName { get; } = dllName;
 		public string MethodName { get; } = methodName;
 		public int ArgBytes { get; } = argBytes;
+		public int CallingConvention { get; } = callingConvention;
 	}
 
 	private readonly struct ExportAttributeInfo(uint ordinal, uint? entryPoint, string? version, string? forwardedTo, bool isStub, string? exportName)

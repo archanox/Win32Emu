@@ -90,12 +90,22 @@ public class Win32Dispatcher(ILogger logger)
 				// but keeping it here ensures all callers get consistent behavior.
 				cpu.SetRegister("EAX", retUnsafe);
 
-				// Try to get arg bytes from metadata (use resolved export name)
-				if (StdCallMeta.TryGetArgBytes(dll, export, out stdcallArgBytes))
+				// Try to get arg bytes and calling convention from metadata (use resolved export name)
+				if (StdCallMeta.TryGetMetadata(dll, export, out stdcallArgBytes, out var dllCallingConvention))
 				{
-					// For Win32 API modules, always use stdcall convention
-					callingConvention = Loader.CallingConvention.Stdcall;
-					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}", dll, originalExport, returnValue, stdcallArgBytes);
+					// Convert DllCallingConvention (from attribute) to Loader.CallingConvention
+					callingConvention = dllCallingConvention switch
+					{
+						1 => Loader.CallingConvention.Stdcall,  // DllCallingConvention.Stdcall
+						2 => Loader.CallingConvention.Cdecl,    // DllCallingConvention.Cdecl
+						3 => Loader.CallingConvention.Fastcall, // DllCallingConvention.Fastcall
+						4 => Loader.CallingConvention.Thiscall, // DllCallingConvention.Thiscall
+						5 => Loader.CallingConvention.Pascal,   // DllCallingConvention.Pascal
+						_ => Loader.CallingConvention.Stdcall   // Default/unknown -> stdcall
+					};
+					
+					logger.LogInformation("[Dispatcher] {Dll}!{Export} returned 0x{ReturnValue:X8}, argBytes={StdcallArgBytes}, convention={Convention}", 
+						dll, originalExport, returnValue, stdcallArgBytes, callingConvention);
 				}
 				else
 				{
