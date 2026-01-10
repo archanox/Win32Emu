@@ -493,7 +493,18 @@ public sealed class Emulator : IDisposable
             LogDebug($"[Loader]   Section '{section.Name}': RVA=0x{section.VirtualAddress:X8} Size=0x{section.VirtualSize:X8} Flags=[{string.Join(",", flags)}]");
         }
 
-        _env = new ProcessEnvironment(_vm, CalculateHeapBase(_image), _host, _logger, _backendFactory);
+        // Create process environment with error handling
+        _logger.LogDebug("[Loader] Initializing process environment with heap base=0x{HeapBase:X8}", CalculateHeapBase(_image));
+        try
+        {
+            _env = new ProcessEnvironment(_vm, CalculateHeapBase(_image), _host, _logger, _backendFactory);
+            _logger.LogDebug("[Loader] Process environment created successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "[Loader] Failed to create process environment");
+            throw;
+        }
         
         // Initialize virtual file system - prioritize custom VFS, then disk path
         if (customVirtualFileSystem != null)

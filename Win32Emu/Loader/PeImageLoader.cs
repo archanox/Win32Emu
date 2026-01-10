@@ -698,6 +698,7 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	/// <summary>
 	/// Builds export metadata (calling convention, arg bytes) from PE exports.
 	/// Attempts to infer calling convention from export name decoration.
+	/// Uses heuristics to detect C-compiled executables and apply appropriate defaults.
 	/// </summary>
 	private Dictionary<string, ExportMetadata> BuildExportMetadata(PEImage image, ILogger? logger)
 	{
@@ -708,6 +709,44 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			return metadata;
 		}
 
+		// First pass: count decorated vs undecorated exports to detect C-compiled executables
+		var decoratedCount = 0;
+		var undecoratedCount = 0;
+		var undecoratedNames = new List<string>();
+		
+		foreach (var export in image.Exports.Entries)
+		{
+			if (export.IsForwarder || string.IsNullOrEmpty(export.Name))
+			{
+				continue;
+			}
+			
+			if (ExportMetadata.FromDecoratedName(export.Name) != null)
+			{
+				decoratedCount++;
+			}
+			else
+			{
+				undecoratedCount++;
+				undecoratedNames.Add(export.Name);
+			}
+		}
+		
+		// Heuristic: If >80% of exports are undecorated, assume C-compiled executable (use cdecl default)
+		// C-compiled executables like rvvm_i386.exe typically have all undecorated exports
+		// Windows API DLLs typically have decorated exports or mixed decoration
+		var isCCompiled = undecoratedCount > 0 && (double)undecoratedCount / (decoratedCount + undecoratedCount) > 0.8;
+		var defaultMetadata = isCCompiled ? ExportMetadata.CdeclDefault : ExportMetadata.Default;
+		
+		if (isCCompiled)
+		{
+			logger?.LogInformation("[Loader] Detected C-compiled executable (>{Percent}% undecorated exports), using cdecl as default calling convention", 80);
+		}
+		
+		// Second pass: build metadata with appropriate defaults
+		var undecoratedExportsLogged = 0;
+		const int MAX_UNDECORATED_LOGS = 10; // Only log first 10 undecorated exports to avoid log spam
+		
 		foreach (var export in image.Exports.Entries)
 		{
 			// Skip forwarded exports - they don't need metadata
@@ -734,17 +773,28 @@ public class PeImageLoader(VirtualMemory vm, ILogger? logger = null)
 			}
 			else
 			{
-				// No decoration found - use default (stdcall with 0 args)
-				// NOTE: This default may be incorrect. Undecorated exports often use cdecl
-				// (e.g., C runtime functions like malloc, printf). Manual configuration may be needed.
-				// This is expected behavior for C-compiled executables, so we log at Debug level to avoid log spam.
-				metadata[export.Name] = ExportMetadata.Default;
-				logger?.LogDebug("[Loader] Export '{Name}' has no decoration, using default {Convention} with {ArgBytes} bytes. This may be incorrect for cdecl functions.",
-					export.Name, ExportMetadata.Default.Convention, ExportMetadata.Default.StackArgBytes);
+				// No decoration found - use appropriate default based on heuristic
+				metadata[export.Name] = defaultMetadata;
+				
+				// Only log first few undecorated exports to avoid log spam (especially for C-compiled executables)
+				if (undecoratedExportsLogged < MAX_UNDECORATED_LOGS)
+				{
+					logger?.LogDebug("[Loader] Export '{Name}' has no decoration, using default {Convention} with {ArgBytes} bytes",
+						export.Name, defaultMetadata.Convention, defaultMetadata.StackArgBytes);
+					undecoratedExportsLogged++;
+				}
 			}
 		}
+		
+		// Log summary of undecorated exports if we truncated the logs
+		if (undecoratedCount > MAX_UNDECORATED_LOGS)
+		{
+			logger?.LogDebug("[Loader] {Total} total undecorated exports (showing first {Shown}, hiding {Hidden} to avoid log spam)",
+				undecoratedCount, MAX_UNDECORATED_LOGS, undecoratedCount - MAX_UNDECORATED_LOGS);
+		}
 
-		logger?.LogInformation("[Loader] Built metadata for {Count} exports", metadata.Count);
+		logger?.LogInformation("[Loader] Built metadata for {Count} exports ({Decorated} decorated, {Undecorated} undecorated)", 
+			metadata.Count, decoratedCount, undecoratedCount);
 		return metadata;
 	}
 
