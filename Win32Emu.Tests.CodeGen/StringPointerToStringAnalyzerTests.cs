@@ -94,6 +94,48 @@ namespace Test
 	}
 
 	[Fact]
+	public async Task LpStrToString_ShouldProduceDiagnostic()
+	{
+		var testCode = @"
+using Win32Emu.Memory;
+
+namespace Win32Emu.Win32
+{
+	public readonly struct LpStr
+	{
+		public readonly uint Address;
+		public LpStr(uint address) => Address = address;
+		public string Read(VirtualMemory mem) => string.Empty;
+	}
+}
+
+namespace Win32Emu.Memory
+{
+	public class VirtualMemory { }
+}
+
+namespace Test
+{
+	using Win32Emu.Win32;
+	using Win32Emu.Memory;
+
+	public class TestClass
+	{
+		public void TestMethod(LpStr str, VirtualMemory memory)
+		{
+			var s = {|#0:str.ToString()|};
+		}
+	}
+}";
+
+		var expected = DiagnosticResult.CompilerError(StringPointerToStringAnalyzer.DiagnosticId)
+			.WithLocation(0)
+			.WithArguments("LpStr");
+
+		await VerifyAnalyzerAsync(testCode, expected);
+	}
+
+	[Fact]
 	public async Task LpWStrToString_ShouldProduceDiagnostic()
 	{
 		var testCode = @"
