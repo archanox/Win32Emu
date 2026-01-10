@@ -8,7 +8,7 @@ namespace Win32Emu.Generators;
 
 /// <summary>
 /// Roslyn analyzer that detects incorrect usage of ToString() on string pointer types.
-/// String pointer types (LpcStr, LpcWStr, LpWStr) should use the Read() method instead.
+/// String pointer types (LpcStr, LpcWStr, LpStr, LpWStr) should use the Read() method instead.
 /// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public sealed class StringPointerToStringAnalyzer : DiagnosticAnalyzer
@@ -18,7 +18,7 @@ public sealed class StringPointerToStringAnalyzer : DiagnosticAnalyzer
 
 	private static readonly LocalizableString Title = "ToString() should not be used on string pointer types";
 	private static readonly LocalizableString MessageFormat = "Use '{0}.Read(memory)' instead of '{0}.ToString()' to read the string from emulated memory";
-	private static readonly LocalizableString Description = "String pointer types (LpcStr, LpcWStr, LpWStr) wrap memory addresses. Calling ToString() returns the type name instead of the string content. Use the Read() method to properly read strings from emulated memory.";
+	private static readonly LocalizableString Description = "String pointer types (LpcStr, LpcWStr, LpStr, LpWStr) wrap memory addresses. Calling ToString() returns the type name instead of the string content. Use the Read() method to properly read strings from emulated memory.";
 
 	private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
 		DiagnosticId,
@@ -59,7 +59,7 @@ public sealed class StringPointerToStringAnalyzer : DiagnosticAnalyzer
 
 		// Check if the type is one of our string pointer types
 		var typeName = namedType.Name;
-		if (typeName != "LpcStr" && typeName != "LpcWStr" && typeName != "LpWStr")
+		if (typeName != "LpcStr" && typeName != "LpcWStr" && typeName != "LpStr" && typeName != "LpWStr")
 			return;
 
 		// Verify it's in the Win32Emu.Win32 namespace
