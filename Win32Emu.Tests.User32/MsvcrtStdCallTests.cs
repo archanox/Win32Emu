@@ -30,6 +30,22 @@ namespace Win32Emu.Tests.User32
         }
 
         [Theory]
+        [InlineData("MSVCRT.DLL", "malloc", 4, 2)]  // Cdecl = 2
+        [InlineData("MSVCRT.DLL", "calloc", 8, 2)]  // Cdecl = 2
+        [InlineData("MSVCRT.DLL", "free", 4, 2)]     // Cdecl = 2
+        [InlineData("MSVCRT.DLL", "memcpy", 12, 2)]  // Cdecl = 2
+        public void Msvcrt_ShouldHaveCorrectCallingConvention(string dll, string export, int expectedArgBytes, int expectedCallingConvention)
+        {
+            // Act
+            var success = StdCallMeta.TryGetMetadata(dll, export, out var argBytes, out var callingConvention);
+
+            // Assert
+            Assert.True(success, $"Failed to get metadata for {dll}!{export}");
+            Assert.Equal(expectedArgBytes, argBytes);
+            Assert.Equal(expectedCallingConvention, callingConvention);
+        }
+
+        [Theory]
         [InlineData("KERNEL32.DLL", "GetCommandLineW", 0)]
         [InlineData("KERNEL32.DLL", "SetConsoleOutputCP", 4)]
         [InlineData("KERNEL32.DLL", "CreateFileW", 28)]
