@@ -35,7 +35,7 @@ public static class Diagnostics
 			var c = ctx.Value;
 			sb.Append($"; EIP=0x{c.Eip:X8} ESP=0x{c.Esp:X8} EBP=0x{c.Ebp:X8} EAX=0x{c.Eax:X8}");
 		}
-		_logger.LogError(sb.ToString());
+		_logger.LogError("{Message}", sb.ToString());
 		if (ctx is { InstructionBytes: not null })
 		{
 			try
@@ -67,7 +67,7 @@ public static class Diagnostics
 			sb.Append("\nPseudo-handles must be translated to real handles via GetStdHandle() before use.");
 		}
 		
-		_logger.LogError(sb.ToString());
+		_logger.LogError("{Message}", sb.ToString());
 		if (instrBytes != null)
 		{
 			_logger.LogError("Instruction bytes at EIP: {Replace}", BitConverter.ToString(instrBytes).Replace('-', ' '));
