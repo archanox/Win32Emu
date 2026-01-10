@@ -2607,6 +2607,13 @@ public sealed class Emulator : IDisposable
                 // Uses logging level check instead of debug mode to allow selective enablement
                 CpuHelpers.ValidateRegisterState(_cpu, saved, _vm!.Size, _logger, $"Syscall {dll}!{name}", LogLevel.Debug);
                 
+                // Log warning if calling convention is unknown to aid debugging
+                if (callingConvention == null)
+                {
+                    _logger.LogWarning("[Syscall] Calling convention unknown for {Dll}!{Name}, defaulting to stdcall. This may cause stack corruption if function uses cdecl.",
+                        dll, name);
+                }
+                
                 _logger.LogDebug("[Syscall] Returned 0x{Ret:X8}, argBytes={ArgBytes}, calling convention={Convention}, CPU will execute RET naturally", 
                     ret, argBytes, callingConvention?.ToString() ?? "unknown");
                 
@@ -2627,13 +2634,14 @@ public sealed class Emulator : IDisposable
                         Loader.CallingConvention.Thiscall => true,
                         Loader.CallingConvention.Pascal => true,
                         Loader.CallingConvention.Cdecl => false,
-                        null => true, // Default to stdcall for unknown conventions (preserves existing behavior)
+                        null => true, // Default to stdcall for unknown conventions (preserves existing behavior, warning logged above)
                         _ => true
                     };
                     
-                    if (requiresCalleeCleanup && argBytes > 0 && argBytes <= 0xFFFF)
+                    if (requiresCalleeCleanup && argBytes <= 0xFFFF)
                     {
                         // Stdcall-style functions: patch RET imm16 to clean up stack
+                        // Note: Even functions with 0 arguments need consistent RET instruction
                         if (opcode == 0xC2)
                         {
                             _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
@@ -2642,9 +2650,16 @@ public sealed class Emulator : IDisposable
                             _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes} for {Convention} calling convention", 
                                 retInstrAddr, argBytes, callingConvention?.ToString() ?? "unknown");
                         }
+                        else if (opcode == 0xC3)
+                        {
+                            // Already a plain RET, mark as patched to avoid redundant warnings
+                            _patchedImportStubs.Add(importStubAddr);
+                            _logger.LogDebug("[Syscall] RET at 0x{RetAddr:X8} already plain RET (0xC3) for {Convention} calling convention", 
+                                retInstrAddr, callingConvention?.ToString() ?? "unknown");
+                        }
                         else
                         {
-                            _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                            _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) or RET (0xC3) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
                         }
                     }
                     else if (!requiresCalleeCleanup)
@@ -2652,10 +2667,14 @@ public sealed class Emulator : IDisposable
                         // Cdecl functions: ensure RET has no cleanup (caller will clean up)
                         if (opcode == 0xC2)
                         {
-                            // Change RET imm16 (0xC2) to RET (0xC3) for cdecl
-                            _vm!.Write8(retInstrAddr, 0xC3);
+                            // Change RET imm16 (0xC2 xx xx) to RET (0xC3) for cdecl
+                            // We need to replace the entire 3-byte instruction with a single-byte RET
+                            // followed by NOPs to avoid instruction boundary issues
+                            _vm!.Write8(retInstrAddr, 0xC3);        // RET
+                            _vm!.Write8(retInstrAddr + 1, 0x90);    // NOP
+                            _vm!.Write8(retInstrAddr + 2, 0x90);    // NOP
                             _patchedImportStubs.Add(importStubAddr);
-                            _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} to RET (0xC3) for cdecl calling convention (caller cleanup)", retInstrAddr);
+                            _logger.LogDebug("[Syscall] Patched RET imm16 at 0x{RetAddr:X8} to RET+NOP+NOP (0xC3 0x90 0x90) for cdecl calling convention (caller cleanup)", retInstrAddr);
                         }
                         else if (opcode == 0xC3)
                         {
