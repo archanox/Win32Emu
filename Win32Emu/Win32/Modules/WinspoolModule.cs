@@ -64,7 +64,7 @@ public class WinspoolModule : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint OpenPrinterA(in LpcStr pPrinterName, uint phPrinter, uint pDefault)
 	{
-		var printerName = pPrinterName.ToString() ?? "Default Printer";
+		var printerName = pPrinterName.Read(_env.Memory) ?? "Default Printer";
 		_logger.LogInformation("[Winspool] OpenPrinterA(pPrinterName=\"{PrinterName}\", phPrinter=0x{PhPrinter:X8}, pDefault=0x{PDefault:X8})",
 			printerName, phPrinter, pDefault);
 
@@ -118,7 +118,7 @@ public class WinspoolModule : IWin32ModuleUnsafe
 	[DllModuleExport(24)]
 	private uint DocumentPropertiesA(uint hwnd, uint hPrinter, in LpcStr pDeviceName, uint pDevModeOutput, uint pDevModeInput, uint fMode)
 	{
-		var deviceName = pDeviceName.ToString() ?? string.Empty;
+		var deviceName = pDeviceName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Winspool] DocumentPropertiesA(hwnd=0x{Hwnd:X8}, hPrinter=0x{HPrinter:X8}, pDeviceName=\"{DeviceName}\", pDevModeOutput=0x{PDevModeOutput:X8}, pDevModeInput=0x{PDevModeInput:X8}, fMode=0x{FMode:X})",
 			hwnd, hPrinter, deviceName, pDevModeOutput, pDevModeInput, fMode);
 

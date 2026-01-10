@@ -1647,7 +1647,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(56)]
 		private uint CreateFontA(int cHeight, int cWidth, int cEscapement, int cOrientation, int cWeight, uint bItalic, uint bUnderline, uint bStrikeOut, uint iCharSet, uint iOutPrecision, uint iClipPrecision, uint iQuality, uint iPitchAndFamily, in LpcStr pszFaceName)
 		{
-			var faceName = pszFaceName.ToString() ?? "Arial";
+			var faceName = pszFaceName.Read(_env.Memory) ?? "Arial";
 			_logger.LogInformation("[Gdi32] CreateFontA(height={CHeight}, weight={CWeight}, faceName=\"{FaceName}\")", cHeight, cWeight, faceName);
 			var handle = _nextGdiObjectHandle++;
 			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Font };

@@ -180,8 +180,8 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 	[DllModuleExport(12)]
 	private uint PathCombineA(uint pszDest, in LpcStr pszDirPtr, in LpcStr pszFilePtr)
 	{
-		var pszDir = pszDirPtr.ToString() ?? string.Empty;
-		var pszFile = pszFilePtr.ToString() ?? string.Empty;
+		var pszDir = pszDirPtr.Read(_env.Memory) ?? string.Empty;
+		var pszFile = pszFilePtr.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogDebug("[Shlwapi] PathCombineA(pszDest=0x{PszDest:X8}, pszDir=\"{PszDir}\", pszFile=\"{PszFile}\")",
 			pszDest, pszDir, pszFile);
@@ -261,7 +261,7 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint PathFindExtensionA(in LpcStr pszPathPtr)
 	{
-		var pszPath = pszPathPtr.ToString() ?? string.Empty;
+		var pszPath = pszPathPtr.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogDebug("[Shlwapi] PathFindExtensionA(pszPath=\"{PszPath}\")", pszPath);
 
@@ -295,7 +295,7 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 	[DllModuleExport(4)]
 	private uint PathFindFileNameA(in LpcStr pszPathPtr)
 	{
-		var pszPath = pszPathPtr.ToString() ?? string.Empty;
+		var pszPath = pszPathPtr.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogDebug("[Shlwapi] PathFindFileNameA(pszPath=\"{PszPath}\")", pszPath);
 
@@ -329,8 +329,8 @@ public partial class ShlwapiModule : IWin32ModuleUnsafe
 	[DllModuleExport(8)]
 	private uint StrStrIA(in LpcStr pszFirstPtr, in LpcStr pszSrchPtr)
 	{
-		var pszFirst = pszFirstPtr.ToString() ?? string.Empty;
-		var pszSrch = pszSrchPtr.ToString() ?? string.Empty;
+		var pszFirst = pszFirstPtr.Read(_env.Memory) ?? string.Empty;
+		var pszSrch = pszSrchPtr.Read(_env.Memory) ?? string.Empty;
 
 		_logger.LogDebug("[Shlwapi] StrStrIA(pszFirst=\"{PszFirst}\", pszSrch=\"{PszSrch}\")",
 			pszFirst, pszSrch);

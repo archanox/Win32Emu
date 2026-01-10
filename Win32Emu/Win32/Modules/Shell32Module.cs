@@ -961,7 +961,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 	[DllModuleExport(12)]
 	private uint ExtractIconA(uint hInst, in LpcStr pszExeFileName, uint nIconIndex)
 	{
-		var fileName = pszExeFileName.ToString() ?? string.Empty;
+		var fileName = pszExeFileName.Read(_env.Memory) ?? string.Empty;
 		LogExtractIconA(hInst, fileName, nIconIndex);
 
 		// Stub - return NULL (no icon)
@@ -975,7 +975,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 	[DllModuleExport(20)]
 	private uint SHGetFileInfoA(in LpcStr pszPath, uint dwFileAttributes, uint psfi, uint cbFileInfo, uint uFlags)
 	{
-		var path = pszPath.ToString() ?? string.Empty;
+		var path = pszPath.Read(_env.Memory) ?? string.Empty;
 		LogSHGetFileInfoA(path, dwFileAttributes, uFlags);
 
 		// Stub - return 0 (failure)
@@ -989,8 +989,8 @@ public partial class Shell32Module : IWin32ModuleAsync
 	[DllModuleExport(16)]
 	private uint ShellAboutA(uint hWnd, in LpcStr szApp, in LpcStr szOtherStuff, uint hIcon)
 	{
-		var app = szApp.ToString() ?? string.Empty;
-		var otherStuff = szOtherStuff.ToString() ?? string.Empty;
+		var app = szApp.Read(_env.Memory) ?? string.Empty;
+		var otherStuff = szOtherStuff.Read(_env.Memory) ?? string.Empty;
 		LogShellAboutA(hWnd, app, otherStuff, hIcon);
 
 		// Stub - return TRUE (success)
