@@ -52,11 +52,6 @@ public sealed class StringPointerToStringAnalyzer : DiagnosticAnalyzer
 		if (memberAccess.Name.Identifier.Text != "ToString")
 			return;
 
-		// Get the symbol info for the expression being accessed
-		var symbolInfo = context.SemanticModel.GetSymbolInfo(memberAccess.Expression);
-		if (symbolInfo.Symbol is not ILocalSymbol and not IParameterSymbol and not IFieldSymbol and not IPropertySymbol)
-			return;
-
 		// Get the type of the expression
 		var typeInfo = context.SemanticModel.GetTypeInfo(memberAccess.Expression);
 		if (typeInfo.Type is not INamedTypeSymbol namedType)

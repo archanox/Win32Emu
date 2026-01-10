@@ -263,6 +263,50 @@ namespace Test
 		await VerifyAnalyzerAsync(testCode, expected1, expected2);
 	}
 
+	[Fact]
+	public async Task MethodReturnValueToString_ShouldProduceDiagnostic()
+	{
+		var testCode = @"
+using Win32Emu.Memory;
+
+namespace Win32Emu.Win32
+{
+	public readonly struct LpcStr
+	{
+		public readonly uint Address;
+		public LpcStr(uint address) => Address = address;
+		public string? Read(VirtualMemory? mem = null) => null;
+	}
+}
+
+namespace Win32Emu.Memory
+{
+	public class VirtualMemory { }
+}
+
+namespace Test
+{
+	using Win32Emu.Win32;
+	using Win32Emu.Memory;
+
+	public class TestClass
+	{
+		private LpcStr GetString() => new LpcStr(0);
+
+		public void TestMethod()
+		{
+			var s = {|#0:GetString().ToString()|};
+		}
+	}
+}";
+
+		var expected = DiagnosticResult.CompilerError(StringPointerToStringAnalyzer.DiagnosticId)
+			.WithLocation(0)
+			.WithArguments("LpcStr");
+
+		await VerifyAnalyzerAsync(testCode, expected);
+	}
+
 	private static async Task VerifyAnalyzerAsync(string source, params DiagnosticResult[] expected)
 	{
 		var test = new CSharpAnalyzerTest<StringPointerToStringAnalyzer, DefaultVerifier>
