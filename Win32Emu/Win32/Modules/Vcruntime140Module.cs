@@ -61,7 +61,7 @@ public partial class Vcruntime140Module : IWin32ModuleUnsafe
 	/// Copies a block of memory from source to destination.
 	/// void* memcpy(void* dest, const void* src, size_t count);
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint Memcpy(uint dest, uint src, uint count)
 	{
 		if (dest == 0 || src == 0 || count == 0)
@@ -94,7 +94,7 @@ public partial class Vcruntime140Module : IWin32ModuleUnsafe
 	/// Sets a block of memory to a specified value.
 	/// void* memset(void* dst, int val, size_t len);
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint Memset(uint dst, uint val, uint len)
 	{
 		if (dst == 0 || len == 0)
@@ -119,7 +119,7 @@ public partial class Vcruntime140Module : IWin32ModuleUnsafe
 	/// int memcmp(const void* lhs, const void* rhs, size_t len);
 	/// </summary>
 	/// <returns>0 if equal, &lt;0 if lhs &lt; rhs, &gt;0 if lhs &gt; rhs</returns>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint Memcmp(uint lhs, uint rhs, uint len)
 	{
 		if (len == 0)

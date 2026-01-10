@@ -1,6 +1,46 @@
 namespace Win32Emu.Win32;
 
 /// <summary>
+/// Calling conventions for DLL export functions.
+/// Used by DllModuleExportAttribute to specify how functions handle stack cleanup and parameter passing.
+/// </summary>
+public enum DllCallingConvention
+{
+	/// <summary>
+	/// Default/unspecified - infer from name decoration or use stdcall.
+	/// </summary>
+	Default = 0,
+	
+	/// <summary>
+	/// Standard call convention - callee cleans stack.
+	/// Used by most Win32 APIs.
+	/// </summary>
+	Stdcall = 1,
+	
+	/// <summary>
+	/// C declaration convention - caller cleans stack.
+	/// Used by variadic functions (printf, sprintf, etc.) and standard C library functions.
+	/// </summary>
+	Cdecl = 2,
+	
+	/// <summary>
+	/// Fast call convention - first two arguments in registers, callee cleans stack.
+	/// </summary>
+	Fastcall = 3,
+	
+	/// <summary>
+	/// This call convention - first argument (this pointer) in ECX, callee cleans stack.
+	/// Used by C++ member functions.
+	/// </summary>
+	Thiscall = 4,
+	
+	/// <summary>
+	/// Pascal calling convention - callee cleans stack, arguments pushed left-to-right.
+	/// </summary>
+	Pascal = 5
+}
+
+/// <summary>
 /// Marks a method as a DLL module export with associated metadata.
 /// Multiple attributes can be applied to support different DLL versions.
 /// </summary>
@@ -47,12 +87,12 @@ public sealed class DllModuleExportAttribute : Attribute
 
 	/// <summary>
 	/// The calling convention used by this export (optional).
-	/// If not specified, defaults based on name decoration:
+	/// If not specified (value is Default), defaults based on name decoration:
 	/// - Decorated names (e.g., "Function@N") infer stdcall/fastcall/thiscall
 	/// - Undecorated names default to stdcall for backward compatibility
-	/// Use this property to explicitly specify cdecl for C runtime functions.
+	/// Use Cdecl to explicitly specify cdecl for C runtime functions.
 	/// </summary>
-	public Loader.CallingConvention? CallingConvention { get; init; }
+	public DllCallingConvention CallingConvention { get; init; } = DllCallingConvention.Default;
 
 	public DllModuleExportAttribute(uint ordinal)
 	{

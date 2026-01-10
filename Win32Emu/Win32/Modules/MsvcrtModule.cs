@@ -605,7 +605,7 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __p___initenv()
 		{
 			_logger.LogInformation("[msvcrt] __p___initenv()");
@@ -613,7 +613,7 @@ namespace Win32Emu.Win32.Modules
 			return _env.GetEnvironmentStringsA();
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __p___winitenv()
 		{
 			_logger.LogInformation("[msvcrt] __p___winitenv()");
@@ -621,7 +621,7 @@ namespace Win32Emu.Win32.Modules
 			return _env.GetEnvironmentStringsW();
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __p__commode()
 		{
 			_logger.LogInformation("[msvcrt] __p__commode()");
@@ -629,7 +629,7 @@ namespace Win32Emu.Win32.Modules
 			return _env.HeapAlloc(0, 4); // Allocate 4 bytes for mode
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __p__fmode()
 		{
 			_logger.LogInformation("[msvcrt] __p__fmode()");
@@ -640,7 +640,7 @@ namespace Win32Emu.Win32.Modules
 		// Cache for _iob array pointer
 		private uint _iobArrayPtr = 0;
 		
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __p__iob()
 		{
 			_logger.LogInformation("[msvcrt] __p__iob()");
@@ -657,14 +657,14 @@ namespace Win32Emu.Win32.Modules
 			return _iobArrayPtr;
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __set_app_type(uint appType)
 		{
 			_logger.LogInformation("[msvcrt] __set_app_type(appType={AppType})", appType);
 			return 0;
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __setusermatherr(uint handler)
 		{
 			_logger.LogInformation("[msvcrt] __setusermatherr(handler=0x{Handler:X8})", handler);
@@ -715,7 +715,7 @@ namespace Win32Emu.Win32.Modules
 			return args;
 		}
 
-		[DllModuleExport(20)]
+		[DllModuleExport(20, CallingConvention = DllCallingConvention.Cdecl)]
 		private int __getmainargs(uint pargc, uint pargv, uint penv, int doWildcard, uint startupInfo)
 		{
 			_logger.LogInformation("[msvcrt] __getmainargs(pargc=0x{Pargc:X8}, pargv=0x{Pargv:X8}, penv=0x{Penv:X8}, doWildcard={DoWildcard}, startupInfo=0x{StartupInfo:X8})", 
@@ -755,7 +755,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success
 		}
 
-		[DllModuleExport(20)]
+		[DllModuleExport(20, CallingConvention = DllCallingConvention.Cdecl)]
 		private int __wgetmainargs(uint pargc, uint pargv, uint penv, int doWildcard, uint startupInfo)
 		{
 			_logger.LogInformation("[msvcrt] __wgetmainargs(pargc=0x{Pargc:X8}, pargv=0x{Pargv:X8}, penv=0x{Penv:X8}, doWildcard={DoWildcard}, startupInfo=0x{StartupInfo:X8})", 
@@ -795,7 +795,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint __p__acmdln()
 		{
 			_logger.LogInformation("[msvcrt] __p__acmdln()");
@@ -809,7 +809,7 @@ namespace Win32Emu.Win32.Modules
 			return _cachedAcmdlnPtr;
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint _acmdln()
 		{
 			_logger.LogInformation("[msvcrt] _acmdln()");
@@ -817,7 +817,7 @@ namespace Win32Emu.Win32.Modules
 			return _env.CommandLinePtr;
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint _wcmdln()
 		{
 			_logger.LogInformation("[msvcrt] _wcmdln()");
@@ -838,7 +838,7 @@ namespace Win32Emu.Win32.Modules
 			return _cachedWcmdlnPtr;
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint _environ()
 		{
 			_logger.LogInformation("[msvcrt] _environ()");
@@ -846,7 +846,7 @@ namespace Win32Emu.Win32.Modules
 			return _env.GetEnvironmentStringsA();
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint _adjust_fdiv()
 		{
 			_logger.LogInformation("[msvcrt] _adjust_fdiv()");
@@ -854,14 +854,14 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private void _amsg_exit(int code)
 		{
 			_logger.LogInformation("[msvcrt] _amsg_exit(code={Code})", code);
 			// Exit with error message (stub)
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private void _cexit()
 		{
 			_logger.LogInformation("[msvcrt] _cexit()");
@@ -912,7 +912,7 @@ namespace Win32Emu.Win32.Modules
 			// Note: _cexit does NOT terminate the process, only calls cleanup handlers
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private void _initterm(uint start, uint end)
 		{
 			_logger.LogInformation("[msvcrt] _initterm(start=0x{Start:X8}, end=0x{End:X8})", start, end);
@@ -965,7 +965,7 @@ namespace Win32Emu.Win32.Modules
 				eipAfterInitterm, espAfterInitterm);
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint _controlfp(uint newControl, uint mask)
 		{
 			_logger.LogInformation("[msvcrt] _controlfp(newControl=0x{NewControl:X8}, mask=0x{Mask:X8})", newControl, mask);
@@ -983,14 +983,14 @@ namespace Win32Emu.Win32.Modules
 			return 1; // EXCEPTION_CONTINUE_SEARCH
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private void _exit(int code)
 		{
 			_logger.LogInformation("[msvcrt] _exit(code={Code})", code);
 			// Exit without cleanup (stub - should exit)
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint _itoa(int value, uint buffer, int radix)
 		{
 			_logger.LogInformation("[msvcrt] _itoa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
@@ -1045,14 +1045,14 @@ namespace Win32Emu.Win32.Modules
 			return 0; // EXCEPTION_CONTINUE_SEARCH
 		}
 
-		[DllModuleExport(0)]
+		[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 		private void abort()
 		{
 			_logger.LogInformation("[msvcrt] abort()");
 			// Abnormal termination (stub - should exit)
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint atexit(uint func)
 		{
 			_logger.LogInformation("[msvcrt] atexit(func=0x{Func:X8})", func);
@@ -1060,7 +1060,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint calloc(uint num, uint size)
 		{
 			_logger.LogInformation("[msvcrt] calloc(num={Num}, size={Size})", num, size);
@@ -1077,7 +1077,7 @@ namespace Win32Emu.Win32.Modules
 			return ptr;
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private void exit(int code)
 		{
 			_logger.LogInformation("[msvcrt] exit(code={Code})", code);
@@ -1090,7 +1090,7 @@ namespace Win32Emu.Win32.Modules
 			_env.RequestExit();
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private int fprintf(uint stream, in LpcStr format, uint args)
 		{
 			var fmt = format.ToString() ?? string.Empty;
@@ -1126,7 +1126,7 @@ namespace Win32Emu.Win32.Modules
 			return formatted.Length;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private int fputs(in LpcStr str, uint stream)
 		{
 			var s = str.ToString() ?? string.Empty;
@@ -1157,7 +1157,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private void free(uint ptr)
 		{
 			_logger.LogInformation("[msvcrt] free(ptr=0x{Ptr:X8})", ptr);
@@ -1167,7 +1167,7 @@ namespace Win32Emu.Win32.Modules
 			}
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint getenv(in LpcStr name)
 		{
 			var varName = name.ToString() ?? string.Empty;
@@ -1176,14 +1176,14 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint malloc(uint size)
 		{
 			_logger.LogInformation("[msvcrt] malloc(size={Size})", size);
 			return _env.HeapAlloc(0, size);
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private int memcmp(uint ptr1, uint ptr2, uint num)
 		{
 			_logger.LogInformation("[msvcrt] memcmp(ptr1=0x{Ptr1:X8}, ptr2=0x{Ptr2:X8}, num={Num})", ptr1, ptr2, num);
@@ -1205,7 +1205,7 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint memcpy(uint dest, uint src, uint count)
 		{
 			_logger.LogInformation("[msvcrt] memcpy(dest=0x{Dest:X8}, src=0x{Src:X8}, count={Count})", dest, src, count);
@@ -1217,7 +1217,7 @@ namespace Win32Emu.Win32.Modules
 			return dest;
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint memmove(uint dest, uint src, uint count)
 		{
 			_logger.LogInformation("[msvcrt] memmove(dest=0x{Dest:X8}, src=0x{Src:X8}, count={Count})", dest, src, count);
@@ -1241,7 +1241,7 @@ namespace Win32Emu.Win32.Modules
 			return dest;
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint memset(uint ptr, int value, uint num)
 		{
 			_logger.LogInformation("[msvcrt] memset(ptr=0x{Ptr:X8}, value={Value}, num={Num})", ptr, value, num);
@@ -1254,7 +1254,7 @@ namespace Win32Emu.Win32.Modules
 			return ptr;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint realloc(uint ptr, uint size)
 		{
 			_logger.LogInformation("[msvcrt] realloc(ptr=0x{Ptr:X8}, size={Size})", ptr, size);
@@ -1282,7 +1282,7 @@ namespace Win32Emu.Win32.Modules
 			return newPtr;
 		}
 
-		[DllModuleExport(8)]
+		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint signal(int sig, uint func)
 		{
 			_logger.LogInformation("[msvcrt] signal(sig={Sig}, func=0x{Func:X8})", sig, func);
@@ -1290,7 +1290,7 @@ namespace Win32Emu.Win32.Modules
 			return 0; // Success
 		}
 
-		[DllModuleExport(4)]
+		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private int strlen(in LpcStr str)
 		{
 			var s = str.ToString() ?? string.Empty;
@@ -1298,7 +1298,7 @@ namespace Win32Emu.Win32.Modules
 			return s.Length;
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private int strncmp(in LpcStr str1, in LpcStr str2, uint num)
 		{
 			var s1 = str1.ToString() ?? string.Empty;
@@ -1314,7 +1314,7 @@ namespace Win32Emu.Win32.Modules
 		/// strcmp - Compare two strings
 		/// Performs lexicographic comparison of two null-terminated strings
 		/// </summary>
-		[DllModuleExport(8)]
+		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private int strcmp(in LpcStr str1, in LpcStr str2)
 		{
 			var s1 = str1.ToString() ?? string.Empty;
@@ -1324,7 +1324,7 @@ namespace Win32Emu.Win32.Modules
 			return string.Compare(s1, s2, StringComparison.Ordinal);
 		}
 
-		[DllModuleExport(12)]
+		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private int vfprintf(uint stream, in LpcStr format, uint args)
 		{
 			var fmt = format.ToString() ?? string.Empty;
@@ -1339,7 +1339,7 @@ namespace Win32Emu.Win32.Modules
 			return formatted.Length;
 		}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _spawnv(int mode, in LpcStr path, uint argv)
 	{
 		var pathStr = path.ToString() ?? string.Empty;
@@ -1348,7 +1348,7 @@ namespace Win32Emu.Win32.Modules
 		return -1;
 	}
 
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _stricmp(in LpcStr str1, in LpcStr str2)
 	{
 		var s1 = str1.ToString() ?? string.Empty;
@@ -1364,7 +1364,7 @@ namespace Win32Emu.Win32.Modules
 	/// Returns a negative value if str1 is less than str2, 0 if they are equal (within count characters),
 	/// and a positive value if str1 is greater than str2.
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _strnicmp(in LpcStr str1, in LpcStr str2, uint count)
 	{
 		var s1 = str1.ToString() ?? string.Empty;
@@ -1392,7 +1392,7 @@ namespace Win32Emu.Win32.Modules
 		return result;
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int fclose(uint stream)
 	{
 		_logger.LogInformation("[msvcrt] fclose(stream=0x{Stream:X8})", stream);
@@ -1400,7 +1400,7 @@ namespace Win32Emu.Win32.Modules
 		return 0;
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint fgets(uint str, int n, uint stream)
 	{
 		_logger.LogInformation("[msvcrt] fgets(str=0x{Str:X8}, n={N}, stream=0x{Stream:X8})", str, n, stream);
@@ -1408,7 +1408,7 @@ namespace Win32Emu.Win32.Modules
 		return 0;
 	}
 
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint fopen(in LpcStr filename, in LpcStr mode)
 	{
 		var fname = filename.ToString() ?? string.Empty;
@@ -1418,7 +1418,7 @@ namespace Win32Emu.Win32.Modules
 		return 0;
 	}
 
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private int printf(in LpcStr format, uint args)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -1433,7 +1433,7 @@ namespace Win32Emu.Win32.Modules
 		return formatted.Length;
 	}
 
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private int sprintf(uint buffer, in LpcStr format, uint args)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -1446,7 +1446,7 @@ namespace Win32Emu.Win32.Modules
 		return fmt.Length;
 	}
 
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strchr(in LpcStr str, int c)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -1461,7 +1461,7 @@ namespace Win32Emu.Win32.Modules
 		return 0; // NULL
 	}
 
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strrchr(in LpcStr str, int c)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -1502,7 +1502,7 @@ namespace Win32Emu.Win32.Modules
 		return 0;
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _strrev(uint str)
 	{
 		_logger.LogInformation("[msvcrt] _strrev(str=0x{Str:X8})", str);
@@ -1517,7 +1517,7 @@ namespace Win32Emu.Win32.Modules
 		return str;
 	}
 
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int toupper(int c)
 	{
 		_logger.LogInformation("[msvcrt] toupper({C})", c);
@@ -1534,7 +1534,7 @@ namespace Win32Emu.Win32.Modules
 	/// For most Western code pages (like CP 1252): no lead bytes (returns 0)
 	/// Returns non-zero if the byte is a lead byte, 0 otherwise
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _ismbblead(int c)
 	{
 		_logger.LogDebug("[msvcrt] _ismbblead(0x{C:X2})", c);
@@ -1564,7 +1564,7 @@ namespace Win32Emu.Win32.Modules
 	/// This is a special CRT function that reads from the x87 FPU stack
 	/// Returns 64-bit result in EDX:EAX (high:low 32 bits)
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private long __ftol()
 	{
 		_logger.LogInformation("[msvcrt] __ftol()");
@@ -1575,7 +1575,7 @@ namespace Win32Emu.Win32.Modules
 	/// __ftol2 - Convert floating point value in ST(0) to signed long integer
 	/// Variant of __ftol for newer compilers
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private long __ftol2()
 	{
 		_logger.LogInformation("[msvcrt] __ftol2()");
@@ -1586,7 +1586,7 @@ namespace Win32Emu.Win32.Modules
 	/// __ftol2_sse - Convert floating point value in ST(0) to signed long integer
 	/// SSE-optimized variant of __ftol
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private long __ftol2_sse()
 	{
 		_logger.LogInformation("[msvcrt] __ftol2_sse()");
@@ -1657,7 +1657,7 @@ namespace Win32Emu.Win32.Modules
 	/// _fpreset - Reset floating-point unit to default state
 	/// Resets the FPU control word and status word
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _fpreset()
 	{
 		_logger.LogInformation("[msvcrt] _fpreset()");
@@ -1687,7 +1687,7 @@ namespace Win32Emu.Win32.Modules
 	/// _set_invalid_parameter_handler - Set handler for invalid parameter errors
 	/// Allows applications to handle invalid parameter errors in CRT functions
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _set_invalid_parameter_handler(uint handler)
 	{
 		_logger.LogInformation("[msvcrt] _set_invalid_parameter_handler(handler=0x{Handler:X8})", handler);
@@ -1701,7 +1701,7 @@ namespace Win32Emu.Win32.Modules
 	/// fflush - Flush a file stream
 	/// Forces any buffered data to be written to the file
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int fflush(uint stream)
 	{
 		_logger.LogInformation("[msvcrt] fflush(stream=0x{Stream:X8})", stream);
@@ -1741,7 +1741,7 @@ namespace Win32Emu.Win32.Modules
 	/// setvbuf - Set buffer for file stream
 	/// Controls buffering mode and buffer size for a stream
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, CallingConvention = DllCallingConvention.Cdecl)]
 	private int setvbuf(uint stream, uint buffer, int mode, uint size)
 	{
 		_logger.LogInformation("[msvcrt] setvbuf(stream=0x{Stream:X8}, buffer=0x{Buffer:X8}, mode={Mode}, size={Size})", 
@@ -1799,7 +1799,7 @@ namespace Win32Emu.Win32.Modules
 	/// __initenv - Get pointer to environment variables
 	/// Returns pointer to array of environment strings
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint __initenv()
 	{
 		_logger.LogInformation("[msvcrt] __initenv()");
@@ -1811,7 +1811,7 @@ namespace Win32Emu.Win32.Modules
 	/// __winitenv - Get pointer to environment variables (Unicode version)
 	/// Returns pointer to array of Unicode environment strings
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint __winitenv()
 	{
 		_logger.LogInformation("[msvcrt] __winitenv()");
@@ -1823,7 +1823,7 @@ namespace Win32Emu.Win32.Modules
 	/// __lconv_init - Initialize locale conversion structure
 	/// Initializes the locale-specific formatting information
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint __lconv_init()
 	{
 		_logger.LogInformation("[msvcrt] __lconv_init()");
@@ -1835,7 +1835,7 @@ namespace Win32Emu.Win32.Modules
 	/// _iob - Get pointer to I/O buffer array
 	/// Returns pointer to stdin, stdout, stderr buffers
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _iob()
 	{
 		_logger.LogInformation("[msvcrt] _iob()");
@@ -1849,7 +1849,7 @@ namespace Win32Emu.Win32.Modules
 	/// NOTE: This is a stub implementation that only tracks lock acquisition.
 	/// Real implementation would block until lock is available.
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _lock(int locknum)
 	{
 		_logger.LogInformation("[msvcrt] _lock(locknum={Locknum})", locknum);
@@ -1863,7 +1863,7 @@ namespace Win32Emu.Win32.Modules
 	/// _onexit - Register function to be called at exit
 	/// Similar to atexit but returns the function pointer
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _onexit(uint func)
 	{
 		_logger.LogInformation("[msvcrt] _onexit(func=0x{Func:X8})", func);
@@ -1882,7 +1882,7 @@ namespace Win32Emu.Win32.Modules
 	/// _strdup - Duplicate a string
 	/// Allocates memory and copies the string
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _strdup(in LpcStr str)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -1914,7 +1914,7 @@ namespace Win32Emu.Win32.Modules
 	/// _unlock - Release a lock for thread synchronization
 	/// Used to release locks acquired with _lock
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _unlock(int locknum)
 	{
 		_logger.LogInformation("[msvcrt] _unlock(locknum={Locknum})", locknum);
@@ -1930,7 +1930,7 @@ namespace Win32Emu.Win32.Modules
 	/// It only copies the format string itself to the buffer with size limiting.
 	/// Full implementation would require parsing format specifiers and reading varargs.
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _vsnprintf(uint buffer, uint count, in LpcStr format, uint args)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -1962,7 +1962,7 @@ namespace Win32Emu.Win32.Modules
 	/// Returns a pointer to an integer containing the maximum number of bytes
 	/// in a multibyte character for the current locale
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint __mb_cur_max()
 	{
 		_logger.LogDebug("[msvcrt] __mb_cur_max()");
@@ -1987,7 +1987,7 @@ namespace Win32Emu.Win32.Modules
 	/// _errno - Get pointer to thread-local errno value
 	/// Returns a pointer to the errno variable for the current thread
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _errno()
 	{
 		_logger.LogDebug("[msvcrt] _errno()");
@@ -2011,7 +2011,7 @@ namespace Win32Emu.Win32.Modules
 	/// fputc - Write a character to a stream
 	/// Writes the character c to the output stream
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private int fputc(int c, uint stream)
 	{
 		_logger.LogDebug("[msvcrt] fputc(c={C} (0x{C:X2}), stream=0x{Stream:X8})", (char)c, c, stream);
@@ -2052,7 +2052,7 @@ namespace Win32Emu.Win32.Modules
 	/// localeconv - Get locale-specific formatting information
 	/// Returns a pointer to a structure containing locale-specific formatting information
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint localeconv()
 	{
 		_logger.LogDebug("[msvcrt] localeconv()");
@@ -2098,7 +2098,7 @@ namespace Win32Emu.Win32.Modules
 	/// setlocale - Set or query the program's locale
 	/// Sets locale information and returns the new locale string
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint setlocale(int category, uint locale)
 	{
 		var localeStr = locale != 0 ? _env.ReadAnsiString(locale) : null;
@@ -2140,7 +2140,7 @@ namespace Win32Emu.Win32.Modules
 	/// Returns a pointer to a string describing the error number
 	/// Per POSIX specification, returns pointer to static buffer (cached per error number)
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strerror(int errnum)
 	{
 		_logger.LogDebug("[msvcrt] strerror(errnum={Errnum})", errnum);
@@ -2174,7 +2174,7 @@ namespace Win32Emu.Win32.Modules
 	/// atoi - Convert string to integer
 	/// Parses string and returns integer value
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int atoi(in LpcStr str)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -2193,7 +2193,7 @@ namespace Win32Emu.Win32.Modules
 	/// fwrite - Write data to stream
 	/// Writes count items of size bytes each to stream
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint fwrite(uint ptr, uint size, uint count, uint stream)
 	{
 		_logger.LogInformation("[msvcrt] fwrite(ptr=0x{Ptr:X8}, size={Size}, count={Count}, stream=0x{Stream:X8})", 
@@ -2222,7 +2222,7 @@ namespace Win32Emu.Win32.Modules
 	/// strcpy - Copy string
 	/// Copies source string to destination
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strcpy(uint dest, in LpcStr src)
 	{
 		var s = src.ToString() ?? string.Empty;
@@ -2243,7 +2243,7 @@ namespace Win32Emu.Win32.Modules
 	/// _assert - Handle assertion failures
 	/// Reports an assertion failure. Note: Unlike real MSVCRT, this implementation logs the failure but does not terminate the program.
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _assert(in LpcStr expr, in LpcStr file, uint line)
 	{
 		var expression = expr.ToString() ?? string.Empty;
@@ -2260,7 +2260,7 @@ namespace Win32Emu.Win32.Modules
 	/// putchar - Write character to stdout
 	/// Writes a character to standard output
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int putchar(int c)
 	{
 		_logger.LogInformation("[msvcrt] putchar(c={C})", (char)c);
@@ -2275,7 +2275,7 @@ namespace Win32Emu.Win32.Modules
 	/// puts - Write string to stdout with newline
 	/// Writes a string to standard output followed by a newline
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int puts(in LpcStr str)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -2291,7 +2291,7 @@ namespace Win32Emu.Win32.Modules
 	/// sscanf - Read formatted data from string
 	/// Reads data from string according to format specification
 	/// </summary>
-	[DllModuleExport(12, IsStub = true)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private int sscanf(uint buffer, in LpcStr format, uint varargs)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -2310,7 +2310,7 @@ namespace Win32Emu.Win32.Modules
 	/// strcat - Concatenate strings
 	/// Appends source string to destination string
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strcat(uint dest, in LpcStr src)
 	{
 		var s = src.ToString() ?? string.Empty;
@@ -2337,7 +2337,7 @@ namespace Win32Emu.Win32.Modules
 	/// strstr - Find substring
 	/// Searches for first occurrence of substring in string
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strstr(in LpcStr str, in LpcStr substr)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -2369,7 +2369,7 @@ namespace Win32Emu.Win32.Modules
 	///   unsigned *thrdaddr
 	/// );
 	/// </summary>
-	[DllModuleExport(18, IsStub = true)]
+	[DllModuleExport(18, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private uint _beginthreadex(uint security, uint stackSize, uint startAddress, uint arglist, uint initflag, uint thrdaddr)
 	{
 		_logger.LogInformation("[msvcrt] _beginthreadex(security=0x{Security:X8}, stackSize={StackSize}, startAddress=0x{StartAddress:X8}, arglist=0x{Arglist:X8}, initflag={Initflag}, thrdaddr=0x{Thrdaddr:X8})",
@@ -2397,7 +2397,7 @@ namespace Win32Emu.Win32.Modules
 	///   va_list argptr
 	/// );
 	/// </summary>
-	[DllModuleExport(12, IsStub = true)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private int _vsnwprintf(uint buffer, uint count, in LpcWStr format, uint args)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -2421,7 +2421,7 @@ namespace Win32Emu.Win32.Modules
 	///   const wchar_t *mode
 	/// );
 	/// </summary>
-	[DllModuleExport(8, IsStub = true)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private uint _wfopen(in LpcWStr filename, in LpcWStr mode)
 	{
 		var fname = filename.ToString() ?? string.Empty;
@@ -2441,7 +2441,7 @@ namespace Win32Emu.Win32.Modules
 	///   ...
 	/// );
 	/// </summary>
-	[DllModuleExport(12, IsStub = true)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private int swprintf(uint buffer, in LpcWStr format, uint args)
 	{
 		var fmt = format.ToString() ?? string.Empty;
@@ -2464,7 +2464,7 @@ namespace Win32Emu.Win32.Modules
 	///   const wchar_t *string2
 	/// );
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private int wcscmp(in LpcWStr str1, in LpcWStr str2)
 	{
 		var s1 = str1.ToString() ?? string.Empty;
@@ -2482,7 +2482,7 @@ namespace Win32Emu.Win32.Modules
 	///   const wchar_t *strSource
 	/// );
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint wcscpy(uint dest, in LpcWStr src)
 	{
 		var s = src.ToString() ?? string.Empty;
@@ -2506,7 +2506,7 @@ namespace Win32Emu.Win32.Modules
 	///   const wchar_t *str
 	/// );
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int wcslen(in LpcWStr str)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -2522,7 +2522,7 @@ namespace Win32Emu.Win32.Modules
 	///   wchar_t c
 	/// );
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint wcsrchr(in LpcWStr str, int c)
 	{
 		var s = str.ToString() ?? string.Empty;
@@ -2549,7 +2549,7 @@ namespace Win32Emu.Win32.Modules
 	/// NOTE: This is a stub that reads and pops the value but doesn't compute or push the result.
 	/// Real implementation would require FPU manipulation that isn't accessible.
 	/// </summary>
-	[DllModuleExport(0, IsStub = true)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private void sin()
 	{
 		_logger.LogInformation("[msvcrt] sin()");
@@ -2574,7 +2574,7 @@ namespace Win32Emu.Win32.Modules
 	/// NOTE: This is a stub that reads the value but doesn't compute or replace the result.
 	/// Real implementation would require FPU manipulation that isn't accessible.
 	/// </summary>
-	[DllModuleExport(0, IsStub = true)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private void sqrt()
 	{
 		_logger.LogInformation("[msvcrt] sqrt()");
@@ -2716,7 +2716,7 @@ namespace Win32Emu.Win32.Modules
 	/// Returns pseudo-random integer in the range 0 to RAND_MAX (32767)
 	/// Uses the algorithm from MSVC runtime
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private int rand()
 	{
 		_logger.LogDebug("[msvcrt] rand()");
@@ -2733,7 +2733,7 @@ namespace Win32Emu.Win32.Modules
 	/// srand - Seed pseudo-random number generator
 	/// Sets the seed for the random number generator
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private void srand(uint seed)
 	{
 		_logger.LogInformation("[msvcrt] srand(seed={Seed})", seed);
@@ -2744,7 +2744,7 @@ namespace Win32Emu.Win32.Modules
 	/// rand_s - Generate cryptographically secure random number
 	/// Returns cryptographically secure random integer
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int rand_s(uint pval)
 	{
 		_logger.LogInformation("[msvcrt] rand_s(pval=0x{Pval:X8})", pval);
@@ -2769,7 +2769,7 @@ namespace Win32Emu.Win32.Modules
 	/// system - Execute command via command processor
 	/// Executes a command string via the system command processor (cmd.exe on Windows)
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int system(in LpcStr command)
 	{
 		var cmd = command.ToString();
@@ -2794,7 +2794,7 @@ namespace Win32Emu.Win32.Modules
 	/// _wsystem - Execute command via command processor (wide character version)
 	/// Executes a command string via the system command processor
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _wsystem(in LpcWStr command)
 	{
 		var cmd = command.ToString();
@@ -2817,7 +2817,7 @@ namespace Win32Emu.Win32.Modules
 	/// _sleep - Sleep for specified milliseconds
 	/// Suspends execution of the current thread for the specified duration
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _sleep(uint milliseconds)
 	{
 		_logger.LogInformation("[msvcrt] _sleep(milliseconds={Milliseconds})", milliseconds);
@@ -2834,7 +2834,7 @@ namespace Win32Emu.Win32.Modules
 	/// _beep - Produce system beep
 	/// Generates a tone on the speaker at the specified frequency and duration
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _beep(uint frequency, uint duration)
 	{
 		_logger.LogInformation("[msvcrt] _beep(frequency={Frequency}, duration={Duration})", frequency, duration);
@@ -2848,7 +2848,7 @@ namespace Win32Emu.Win32.Modules
 	/// _lfind - Linear search for element in array
 	/// Performs a linear search for a key in an array
 	/// </summary>
-	[DllModuleExport(20, IsStub = true)]
+	[DllModuleExport(20, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private uint _lfind(uint key, uint base_, uint num, uint width, uint compare)
 	{
 		_logger.LogInformation("[msvcrt] _lfind(key=0x{Key:X8}, base=0x{Base:X8}, num=0x{Num:X8}, width={Width}, compare=0x{Compare:X8})", 
@@ -2886,7 +2886,7 @@ namespace Win32Emu.Win32.Modules
 	/// _lsearch - Linear search for element in array, add if not found
 	/// Performs a linear search for a key in an array, adds it if not found
 	/// </summary>
-	[DllModuleExport(20, IsStub = true)]
+	[DllModuleExport(20, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private uint _lsearch(uint key, uint base_, uint num, uint width, uint compare)
 	{
 		_logger.LogInformation("[msvcrt] _lsearch(key=0x{Key:X8}, base=0x{Base:X8}, num=0x{Num:X8}, width={Width}, compare=0x{Compare:X8})", 
@@ -2922,7 +2922,7 @@ namespace Win32Emu.Win32.Modules
 	/// bsearch - Binary search for element in sorted array
 	/// Performs a binary search for a key in a sorted array
 	/// </summary>
-	[DllModuleExport(20, IsStub = true)]
+	[DllModuleExport(20, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private uint bsearch(uint key, uint base_, uint nmemb, uint size, uint compar)
 	{
 		_logger.LogInformation("[msvcrt] bsearch(key=0x{Key:X8}, base=0x{Base:X8}, nmemb={Nmemb}, size={Size}, compar=0x{Compar:X8})", 
@@ -2944,7 +2944,7 @@ namespace Win32Emu.Win32.Modules
 	/// _tzset - Set time zone information
 	/// Initializes time zone information from environment variables
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _tzset()
 	{
 		_logger.LogInformation("[msvcrt] _tzset()");
@@ -2960,7 +2960,7 @@ namespace Win32Emu.Win32.Modules
 	/// __p__daylight - Get pointer to daylight saving time flag
 	/// Returns pointer to the _daylight variable
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint __p__daylight()
 	{
 		_logger.LogDebug("[msvcrt] __p__daylight()");
@@ -2973,7 +2973,7 @@ namespace Win32Emu.Win32.Modules
 	/// __p__timezone - Get pointer to timezone offset
 	/// Returns pointer to the _timezone variable (offset in seconds)
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint __p__timezone()
 	{
 		_logger.LogDebug("[msvcrt] __p__timezone()");
@@ -2986,7 +2986,7 @@ namespace Win32Emu.Win32.Modules
 	/// __p__dstbias - Get pointer to DST bias
 	/// Returns pointer to the _dstbias variable (DST offset in seconds)
 	/// </summary>
-	[DllModuleExport(0)]
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint __p__dstbias()
 	{
 		_logger.LogDebug("[msvcrt] __p__dstbias()");
@@ -2999,7 +2999,7 @@ namespace Win32Emu.Win32.Modules
 	/// _strlwr - Convert string to lowercase
 	/// Converts all uppercase characters in a string to lowercase in-place
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _strlwr(uint str)
 	{
 		_logger.LogInformation("[msvcrt] _strlwr(str=0x{Str:X8})", str);
@@ -3025,7 +3025,7 @@ namespace Win32Emu.Win32.Modules
 	/// _strupr - Convert string to uppercase
 	/// Converts all lowercase characters in a string to uppercase in-place
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _strupr(uint str)
 	{
 		_logger.LogInformation("[msvcrt] _strupr(str=0x{Str:X8})", str);
@@ -3051,7 +3051,7 @@ namespace Win32Emu.Win32.Modules
 	/// _strset - Set all characters in string to a value
 	/// Sets all characters in a string (except the null terminator) to the specified character
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _strset(uint str, int value)
 	{
 		_logger.LogInformation("[msvcrt] _strset(str=0x{Str:X8}, value={Value})", str, value);
@@ -3078,7 +3078,7 @@ namespace Win32Emu.Win32.Modules
 	/// _strnset - Set first n characters in string to a value
 	/// Sets the first n characters in a string to the specified character
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _strnset(uint str, int value, uint count)
 	{
 		_logger.LogInformation("[msvcrt] _strnset(str=0x{Str:X8}, value={Value}, count={Count})", str, value, count);
@@ -3106,7 +3106,7 @@ namespace Win32Emu.Win32.Modules
 	/// _ltoa - Convert long integer to string
 	/// Converts a long integer value to a string representation in the specified radix
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _ltoa(int value, uint buffer, int radix)
 	{
 		_logger.LogInformation("[msvcrt] _ltoa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
@@ -3148,7 +3148,7 @@ namespace Win32Emu.Win32.Modules
 	/// _ultoa - Convert unsigned long integer to string
 	/// Converts an unsigned long integer value to a string representation in the specified radix
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _ultoa(uint value, uint buffer, int radix)
 	{
 		_logger.LogInformation("[msvcrt] _ultoa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
@@ -3189,7 +3189,7 @@ namespace Win32Emu.Win32.Modules
 	/// _i64toa - Convert 64-bit integer to string
 	/// Converts a 64-bit integer value to a string representation in the specified radix
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _i64toa(long value, uint buffer, int radix)
 	{
 		_logger.LogInformation("[msvcrt] _i64toa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
@@ -3236,7 +3236,7 @@ namespace Win32Emu.Win32.Modules
 	/// _ui64toa - Convert unsigned 64-bit integer to string
 	/// Converts an unsigned 64-bit integer value to a string representation in the specified radix
 	/// </summary>
-	[DllModuleExport(16)]
+	[DllModuleExport(16, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _ui64toa(ulong value, uint buffer, int radix)
 	{
 		_logger.LogInformation("[msvcrt] _ui64toa(value={Value}, buffer=0x{Buffer:X8}, radix={Radix})", value, buffer, radix);
@@ -3294,7 +3294,7 @@ namespace Win32Emu.Win32.Modules
 	/// _wcslwr - Convert wide string to lowercase
 	/// Converts all uppercase characters in a wide string to lowercase in-place
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _wcslwr(uint str)
 	{
 		_logger.LogInformation("[msvcrt] _wcslwr(str=0x{Str:X8})", str);
@@ -3323,7 +3323,7 @@ namespace Win32Emu.Win32.Modules
 	/// _wcsupr - Convert wide string to uppercase
 	/// Converts all lowercase characters in a wide string to uppercase in-place
 	/// </summary>
-	[DllModuleExport(4)]
+	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _wcsupr(uint str)
 	{
 		_logger.LogInformation("[msvcrt] _wcsupr(str=0x{Str:X8})", str);
@@ -3356,7 +3356,7 @@ namespace Win32Emu.Win32.Modules
 	/// strtok - Tokenize string using delimiters
 	/// Finds the next token in a string, using delimiters to separate tokens
 	/// </summary>
-	[DllModuleExport(8)]
+	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strtok(uint str, in LpcStr delim)
 	{
 		var delimStr = delim.ToString() ?? string.Empty;
@@ -3424,7 +3424,7 @@ namespace Win32Emu.Win32.Modules
 	/// _swab - Swap bytes in buffer
 	/// Swaps adjacent bytes in a buffer (byte swapping)
 	/// </summary>
-	[DllModuleExport(12)]
+	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _swab(uint src, uint dst, int len)
 	{
 		_logger.LogInformation("[msvcrt] _swab(src=0x{Src:X8}, dst=0x{Dst:X8}, len={Len})", src, dst, len);
