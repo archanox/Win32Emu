@@ -2691,7 +2691,7 @@ public sealed class Emulator : IDisposable
                             _vm!.Write8(retInstrAddr + 2, NOP_OPCODE);  // NOP
                             _patchedImportStubs.Add(importStubAddr);
                             _logger.LogDebug("[Syscall] Patched RET imm16 at 0x{RetAddr:X8} to RET+NOP+NOP (0x{RetOpcode:X2} 0x{NopOpcode:X2} 0x{NopOpcode:X2}) for cdecl calling convention (caller cleanup)", 
-                                retInstrAddr, RET_OPCODE, NOP_OPCODE);
+                                retInstrAddr, RET_OPCODE, NOP_OPCODE, NOP_OPCODE);
                         }
                         else if (opcode == RET_OPCODE)
                         {
