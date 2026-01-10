@@ -52,6 +52,11 @@ public sealed class Emulator : IDisposable
     // Note: Based on instruction count, not real time - actual latency depends on CPU performance
     private const ulong EVENT_PROCESSING_INTERVAL = 1000;
     
+    // x86 instruction opcodes for import stub patching
+    private const byte RET_OPCODE = 0xC3;           // RET - return (no stack cleanup)
+    private const byte RET_IMM16_OPCODE = 0xC2;     // RET imm16 - return with stack cleanup
+    private const byte NOP_OPCODE = 0x90;           // NOP - no operation
+    
     // Logging throttle interval when stuck at same EIP (reduce spam)
     // Log a warning every 1M iterations to avoid excessive log spam during legitimate tight loops
     private const ulong STUCK_EIP_LOG_INTERVAL = 1000000;
@@ -2634,7 +2639,7 @@ public sealed class Emulator : IDisposable
                         Loader.CallingConvention.Thiscall => true,
                         Loader.CallingConvention.Pascal => true,
                         Loader.CallingConvention.Cdecl => false,
-                        null => true, // Default to stdcall for unknown conventions (preserves existing behavior, warning logged above)
+                        // Default to stdcall for unknown/null conventions (preserves existing behavior, warning logged above)
                         _ => true
                     };
                     
@@ -2652,7 +2657,7 @@ public sealed class Emulator : IDisposable
                                 dll, name, argBytes);
                             _patchedImportStubs.Add(importStubAddr);
                         }
-                        else if (opcode == 0xC2)
+                        else if (opcode == RET_IMM16_OPCODE)
                         {
                             _vm!.Write8(retInstrAddr + 1, (byte)(argBytes & 0xFF));
                             _vm!.Write8(retInstrAddr + 2, (byte)((argBytes >> 8) & 0xFF));
@@ -2660,41 +2665,45 @@ public sealed class Emulator : IDisposable
                             _logger.LogDebug("[Syscall] Patched RET at 0x{RetAddr:X8} with argBytes={ArgBytes} for {Convention} calling convention", 
                                 retInstrAddr, argBytes, callingConvention?.ToString() ?? "unknown");
                         }
-                        else if (opcode == 0xC3)
+                        else if (opcode == RET_OPCODE)
                         {
                             // Already a plain RET, mark as patched to avoid redundant warnings
                             _patchedImportStubs.Add(importStubAddr);
-                            _logger.LogDebug("[Syscall] RET at 0x{RetAddr:X8} already plain RET (0xC3) for {Convention} calling convention", 
-                                retInstrAddr, callingConvention?.ToString() ?? "unknown");
+                            _logger.LogDebug("[Syscall] RET at 0x{RetAddr:X8} already plain RET (0x{RetOpcode:X2}) for {Convention} calling convention", 
+                                retInstrAddr, RET_OPCODE, callingConvention?.ToString() ?? "unknown");
                         }
                         else
                         {
-                            _logger.LogWarning("[Syscall] Expected RET imm16 (0xC2) or RET (0xC3) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                            _logger.LogWarning("[Syscall] Expected RET imm16 (0x{RetImm16Opcode:X2}) or RET (0x{RetOpcode:X2}) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", 
+                                RET_IMM16_OPCODE, RET_OPCODE, retInstrAddr, opcode);
                         }
                     }
                     else
                     {
                         // Cdecl functions: ensure RET has no cleanup (caller will clean up)
-                        if (opcode == 0xC2)
+                        if (opcode == RET_IMM16_OPCODE)
                         {
                             // Change RET imm16 (0xC2 xx xx) to RET (0xC3) for cdecl
                             // We need to replace the entire 3-byte instruction with a single-byte RET
                             // followed by NOPs to avoid instruction boundary issues
-                            _vm!.Write8(retInstrAddr, 0xC3);        // RET
-                            _vm!.Write8(retInstrAddr + 1, 0x90);    // NOP
-                            _vm!.Write8(retInstrAddr + 2, 0x90);    // NOP
+                            _vm!.Write8(retInstrAddr, RET_OPCODE);      // RET
+                            _vm!.Write8(retInstrAddr + 1, NOP_OPCODE);  // NOP
+                            _vm!.Write8(retInstrAddr + 2, NOP_OPCODE);  // NOP
                             _patchedImportStubs.Add(importStubAddr);
-                            _logger.LogDebug("[Syscall] Patched RET imm16 at 0x{RetAddr:X8} to RET+NOP+NOP (0xC3 0x90 0x90) for cdecl calling convention (caller cleanup)", retInstrAddr);
+                            _logger.LogDebug("[Syscall] Patched RET imm16 at 0x{RetAddr:X8} to RET+NOP+NOP (0x{RetOpcode:X2} 0x{NopOpcode:X2} 0x{NopOpcode:X2}) for cdecl calling convention (caller cleanup)", 
+                                retInstrAddr, RET_OPCODE, NOP_OPCODE);
                         }
-                        else if (opcode == 0xC3)
+                        else if (opcode == RET_OPCODE)
                         {
                             // Already a plain RET, mark as patched
                             _patchedImportStubs.Add(importStubAddr);
-                            _logger.LogDebug("[Syscall] RET at 0x{RetAddr:X8} already plain RET (0xC3) for cdecl calling convention", retInstrAddr);
+                            _logger.LogDebug("[Syscall] RET at 0x{RetAddr:X8} already plain RET (0x{RetOpcode:X2}) for cdecl calling convention", 
+                                retInstrAddr, RET_OPCODE);
                         }
                         else
                         {
-                            _logger.LogWarning("[Syscall] Expected RET (0xC3) or RET imm16 (0xC2) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", retInstrAddr, opcode);
+                            _logger.LogWarning("[Syscall] Expected RET (0x{RetOpcode:X2}) or RET imm16 (0x{RetImm16Opcode:X2}) at 0x{RetAddr:X8} but found 0x{Opcode:X2}. Skipping patch.", 
+                                RET_OPCODE, RET_IMM16_OPCODE, retInstrAddr, opcode);
                         }
                     }
                 }
