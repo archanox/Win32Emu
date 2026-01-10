@@ -4664,7 +4664,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(20)]
 		private uint WsprintfA(in LpStr output, in LpcStr format, StackArgs args)
 		{
-			var formatStr = format.ToString() ?? string.Empty;
+			var formatStr = format.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] WsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\")", output.Address, formatStr);
 
 			// Format the string using stack arguments
@@ -4695,7 +4695,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(12)]
 		private uint WvsprintfA(in LpStr output, in LpcStr format, uint arglist)
 		{
-			var formatStr = format.ToString() ?? string.Empty;
+			var formatStr = format.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] WvsprintfA(output=0x{Output:X8}, format=\"{FormatStr}\", arglist=0x{Arglist:X8})",
 				output.Address, formatStr, arglist);
 
@@ -7238,7 +7238,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(12)]
 		private uint DdeCreateStringHandleA(uint idInst, in LpcStr psz, int iCodePage)
 		{
-			var str = psz.ToString() ?? string.Empty;
+			var str = psz.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[User32] DdeCreateStringHandleA(idInst=0x{IdInst:X8}, psz=\"{Str}\", iCodePage={ICodePage})",
 				idInst, str, iCodePage);
 
@@ -10159,7 +10159,7 @@ return 0; // NULL - Stub implementation (window station not opened)
 [DllModuleExport(32, IsStub = true)]
 private uint PrivateExtractIconsW(in LpcWStr szFileName, int nIconIndex, int cxIcon, int cyIcon, uint phicon, uint piconid, uint nIcons, uint flags)
 {
-var fileName = szFileName.ToString() ?? string.Empty;
+var fileName = szFileName.Read(_env.Memory) ?? string.Empty;
 _logger.LogInformation("[User32] PrivateExtractIconsW(szFileName=\"{FileName}\", nIconIndex={NIconIndex}, cxIcon={CxIcon}, cyIcon={CyIcon}, phicon=0x{Phicon:X8}, piconid=0x{Piconid:X8}, nIcons={NIcons}, flags=0x{Flags:X8})",
 fileName, nIconIndex, cxIcon, cyIcon, phicon, piconid, nIcons, flags);
 return 0; // 0 indicates no icons extracted - Stub implementation

@@ -1093,7 +1093,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private int fprintf(uint stream, in LpcStr format, uint args)
 		{
-			var fmt = format.ToString() ?? string.Empty;
+			var fmt = format.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] fprintf(stream=0x{Stream:X8}, format=\"{Fmt}\", args=0x{Args:X8})", stream, fmt, args);
 			
 			// Format the string using the va_list
@@ -1129,7 +1129,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private int fputs(in LpcStr str, uint stream)
 		{
-			var s = str.ToString() ?? string.Empty;
+			var s = str.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] fputs(str=\"{S}\", stream=0x{Stream:X8})", s, stream);
 			
 			// Check if stream is stdout or stderr
@@ -1170,7 +1170,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private uint getenv(in LpcStr name)
 		{
-			var varName = name.ToString() ?? string.Empty;
+			var varName = name.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] getenv(name=\"{VarName}\")", varName);
 			// Get environment variable (stub - return NULL)
 			return 0;
@@ -1293,7 +1293,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 		private int strlen(in LpcStr str)
 		{
-			var s = str.ToString() ?? string.Empty;
+			var s = str.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] strlen(str=\"{S}\")", s);
 			return s.Length;
 		}
@@ -1301,8 +1301,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private int strncmp(in LpcStr str1, in LpcStr str2, uint num)
 		{
-			var s1 = str1.ToString() ?? string.Empty;
-			var s2 = str2.ToString() ?? string.Empty;
+			var s1 = str1.Read(_env.Memory) ?? string.Empty;
+			var s2 = str2.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] strncmp(str1=\"{S1}\", str2=\"{S2}\", num={Num})", s1, s2, num);
 			// Compare strings up to num characters
 			var compareLength = (int)Math.Min(num, Math.Min(s1.Length, s2.Length));
@@ -1317,8 +1317,8 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 		private int strcmp(in LpcStr str1, in LpcStr str2)
 		{
-			var s1 = str1.ToString() ?? string.Empty;
-			var s2 = str2.ToString() ?? string.Empty;
+			var s1 = str1.Read(_env.Memory) ?? string.Empty;
+			var s2 = str2.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] strcmp(str1=\"{S1}\", str2=\"{S2}\")", s1, s2);
 			// Compare strings
 			return string.Compare(s1, s2, StringComparison.Ordinal);
@@ -1327,7 +1327,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 		private int vfprintf(uint stream, in LpcStr format, uint args)
 		{
-			var fmt = format.ToString() ?? string.Empty;
+			var fmt = format.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] vfprintf(stream=0x{Stream:X8}, format=\"{Fmt}\", args=0x{Args:X8})", stream, fmt, args);
 			
 			// Format the string using the va_list
@@ -1342,7 +1342,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _spawnv(int mode, in LpcStr path, uint argv)
 	{
-		var pathStr = path.ToString() ?? string.Empty;
+		var pathStr = path.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _spawnv(mode={Mode}, path=\"{Path}\", argv=0x{Argv:X8})", mode, pathStr, argv);
 		// Stub - return -1 (error)
 		return -1;
@@ -1351,8 +1351,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _stricmp(in LpcStr str1, in LpcStr str2)
 	{
-		var s1 = str1.ToString() ?? string.Empty;
-		var s2 = str2.ToString() ?? string.Empty;
+		var s1 = str1.Read(_env.Memory) ?? string.Empty;
+		var s2 = str2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _stricmp(\"{S1}\", \"{S2}\")", s1, s2);
 		return string.Compare(s1, s2, StringComparison.OrdinalIgnoreCase);
 	}
@@ -1367,8 +1367,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _strnicmp(in LpcStr str1, in LpcStr str2, uint count)
 	{
-		var s1 = str1.ToString() ?? string.Empty;
-		var s2 = str2.ToString() ?? string.Empty;
+		var s1 = str1.Read(_env.Memory) ?? string.Empty;
+		var s2 = str2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _strnicmp(\"{S1}\", \"{S2}\", count={Count})", s1, s2, count);
 		
 		// Compare strings up to count characters, case-insensitive
@@ -1411,8 +1411,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint fopen(in LpcStr filename, in LpcStr mode)
 	{
-		var fname = filename.ToString() ?? string.Empty;
-		var modeStr = mode.ToString() ?? string.Empty;
+		var fname = filename.Read(_env.Memory) ?? string.Empty;
+		var modeStr = mode.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] fopen(\"{Fname}\", \"{Mode}\")", fname, modeStr);
 		// Stub - return NULL
 		return 0;
@@ -1421,7 +1421,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private int printf(in LpcStr format, uint args)
 	{
-		var fmt = format.ToString() ?? string.Empty;
+		var fmt = format.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] printf(\"{Fmt}\", args=0x{Args:X8})", fmt, args);
 		
 		// Format the string using the va_list (args points to the first variadic argument)
@@ -1436,7 +1436,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private int sprintf(uint buffer, in LpcStr format, uint args)
 	{
-		var fmt = format.ToString() ?? string.Empty;
+		var fmt = format.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] sprintf(buffer=0x{Buffer:X8}, format=\"{Fmt}\", args=0x{Args:X8})", buffer, fmt, args);
 		// Stub - write format string to buffer and return length
 		if (buffer != 0)
@@ -1449,7 +1449,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strchr(in LpcStr str, int c)
 	{
-		var s = str.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] strchr(\"{S}\", {C})", s, c);
 		var ch = (char)c;
 		var index = s.IndexOf(ch);
@@ -1464,7 +1464,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strrchr(in LpcStr str, int c)
 	{
-		var s = str.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] strrchr(\"{S}\", {C})", s, c);
 		var ch = (char)c;
 		var index = s.LastIndexOf(ch);
@@ -1885,7 +1885,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint _strdup(in LpcStr str)
 	{
-		var s = str.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _strdup(str=\"{S}\")", s);
 		
 		// Allocate memory for string + null terminator
@@ -1933,7 +1933,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(16, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _vsnprintf(uint buffer, uint count, in LpcStr format, uint args)
 	{
-		var fmt = format.ToString() ?? string.Empty;
+		var fmt = format.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _vsnprintf(buffer=0x{Buffer:X8}, count={Count}, format=\"{Fmt}\", args=0x{Args:X8})", 
 			buffer, count, fmt, args);
 		
@@ -2177,7 +2177,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int atoi(in LpcStr str)
 	{
-		var s = str.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] atoi(str=\"{S}\")", s);
 		
 		// Parse string to integer, return 0 if parsing fails
@@ -2225,7 +2225,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strcpy(uint dest, in LpcStr src)
 	{
-		var s = src.ToString() ?? string.Empty;
+		var s = src.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] strcpy(dest=0x{Dest:X8}, src=\"{S}\")", dest, s);
 		
 		if (dest == 0)
@@ -2246,8 +2246,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl)]
 	private void _assert(in LpcStr expr, in LpcStr file, uint line)
 	{
-		var expression = expr.ToString() ?? string.Empty;
-		var filename = file.ToString() ?? string.Empty;
+		var expression = expr.Read(_env.Memory) ?? string.Empty;
+		var filename = file.Read(_env.Memory) ?? string.Empty;
 		_logger.LogError("[msvcrt] Assertion failed: {Expression}, file {File}, line {Line}", 
 			expression, filename, line);
 		
@@ -2278,7 +2278,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int puts(in LpcStr str)
 	{
-		var s = str.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] puts(str=\"{S}\")", s);
 		
 		// Write to proper stdout using the environment's WriteToStdOutput
@@ -2294,7 +2294,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private int sscanf(uint buffer, in LpcStr format, uint varargs)
 	{
-		var fmt = format.ToString() ?? string.Empty;
+		var fmt = format.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] sscanf(buffer=0x{Buffer:X8}, format=\"{Fmt}\", varargs=0x{Varargs:X8})", 
 			buffer, fmt, varargs);
 		
@@ -2313,7 +2313,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strcat(uint dest, in LpcStr src)
 	{
-		var s = src.ToString() ?? string.Empty;
+		var s = src.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] strcat(dest=0x{Dest:X8}, src=\"{S}\")", dest, s);
 		
 		if (dest == 0)
@@ -2340,8 +2340,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strstr(in LpcStr str, in LpcStr substr)
 	{
-		var s = str.ToString() ?? string.Empty;
-		var sub = substr.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
+		var sub = substr.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] strstr(str=\"{S}\", substr=\"{Sub}\")", s, sub);
 		
 		// Find index of substring
@@ -2400,7 +2400,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private int _vsnwprintf(uint buffer, uint count, in LpcWStr format, uint args)
 	{
-		var fmt = format.ToString() ?? string.Empty;
+		var fmt = format.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _vsnwprintf(buffer=0x{Buffer:X8}, count={Count}, format=\"{Fmt}\", args=0x{Args:X8})", buffer, count, fmt, args);
 		
 		// Stub implementation - just write the format string
@@ -2424,8 +2424,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private uint _wfopen(in LpcWStr filename, in LpcWStr mode)
 	{
-		var fname = filename.ToString() ?? string.Empty;
-		var m = mode.ToString() ?? string.Empty;
+		var fname = filename.Read(_env.Memory) ?? string.Empty;
+		var m = mode.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] _wfopen(filename=\"{Fname}\", mode=\"{M}\")", fname, m);
 		
 		// Stub implementation - return a fake FILE pointer
@@ -2444,7 +2444,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(12, CallingConvention = DllCallingConvention.Cdecl, IsStub = true)]
 	private int swprintf(uint buffer, in LpcWStr format, uint args)
 	{
-		var fmt = format.ToString() ?? string.Empty;
+		var fmt = format.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] swprintf(buffer=0x{Buffer:X8}, format=\"{Fmt}\", args=0x{Args:X8})", buffer, fmt, args);
 		
 		// Stub implementation - just write the format string
@@ -2467,8 +2467,8 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private int wcscmp(in LpcWStr str1, in LpcWStr str2)
 	{
-		var s1 = str1.ToString() ?? string.Empty;
-		var s2 = str2.ToString() ?? string.Empty;
+		var s1 = str1.Read(_env.Memory) ?? string.Empty;
+		var s2 = str2.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] wcscmp(str1=\"{S1}\", str2=\"{S2}\")", s1, s2);
 		
 		// Compare wide strings
@@ -2485,7 +2485,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint wcscpy(uint dest, in LpcWStr src)
 	{
-		var s = src.ToString() ?? string.Empty;
+		var s = src.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] wcscpy(dest=0x{Dest:X8}, src=\"{S}\")", dest, s);
 		
 		if (dest == 0)
@@ -2509,7 +2509,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int wcslen(in LpcWStr str)
 	{
-		var s = str.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] wcslen(str=\"{S}\")", s);
 		
 		return s.Length;
@@ -2525,7 +2525,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint wcsrchr(in LpcWStr str, int c)
 	{
-		var s = str.ToString() ?? string.Empty;
+		var s = str.Read(_env.Memory) ?? string.Empty;
 		var ch = (char)c;
 		_logger.LogInformation("[msvcrt] wcsrchr(str=\"{S}\", c='{Ch}')", s, ch);
 		
@@ -2772,7 +2772,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int system(in LpcStr command)
 	{
-		var cmd = command.ToString();
+		var cmd = command.Read(_env.Memory);
 		_logger.LogInformation("[msvcrt] system(command=\"{Cmd}\")", cmd);
 		
 		// If command is NULL, return non-zero to indicate command processor is available
@@ -2797,7 +2797,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(4, CallingConvention = DllCallingConvention.Cdecl)]
 	private int _wsystem(in LpcWStr command)
 	{
-		var cmd = command.ToString();
+		var cmd = command.Read(_env.Memory);
 		_logger.LogInformation("[msvcrt] _wsystem(command=\"{Cmd}\")", cmd);
 		
 		// If command is NULL, return non-zero to indicate command processor is available
@@ -3359,7 +3359,7 @@ namespace Win32Emu.Win32.Modules
 	[DllModuleExport(8, CallingConvention = DllCallingConvention.Cdecl)]
 	private uint strtok(uint str, in LpcStr delim)
 	{
-		var delimStr = delim.ToString() ?? string.Empty;
+		var delimStr = delim.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[msvcrt] strtok(str=0x{Str:X8}, delim=\"{Delim}\")", str, delimStr);
 		
 		if (delimStr.Length == 0)

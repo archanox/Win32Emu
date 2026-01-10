@@ -2022,7 +2022,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint SndPlaySound(in LpcStr pszSound, uint fuSound)
 		{
-			var soundName = pszSound.ToString() ?? string.Empty;
+			var soundName = pszSound.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[WinMM] sndPlaySound(pszSound=\"{SoundName}\", fuSound=0x{FuSound:X8})",
 				soundName, fuSound);
 
@@ -2058,7 +2058,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint SndPlaySoundA(in LpcStr pszSound, uint fuSound)
 		{
-			var soundName = pszSound.ToString() ?? string.Empty;
+			var soundName = pszSound.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[WinMM] sndPlaySoundA(pszSound=\"{SoundName}\", fuSound=0x{FuSound:X8})",
 				soundName, fuSound);
 
@@ -2095,7 +2095,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint PlaySoundA(in LpcStr pszSound, uint hmod, uint fdwSound)
 		{
-			var soundName = pszSound.ToString() ?? string.Empty;
+			var soundName = pszSound.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[WinMM] PlaySoundA(pszSound=\"{SoundName}\", hmod=0x{Hmod:X8}, fdwSound=0x{FdwSound:X8})",
 				soundName, hmod, fdwSound);
 
@@ -2139,7 +2139,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(1)]
 		private uint PlaySound(in LpcStr pszSound, uint hmod, uint fdwSound)
 		{
-			var soundName = pszSound.ToString() ?? string.Empty;
+			var soundName = pszSound.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[WinMM] PlaySound(pszSound=\"{SoundName}\", hmod=0x{Hmod:X8}, fdwSound=0x{FdwSound:X8})",
 				soundName, hmod, fdwSound);
 
@@ -2483,7 +2483,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(4)]
 		private uint MciGetDeviceIDA(in LpcStr pszDevice)
 		{
-			var deviceName = pszDevice.ToString() ?? string.Empty;
+			var deviceName = pszDevice.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[WinMM] mciGetDeviceIDA(pszDevice=\"{DeviceName}\")", deviceName);
 			// Return 0 (no device)
 			return 0;
@@ -2750,7 +2750,7 @@ namespace Win32Emu.Win32.Modules
 		[DllModuleExport(8)]
 		private uint SndPlaySoundW(in LpcWStr pszSound, uint fuSound)
 		{
-			var soundName = pszSound.ToString() ?? string.Empty;
+			var soundName = pszSound.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[WinMM] sndPlaySoundW(pszSound=\"{SoundName}\", fuSound=0x{FuSound:X8})",
 				soundName, fuSound);
 			// Return success without playing - stub
