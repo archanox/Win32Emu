@@ -45,6 +45,15 @@ public sealed class DllModuleExportAttribute : Attribute
 	/// </summary>
 	public string? ExportName { get; init; }
 
+	/// <summary>
+	/// The calling convention used by this export (optional).
+	/// If not specified, defaults based on name decoration:
+	/// - Decorated names (e.g., "Function@N") infer stdcall/fastcall/thiscall
+	/// - Undecorated names default to stdcall for backward compatibility
+	/// Use this property to explicitly specify cdecl for C runtime functions.
+	/// </summary>
+	public Loader.CallingConvention? CallingConvention { get; init; }
+
 	public DllModuleExportAttribute(uint ordinal)
 	{
 		Ordinal = ordinal;
