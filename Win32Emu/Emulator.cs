@@ -2755,7 +2755,7 @@ public sealed class Emulator : IDisposable
                             }
                         }
                         
-                        _logger.LogDebug(stackDump.ToString());
+                        _logger.LogDebug("{StackDump}", stackDump.ToString());
                     }
                     catch (Exception ex)
                     {
