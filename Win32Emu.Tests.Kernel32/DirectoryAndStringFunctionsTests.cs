@@ -325,6 +325,85 @@ public sealed class DirectoryAndStringFunctionsTests : IDisposable
         Assert.Equal(BASE_SEARCH_PATH_ENABLE_SAFE_SEARCHMODE, _testEnv.ProcessEnv.SearchPathMode); // Mode should not have changed
     }
 
+    [Fact]
+    public void GetTempPathA_WithSufficientBuffer_ShouldReturnPathAndLength()
+    {
+        // Arrange
+        const string expectedPath = "C:\\TEMP\\";
+        var bufferSize = 260u; // MAX_PATH
+        var buffer = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETTEMPPATHA", bufferSize, buffer);
+
+        // Assert
+        Assert.Equal((uint)expectedPath.Length, result); // Should return length without null terminator
+        var actualPath = _testEnv.ReadString(buffer);
+        Assert.Equal(expectedPath, actualPath);
+    }
+
+    [Fact]
+    public void GetTempPathA_WithExactBuffer_ShouldReturnPathAndLength()
+    {
+        // Arrange
+        const string expectedPath = "C:\\TEMP\\";
+        var bufferSize = (uint)(expectedPath.Length + 1); // Exact size with null terminator
+        var buffer = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETTEMPPATHA", bufferSize, buffer);
+
+        // Assert
+        Assert.Equal((uint)expectedPath.Length, result); // Should return length without null terminator
+        var actualPath = _testEnv.ReadString(buffer);
+        Assert.Equal(expectedPath, actualPath);
+    }
+
+    [Fact]
+    public void GetTempPathA_WithSmallBuffer_ShouldReturnRequiredSize()
+    {
+        // Arrange
+        const string expectedPath = "C:\\TEMP\\";
+        var bufferSize = 5u; // Too small
+        var buffer = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETTEMPPATHA", bufferSize, buffer);
+
+        // Assert
+        Assert.Equal((uint)(expectedPath.Length + 1), result); // Should return required size including null terminator
+    }
+
+    [Fact]
+    public void GetTempPathA_WithNullBuffer_ShouldReturnRequiredSize()
+    {
+        // Arrange
+        const string expectedPath = "C:\\TEMP\\";
+        var bufferSize = 0u;
+        var buffer = 0u; // NULL pointer
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETTEMPPATHA", bufferSize, buffer);
+
+        // Assert
+        Assert.Equal((uint)(expectedPath.Length + 1), result); // Should return required size including null terminator
+    }
+
+    [Fact]
+    public void GetTempPathA_WithZeroBuffer_ShouldReturnRequiredSize()
+    {
+        // Arrange
+        const string expectedPath = "C:\\TEMP\\";
+        var bufferSize = 0u;
+        var buffer = _testEnv.ProcessEnv.SimpleAlloc(10); // Valid buffer but size is 0
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETTEMPPATHA", bufferSize, buffer);
+
+        // Assert
+        Assert.Equal((uint)(expectedPath.Length + 1), result); // Should return required size including null terminator
+    }
+
     public void Dispose()
     {
         _testEnv?.Dispose();

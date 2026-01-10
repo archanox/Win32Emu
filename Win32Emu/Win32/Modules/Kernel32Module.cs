@@ -7353,13 +7353,24 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetTempPathA(uint nBufferLength, uint lpBuffer)
 	{
 		_logger.LogInformation("[Kernel32] GetTempPathA(nBufferLength={NBufferLength}, lpBuffer=0x{LpBuffer:X8})", nBufferLength, lpBuffer);
-		var tempPath = "C:\\TEMP\\";
-		if (lpBuffer != 0 && nBufferLength >= (uint)tempPath.Length + 1)
+		const string tempPath = "C:\\TEMP\\";
+		
+		// Per Win32 API specification:
+		// - If successful: return length of string copied (NOT including null terminator)
+		// - If buffer too small: return required buffer size (INCLUDING null terminator)
+		// - Buffer must be large enough to hold the string + null terminator
+		var requiredSize = (uint)tempPath.Length + 1; // Include null terminator
+		
+		if (lpBuffer != 0 && nBufferLength >= requiredSize)
 		{
+			// Buffer is large enough - copy the string with null terminator
 			_env.WriteAnsiStringAt(lpBuffer, tempPath);
+			// Return length WITHOUT null terminator
 			return (uint)tempPath.Length;
 		}
-		return (uint)tempPath.Length + 1;
+		
+		// Buffer too small or null - return required size INCLUDING null terminator
+		return requiredSize;
 	}
 
 	[DllModuleExport(4)]
