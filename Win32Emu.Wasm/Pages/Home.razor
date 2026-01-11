@@ -1521,6 +1521,7 @@
 	/// <summary>
 	/// Parse program arguments from a string into an array.
 	/// Handles quoted strings with spaces properly (e.g., "file name.txt" -v).
+	/// Supports escaped quotes within quoted strings (e.g., "file \"with quotes\".txt").
 	/// </summary>
 	private string[]? ParseProgramArguments(string argsString)
 	{
@@ -1537,7 +1538,13 @@
 		{
 			var c = argsString[i];
 			
-			if (c == '"')
+			// Handle escaped quotes (backslash before quote)
+			if (c == '\\' && i + 1 < argsString.Length && argsString[i + 1] == '"')
+			{
+				currentArg.Append('"');
+				i++; // Skip the next character (the escaped quote)
+			}
+			else if (c == '"')
 			{
 				inQuotes = !inQuotes;
 			}
@@ -1561,6 +1568,7 @@
 			args.Add(currentArg.ToString());
 		}
 		
+		// Return null if no actual arguments were parsed (handles cases like "" "" "")
 		return args.Count > 0 ? args.ToArray() : null;
 	}
 }
