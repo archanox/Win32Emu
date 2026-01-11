@@ -2725,19 +2725,19 @@ namespace Win32Emu.Win32.Modules
 				continue;
 			}
 
-			// Handle COM vtable and import calls
-			if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
-			{
-				failed = true;
-				break;
-			}
+		// Handle COM vtable and import calls
+		if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
+		{
+			failed = true;
+			break;
+		}
 
-				// Periodically check if we should yield to other threads
-				if (steps % YIELD_INTERVAL == 0)
-					{
-						var scheduler = _env.ThreadScheduler;
-						if (scheduler != null)
-						{
+			// Periodically check if we should yield to other threads
+			if (steps % YIELD_INTERVAL == 0)
+			{
+				var scheduler = _env.ThreadScheduler;
+				if (scheduler != null)
+				{
 							scheduler.ProcessWaitTimeouts();
 							if (scheduler.ShouldContextSwitch())
 							{
@@ -2917,22 +2917,22 @@ namespace Win32Emu.Win32.Modules
 
 			// Handle COM vtable and import calls
 			if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak))
+		{
+			if (shouldBreak)
 			{
-				if (shouldBreak)
-				{
-					failed = true;
-					break;
-				}
+				failed = true;
+				break;
 			}
+		}
 
-				// Periodically check if we should yield to other threads
-				if (steps % YIELD_INTERVAL == 0)
-					{
-						var scheduler = _env.ThreadScheduler;
-						if (scheduler != null)
-						{
-							scheduler.ProcessWaitTimeouts();
-							if (scheduler.ShouldContextSwitch())
+			// Periodically check if we should yield to other threads
+			if (steps % YIELD_INTERVAL == 0)
+			{
+				var scheduler = _env.ThreadScheduler;
+				if (scheduler != null)
+				{
+					scheduler.ProcessWaitTimeouts();
+					if (scheduler.ShouldContextSwitch())
 							{
 								_logger.LogDebug("[User32] {Context}: Cooperative yield at {Steps} steps", contextName, steps);
 							}
