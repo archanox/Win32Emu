@@ -409,6 +409,25 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 	}
 
 	[Fact]
+	public void Fputc_ToStderr_ReturnsCharacterWritten()
+	{
+		// Arrange - get stderr pointer from __p__iob
+		var success = _msvcrt.TryInvokeUnsafe("__P__IOB", _testEnv.Cpu, _testEnv.Memory, out var iobPtr);
+		Assert.True(success, "__p__iob should be implemented");
+		
+		// stderr is at iob[2], which is 64 bytes from the iob base
+		var stderrPtr = iobPtr + 64;
+		
+		// Act - write character 'E' (0x45) to stderr
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0x45u, stderrPtr);
+		success = _msvcrt.TryInvokeUnsafe("fputc", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+		
+		// Assert
+		Assert.True(success, "fputc should be implemented");
+		Assert.Equal(0x45u, returnValue); // Should return the character written
+	}
+
+	[Fact]
 	public void Fputc_WithStreamAtImageBaseOffset_ReturnsCharacterWritten()
 	{
 		// Arrange - simulate a stream pointer that's in the image base range
