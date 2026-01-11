@@ -2706,33 +2706,34 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-				// Execute one instruction
-				var step = cpu.SingleStep(memory);
+			// Execute one instruction
+			var step = cpu.SingleStep(memory);
 
-				// Handle syscalls (INT 0x80 from import stubs)
-				if (step.IsSyscall)
-				{
-					if (!HandleSyscall(step, cpu, memory, contextName))
-					{
-						_logger.LogError("[User32] {Context}: Failed to handle syscall at EIP=0x{Eip:X8}", contextName, cpu.GetEip());
-						failed = true;
-						break;
-					}
-					// Syscall was handled, continue to next iteration
-					continue;
-				}
+			// Increment step counter (done here so syscall handling is counted)
+			steps++;
 
-				// Handle COM vtable and import calls
-				if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
+			// Handle syscalls (INT 0x80 from import stubs)
+			if (step.IsSyscall)
+			{
+				if (!HandleSyscall(step, cpu, memory, contextName))
 				{
+					_logger.LogError("[User32] {Context}: Failed to handle syscall at EIP=0x{Eip:X8}", contextName, cpu.GetEip());
 					failed = true;
 					break;
 				}
+				// Syscall was handled, continue to next iteration
+				continue;
+			}
 
-					steps++;
+			// Handle COM vtable and import calls
+			if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
+			{
+				failed = true;
+				break;
+			}
 
-					// Periodically check if we should yield to other threads
-					if (steps % YIELD_INTERVAL == 0)
+				// Periodically check if we should yield to other threads
+				if (steps % YIELD_INTERVAL == 0)
 					{
 						var scheduler = _env.ThreadScheduler;
 						if (scheduler != null)
@@ -2893,38 +2894,39 @@ namespace Win32Emu.Win32.Modules
 							stuckCounter = 0;
 							lastCheckEip = currentEip;
 						}
-					}
-
-				// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-				var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
-
-				// Handle syscalls (INT 0x80 from import stubs)
-				if (step.IsSyscall)
-				{
-					if (!await HandleSyscallAsync(step, cpu, memory, contextName, cancellationToken).ConfigureAwait(false))
-					{
-						_logger.LogError("[User32] {Context}: Failed to handle syscall at EIP=0x{Eip:X8}", contextName, cpu.GetEip());
-						failed = true;
-						break;
-					}
-					// Syscall was handled, continue to next iteration
-					continue;
 				}
 
-				// Handle COM vtable and import calls
-				if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak))
+			// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
+			var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
+
+			// Increment step counter (done here so syscall handling is counted)
+			steps++;
+
+			// Handle syscalls (INT 0x80 from import stubs)
+			if (step.IsSyscall)
+			{
+				if (!await HandleSyscallAsync(step, cpu, memory, contextName, cancellationToken).ConfigureAwait(false))
 				{
-					if (shouldBreak)
-					{
-						failed = true;
-						break;
-					}
+					_logger.LogError("[User32] {Context}: Failed to handle syscall at EIP=0x{Eip:X8}", contextName, cpu.GetEip());
+					failed = true;
+					break;
 				}
+				// Syscall was handled, continue to next iteration
+				continue;
+			}
 
-					steps++;
+			// Handle COM vtable and import calls
+			if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak))
+			{
+				if (shouldBreak)
+				{
+					failed = true;
+					break;
+				}
+			}
 
-					// Periodically check if we should yield to other threads
-					if (steps % YIELD_INTERVAL == 0)
+				// Periodically check if we should yield to other threads
+				if (steps % YIELD_INTERVAL == 0)
 					{
 						var scheduler = _env.ThreadScheduler;
 						if (scheduler != null)
@@ -5093,6 +5095,14 @@ namespace Win32Emu.Win32.Modules
 			return false;
 		}
 
+		// Check that ESP + 4 is within memory bounds before reading
+		if (esp + 4 > memory.Size)
+		{
+			_logger.LogError("[User32] {Context}: ESP=0x{Esp:X8} + 4 exceeds memory size 0x{Size:X8}, cannot handle syscall", 
+				logContext, esp, memory.Size);
+			return false;
+		}
+
 		var retToStub = memory.Read32(esp);
 		var importStubAddr = retToStub - IMPORT_STUB_CALL_SIZE; // Import stub CALL is before return address
 
@@ -5167,6 +5177,14 @@ namespace Win32Emu.Win32.Modules
 		if (esp < MemoryRegions.MinValidUserAddress)
 		{
 			_logger.LogError("[User32] {Context}: ESP=0x{Esp:X8} is too low, cannot handle syscall", logContext, esp);
+			return false;
+		}
+
+		// Check that ESP + 4 is within memory bounds before reading
+		if (esp + 4 > memory.Size)
+		{
+			_logger.LogError("[User32] {Context}: ESP=0x{Esp:X8} + 4 exceeds memory size 0x{Size:X8}, cannot handle syscall", 
+				logContext, esp, memory.Size);
 			return false;
 		}
 
