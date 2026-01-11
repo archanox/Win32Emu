@@ -103,9 +103,7 @@ public class RtlToCSharpGenerator
             RtlBranch branch => $"if ({ExpressionToString(branch.Condition)}) goto Label_{branch.TargetOffset:X};",
             RtlGoto goto_ => $"goto Label_{goto_.TargetOffset:X};",
             RtlCall call => GenerateCall(call),
-            RtlReturn ret => ret.ReturnValue != null ? 
-                $"return await Task.FromResult(new CpuStepResult {{ IsCall = false, CallTarget = 0 }});" :
-                "return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });",
+            RtlReturn ret => GenerateReturn(ret),
             RtlLoad load => $"{ExpressionToString(load.Destination)} = mem.Read{load.Size * 8}({ExpressionToString(load.Address)});",
             RtlStore store => $"mem.Write{store.Size * 8}({ExpressionToString(store.Address)}, {ExpressionToString(store.Value)});",
             RtlSimdOp simd => $"// {simd.Comment}",
@@ -126,6 +124,29 @@ public class RtlToCSharpGenerator
             return $"{ExpressionToString(call.ReturnValue)} = await CallFunction({target}, new object[] {{ {args} }});";
         }
         return $"await CallFunction({target}, new object[] {{ {args} }});";
+    }
+    
+    private string GenerateReturn(RtlReturn ret)
+    {
+        // RET instruction semantics:
+        // 1. Pop return address from stack: retAddr = [ESP]; ESP += 4
+        // 2. If immediate operand, add it to ESP (stdcall cleanup): ESP += imm16
+        // 3. Update EIP to return address
+        // 4. Return from compiled block
+        
+        var sb = new StringBuilder();
+        sb.AppendLine("{ // RET instruction");
+        sb.AppendLine("                uint retAddr = mem.Read32(ESP);");
+        sb.AppendLine("                ESP += 4;");
+        if (ret.StackCleanup > 0)
+        {
+            sb.AppendLine($"                ESP += 0x{ret.StackCleanup:X}u; // stdcall cleanup");
+        }
+        sb.AppendLine("                cpu.SetEip(retAddr);");
+        sb.AppendLine("                cpu.SetRegister(\"ESP\", ESP);");
+        sb.AppendLine("                return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });");
+        sb.Append("            }");
+        return sb.ToString();
     }
     
     private string ExpressionToString(RtlExpression expr)
