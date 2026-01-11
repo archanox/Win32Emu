@@ -65,13 +65,17 @@ namespace Win32Emu.Win32.Modules
 			uint ThreadId
 		);
 
-		// Constants for procedure execution monitoring
-		private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
-		private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
-		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
-		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB) - addresses below this indicate memory corruption
-		
-		// Resource ID constants
+	// Constants for procedure execution monitoring
+	private const int INFINITE_LOOP_CHECK_INTERVAL = 100000; // Check for infinite loops every 100K steps
+	private const int STUCK_COUNTER_THRESHOLD = 3; // Number of consecutive checks at same EIP to consider it stuck
+	private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
+	private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB) - addresses below this indicate memory corruption
+	
+	// Constants for syscall handling (INT 0x80 instruction and import stub layout)
+	private const int INT_INSTRUCTION_SIZE = 2; // Size of INT 0x80 instruction in bytes (CD 80)
+	private const int IMPORT_STUB_CALL_SIZE = 5; // Size of CALL instruction in import stub (E8 xx xx xx xx)
+	
+	// Resource ID constants
 		// In Win32 API, resource IDs can be either integers or string pointers.
 		// Integer resource IDs are stored as values < 0x10000 (65536), while string pointers are >= 0x10000.
 		// This follows the Windows IS_INTRESOURCE macro convention.
@@ -5075,9 +5079,9 @@ namespace Win32Emu.Win32.Modules
 	/// </summary>
 	private bool HandleSyscall(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext)
 	{
-		// Advance EIP past the INT 0x80 instruction (2 bytes: CD 80)
+		// Advance EIP past the INT 0x80 instruction
 		var eipAtInt = cpu.GetEip();
-		cpu.SetEip(eipAtInt + 2);
+		cpu.SetEip(eipAtInt + INT_INSTRUCTION_SIZE);
 		_logger.LogDebug("[User32] {Context}: Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
 			logContext, eipAtInt, cpu.GetEip());
 
@@ -5090,7 +5094,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		var retToStub = memory.Read32(esp);
-		var importStubAddr = retToStub - 5; // Import stub is 5 bytes before return address
+		var importStubAddr = retToStub - IMPORT_STUB_CALL_SIZE; // Import stub CALL is before return address
 
 		// Get the current main executable (may have synthetic exports)
 		var currentImage = _env.GetMainExecutable() ?? _image;
@@ -5152,9 +5156,9 @@ namespace Win32Emu.Win32.Modules
 	/// </summary>
 	private async Task<bool> HandleSyscallAsync(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext, CancellationToken cancellationToken = default)
 	{
-		// Advance EIP past the INT 0x80 instruction (2 bytes: CD 80)
+		// Advance EIP past the INT 0x80 instruction
 		var eipAtInt = cpu.GetEip();
-		cpu.SetEip(eipAtInt + 2);
+		cpu.SetEip(eipAtInt + INT_INSTRUCTION_SIZE);
 		_logger.LogDebug("[User32] {Context}: Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
 			logContext, eipAtInt, cpu.GetEip());
 
@@ -5167,7 +5171,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		var retToStub = memory.Read32(esp);
-		var importStubAddr = retToStub - 5; // Import stub is 5 bytes before return address
+		var importStubAddr = retToStub - IMPORT_STUB_CALL_SIZE; // Import stub CALL is before return address
 
 		// Get the current main executable (may have synthetic exports)
 		var currentImage = _env.GetMainExecutable() ?? _image;
