@@ -80,8 +80,9 @@ public class RtlCall : RtlInstruction
 public class RtlReturn : RtlInstruction
 {
     public RtlExpression? ReturnValue { get; set; }
+    public ushort StackCleanup { get; set; } // For stdcall RET imm16
     
-    public override string ToReadableString() => ReturnValue != null ? $"return {ReturnValue}" : "return";
+    public override string ToReadableString() => StackCleanup > 0 ? $"return (pop stack + {StackCleanup})" : "return";
 }
 
 /// <summary>

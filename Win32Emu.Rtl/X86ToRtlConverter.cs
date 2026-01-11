@@ -164,10 +164,16 @@ public class X86ToRtlConverter
                 break;
                 
             case Mnemonic.Ret:
+                var stackCleanup = (ushort)0;
+                if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Immediate16)
+                {
+                    stackCleanup = insn.Immediate16;
+                }
                 results.Add(new RtlReturn
                 {
                     Offset = (int)insn.IP,
-                    ReturnValue = new RtlRegister { Name = "EAX" }
+                    ReturnValue = new RtlRegister { Name = "EAX" },
+                    StackCleanup = stackCleanup
                 });
                 break;
                 
