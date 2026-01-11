@@ -44,47 +44,73 @@ The range check failed, so stdout wasn't detected.
 
 ## Solution
 
-Updated `GetStandardStreamType` to accept stream pointers in any valid memory range, not just near `_imageBase`:
+Updated `GetStandardStreamType` to properly handle both static and heap-allocated `_iob` arrays while preventing false positives:
 
 ### New Detection Logic
 
 ```csharp
-// Check if stream could be stdout (offset FILE_STRUCTURE_SIZE from _iob base)
-var potentialIobBase = stream - FILE_STRUCTURE_SIZE;
-
-// Accept any address that looks reasonable (not NULL, not in low memory < 0x10000)
-if (potentialIobBase >= 0x10000 && potentialIobBase < 0xFFFF0000)
+private int GetStandardStreamType(uint stream)
 {
-    // Additional validation: check if this looks like it could be in a valid memory region
-    if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
+    // First check against _iobArrayPtr if it's set
+    if (_iobArrayPtr != 0)
     {
-        // Static _iob array in module's data section
-        if (_iobArrayPtr == 0)
+        if (stream == _iobArrayPtr) return 0; // stdin
+        if (stream == _iobArrayPtr + FILE_STRUCTURE_SIZE) return 1; // stdout
+        if (stream == _iobArrayPtr + (FILE_STRUCTURE_SIZE * 2)) return 2; // stderr
+        
+        // _iobArrayPtr is already set, so only exact matches are valid.
+        // Return -1 for non-matching streams to avoid false positives with arbitrary pointers.
+        return -1;
+    }
+    
+    // Heuristic detection: only applies when _iobArrayPtr is not yet set (== 0)
+    // Check if stream could be stdout (offset FILE_STRUCTURE_SIZE from _iob base)
+    var potentialIobBase = stream - FILE_STRUCTURE_SIZE;
+    
+    // Accept any address that looks reasonable (not NULL, not in low memory < 0x10000)
+    if (potentialIobBase >= 0x10000 && potentialIobBase < 0xFFFF0000)
+    {
+        if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
         {
+            // Static _iob array in module's data section
             _iobArrayPtr = potentialIobBase;
             _logger.LogInformation("[msvcrt] Detected static _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
+            return 1; // stdout
         }
-        return 1; // stdout
-    }
-    else
-    {
-        // Potentially heap-allocated _iob array - be more permissive
-        if (_iobArrayPtr == 0)
+        else
         {
+            // Heap-allocated _iob array
             _iobArrayPtr = potentialIobBase;
             _logger.LogInformation("[msvcrt] Detected heap-allocated _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
+            return 1; // stdout
         }
-        return 1; // stdout
     }
+    
+    // Similar logic for stderr detection...
+    
+    return -1; // Not a standard stream
 }
 ```
 
 ### Key Changes
 
-1. **Broadened range check**: Accept any address in `[0x10000, 0xFFFF0000]` instead of just `[_imageBase, _imageBase + 64KB]`
-2. **Distinguish static vs heap**: Log whether the `_iob` array appears to be static or heap-allocated
-3. **Auto-detection**: Cache `_iobArrayPtr` on first stdout/stderr usage, regardless of location
-4. **Safety**: Still reject NULL pointers and low memory addresses (< `0x10000`)
+1. **Early return when `_iobArrayPtr` is set**: Once `_iobArrayPtr` is discovered, only exact matches are accepted. This prevents false positives where arbitrary file handles are misidentified as standard streams.
+2. **Heuristic detection only when needed**: The arithmetic-based detection (stream - 32 or stream - 64) only runs when `_iobArrayPtr == 0`, preventing misidentification of random pointers.
+3. **Broadened initial detection**: Accept any address in `[0x10000, 0xFFFF0000]` for initial detection instead of restricting to `[_imageBase, _imageBase + 64KB]`
+4. **Distinguish static vs heap**: Log whether the `_iob` array appears to be static or heap-allocated
+5. **Safety preserved**: Still reject NULL pointers and low memory addresses (< `0x10000`)
+
+### False Positive Prevention
+
+The original fix had a critical flaw: after `_iobArrayPtr` was set, the function would still apply heuristic checks and return stdout/stderr for arbitrary pointers. For example:
+
+1. `_iobArrayPtr = 0x0F0001F0` (already set from `__p__iob()`)
+2. File handle `0x50020` is passed to `fputc`
+3. Function calculates: `potentialIobBase = 0x50020 - 32 = 0x50000`
+4. Passes range check and **incorrectly returns 1 (stdout)**
+5. File output gets redirected to console!
+
+The fix adds an early return after exact match checks fail when `_iobArrayPtr != 0`, ensuring heuristic detection only runs once during initial discovery.
 
 ## Testing
 

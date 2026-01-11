@@ -2024,9 +2024,13 @@ namespace Win32Emu.Win32.Modules
 			if (stream == _iobArrayPtr) return 0; // stdin
 			if (stream == _iobArrayPtr + FILE_STRUCTURE_SIZE) return 1; // stdout
 			if (stream == _iobArrayPtr + (FILE_STRUCTURE_SIZE * 2)) return 2; // stderr
+			
+			// _iobArrayPtr is already set, so only exact matches are valid.
+			// Return -1 for non-matching streams to avoid false positives with arbitrary pointers.
+			return -1;
 		}
 		
-		// Also check if stream could be a standard stream based on address pattern
+		// Heuristic detection: only applies when _iobArrayPtr is not yet set (== 0)
 		// The _iob array can be either in the module's data section (static) or heap-allocated
 		// (via __p__iob). Each FILE structure is FILE_STRUCTURE_SIZE bytes, and they're
 		// consecutive: stdin, stdout, stderr. We check if the stream address could plausibly
@@ -2043,22 +2047,15 @@ namespace Win32Emu.Win32.Modules
 			if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 			{
 				// Static _iob array in module's data section
-				if (_iobArrayPtr == 0)
-				{
-					_iobArrayPtr = potentialIobBase;
-					_logger.LogInformation("[msvcrt] Detected static _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
-				}
+				_iobArrayPtr = potentialIobBase;
+				_logger.LogInformation("[msvcrt] Detected static _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
 				return 1; // stdout
 			}
 			else
 			{
 				// Not in module's data section - likely a heap-allocated _iob array
-				// Only set _iobArrayPtr if not already set (prevents overwriting with incorrect value)
-				if (_iobArrayPtr == 0)
-				{
-					_iobArrayPtr = potentialIobBase;
-					_logger.LogInformation("[msvcrt] Detected heap-allocated _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
-				}
+				_iobArrayPtr = potentialIobBase;
+				_logger.LogInformation("[msvcrt] Detected heap-allocated _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
 				return 1; // stdout
 			}
 		}
@@ -2073,22 +2070,15 @@ namespace Win32Emu.Win32.Modules
 			if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 			{
 				// Static _iob array in module's data section
-				if (_iobArrayPtr == 0)
-				{
-					_iobArrayPtr = potentialIobBase;
-					_logger.LogInformation("[msvcrt] Detected static _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
-				}
+				_iobArrayPtr = potentialIobBase;
+				_logger.LogInformation("[msvcrt] Detected static _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
 				return 2; // stderr
 			}
 			else
 			{
 				// Not in module's data section - likely a heap-allocated _iob array
-				// Only set _iobArrayPtr if not already set (prevents overwriting with incorrect value)
-				if (_iobArrayPtr == 0)
-				{
-					_iobArrayPtr = potentialIobBase;
-					_logger.LogInformation("[msvcrt] Detected heap-allocated _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
-				}
+				_iobArrayPtr = potentialIobBase;
+				_logger.LogInformation("[msvcrt] Detected heap-allocated _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
 				return 2; // stderr
 			}
 		}
