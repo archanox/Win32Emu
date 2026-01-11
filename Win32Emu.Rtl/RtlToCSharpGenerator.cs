@@ -133,6 +133,7 @@ public class RtlToCSharpGenerator
         // 2. If immediate operand, add it to ESP (stdcall cleanup): ESP += imm16
         // 3. Update EIP to return address
         // 4. Return from compiled block
+        // Note: ESP variable is defined in the generated method (see GenerateCSharpCode line 43)
         
         var sb = new StringBuilder();
         sb.AppendLine("{ // RET instruction");
