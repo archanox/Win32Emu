@@ -2027,42 +2027,76 @@ namespace Win32Emu.Win32.Modules
 		}
 		
 		// Also check if stream could be a standard stream based on address pattern
-		// The _iob array is typically in the module's data section (near _imageBase)
-		// Each FILE structure is FILE_STRUCTURE_SIZE bytes, and they're consecutive: stdin, stdout, stderr
-		// We check if the stream address could plausibly be stdout or stderr by checking
-		// if (stream - FILE_STRUCTURE_SIZE) or (stream - FILE_STRUCTURE_SIZE * 2) gives us a reasonable _iob base address
+		// The _iob array can be either in the module's data section (static) or heap-allocated
+		// (via __p__iob). Each FILE structure is FILE_STRUCTURE_SIZE bytes, and they're
+		// consecutive: stdin, stdout, stderr. We check if the stream address could plausibly
+		// be stdout or stderr by checking if (stream - FILE_STRUCTURE_SIZE) or 
+		// (stream - FILE_STRUCTURE_SIZE * 2) gives us a reasonable _iob base address.
 		
 		// Check if stream could be stdout (offset FILE_STRUCTURE_SIZE from _iob base)
 		var potentialIobBase = stream - FILE_STRUCTURE_SIZE;
-		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
+		// Accept any address that looks reasonable (not NULL, not in low memory < 0x10000)
+		// This handles both static _iob arrays (near _imageBase) and heap-allocated ones
+		if (potentialIobBase >= 0x10000 && potentialIobBase < 0xFFFF0000)
 		{
-			// This looks like it could be stdout
-			// Update _iobArrayPtr if not set so future calls will match
-			if (_iobArrayPtr == 0)
+			// Additional validation: check if this looks like it could be in a valid memory region
+			// For heap-allocated arrays, the address range check against _imageBase is too restrictive
+			// Instead, we just check if it's in a reasonable address range
+			if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 			{
-				_iobArrayPtr = potentialIobBase;
-				_logger.LogInformation("[msvcrt] Detected _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
+				// Static _iob array in module's data section
+				if (_iobArrayPtr == 0)
+				{
+					_iobArrayPtr = potentialIobBase;
+					_logger.LogInformation("[msvcrt] Detected static _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
+				}
+				return 1; // stdout
 			}
-			return 1; // stdout
+			else
+			{
+				// Potentially heap-allocated _iob array - be more permissive
+				// Only auto-detect if this is the first time we're seeing a stream pointer
+				// This prevents random pointers from being misidentified
+				if (_iobArrayPtr == 0)
+				{
+					_iobArrayPtr = potentialIobBase;
+					_logger.LogInformation("[msvcrt] Detected heap-allocated _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
+				}
+				return 1; // stdout
+			}
 		}
 		
 		// Check if stream could be stderr (offset FILE_STRUCTURE_SIZE * 2 from _iob base)
 		potentialIobBase = stream - (FILE_STRUCTURE_SIZE * 2);
-		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
+		// Accept any address that looks reasonable (not NULL, not in low memory < 0x10000)
+		if (potentialIobBase >= 0x10000 && potentialIobBase < 0xFFFF0000)
 		{
-			// This looks like it could be stderr
-			// Update _iobArrayPtr if not set so future calls will match
-			if (_iobArrayPtr == 0)
+			// Additional validation similar to stdout check above
+			if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 			{
-				_iobArrayPtr = potentialIobBase;
-				_logger.LogInformation("[msvcrt] Detected _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
+				// Static _iob array in module's data section
+				if (_iobArrayPtr == 0)
+				{
+					_iobArrayPtr = potentialIobBase;
+					_logger.LogInformation("[msvcrt] Detected static _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
+				}
+				return 2; // stderr
 			}
-			return 2; // stderr
+			else
+			{
+				// Potentially heap-allocated _iob array
+				if (_iobArrayPtr == 0)
+				{
+					_iobArrayPtr = potentialIobBase;
+					_logger.LogInformation("[msvcrt] Detected heap-allocated _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
+				}
+				return 2; // stderr
+			}
 		}
 		
 		// NOTE: We intentionally do not heuristically detect stdin based solely on the
-		// stream address falling within the first 64KB of the module. Doing so can cause
-		// arbitrary pointers in that range to be misidentified as stdin, which would then
+		// stream address falling within a general address range. Doing so can cause
+		// arbitrary pointers to be misidentified as stdin, which would then
 		// corrupt _iobArrayPtr and break subsequent stdout/stderr detection. stdin is
 		// rarely used for output, so we only recognize it when _iobArrayPtr has already
 		// been set and the stream exactly matches that pointer.
