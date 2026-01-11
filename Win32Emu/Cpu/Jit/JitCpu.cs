@@ -737,7 +737,7 @@ public class JitCpu : IAsyncCpu
 				{
 					// INT 0x80 - Syscall dispatcher
 					isSyscall = true;
-					_logger.LogDebug("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
+					_logger.LogTrace("[JitCpu] INT 0x80 syscall at 0x{OldEip:X8}", oldEip);
 					// Reset EIP to the instruction address (line 682 already advanced it past the INT)
 					// The syscall handler needs EIP to point AT the INT instruction, not past it
 					_eip = oldEip;
@@ -748,7 +748,7 @@ public class JitCpu : IAsyncCpu
 					// Used by Win16 NE executables and DOS programs
 					// Signal as a DOS interrupt
 					isDosInterrupt = true;
-					_logger.LogDebug("[JitCpu] INT 0x21 DOS services at 0x{OldEip:X8}, AH=0x{Ah:X2}", oldEip, (_eax >> 8) & 0xFF);
+					_logger.LogTrace("[JitCpu] INT 0x21 DOS services at 0x{OldEip:X8}, AH=0x{Ah:X2}", oldEip, (_eax >> 8) & 0xFF);
 					// Reset EIP to the instruction address (line 682 already advanced it past the INT)
 					// The DOS interrupt handler needs EIP to point AT the INT instruction, not past it  
 					_eip = oldEip;
