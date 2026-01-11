@@ -7318,8 +7318,41 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] GetEnvironmentVariableA(lpName=\"{Name}\", lpBuffer=0x{LpBuffer:X8}, nSize={NSize})",
 			name, lpBuffer, nSize);
 
-		// Return empty (variable not found)
-		return 0;
+		// Handle empty variable name
+		if (string.IsNullOrEmpty(name))
+		{
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_ENVVAR_NOT_FOUND;
+			return 0;
+		}
+
+		// Get the environment variable value
+		var value = _env.GetEnvironmentVariable(name);
+		
+		if (value == null)
+		{
+			// Variable not found
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_ENVVAR_NOT_FOUND;
+			return 0;
+		}
+
+		// Calculate required buffer size (including null terminator)
+		var requiredSize = (uint)(value.Length + 1);
+
+		// If buffer is NULL or too small, return required size
+		if (lpBuffer == 0 || nSize < requiredSize)
+		{
+			// Windows behavior: return required size including null terminator
+			// Some sources indicate ERROR_MORE_DATA should be set when buffer is too small
+			// but based on the Win11 test results, it appears LastError may not always be modified
+			return requiredSize;
+		}
+
+		// Buffer is sufficient, copy the value
+		_env.WriteAnsiStringAt(lpBuffer, value);
+		_env.LastError = (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
+		
+		// Return the length of the string (excluding null terminator)
+		return (uint)value.Length;
 	}
 
 	[DllModuleExport(4)]

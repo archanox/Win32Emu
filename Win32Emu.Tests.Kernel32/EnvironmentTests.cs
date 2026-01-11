@@ -410,6 +410,134 @@ public class EnvironmentTests : IDisposable
     }
 
     [Fact]
+    public void GetEnvironmentVariableA_ExistingVariable_ShouldReturnValue()
+    {
+        // Arrange - PATH should exist in the default environment
+        var namePtr = WriteAnsiString("PATH");
+        var bufferSize = 1024u;
+        var bufferPtr = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETENVIRONMENTVARIABLEA", namePtr, bufferPtr, bufferSize);
+
+        // Assert - Should return length of value (excluding null terminator)
+        Assert.True(result > 0, "Should return length of environment variable value");
+        
+        // Read the value from buffer
+        var value = ReadAnsiString(bufferPtr);
+        Assert.NotEmpty(value);
+        Assert.Equal(result, (uint)value.Length);
+    }
+
+    [Fact]
+    public void GetEnvironmentVariableA_NonExistentVariable_ShouldReturnZeroAndSetError()
+    {
+        // Arrange
+        var namePtr = WriteAnsiString("NONEXISTENT_VAR_12345");
+        var bufferSize = 1024u;
+        var bufferPtr = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETENVIRONMENTVARIABLEA", namePtr, bufferPtr, bufferSize);
+
+        // Assert
+        Assert.Equal(0u, result);
+        Assert.Equal(203u, _testEnv.ProcessEnv.LastError); // ERROR_ENVVAR_NOT_FOUND
+    }
+
+    [Fact]
+    public void GetEnvironmentVariableA_WithNullBuffer_ShouldReturnRequiredSize()
+    {
+        // Arrange - PATH should exist
+        var namePtr = WriteAnsiString("PATH");
+
+        // Act - Call with NULL buffer
+        var result = _testEnv.CallKernel32Api("GETENVIRONMENTVARIABLEA", namePtr, 0u, 0u);
+
+        // Assert - Should return required buffer size (including null terminator)
+        Assert.True(result > 0, "Should return required buffer size");
+    }
+
+    [Fact]
+    public void GetEnvironmentVariableA_WithInsufficientBuffer_ShouldReturnRequiredSize()
+    {
+        // Arrange - PATH should exist and be longer than 5 characters
+        var namePtr = WriteAnsiString("PATH");
+        var smallBufferSize = 5u;
+        var smallBufferPtr = _testEnv.ProcessEnv.SimpleAlloc(smallBufferSize);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETENVIRONMENTVARIABLEA", namePtr, smallBufferPtr, smallBufferSize);
+
+        // Assert - Should return required buffer size (which should be > 5)
+        Assert.True(result > smallBufferSize, "Should return required buffer size which is greater than provided buffer");
+    }
+
+    [Fact]
+    public void GetEnvironmentVariableA_SetAndGetNewVariable_ShouldWork()
+    {
+        // Arrange - Set a new variable
+        var testName = "TEST_VAR_123";
+        var testValue = "TestValue456";
+        var namePtr = WriteAnsiString(testName);
+        var valuePtr = WriteAnsiString(testValue);
+        
+        var setResult = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, valuePtr);
+        Assert.Equal(1u, setResult);
+
+        // Act - Get the variable
+        var bufferSize = 1024u;
+        var bufferPtr = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+        var getResult = _testEnv.CallKernel32Api("GETENVIRONMENTVARIABLEA", namePtr, bufferPtr, bufferSize);
+
+        // Assert
+        Assert.Equal((uint)testValue.Length, getResult);
+        var retrievedValue = ReadAnsiString(bufferPtr);
+        Assert.Equal(testValue, retrievedValue);
+    }
+
+    [Fact]
+    public void GetEnvironmentVariableA_DeletedVariable_ShouldReturnZero()
+    {
+        // Arrange - Set and then delete a variable
+        var testName = "TEST_VAR_DELETE";
+        var testValue = "InitialValue";
+        var namePtr = WriteAnsiString(testName);
+        var valuePtr = WriteAnsiString(testValue);
+        
+        var setResult = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, valuePtr);
+        Assert.Equal(1u, setResult);
+        
+        var deleteResult = _testEnv.CallKernel32Api("SETENVIRONMENTVARIABLEA", namePtr, 0u);
+        Assert.Equal(1u, deleteResult);
+
+        // Act - Try to get the deleted variable
+        var bufferSize = 1024u;
+        var bufferPtr = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+        var getResult = _testEnv.CallKernel32Api("GETENVIRONMENTVARIABLEA", namePtr, bufferPtr, bufferSize);
+
+        // Assert
+        Assert.Equal(0u, getResult);
+        Assert.Equal(203u, _testEnv.ProcessEnv.LastError); // ERROR_ENVVAR_NOT_FOUND
+    }
+
+    [Fact]
+    public void GetEnvironmentVariableA_WithEmptyName_ShouldReturnZero()
+    {
+        // Arrange
+        var emptyNamePtr = WriteAnsiString("");
+        var bufferSize = 1024u;
+        var bufferPtr = _testEnv.ProcessEnv.SimpleAlloc(bufferSize);
+
+        // Act
+        var result = _testEnv.CallKernel32Api("GETENVIRONMENTVARIABLEA", emptyNamePtr, bufferPtr, bufferSize);
+
+        // Assert
+        Assert.Equal(0u, result);
+        Assert.Equal(203u, _testEnv.ProcessEnv.LastError); // ERROR_ENVVAR_NOT_FOUND
+    }
+
+    [Fact]
     public void SetEnvironmentVariableA_ShouldSetVirtualizedVariable()
     {
         // Arrange - Create string pointers for name and value
