@@ -104,6 +104,7 @@ public class EmulatorService : IDisposable
 	/// <param name="executableBytes">The raw bytes of the executable</param>
 	/// <param name="fileName">The name of the executable file</param>
 	/// <param name="additionalFiles">Optional dictionary of additional files (path -> bytes) for the VFS</param>
+	/// <param name="programArgs">Optional command-line arguments for the program</param>
 	/// <param name="force32BitStackOps">Force 32-bit operand size for stack operations in 32-bit mode</param>
 	/// <param name="useCache">Enable cache loading from wwwroot/cache/ directory</param>
 	/// <param name="enableInstructionAnalyzer">Enable instruction analyzer for debugging (runs in interpreter mode)</param>
@@ -113,6 +114,7 @@ public class EmulatorService : IDisposable
 		byte[] executableBytes, 
 		string fileName,
 		Dictionary<string, byte[]>? additionalFiles = null,
+		string[]? programArgs = null,
 		bool force32BitStackOps = true,
 		bool useCache = true,
 		bool enableInstructionAnalyzer = false,
@@ -127,6 +129,11 @@ public class EmulatorService : IDisposable
 			}
 			
 			EmitDebugOutput($"Loading executable: {fileName} ({executableBytes.Length} bytes)");
+			
+			if (programArgs != null && programArgs.Length > 0)
+			{
+				EmitDebugOutput($"Program arguments: {string.Join(" ", programArgs)}");
+			}
 			
 			// Create backend factory if not already created
 			_backendFactory ??= new WasmBackendFactory(_jsRuntime, _loggerFactory);
@@ -233,7 +240,7 @@ public class EmulatorService : IDisposable
 			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
 			// When enableInstructionAnalyzer is true, instruction analysis features are available
 			// When enableLegacyInstructionDecoding is true, legacy instruction sets are supported (MPX, Cyrix, etc.)
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, null, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer, enableLegacyInstructionDecoding);
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, programArgs, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer, enableLegacyInstructionDecoding);
 			
 			// Load cache if enabled - JitCpu uses RTL-based cache
 			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
