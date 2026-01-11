@@ -389,6 +389,43 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		Assert.Equal(0u, returnValue);
 	}
 
+	[Fact]
+	public void Fputc_ToStdout_ReturnsCharacterWritten()
+	{
+		// Arrange - get stdout pointer from __p__iob
+		var success = _msvcrt.TryInvokeUnsafe("__P__IOB", _testEnv.Cpu, _testEnv.Memory, out var iobPtr);
+		Assert.True(success, "__p__iob should be implemented");
+		
+		// stdout is at iob[1], which is 32 bytes from the iob base
+		var stdoutPtr = iobPtr + 32;
+		
+		// Act - write character 'A' (0x41) to stdout
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0x41u, stdoutPtr);
+		success = _msvcrt.TryInvokeUnsafe("fputc", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+		
+		// Assert
+		Assert.True(success, "fputc should be implemented");
+		Assert.Equal(0x41u, returnValue); // Should return the character written
+	}
+
+	[Fact]
+	public void Fputc_WithStreamAtImageBaseOffset_ReturnsCharacterWritten()
+	{
+		// Arrange - simulate a stream pointer that's in the image base range
+		// This tests the scenario where the stream comes from a data import
+		// The stream pointer is at imageBase + offset, representing stdout
+		var imageBase = 0x00400000u;
+		var streamPtr = imageBase + 0x210; // Simulating stdout at offset 0x210 (stream - 32 = iob base)
+		
+		// Act - write character 's' (0x73) to this stream
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory, 0x73u, streamPtr);
+		var success = _msvcrt.TryInvokeUnsafe("fputc", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+		
+		// Assert
+		Assert.True(success, "fputc should be implemented");
+		Assert.Equal(0x73u, returnValue); // Should return the character written
+	}
+
 	public void Dispose()
 	{
 		_testEnv.Dispose();
