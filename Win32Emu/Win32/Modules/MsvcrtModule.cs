@@ -2095,7 +2095,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				else
 				{
-					_logger.LogInformation("[msvcrt] Found additional _iob array at 0x{Ptr:X8} (different from cached 0x{Cached:X8}), treating as stderr", potentialIobBase, _iobArrayPtr);
+					_logger.LogDebug("[msvcrt] Found additional _iob array at 0x{Ptr:X8} (different from cached 0x{Cached:X8}), treating as stderr", potentialIobBase, _iobArrayPtr);
 				}
 				return 2; // stderr
 			}
@@ -2110,7 +2110,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				else
 				{
-					_logger.LogInformation("[msvcrt] Found additional _iob array at 0x{Ptr:X8} (different from cached 0x{Cached:X8}), treating as stderr", potentialIobBase, _iobArrayPtr);
+					_logger.LogDebug("[msvcrt] Found additional _iob array at 0x{Ptr:X8} (different from cached 0x{Cached:X8}), treating as stderr", potentialIobBase, _iobArrayPtr);
 				}
 				return 2; // stderr
 			}
