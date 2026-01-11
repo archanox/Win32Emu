@@ -26,7 +26,7 @@ public class JitRetInstructionTests
 		var eip = cpu.GetEip();
 		mem.Write8(eip, 0xC3); // RET opcode
 		
-		// Act - Execute RET using interpreter (not JIT, for this simple test)
+		// Act - Execute RET (interpreter mode is used by SingleStep for simple instructions)
 		cpu.SingleStep(mem);
 		
 		// Assert
