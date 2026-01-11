@@ -2702,15 +2702,28 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-					// Execute one instruction
-					var step = cpu.SingleStep(memory);
+				// Execute one instruction
+				var step = cpu.SingleStep(memory);
 
-					// Handle COM vtable and import calls
-					if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
+				// Handle syscalls (INT 0x80 from import stubs)
+				if (step.IsSyscall)
+				{
+					if (!HandleSyscall(step, cpu, memory, contextName))
 					{
+						_logger.LogError("[User32] {Context}: Failed to handle syscall at EIP=0x{Eip:X8}", contextName, cpu.GetEip());
 						failed = true;
 						break;
 					}
+					// Syscall was handled, continue to next iteration
+					continue;
+				}
+
+				// Handle COM vtable and import calls
+				if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak) && shouldBreak)
+				{
+					failed = true;
+					break;
+				}
 
 					steps++;
 
@@ -2878,18 +2891,31 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-					var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
+				// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
+				var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
 
-					// Handle COM vtable and import calls
-					if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak))
+				// Handle syscalls (INT 0x80 from import stubs)
+				if (step.IsSyscall)
+				{
+					if (!await HandleSyscallAsync(step, cpu, memory, contextName, cancellationToken).ConfigureAwait(false))
 					{
-						if (shouldBreak)
-						{
-							failed = true;
-							break;
-						}
+						_logger.LogError("[User32] {Context}: Failed to handle syscall at EIP=0x{Eip:X8}", contextName, cpu.GetEip());
+						failed = true;
+						break;
 					}
+					// Syscall was handled, continue to next iteration
+					continue;
+				}
+
+				// Handle COM vtable and import calls
+				if (HandleComAndImportCalls(step, cpu, memory, contextName, out var stepDesc, out var shouldBreak))
+				{
+					if (shouldBreak)
+					{
+						failed = true;
+						break;
+					}
+				}
 
 					steps++;
 
@@ -5040,11 +5066,175 @@ namespace Win32Emu.Win32.Modules
 				return handled;
 			}
 
+		return false;
+	}
+
+	/// <summary>
+	/// Handles syscalls (INT 0x80) encountered during window/dialog procedure execution.
+	/// This is the synchronous version for use in ExecuteStdCallProcedure.
+	/// </summary>
+	private bool HandleSyscall(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext)
+	{
+		// Advance EIP past the INT 0x80 instruction (2 bytes: CD 80)
+		var eipAtInt = cpu.GetEip();
+		cpu.SetEip(eipAtInt + 2);
+		_logger.LogDebug("[User32] {Context}: Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
+			logContext, eipAtInt, cpu.GetEip());
+
+		// Read return address from stack to find import stub address
+		var esp = cpu.GetRegister("ESP");
+		if (esp < MemoryRegions.MinValidUserAddress)
+		{
+			_logger.LogError("[User32] {Context}: ESP=0x{Esp:X8} is too low, cannot handle syscall", logContext, esp);
 			return false;
 		}
 
-		/// <summary>
-		/// Validates that a return address points to valid executable code and not to stack or invalid memory.
+		var retToStub = memory.Read32(esp);
+		var importStubAddr = retToStub - 5; // Import stub is 5 bytes before return address
+
+		// Get the current main executable (may have synthetic exports)
+		var currentImage = _env.GetMainExecutable() ?? _image;
+		if (currentImage == null)
+		{
+			_logger.LogError("[User32] {Context}: No image available for syscall lookup", logContext);
+			return false;
+		}
+
+		// Look up which import this syscall corresponds to
+		if (currentImage.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
+		{
+			var dll = imp.dll.ToUpperInvariant();
+			var name = imp.name;
+			_logger.LogDebug("[User32] {Context}: Syscall to {Dll}!{Name} from stub at 0x{Stub:X8}", 
+				logContext, dll, name, importStubAddr);
+
+			// Save callee-saved registers
+			var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+
+			// Adjust ESP to skip return-to-stub address for argument reading
+			var originalEsp = esp;
+			cpu.SetRegister("ESP", esp + 4);
+
+			// Invoke the Win32 API function synchronously
+			if (_dispatcher != null && _dispatcher.TryInvoke(dll, name, cpu, memory, out var ret, out var argBytes))
+			{
+				// Set return value in EAX
+				cpu.SetRegister("EAX", ret);
+
+				// Restore ESP
+				cpu.SetRegister("ESP", originalEsp);
+
+				// Restore callee-saved registers
+				CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
+
+				_logger.LogDebug("[User32] {Context}: Syscall {Dll}!{Name} returned 0x{Ret:X8}", 
+					logContext, dll, name, ret);
+				return true;
+			}
+			else
+			{
+				_logger.LogWarning("[User32] {Context}: Failed to dispatch {Dll}!{Name}", logContext, dll, name);
+				cpu.SetRegister("ESP", originalEsp);
+				return false;
+			}
+		}
+		else
+		{
+			_logger.LogError("[User32] {Context}: No import found for stub address 0x{Stub:X8}", 
+				logContext, importStubAddr);
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Handles syscalls (INT 0x80) encountered during window/dialog procedure execution.
+	/// This is the async version for use in ExecuteStdCallProcedureAsync.
+	/// </summary>
+	private async Task<bool> HandleSyscallAsync(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext, CancellationToken cancellationToken = default)
+	{
+		// Advance EIP past the INT 0x80 instruction (2 bytes: CD 80)
+		var eipAtInt = cpu.GetEip();
+		cpu.SetEip(eipAtInt + 2);
+		_logger.LogDebug("[User32] {Context}: Advanced EIP past INT 0x80: 0x{EipBefore:X8} -> 0x{EipAfter:X8}", 
+			logContext, eipAtInt, cpu.GetEip());
+
+		// Read return address from stack to find import stub address
+		var esp = cpu.GetRegister("ESP");
+		if (esp < MemoryRegions.MinValidUserAddress)
+		{
+			_logger.LogError("[User32] {Context}: ESP=0x{Esp:X8} is too low, cannot handle syscall", logContext, esp);
+			return false;
+		}
+
+		var retToStub = memory.Read32(esp);
+		var importStubAddr = retToStub - 5; // Import stub is 5 bytes before return address
+
+		// Get the current main executable (may have synthetic exports)
+		var currentImage = _env.GetMainExecutable() ?? _image;
+		if (currentImage == null)
+		{
+			_logger.LogError("[User32] {Context}: No image available for syscall lookup", logContext);
+			return false;
+		}
+
+		// Look up which import this syscall corresponds to
+		if (currentImage.ImportAddressMap.TryGetValue(importStubAddr, out var imp))
+		{
+			var dll = imp.dll.ToUpperInvariant();
+			var name = imp.name;
+			_logger.LogDebug("[User32] {Context}: Syscall to {Dll}!{Name} from stub at 0x{Stub:X8}", 
+				logContext, dll, name, importStubAddr);
+
+			// Save callee-saved registers
+			var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
+
+			// Adjust ESP to skip return-to-stub address for argument reading
+			var originalEsp = esp;
+			cpu.SetRegister("ESP", esp + 4);
+
+			// Invoke the Win32 API function asynchronously
+			if (_dispatcher != null)
+			{
+				var (success, ret, argBytes, _) = await _dispatcher.TryInvokeAsync(dll, name, cpu, memory, cancellationToken).ConfigureAwait(false);
+				if (success)
+				{
+					// Set return value in EAX
+					cpu.SetRegister("EAX", ret);
+
+					// Restore ESP
+					cpu.SetRegister("ESP", originalEsp);
+
+					// Restore callee-saved registers
+					CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
+
+					_logger.LogDebug("[User32] {Context}: Syscall {Dll}!{Name} returned 0x{Ret:X8}", 
+						logContext, dll, name, ret);
+					return true;
+				}
+				else
+				{
+					_logger.LogWarning("[User32] {Context}: Failed to dispatch {Dll}!{Name}", logContext, dll, name);
+					cpu.SetRegister("ESP", originalEsp);
+					return false;
+				}
+			}
+			else
+			{
+				_logger.LogError("[User32] {Context}: Dispatcher not available", logContext);
+				cpu.SetRegister("ESP", originalEsp);
+				return false;
+			}
+		}
+		else
+		{
+			_logger.LogError("[User32] {Context}: No import found for stub address 0x{Stub:X8}", 
+				logContext, importStubAddr);
+			return false;
+		}
+	}
+
+	/// <summary>
+	/// Validates that a return address points to valid executable code and not to stack or invalid memory.
 		/// Uses actual values from the PE header and process environment instead of hardcoded constants.
 		/// </summary>
 		/// <param name="address">The return address to validate</param>
