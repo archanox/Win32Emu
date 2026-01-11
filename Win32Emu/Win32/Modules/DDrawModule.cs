@@ -23,6 +23,11 @@ namespace Win32Emu.Win32.Modules
 		// RGBA pixel format constant
 		private const int BytesPerPixelRgba = 4;
 
+		// Default dimensions for windowed mode when SetDisplayMode is not called
+		private const int DEFAULT_WINDOWED_WIDTH = 640;
+		private const int DEFAULT_WINDOWED_HEIGHT = 480;
+		private const int DEFAULT_WINDOWED_BPP = 32;
+
 		// Callback execution constants for WASM responsiveness
 		// Lower yield interval ensures browser remains responsive during callback execution
 		private const int CALLBACK_YIELD_INTERVAL = 10;
@@ -3302,13 +3307,11 @@ namespace Win32Emu.Win32.Modules
 
 			// Decode and log flags for better debugging
 			var flagsStr = new List<string>();
-			var isFullscreen = false;
 			var isNormal = false;
 			
 			if ((dwFlags & 0x00000008) != 0)
 			{
 				flagsStr.Add("DDSCL_FULLSCREEN");
-				isFullscreen = true;
 			}
 
 			if ((dwFlags & 0x00000010) != 0)
@@ -3383,18 +3386,29 @@ namespace Win32Emu.Win32.Modules
 				if (isNormal && obj.RenderingBackend != null && !obj.RenderingBackend.IsInitialized)
 				{
 					// Use existing dimensions if already set, otherwise use default dimensions
-					var width = obj.Width > 0 ? obj.Width : 640;
-					var height = obj.Height > 0 ? obj.Height : 480;
+					var width = obj.Width > 0 ? obj.Width : DEFAULT_WINDOWED_WIDTH;
+					var height = obj.Height > 0 ? obj.Height : DEFAULT_WINDOWED_HEIGHT;
+					var bitsPerPixel = obj.BitsPerPixel > 0 ? obj.BitsPerPixel : DEFAULT_WINDOWED_BPP;
 					var title = "Win32Emu DirectDraw";
 					
-					_logger.LogInformation("[DDraw] Initializing rendering backend for windowed mode (DDSCL_NORMAL) with {Width}x{Height}", width, height);
+					_logger.LogInformation("[DDraw] Initializing rendering backend for windowed mode (DDSCL_NORMAL) with {Width}x{Height}x{Bpp}", width, height, bitsPerPixel);
 					
 					try
 					{
 						var success = await obj.RenderingBackend.InitializeAsync(width, height, title);
 						if (success)
 						{
+							// Update DirectDraw object dimensions
+							obj.Width = width;
+							obj.Height = height;
+							obj.BitsPerPixel = bitsPerPixel;
+							
+							// Update ProcessEnvironment with display mode for GetSystemMetrics
+							_env.DisplayWidth = width;
+							_env.DisplayHeight = height;
+							_env.DisplayBitsPerPixel = bitsPerPixel;
 							_logger.LogInformation("[DDraw] Rendering backend initialized successfully for windowed mode");
+							_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", width, height, bitsPerPixel);
 						}
 						else
 						{
