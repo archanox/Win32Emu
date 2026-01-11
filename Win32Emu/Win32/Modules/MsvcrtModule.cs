@@ -59,6 +59,10 @@ namespace Win32Emu.Win32.Modules
 		// Error codes
 		private const int EINVAL = 22;
 		
+		// FILE structure constants for _iob array detection
+		private const uint FILE_STRUCTURE_SIZE = 32; // Each FILE structure is 32 bytes in MSVC runtime
+		private const uint IOB_DETECTION_RANGE = 0x10000; // Maximum 64KB range from image base for _iob detection
+		
 		// Callback execution constants
 		private const uint CALLBACK_RETURN_ADDRESS = 0xDEADBEEF; // Return address marker for callback execution
 		private const int MAX_CALLBACK_STEPS = 100000; // Safety limit to prevent infinite loops in callbacks
@@ -2010,6 +2014,7 @@ namespace Win32Emu.Win32.Modules
 	/// <summary>
 	/// Helper method to detect if a stream pointer represents stdin, stdout, or stderr
 	/// Returns: -1 = not standard stream, 0 = stdin, 1 = stdout, 2 = stderr
+	/// Side effect: May update _iobArrayPtr cache when a standard stream is detected
 	/// </summary>
 	private int GetStandardStreamType(uint stream)
 	{
@@ -2017,19 +2022,19 @@ namespace Win32Emu.Win32.Modules
 		if (_iobArrayPtr != 0)
 		{
 			if (stream == _iobArrayPtr) return 0; // stdin
-			if (stream == _iobArrayPtr + 32) return 1; // stdout
-			if (stream == _iobArrayPtr + 64) return 2; // stderr
+			if (stream == _iobArrayPtr + FILE_STRUCTURE_SIZE) return 1; // stdout
+			if (stream == _iobArrayPtr + (FILE_STRUCTURE_SIZE * 2)) return 2; // stderr
 		}
 		
 		// Also check if stream could be a standard stream based on address pattern
 		// The _iob array is typically in the module's data section (near _imageBase)
-		// Each FILE structure is 32 bytes, and they're consecutive: stdin, stdout, stderr
+		// Each FILE structure is FILE_STRUCTURE_SIZE bytes, and they're consecutive: stdin, stdout, stderr
 		// We check if the stream address could plausibly be stdout or stderr by checking
-		// if (stream - 32) or (stream - 64) gives us a reasonable _iob base address
+		// if (stream - FILE_STRUCTURE_SIZE) or (stream - FILE_STRUCTURE_SIZE * 2) gives us a reasonable _iob base address
 		
-		// Check if stream could be stdout (offset 32 from _iob base)
-		var potentialIobBase = stream - 32;
-		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + 0x10000)
+		// Check if stream could be stdout (offset FILE_STRUCTURE_SIZE from _iob base)
+		var potentialIobBase = stream - FILE_STRUCTURE_SIZE;
+		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 		{
 			// This looks like it could be stdout
 			// Update _iobArrayPtr if not set so future calls will match
@@ -2041,9 +2046,9 @@ namespace Win32Emu.Win32.Modules
 			return 1; // stdout
 		}
 		
-		// Check if stream could be stderr (offset 64 from _iob base)
-		potentialIobBase = stream - 64;
-		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + 0x10000)
+		// Check if stream could be stderr (offset FILE_STRUCTURE_SIZE * 2 from _iob base)
+		potentialIobBase = stream - (FILE_STRUCTURE_SIZE * 2);
+		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 		{
 			// This looks like it could be stderr
 			// Update _iobArrayPtr if not set so future calls will match
@@ -2055,17 +2060,12 @@ namespace Win32Emu.Win32.Modules
 			return 2; // stderr
 		}
 		
-		// Check if stream could be stdin (at _iob base)
-		if (stream >= _imageBase && stream < _imageBase + 0x10000)
-		{
-			// Could be stdin at the base of _iob array
-			if (_iobArrayPtr == 0)
-			{
-				_iobArrayPtr = stream;
-				_logger.LogInformation("[msvcrt] Detected _iob array at 0x{Ptr:X8} based on stdin stream pointer", _iobArrayPtr);
-			}
-			return 0; // stdin
-		}
+		// NOTE: We intentionally do not heuristically detect stdin based solely on the
+		// stream address falling within the first 64KB of the module. Doing so can cause
+		// arbitrary pointers in that range to be misidentified as stdin, which would then
+		// corrupt _iobArrayPtr and break subsequent stdout/stderr detection. stdin is
+		// rarely used for output, so we only recognize it when _iobArrayPtr has already
+		// been set and the stream exactly matches that pointer.
 		
 		return -1; // Not a standard stream
 	}
@@ -2090,7 +2090,7 @@ namespace Win32Emu.Win32.Modules
 		else if (streamType == 2) // stderr
 		{
 			_logger.LogDebug("[msvcrt] fputc detected stderr stream, writing to stderr");
-			_env.WriteToStdOutput(((char)c).ToString());
+			_env.WriteToStdError(((char)c).ToString());
 			return c; // Return the character written
 		}
 		
