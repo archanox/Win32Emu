@@ -173,6 +173,21 @@
 						</div>
 					}
 					
+					@* Program Arguments Input *@
+					@if (_executableLoaded && !_isRunning)
+					{
+						<div class="mb-3">
+							<label for="programArgs" class="form-label">Program Arguments</label>
+							<input type="text" 
+								   id="programArgs" 
+								   class="form-control" 
+								   @bind="_programArguments"
+								   placeholder="e.g., -v --debug input.txt"
+								   disabled="@_isRunning" />
+							<small class="text-muted">Optional command-line arguments for the executable</small>
+						</div>
+					}
+					
 					@if (_executableLoaded && !_isRunning)
 					{
 						<button class="btn btn-success w-100 mb-2" @onclick="StartEmulation">
@@ -542,6 +557,9 @@
 	private List<ExecutableInfo> _discoveredExecutables = new();
 	private string _selectedExecutablePath = string.Empty;
 	
+	// Program arguments
+	private string _programArguments = string.Empty;
+	
 	private long _instructionsExecuted = 0;
 	private int _fps = 0;
 	
@@ -851,10 +869,18 @@
 			AddDebugOutput($"Instruction Analyzer: {(_enableInstructionAnalyzer ? "Enabled" : "Disabled")}");
 			AddDebugOutput($"Legacy Instruction Decoding: {(_enableLegacyInstructionDecoding ? "Enabled" : "Disabled")}");
 			
+			// Parse program arguments
+			var programArgs = ParseProgramArguments(_programArguments);
+			if (programArgs != null && programArgs.Length > 0)
+			{
+				AddDebugOutput($"Program Arguments: {string.Join(" ", programArgs)}");
+			}
+			
 			var loadSuccess = await EmulatorService.LoadExecutableAsync(
 				_executableData, 
 				_loadedFileName,
 				_folderMode ? _loadedFiles : null,
+				programArgs,
 				_force32BitStackOps,
 				_useCache,
 				_enableInstructionAnalyzer,
@@ -1490,5 +1516,51 @@
 		{
 			Logger.LogError(ex, "Error performing auto-save");
 		}
+	}
+	
+	/// <summary>
+	/// Parse program arguments from a string into an array.
+	/// Handles quoted strings with spaces properly (e.g., "file name.txt" -v).
+	/// </summary>
+	private string[]? ParseProgramArguments(string argsString)
+	{
+		if (string.IsNullOrWhiteSpace(argsString))
+		{
+			return null;
+		}
+		
+		var args = new List<string>();
+		var currentArg = new StringBuilder();
+		var inQuotes = false;
+		
+		for (var i = 0; i < argsString.Length; i++)
+		{
+			var c = argsString[i];
+			
+			if (c == '"')
+			{
+				inQuotes = !inQuotes;
+			}
+			else if (char.IsWhiteSpace(c) && !inQuotes)
+			{
+				if (currentArg.Length > 0)
+				{
+					args.Add(currentArg.ToString());
+					currentArg.Clear();
+				}
+			}
+			else
+			{
+				currentArg.Append(c);
+			}
+		}
+		
+		// Add the last argument if there is one
+		if (currentArg.Length > 0)
+		{
+			args.Add(currentArg.ToString());
+		}
+		
+		return args.Count > 0 ? args.ToArray() : null;
 	}
 }
