@@ -209,7 +209,7 @@ namespace Win32Emu.Win32.Modules
 				new("GetVerticalBlankStatus", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetVerticalBlankStatus>(async (cpu, mem) => await Task.FromResult(DDraw_GetVerticalBlankStatus(cpu, mem)))),
 				new("Initialize", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Initialize>(async (cpu, mem) => await Task.FromResult(DDraw_Initialize(cpu, mem)))),
 				new("RestoreDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.RestoreDisplayMode>(async (cpu, mem) => await Task.FromResult(DDraw_RestoreDisplayMode(cpu, mem)))),
-				new("SetCooperativeLevel", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetCooperativeLevel>(async (cpu, mem) => await Task.FromResult(DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle)))),
+				new("SetCooperativeLevel", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetCooperativeLevel>(async (cpu, mem) => await DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle))),
 				new("SetDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetDisplayMode>(async (cpu, mem) => await DDraw_SetDisplayModeAsync(cpu, mem, ddrawHandle))),
 				new("WaitForVerticalBlank", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.WaitForVerticalBlank>(async (cpu, mem) => await Task.FromResult(DDraw_WaitForVerticalBlank(cpu, mem))))
 			};
@@ -298,7 +298,7 @@ namespace Win32Emu.Win32.Modules
 				new("GetVerticalBlankStatus", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.GetVerticalBlankStatus>(async (cpu, mem) => await Task.FromResult(DDraw_GetVerticalBlankStatus(cpu, mem)))),
 				new("Initialize", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.Initialize>(async (cpu, mem) => await Task.FromResult(DDraw_Initialize(cpu, mem)))),
 				new("RestoreDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.RestoreDisplayMode>(async (cpu, mem) => await Task.FromResult(DDraw_RestoreDisplayMode(cpu, mem)))),
-				new("SetCooperativeLevel", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetCooperativeLevel>(async (cpu, mem) => await Task.FromResult(DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle)))),
+				new("SetCooperativeLevel", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetCooperativeLevel>(async (cpu, mem) => await DDraw_SetCooperativeLevel(cpu, mem, ddrawHandle))),
 				new("SetDisplayMode", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.SetDisplayMode>(async (cpu, mem) => await DDraw_SetDisplayModeAsync(cpu, mem, ddrawHandle))),
 				new("WaitForVerticalBlank", ComVtableDispatcher.FromAsyncDelegate<IDirectDraw.WaitForVerticalBlank>(async (cpu, mem) => await Task.FromResult(DDraw_WaitForVerticalBlank(cpu, mem))))
 			};
@@ -3291,7 +3291,7 @@ namespace Win32Emu.Win32.Modules
 			return (uint)DDResult.DD_OK;
 		}
 
-		private uint DDraw_SetCooperativeLevel(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
+		private async Task<uint> DDraw_SetCooperativeLevel(ICpu cpu, VirtualMemory memory, uint ddrawHandle)
 		{
 			var args = new StackArgs(cpu, memory);
 			var thisPtr = args.UInt32(0);
@@ -3302,9 +3302,13 @@ namespace Win32Emu.Win32.Modules
 
 			// Decode and log flags for better debugging
 			var flagsStr = new List<string>();
+			var isFullscreen = false;
+			var isNormal = false;
+			
 			if ((dwFlags & 0x00000008) != 0)
 			{
 				flagsStr.Add("DDSCL_FULLSCREEN");
+				isFullscreen = true;
 			}
 
 			if ((dwFlags & 0x00000010) != 0)
@@ -3315,6 +3319,7 @@ namespace Win32Emu.Win32.Modules
 			if ((dwFlags & 0x00000002) != 0)
 			{
 				flagsStr.Add("DDSCL_NORMAL");
+				isNormal = true;
 			}
 
 			if ((dwFlags & 0x00000020) != 0)
@@ -3370,6 +3375,36 @@ namespace Win32Emu.Win32.Modules
 				{
 					_env.SubscribeToUIEvents(obj.RenderingBackend, null);
 					_logger.LogInformation("[DDraw] Subscribed to UI events from rendering backend");
+				}
+
+				// For windowed mode (DDSCL_NORMAL), initialize the rendering backend with default dimensions
+				// if it hasn't been initialized yet. This allows applications that don't call SetDisplayMode
+				// (like simple_ddraw.c) to still display content.
+				if (isNormal && obj.RenderingBackend != null && !obj.RenderingBackend.IsInitialized)
+				{
+					// Use existing dimensions if already set, otherwise use default dimensions
+					var width = obj.Width > 0 ? obj.Width : 640;
+					var height = obj.Height > 0 ? obj.Height : 480;
+					var title = "Win32Emu DirectDraw";
+					
+					_logger.LogInformation("[DDraw] Initializing rendering backend for windowed mode (DDSCL_NORMAL) with {Width}x{Height}", width, height);
+					
+					try
+					{
+						var success = await obj.RenderingBackend.InitializeAsync(width, height, title);
+						if (success)
+						{
+							_logger.LogInformation("[DDraw] Rendering backend initialized successfully for windowed mode");
+						}
+						else
+						{
+							_logger.LogWarning("[DDraw] Rendering backend initialization returned false for windowed mode");
+						}
+					}
+					catch (Exception ex)
+					{
+						_logger.LogError(ex, "[DDraw] Rendering backend initialization failed for windowed mode");
+					}
 				}
 
 				_logger.LogInformation("[DDraw COM] SetCooperativeLevel succeeded, returning DD_OK (0)");
