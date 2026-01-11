@@ -1099,26 +1099,19 @@ namespace Win32Emu.Win32.Modules
 			// Format the string using the va_list
 			var formatted = FormatPrintfString(fmt, args);
 			
-			// Check if stream is stdout or stderr
-			// stdout = _iob + 32 (offset for second FILE structure)
-			// stderr = _iob + 64 (offset for third FILE structure)
-			if (_iobArrayPtr != 0)
+			// Check if stream is a standard stream (stdin/stdout/stderr)
+			var streamType = GetStandardStreamType(stream);
+			if (streamType == 1) // stdout
 			{
-				var stdoutPtr = _iobArrayPtr + 32;
-				var stderrPtr = _iobArrayPtr + 64;
-				
-				if (stream == stdoutPtr)
-				{
-					_logger.LogDebug("[msvcrt] fprintf detected stdout stream, writing to stdout");
-					_env.WriteToStdOutput(formatted);
-					return formatted.Length;
-				}
-				else if (stream == stderrPtr)
-				{
-					_logger.LogDebug("[msvcrt] fprintf detected stderr stream, writing to stderr");
-					_env.WriteToStdError(formatted);
-					return formatted.Length;
-				}
+				_logger.LogDebug("[msvcrt] fprintf detected stdout stream, writing to stdout");
+				_env.WriteToStdOutput(formatted);
+				return formatted.Length;
+			}
+			else if (streamType == 2) // stderr
+			{
+				_logger.LogDebug("[msvcrt] fprintf detected stderr stream, writing to stderr");
+				_env.WriteToStdError(formatted);
+				return formatted.Length;
 			}
 			
 			// For unknown streams, just log and return success
@@ -1132,24 +1125,19 @@ namespace Win32Emu.Win32.Modules
 			var s = str.Read(_env.Memory) ?? string.Empty;
 			_logger.LogInformation("[msvcrt] fputs(str=\"{S}\", stream=0x{Stream:X8})", s, stream);
 			
-			// Check if stream is stdout or stderr
-			if (_iobArrayPtr != 0)
+			// Check if stream is a standard stream (stdin/stdout/stderr)
+			var streamType = GetStandardStreamType(stream);
+			if (streamType == 1) // stdout
 			{
-				var stdoutPtr = _iobArrayPtr + 32;
-				var stderrPtr = _iobArrayPtr + 64;
-				
-				if (stream == stdoutPtr)
-				{
-					_logger.LogDebug("[msvcrt] fputs detected stdout stream, writing to stdout");
-					_env.WriteToStdOutput(s);
-					return 0; // Success
-				}
-				else if (stream == stderrPtr)
-				{
-					_logger.LogDebug("[msvcrt] fputs detected stderr stream, writing to stderr");
-					_env.WriteToStdError(s);
-					return 0; // Success
-				}
+				_logger.LogDebug("[msvcrt] fputs detected stdout stream, writing to stdout");
+				_env.WriteToStdOutput(s);
+				return 0; // Success
+			}
+			else if (streamType == 2) // stderr
+			{
+				_logger.LogDebug("[msvcrt] fputs detected stderr stream, writing to stderr");
+				_env.WriteToStdError(s);
+				return 0; // Success
 			}
 			
 			// For unknown streams, just log and return success
@@ -1333,9 +1321,21 @@ namespace Win32Emu.Win32.Modules
 			// Format the string using the va_list
 			var formatted = FormatPrintfString(fmt, args);
 			
-			// For now, we treat all streams as stdout since we don't have proper FILE* implementation
-			_env.WriteToStdOutput(formatted);
+			// Check if stream is a standard stream (stdin/stdout/stderr)
+			var streamType = GetStandardStreamType(stream);
+			if (streamType == 1) // stdout
+			{
+				_env.WriteToStdOutput(formatted);
+				return formatted.Length;
+			}
+			else if (streamType == 2) // stderr
+			{
+				_env.WriteToStdError(formatted);
+				return formatted.Length;
+			}
 			
+			// For unknown streams, write to stdout as fallback
+			_env.WriteToStdOutput(formatted);
 			return formatted.Length;
 		}
 
@@ -2008,6 +2008,69 @@ namespace Win32Emu.Win32.Modules
 	private uint _errnoPtr = 0;
 	
 	/// <summary>
+	/// Helper method to detect if a stream pointer represents stdin, stdout, or stderr
+	/// Returns: -1 = not standard stream, 0 = stdin, 1 = stdout, 2 = stderr
+	/// </summary>
+	private int GetStandardStreamType(uint stream)
+	{
+		// First check against _iobArrayPtr if it's set
+		if (_iobArrayPtr != 0)
+		{
+			if (stream == _iobArrayPtr) return 0; // stdin
+			if (stream == _iobArrayPtr + 32) return 1; // stdout
+			if (stream == _iobArrayPtr + 64) return 2; // stderr
+		}
+		
+		// Also check if stream could be a standard stream based on address pattern
+		// The _iob array is typically in the module's data section (near _imageBase)
+		// Each FILE structure is 32 bytes, and they're consecutive: stdin, stdout, stderr
+		// We check if the stream address could plausibly be stdout or stderr by checking
+		// if (stream - 32) or (stream - 64) gives us a reasonable _iob base address
+		
+		// Check if stream could be stdout (offset 32 from _iob base)
+		var potentialIobBase = stream - 32;
+		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + 0x10000)
+		{
+			// This looks like it could be stdout
+			// Update _iobArrayPtr if not set so future calls will match
+			if (_iobArrayPtr == 0)
+			{
+				_iobArrayPtr = potentialIobBase;
+				_logger.LogInformation("[msvcrt] Detected _iob array at 0x{Ptr:X8} based on stdout stream pointer", _iobArrayPtr);
+			}
+			return 1; // stdout
+		}
+		
+		// Check if stream could be stderr (offset 64 from _iob base)
+		potentialIobBase = stream - 64;
+		if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + 0x10000)
+		{
+			// This looks like it could be stderr
+			// Update _iobArrayPtr if not set so future calls will match
+			if (_iobArrayPtr == 0)
+			{
+				_iobArrayPtr = potentialIobBase;
+				_logger.LogInformation("[msvcrt] Detected _iob array at 0x{Ptr:X8} based on stderr stream pointer", _iobArrayPtr);
+			}
+			return 2; // stderr
+		}
+		
+		// Check if stream could be stdin (at _iob base)
+		if (stream >= _imageBase && stream < _imageBase + 0x10000)
+		{
+			// Could be stdin at the base of _iob array
+			if (_iobArrayPtr == 0)
+			{
+				_iobArrayPtr = stream;
+				_logger.LogInformation("[msvcrt] Detected _iob array at 0x{Ptr:X8} based on stdin stream pointer", _iobArrayPtr);
+			}
+			return 0; // stdin
+		}
+		
+		return -1; // Not a standard stream
+	}
+
+	/// <summary>
 	/// fputc - Write a character to a stream
 	/// Writes the character c to the output stream
 	/// </summary>
@@ -2016,26 +2079,19 @@ namespace Win32Emu.Win32.Modules
 	{
 		_logger.LogDebug("[msvcrt] fputc(c={C} (0x{C:X2}), stream=0x{Stream:X8})", (char)c, c, stream);
 		
-		// Check if stream is stdout or stderr
-		if (_iobArrayPtr != 0)
+		// Check if stream is a standard stream (stdin/stdout/stderr)
+		var streamType = GetStandardStreamType(stream);
+		if (streamType == 1) // stdout
 		{
-			var stdoutPtr = _iobArrayPtr + 32;
-			var stderrPtr = _iobArrayPtr + 64;
-			
-			if (stream == stdoutPtr)
-			{
-				// Write to stdout
-				_logger.LogDebug("[msvcrt] fputc detected stdout stream, writing to stdout");
-				_env.WriteToStdOutput(((char)c).ToString());
-				return c; // Return the character written
-			}
-			else if (stream == stderrPtr)
-			{
-				// Write to stderr
-				_logger.LogDebug("[msvcrt] fputc detected stderr stream, writing to stderr");
-				_env.WriteToStdOutput(((char)c).ToString());
-				return c; // Return the character written
-			}
+			_logger.LogDebug("[msvcrt] fputc detected stdout stream, writing to stdout");
+			_env.WriteToStdOutput(((char)c).ToString());
+			return c; // Return the character written
+		}
+		else if (streamType == 2) // stderr
+		{
+			_logger.LogDebug("[msvcrt] fputc detected stderr stream, writing to stderr");
+			_env.WriteToStdOutput(((char)c).ToString());
+			return c; // Return the character written
 		}
 		
 		// For other streams, mark as needing flush if tracked
@@ -2205,6 +2261,26 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogWarning("[msvcrt] fwrite: size * count would overflow, returning 0");
 			return 0; // Error - overflow would occur
+		}
+		
+		var totalBytes = size * count;
+		
+		// Check if stream is a standard stream (stdin/stdout/stderr)
+		var streamType = GetStandardStreamType(stream);
+		if (streamType == 1 || streamType == 2) // stdout or stderr
+		{
+			// Read the bytes and write to stdout/stderr
+			var bytes = _env.Memory.GetSpan(ptr, (int)totalBytes);
+			var text = System.Text.Encoding.Default.GetString(bytes);
+			if (streamType == 1)
+			{
+				_env.WriteToStdOutput(text);
+			}
+			else
+			{
+				_env.WriteToStdError(text);
+			}
+			return count; // Return number of items written
 		}
 		
 		// In a real implementation, this would write to a file
