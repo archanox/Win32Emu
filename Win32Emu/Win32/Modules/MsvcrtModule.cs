@@ -2039,9 +2039,7 @@ namespace Win32Emu.Win32.Modules
 		// This handles both static _iob arrays (near _imageBase) and heap-allocated ones
 		if (potentialIobBase >= 0x10000 && potentialIobBase < 0xFFFF0000)
 		{
-			// Additional validation: check if this looks like it could be in a valid memory region
-			// For heap-allocated arrays, the address range check against _imageBase is too restrictive
-			// Instead, we just check if it's in a reasonable address range
+			// First check if this is a static _iob array in module's data section
 			if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 			{
 				// Static _iob array in module's data section
@@ -2054,9 +2052,8 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				// Potentially heap-allocated _iob array - be more permissive
-				// Only auto-detect if this is the first time we're seeing a stream pointer
-				// This prevents random pointers from being misidentified
+				// Not in module's data section - likely a heap-allocated _iob array
+				// Only set _iobArrayPtr if not already set (prevents overwriting with incorrect value)
 				if (_iobArrayPtr == 0)
 				{
 					_iobArrayPtr = potentialIobBase;
@@ -2069,9 +2066,10 @@ namespace Win32Emu.Win32.Modules
 		// Check if stream could be stderr (offset FILE_STRUCTURE_SIZE * 2 from _iob base)
 		potentialIobBase = stream - (FILE_STRUCTURE_SIZE * 2);
 		// Accept any address that looks reasonable (not NULL, not in low memory < 0x10000)
+		// This handles both static _iob arrays (near _imageBase) and heap-allocated ones
 		if (potentialIobBase >= 0x10000 && potentialIobBase < 0xFFFF0000)
 		{
-			// Additional validation similar to stdout check above
+			// First check if this is a static _iob array in module's data section
 			if (potentialIobBase >= _imageBase && potentialIobBase < _imageBase + IOB_DETECTION_RANGE)
 			{
 				// Static _iob array in module's data section
@@ -2084,7 +2082,8 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				// Potentially heap-allocated _iob array
+				// Not in module's data section - likely a heap-allocated _iob array
+				// Only set _iobArrayPtr if not already set (prevents overwriting with incorrect value)
 				if (_iobArrayPtr == 0)
 				{
 					_iobArrayPtr = potentialIobBase;
