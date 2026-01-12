@@ -131,6 +131,39 @@
 							</label>
 						</div>
 						
+						<div class="mb-2">
+							<label for="ansiCodePage" class="form-label">ANSI Code Page (CP_ACP)</label>
+							<select id="ansiCodePage" class="form-select form-select-sm" @bind="_ansiCodePage" disabled="@_isRunning">
+								<option value="65001">UTF-8 (65001) - Default</option>
+								<option value="1252">Western European (1252)</option>
+								<option value="932">Japanese (932)</option>
+								<option value="936">Chinese Simplified (936)</option>
+								<option value="949">Korean (949)</option>
+								<option value="950">Chinese Traditional (950)</option>
+								<option value="1251">Cyrillic (1251)</option>
+								<option value="1250">Central European (1250)</option>
+								<option value="1253">Greek (1253)</option>
+								<option value="1254">Turkish (1254)</option>
+								<option value="1255">Hebrew (1255)</option>
+								<option value="1256">Arabic (1256)</option>
+								<option value="1257">Baltic (1257)</option>
+								<option value="874">Thai (874)</option>
+								<option value="1258">Vietnamese (1258)</option>
+							</select>
+							<small class="text-muted">Character encoding for ANSI string conversions</small>
+						</div>
+						
+						<div class="mb-2">
+							<label for="oemCodePage" class="form-label">OEM Code Page (CP_OEMCP)</label>
+							<select id="oemCodePage" class="form-select form-select-sm" @bind="_oemCodePage" disabled="@_isRunning">
+								<option value="437">US (437) - Default</option>
+								<option value="850">Multilingual Latin I (850)</option>
+								<option value="852">Latin II (852)</option>
+								<option value="866">Russian (866)</option>
+							</select>
+							<small class="text-muted">Character encoding for console operations</small>
+						</div>
+						
 						@if (!_folderMode)
 						{
 							<label for="fileInput" class="form-label">Select Executable</label>
@@ -547,6 +580,8 @@
 	private bool _useCache = true; // Default to using cache
 	private bool _enableInstructionAnalyzer = false; // Default to disabled
 	private bool _enableLegacyInstructionDecoding = false; // Default to disabled
+	private uint _ansiCodePage = 65001; // Default to UTF-8
+	private uint _oemCodePage = 437; // Default to OEM US
 	private string _loadedFileName = string.Empty;
 	private long _loadedFileSize = 0;
 	private byte[]? _executableData = null;
@@ -884,7 +919,9 @@
 				_force32BitStackOps,
 				_useCache,
 				_enableInstructionAnalyzer,
-				_enableLegacyInstructionDecoding);
+				_enableLegacyInstructionDecoding,
+				_ansiCodePage,
+				_oemCodePage);
 			
 			if (!loadSuccess)
 			{
