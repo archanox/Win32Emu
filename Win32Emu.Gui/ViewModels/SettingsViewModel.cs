@@ -344,18 +344,6 @@ public partial class SettingsViewModel : ViewModelBase
         }
     }
     
-    partial void OnDefaultAnsiCodePageChanged(uint value)
-    {
-        _configuration.DefaultAnsiCodePage = value;
-        _configService.SaveEmulatorConfiguration(_configuration);
-    }
-    
-    partial void OnDefaultOemCodePageChanged(uint value)
-    {
-        _configuration.DefaultOemCodePage = value;
-        _configService.SaveEmulatorConfiguration(_configuration);
-    }
-    
     /// <summary>
     /// Command to purge the JIT cache
     /// </summary>
