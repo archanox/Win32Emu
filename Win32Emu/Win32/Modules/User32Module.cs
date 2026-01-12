@@ -3672,9 +3672,12 @@ namespace Win32Emu.Win32.Modules
 					msg.ptX = 0;
 					msg.ptY = 0;
 
-					// If PM_REMOVE was specified, we would consume the quit message
-					// For now, we leave the quit flag set so multiple PeekMessage calls can see it
-					// The application should exit its message loop after seeing WM_QUIT
+					// When PM_REMOVE is specified, consume the quit message so it is not seen again
+					const uint PM_REMOVE = 0x0001;
+					if ((wRemoveMsg & PM_REMOVE) == PM_REMOVE)
+					{
+						_env.ClearQuitMessage();
+					}
 
 					return (uint)NativeTypes.Win32Bool.TRUE; // Message available
 				}
@@ -3739,15 +3742,12 @@ namespace Win32Emu.Win32.Modules
 
 			// Special case: HWND_BROADCAST (0xFFFF) is always valid
 			const uint HWND_BROADCAST = 0xFFFF;
-			if (hwnd != HWND_BROADCAST && hwnd != 0)
+			if (hwnd != HWND_BROADCAST && hwnd != 0 && _env.GetWindow(hwnd) == null)
 			{
 				// Validate window handle exists
-				if (_env.GetWindow(hwnd) == null)
-				{
-					_logger.LogWarning("[User32] PostMessageA: Invalid window handle 0x{Hwnd:X8}", hwnd);
-					_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
-					return 0u; // FALSE
-				}
+				_logger.LogWarning("[User32] PostMessageA: Invalid window handle 0x{Hwnd:X8}", hwnd);
+				_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
+				return 0u; // FALSE
 			}
 
 			// Post message to the queue
