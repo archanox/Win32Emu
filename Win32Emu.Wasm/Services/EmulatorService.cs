@@ -118,7 +118,9 @@ public class EmulatorService : IDisposable
 		bool force32BitStackOps = true,
 		bool useCache = true,
 		bool enableInstructionAnalyzer = false,
-		bool enableLegacyInstructionDecoding = false)
+		bool enableLegacyInstructionDecoding = false,
+		uint? ansiCodePage = null,
+		uint? oemCodePage = null)
 	{
 		try
 		{
@@ -240,7 +242,7 @@ public class EmulatorService : IDisposable
 			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
 			// When enableInstructionAnalyzer is true, instruction analysis features are available
 			// When enableLegacyInstructionDecoding is true, legacy instruction sets are supported (MPX, Cyrix, etc.)
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, programArgs, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer, enableLegacyInstructionDecoding, ansiCodePage: null, oemCodePage: null);
+			_emulator.LoadExecutableFromBytes(executableBytes, fileName, programArgs, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer, enableLegacyInstructionDecoding, ansiCodePage, oemCodePage);
 			
 			// Load cache if enabled - JitCpu uses RTL-based cache
 			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
