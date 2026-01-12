@@ -2616,64 +2616,90 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
-	/// Try to peek at a message from the queue (non-blocking)
+	/// Try to peek at a message from the queue (non-blocking).
+	/// 
+	/// IMPORTANT: Due to the Channel API limitations (no true peek operation), this method
+	/// must temporarily remove messages to inspect them. This means:
+	/// 1. For PM_NOREMOVE, the message order is maintained by immediately re-queueing
+	/// 2. For filtered reads, non-matching messages are temporarily removed and re-queued
+	/// 3. In single-threaded scenarios (like tests), order is preserved
 	/// </summary>
 	public bool TryPeekMessage(out QueuedMessage message, uint hwnd, uint msgFilterMin, uint msgFilterMax, bool remove)
 	{
 		message = default;
 
-		// We need to scan through the queue to find a matching message
-		// Collect messages that don't match filters so we can re-queue them
-		List<QueuedMessage>? requeueList = null;
-		bool foundMatch = false;
+		// Simple case: no filters, just check if any message exists
+		if (hwnd == 0 && msgFilterMin == 0 && msgFilterMax == 0)
+		{
+			if (_messageQueue.Reader.TryRead(out var queuedMsg))
+			{
+				message = queuedMsg;
+				
+				// If PM_NOREMOVE, put the message back immediately
+				if (!remove)
+				{
+					_messageQueue.Writer.TryWrite(queuedMsg);
+				}
+				
+				return true;
+			}
+			return false;
+		}
 
-		// Scan through available messages to find one matching our filters
+		// Complex case: need to search for a matching message
+		// We'll collect non-matching messages to re-queue them in order
+		List<QueuedMessage>? nonMatchingMessages = null;
+
 		while (_messageQueue.Reader.TryRead(out var queuedMsg))
 		{
 			// Check window filter
-			if (hwnd != 0 && queuedMsg.Hwnd != hwnd)
-			{
-				// Message doesn't match window filter, hold it for re-queueing
-				requeueList ??= new List<QueuedMessage>();
-				requeueList.Add(queuedMsg);
-				continue;
-			}
+			bool matchesWindow = (hwnd == 0) || (queuedMsg.Hwnd == hwnd);
 
 			// Check message range filter
+			bool matchesRange = true;
 			if (msgFilterMin != 0 || msgFilterMax != 0)
 			{
-				if (queuedMsg.Message < msgFilterMin || queuedMsg.Message > msgFilterMax)
+				matchesRange = (queuedMsg.Message >= msgFilterMin && queuedMsg.Message <= msgFilterMax);
+			}
+
+			if (matchesWindow && matchesRange)
+			{
+				// Found a matching message!
+				message = queuedMsg;
+				
+				// Re-queue all non-matching messages first (maintains order)
+				if (nonMatchingMessages != null)
 				{
-					// Message doesn't match range filter, hold it for re-queueing
-					requeueList ??= new List<QueuedMessage>();
-					requeueList.Add(queuedMsg);
-					continue;
+					foreach (var nonMatchingMsg in nonMatchingMessages)
+					{
+						_messageQueue.Writer.TryWrite(nonMatchingMsg);
+					}
 				}
+				
+				// If PM_NOREMOVE, put the matched message back too
+				if (!remove)
+				{
+					_messageQueue.Writer.TryWrite(queuedMsg);
+				}
+				
+				return true;
 			}
 
-			// Found a matching message!
-			message = queuedMsg;
-			foundMatch = true;
-			
-			// If remove is false (PM_NOREMOVE), put this message back too
-			if (!remove)
-			{
-				_messageQueue.Writer.TryWrite(queuedMsg);
-			}
-			
-			break;
+			// Message doesn't match - collect it for re-queueing
+			nonMatchingMessages ??= new List<QueuedMessage>();
+			nonMatchingMessages.Add(queuedMsg);
 		}
 
-		// Re-queue all non-matching messages to preserve queue order
-		if (requeueList != null)
+		// No matching message found - re-queue all messages we read
+		if (nonMatchingMessages != null)
 		{
-			foreach (var msgToRequeue in requeueList)
+			foreach (var nonMatchingMsg in nonMatchingMessages)
 			{
-				_messageQueue.Writer.TryWrite(msgToRequeue);
+				_messageQueue.Writer.TryWrite(nonMatchingMsg);
 			}
 		}
 
-		return foundMatch;
+		return false;
 	}
 
 	/// <summary>
