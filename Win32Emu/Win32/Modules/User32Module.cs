@@ -3644,6 +3644,42 @@ namespace Win32Emu.Win32.Modules
 				return (uint)NativeTypes.Win32Bool.TRUE; // Message available
 			}
 
+			// Check if there's a quit message pending
+			// WM_QUIT (0x0012) is special - it's generated on-demand from the quit flag
+			// rather than being stored in the message queue
+			const uint WM_QUIT = 0x0012;
+			if (_env.HasQuitMessage())
+			{
+				// Check if WM_QUIT passes the message filter
+				bool passesFilter = true;
+				if (wMsgFilterMin != 0 || wMsgFilterMax != 0)
+				{
+					passesFilter = (WM_QUIT >= wMsgFilterMin && WM_QUIT <= wMsgFilterMax);
+				}
+
+				if (passesFilter)
+				{
+					var exitCode = _env.GetQuitExitCode();
+					_logger.LogInformation("[User32] PeekMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
+
+					// Use generated ref struct for safe memory access
+					var msg = new MSGRef(_env.Memory, lpMsg);
+					msg.hwnd = 0; // WM_QUIT has no associated window
+					msg.message = WM_QUIT;
+					msg.wParam = (uint)exitCode;
+					msg.lParam = 0;
+					msg.time = (uint)Environment.TickCount;
+					msg.ptX = 0;
+					msg.ptY = 0;
+
+					// If PM_REMOVE was specified, we would consume the quit message
+					// For now, we leave the quit flag set so multiple PeekMessage calls can see it
+					// The application should exit its message loop after seeing WM_QUIT
+
+					return (uint)NativeTypes.Win32Bool.TRUE; // Message available
+				}
+			}
+
 			return (uint)NativeTypes.Win32Bool.FALSE; // No message available
 		}
 
@@ -3700,6 +3736,19 @@ namespace Win32Emu.Win32.Modules
 		private uint PostMessageA(uint hwnd, uint msg, uint wParam, uint lParam)
 		{
 			_logger.LogInformation("[User32] PostMessageA: HWND=0x{Hwnd:X8} MSG=0x{Msg:X4} wParam=0x{WParam:X8} lParam=0x{LParam:X8}", hwnd, msg, wParam, lParam);
+
+			// Special case: HWND_BROADCAST (0xFFFF) is always valid
+			const uint HWND_BROADCAST = 0xFFFF;
+			if (hwnd != HWND_BROADCAST && hwnd != 0)
+			{
+				// Validate window handle exists
+				if (_env.GetWindow(hwnd) == null)
+				{
+					_logger.LogWarning("[User32] PostMessageA: Invalid window handle 0x{Hwnd:X8}", hwnd);
+					_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_WINDOW_HANDLE;
+					return 0u; // FALSE
+				}
+			}
 
 			// Post message to the queue
 			var success = _env.PostMessage(hwnd, msg, wParam, lParam);
