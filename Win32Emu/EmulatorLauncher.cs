@@ -98,6 +98,23 @@ public static class EmulatorLauncher
 			}
 		}
 
+		// Parse codepage options
+		uint? ansiCodePage = null;
+		var ansiCodePageIndex = Array.IndexOf(args, "--ansi-codepage");
+		if (ansiCodePageIndex >= 0 && ansiCodePageIndex + 1 < args.Length &&
+		    uint.TryParse(args[ansiCodePageIndex + 1], out var parsedAnsiCp))
+		{
+			ansiCodePage = parsedAnsiCp;
+		}
+		
+		uint? oemCodePage = null;
+		var oemCodePageIndex = Array.IndexOf(args, "--oem-codepage");
+		if (oemCodePageIndex >= 0 && oemCodePageIndex + 1 < args.Length &&
+		    uint.TryParse(args[oemCodePageIndex + 1], out var parsedOemCp))
+		{
+			oemCodePage = parsedOemCp;
+		}
+
 		// Check for backend selection
 		// Note: Backend selection is now handled by the GUI layer through IBackendFactory
 		var backendIndex = Array.IndexOf(args, "--backend");
@@ -128,7 +145,8 @@ public static class EmulatorLauncher
 						}
 					}
 					else if (args[i] == "--trace-api" || args[i] == "--compare-apimon" ||
-					         args[i] == "--log-file" || args[i] == "--telemetry-otlp" || args[i] == "--gdb-server")
+					         args[i] == "--log-file" || args[i] == "--telemetry-otlp" || args[i] == "--gdb-server" ||
+					         args[i] == "--ansi-codepage" || args[i] == "--oem-codepage")
 					{
 						// For these flags, the value is optional and can be any string except another flag.
 						// We assume that if the next argument is not another flag, it is intended as the value.
@@ -260,7 +278,7 @@ public static class EmulatorLauncher
 					// Let critical exceptions propagate
 					
 					using var emulator = new Emulator(null, logger, telemetryService, backendFactory);
-					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, null, null, force32BitStackOps);
+					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, null, null, force32BitStackOps, ansiCodePage, oemCodePage);
 					
 					// Enable API tracing if requested
 					if (enableApiTrace && emulator.Environment != null)
@@ -336,6 +354,8 @@ public static class EmulatorLauncher
 		Console.WriteLine("  --telemetry-console  Enable OpenTelemetry with console exporter");
 		Console.WriteLine("  --telemetry-otlp [endpoint] Enable OpenTelemetry with OTLP exporter (default: http://localhost:4317)");
 		Console.WriteLine("  --no-force-32bit-stack-ops   Disable forcing 32-bit operand size for stack operations (default: enabled for Win32 compatibility)");
+		Console.WriteLine("  --ansi-codepage <codepage>   Set default ANSI code page (CP_ACP) - e.g., 1252 (Western European), 932 (Japanese), 65001 (UTF-8)");
+		Console.WriteLine("  --oem-codepage <codepage>    Set default OEM code page (CP_OEMCP) - e.g., 437 (US), 850 (Multilingual Latin I)");
 		Console.WriteLine();
 		Console.WriteLine("Environment Variables:");
 		Console.WriteLine("  WIN32EMU_BACKEND             Set backend type (SDL, GLFW, Vulkan, Metal, or Software)");

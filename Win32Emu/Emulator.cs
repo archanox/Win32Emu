@@ -327,7 +327,9 @@ public sealed class Emulator : IDisposable
     /// <param name="forceInterpreterMode">Force interpreter mode even on native platforms (disables JIT compilation)</param>
     /// <param name="enableInstructionAnalyzer">Enable instruction analyzer for debugging (requires forceInterpreterMode in WASM)</param>
     /// <param name="enableLegacyInstructionDecoding">Enable legacy instruction decoding (MPX, Cyrix, ALTINST, etc.)</param>
-    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true, bool forceInterpreterMode = false, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false)
+    /// <param name="ansiCodePage">Default ANSI code page (CP_ACP). If null, uses UTF-8 (65001)</param>
+    /// <param name="oemCodePage">Default OEM code page (CP_OEMCP). If null, uses OEM US (437)</param>
+    public void LoadExecutableFromBytes(byte[] executableBytes, string executableName, string[]? programArgs, bool debugMode, int reservedMemoryMb, VirtualFileSystem.IVirtualFileSystem? virtualFileSystem, bool force32BitStackOps = true, bool forceInterpreterMode = false, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, uint? ansiCodePage = null, uint? oemCodePage = null)
     {
         // Use a synthetic path for internal tracking
         var syntheticPath = $"C:\\WASM\\{executableName}";
@@ -347,10 +349,12 @@ public sealed class Emulator : IDisposable
             virtualDiskPath: null,
             preloadedBytes: executableBytes,
             customVirtualFileSystem: virtualFileSystem,
-            force32BitStackOps: force32BitStackOps);
+            force32BitStackOps: force32BitStackOps,
+            ansiCodePage: ansiCodePage,
+            oemCodePage: oemCodePage);
     }
 
-    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool forceInterpreterMode = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null, bool force32BitStackOps = true)
+    public void LoadExecutable(string path, string[]? programArgs = null, bool debugMode = false, bool interactiveDebugMode = false, int reservedMemoryMb = 256, bool gdbServerMode = false, int gdbServerPort = 1234, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, bool forceInterpreterMode = false, string? virtualDiskPath = null, byte[]? preloadedBytes = null, VirtualFileSystem.IVirtualFileSystem? customVirtualFileSystem = null, bool force32BitStackOps = true, uint? ansiCodePage = null, uint? oemCodePage = null)
     {
         _debugMode = debugMode;
         _interactiveDebugMode = interactiveDebugMode;
@@ -494,6 +498,18 @@ public sealed class Emulator : IDisposable
         }
 
         _env = new ProcessEnvironment(_vm, CalculateHeapBase(_image), _host, _logger, _backendFactory);
+        
+        // Set codepage configuration if specified
+        if (ansiCodePage.HasValue)
+        {
+            _env.AnsiCodePage = (CodePage)ansiCodePage.Value;
+            _logger.LogInformation("[Loader] ANSI code page set to: {CodePage} ({CodePageValue})", _env.AnsiCodePage, ansiCodePage.Value);
+        }
+        if (oemCodePage.HasValue)
+        {
+            _env.OemCodePage = (CodePage)oemCodePage.Value;
+            _logger.LogInformation("[Loader] OEM code page set to: {CodePage} ({CodePageValue})", _env.OemCodePage, oemCodePage.Value);
+        }
         
         // Initialize virtual file system - prioritize custom VFS, then disk path
         if (customVirtualFileSystem != null)

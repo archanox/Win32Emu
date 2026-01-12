@@ -132,6 +132,20 @@ public class ProcessEnvironment
 	/// </summary>
 	public uint LastError { get; set; }
 
+	/// <summary>
+	/// Gets or sets the default ANSI code page (CP_ACP) for this process.
+	/// Used by GetACP() and string conversion functions.
+	/// Default: UTF-8 (65001)
+	/// </summary>
+	public CodePage AnsiCodePage { get; set; } = CodePage.Utf8;
+
+	/// <summary>
+	/// Gets or sets the default OEM code page (CP_OEMCP) for this process.
+	/// Used by GetOEMCP() and console-related functions.
+	/// Default: OEM United States (437)
+	/// </summary>
+	public CodePage OemCodePage { get; set; } = CodePage.Oem437;
+
 	public ProcessEnvironment(VirtualMemory vm, uint heapBase = 0x01000000, IEmulatorHost? host = null, ILogger? logger = null, IBackendFactory? backendFactory = null)
 	{
 		Memory = vm;
