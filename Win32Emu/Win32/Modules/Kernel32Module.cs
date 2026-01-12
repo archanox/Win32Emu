@@ -3130,6 +3130,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		_logger.LogInformation("[Kernel32] VirtualAlloc(lpAddress=0x{Lp:X8}, dwSize=0x{Size:X8}, alloc=0x{Alloc:X8}, protect=0x{Prot:X8})", lpAddress, dwSize, flAllocationType, flProtect);
 		var addr = _env.VirtualAlloc(lpAddress, dwSize, flAllocationType, flProtect);
 		_logger.LogInformation("[Kernel32] VirtualAlloc -> 0x{Addr:X8}", addr);
+		
+		if (addr != 0)
+		{
+			_env.LastError = 0; // ERROR_SUCCESS
+		}
+		else
+		{
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_NOT_ENOUGH_MEMORY;
+		}
+		
 		return addr;
 	}
 
@@ -3149,6 +3159,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
+		_env.LastError = 0; // ERROR_SUCCESS
 		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
