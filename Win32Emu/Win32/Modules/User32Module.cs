@@ -3927,7 +3927,7 @@ namespace Win32Emu.Win32.Modules
 				}
 				else
 				{
-					_logger.LogWarning("[User32] DialogBoxParamAsync: UNEXPECTED - else branch taken. lpDialogFunc=0x{LpDialogFunc:X8}", lpDialogFunc);
+					_logger.LogInformation("[User32] DialogBoxParamAsync: No dialog procedure specified; skipping dialog procedure calls. lpDialogFunc=0x{LpDialogFunc:X8}", lpDialogFunc);
 				}
 
 				// Run modal message loop until EndDialog is called
