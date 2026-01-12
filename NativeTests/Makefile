@@ -4,13 +4,15 @@
 # Compiler settings
 CC = i686-w64-mingw32-gcc
 CFLAGS = -Wall -Wextra -O2 -m32
-LDFLAGS = -lkernel32
+LDFLAGS = -lkernel32 -luser32 -lgdi32 -lwinmm
 
 # Output directory
 OUTDIR = ../EXEs/NativeTests
 
 # Source files
-SOURCES = test_getmodulefilename.c test_environment.c
+SOURCES = test_getmodulefilename.c test_environment.c \
+          test_heap.c test_virtualalloc.c test_fileio.c test_version.c \
+          test_commandline.c test_procaddress.c test_messages.c test_multimedia.c
 
 # Output executables
 EXECUTABLES = $(SOURCES:.c=.exe)
