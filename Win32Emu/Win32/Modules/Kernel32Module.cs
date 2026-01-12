@@ -3133,7 +3133,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		
 		if (addr != 0)
 		{
-			_env.LastError = 0; // ERROR_SUCCESS
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		}
 		else
 		{
@@ -3159,7 +3159,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 			return (uint)NativeTypes.Win32Bool.FALSE;
 		}
 
-		_env.LastError = 0; // ERROR_SUCCESS
+		_env.LastError = (uint)NativeTypes.Win32Error.ERROR_SUCCESS;
 		return (uint)NativeTypes.Win32Bool.TRUE;
 	}
 
