@@ -30,6 +30,22 @@ public class EmulatorConfiguration
 	/// </summary>
 	public bool ForceInterpreterMode { get; set; } = false;
 	
+	// Codepage Settings
+	/// <summary>
+	/// Default ANSI code page (CP_ACP) used by the emulator.
+	/// Common values: 1252 (Western European), 932 (Japanese), 936 (Chinese Simplified),
+	/// 949 (Korean), 950 (Chinese Traditional), 1251 (Cyrillic), 65001 (UTF-8).
+	/// Default: 65001 (UTF-8) for maximum compatibility.
+	/// </summary>
+	public uint DefaultAnsiCodePage { get; set; } = 65001; // UTF-8
+	
+	/// <summary>
+	/// Default OEM code page (CP_OEMCP) used by the emulator.
+	/// Common values: 437 (US), 850 (Multilingual Latin I), 852 (Latin II).
+	/// Default: 437 (IBM PC US).
+	/// </summary>
+	public uint DefaultOemCodePage { get; set; } = 437; // IBM PC US
+	
 	// OpenTelemetry Settings
 	public bool EnableOpenTelemetry { get; set; }
 	public bool UseConsoleExporter { get; set; }
