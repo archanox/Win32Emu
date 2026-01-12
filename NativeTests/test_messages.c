@@ -156,6 +156,9 @@ int main(void)
 	/* Cleanup */
 	printf("Cleanup: Destroying window\n");
 	DestroyWindow(hwnd);
+	
+	printf("Cleanup: Unregistering window class\n");
+	UnregisterClassA("TestMessageWindowClass", wc.hInstance);
 	printf("\n");
 
 	printf("All message function tests completed.\n");
