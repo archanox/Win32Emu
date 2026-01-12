@@ -78,6 +78,13 @@ public partial class SettingsViewModel : ViewModelBase
     
     [ObservableProperty]
     private string? _virtualDisksDirectory;
+    
+    // Codepage Settings
+    [ObservableProperty]
+    private uint _defaultAnsiCodePage;
+    
+    [ObservableProperty]
+    private uint _defaultOemCodePage;
 
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
@@ -141,6 +148,8 @@ public partial class SettingsViewModel : ViewModelBase
         _defaultVirtualDiskSizeMb = configuration.DefaultVirtualDiskSizeMb;
         _virtualDiskFormat = configuration.VirtualDiskFormat;
         _virtualDisksDirectory = configuration.VirtualDisksDirectory;
+        _defaultAnsiCodePage = configuration.DefaultAnsiCodePage;
+        _defaultOemCodePage = configuration.DefaultOemCodePage;
     }
 
     partial void OnRenderingBackendChanged(string value)
@@ -266,6 +275,18 @@ public partial class SettingsViewModel : ViewModelBase
     partial void OnVirtualDisksDirectoryChanged(string? value)
     {
         _configuration.VirtualDisksDirectory = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnDefaultAnsiCodePageChanged(uint value)
+    {
+        _configuration.DefaultAnsiCodePage = value;
+        _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnDefaultOemCodePageChanged(uint value)
+    {
+        _configuration.DefaultOemCodePage = value;
         _configService.SaveEmulatorConfiguration(_configuration);
     }
     

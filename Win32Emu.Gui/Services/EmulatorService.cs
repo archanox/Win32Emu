@@ -125,7 +125,9 @@ public class EmulatorService
                     virtualDiskPath, // Pass the virtual disk path
                     preloadedBytes: null,
                     customVirtualFileSystem: null,
-                    force32BitStackOps: _configuration.Force32BitStackOps); // Pass Force32BitStackOps setting
+                    force32BitStackOps: _configuration.Force32BitStackOps, // Pass Force32BitStackOps setting
+                    ansiCodePage: _configuration.DefaultAnsiCodePage,
+                    oemCodePage: _configuration.DefaultOemCodePage);
                 
                 // Run the emulator
                 _currentEmulator.Run();
