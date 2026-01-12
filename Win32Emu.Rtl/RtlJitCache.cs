@@ -122,7 +122,11 @@ public class RtlJitCache
     {
         var syntaxTree = CSharpSyntaxTree.ParseText(csharpCode);
         
-        var references = new[]
+        // Find Win32Emu assembly for CpuStepResult type
+        var win32EmuAssembly = AppDomain.CurrentDomain.GetAssemblies()
+            .FirstOrDefault(a => a.GetName().Name == "Win32Emu");
+        
+        var referencesList = new List<MetadataReference>
         {
             MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
@@ -132,10 +136,16 @@ public class RtlJitCache
             MetadataReference.CreateFromFile(typeof(System.Linq.Expressions.Expression).Assembly.Location), // For DynamicAttribute
         };
         
+        // Add Win32Emu assembly reference if available (for CpuStepResult)
+        if (win32EmuAssembly != null)
+        {
+            referencesList.Add(MetadataReference.CreateFromFile(win32EmuAssembly.Location));
+        }
+        
         var compilation = CSharpCompilation.Create(
             assemblyName,
             new[] { syntaxTree },
-            references,
+            referencesList,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
         );
         

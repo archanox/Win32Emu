@@ -21,6 +21,7 @@ public class RtlToCSharpGenerator
         
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Threading.Tasks;");
+        sb.AppendLine("using Win32Emu.Cpu; // For CpuStepResult");
         sb.AppendLine();
         sb.AppendLine("namespace Win32Emu.Jit.Generated");
         sb.AppendLine("{");
@@ -80,15 +81,6 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
-        sb.AppendLine();
-        sb.AppendLine("    /// <summary>");
-        sb.AppendLine("    /// CPU step result (matches Win32Emu.Cpu.CpuStepResult)");
-        sb.AppendLine("    /// </summary>");
-        sb.AppendLine("    public struct CpuStepResult");
-        sb.AppendLine("    {");
-        sb.AppendLine("        public bool IsCall { get; set; }");
-        sb.AppendLine("        public uint CallTarget { get; set; }");
-        sb.AppendLine("    }");
         sb.AppendLine("}");
         
         return sb.ToString();
@@ -111,7 +103,16 @@ public class RtlToCSharpGenerator
             _ => "// unknown instruction"
         };
         
-        sb.AppendLine($"            {code} // @0x{insn.Offset:X}");
+        // For multi-line instructions (like RET), the offset is already included in the code string
+        // Check if offset comment already exists to avoid duplication
+        if (code.Contains($"@0x{insn.Offset:X}"))
+        {
+            sb.AppendLine($"            {code}");
+        }
+        else
+        {
+            sb.AppendLine($"            {code} // @0x{insn.Offset:X}");
+        }
     }
     
     private string GenerateCall(RtlCall call)
@@ -136,7 +137,8 @@ public class RtlToCSharpGenerator
         // Note: ESP variable is defined in the generated method (see GenerateCSharpCode line 43)
         
         var sb = new StringBuilder();
-        sb.AppendLine("{ // RET instruction");
+        // For multi-line blocks, include offset on the opening line instead of closing brace
+        sb.AppendLine($"{{ // RET instruction @0x{ret.Offset:X}");
         sb.AppendLine("                uint retAddr = mem.Read32(ESP);");
         sb.AppendLine("                ESP += 4;");
         if (ret.StackCleanup > 0)

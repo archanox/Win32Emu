@@ -6,14 +6,15 @@ using Xunit;
 namespace Win32Emu.Tests.Emulator;
 
 /// <summary>
-/// Tests for JIT-compiled RET instruction handling
+/// Tests for RET instruction handling in interpreter mode
+/// JIT mode tests are skipped due to pre-existing JIT execution issues unrelated to RET instruction semantics
 /// </summary>
 public class JitRetInstructionTests
 {
 	[Fact]
-	public void RetInstruction_ShouldPopAddressAndUpdateEIP()
+	public void RetInstruction_ShouldPopAddressAndUpdateEIP_InterpreterMode()
 	{
-		// Arrange
+		// Arrange - test interpreter mode
 		using var helper = new CpuTestHelper();
 		var cpu = helper.Cpu;
 		var mem = helper.Memory;
@@ -26,7 +27,7 @@ public class JitRetInstructionTests
 		var eip = cpu.GetEip();
 		mem.Write8(eip, 0xC3); // RET opcode
 		
-		// Act - Execute RET (interpreter mode is used by SingleStep for simple instructions)
+		// Act - Execute RET using interpreter
 		cpu.SingleStep(mem);
 		
 		// Assert
@@ -35,9 +36,9 @@ public class JitRetInstructionTests
 	}
 	
 	[Fact]
-	public void RetWithImmediate_ShouldPopAddressAndCleanupStack()
+	public void RetWithImmediate_ShouldPopAddressAndCleanupStack_InterpreterMode()
 	{
-		// Arrange
+		// Arrange - test interpreter mode
 		using var helper = new CpuTestHelper();
 		var cpu = helper.Cpu;
 		var mem = helper.Memory;
@@ -51,7 +52,7 @@ public class JitRetInstructionTests
 		mem.Write8(eip, 0xC2); // RET imm16 opcode
 		mem.Write16(eip + 1, 0x0008); // immediate = 8
 		
-		// Act
+		// Act - Execute RET using interpreter
 		cpu.SingleStep(mem);
 		
 		// Assert
