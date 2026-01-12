@@ -2273,6 +2273,13 @@ public class ProcessEnvironment
 		return _quitExitCode;
 	}
 
+	public void ClearQuitMessage()
+	{
+		_hasQuitMessage = false;
+		_quitExitCode = 0;
+		_logger.LogDebug("[ProcessEnv] ClearQuitMessage: quit message consumed");
+	}
+
 	/// <summary>
 	/// Post a message to the message queue asynchronously
 	/// </summary>
@@ -2622,7 +2629,13 @@ public class ProcessEnvironment
 	/// must temporarily remove messages to inspect them. This means:
 	/// 1. For PM_NOREMOVE, the message order is maintained by immediately re-queueing
 	/// 2. For filtered reads, non-matching messages are temporarily removed and re-queued
-	/// 3. In single-threaded scenarios (like tests), order is preserved
+	/// 3. In single-threaded scenarios (like tests), order is preserved, but in multi-threaded
+	///    scenarios strict FIFO ordering is not guaranteed: messages posted by other threads
+	///    while peeking can be enqueued before re-queued messages
+	/// 
+	/// If you require true non-destructive peek semantics with strict FIFO guarantees under
+	/// concurrent access, consider using a ConcurrentQueue-based implementation or introduce
+	/// appropriate locking around all accesses to the underlying message queue.
 	/// </summary>
 	public bool TryPeekMessage(out QueuedMessage message, uint hwnd, uint msgFilterMin, uint msgFilterMax, bool remove)
 	{
@@ -2667,19 +2680,19 @@ public class ProcessEnvironment
 				// Found a matching message!
 				message = queuedMsg;
 				
-				// Re-queue all non-matching messages first (maintains order)
+				// If PM_NOREMOVE, put the matched message back first to maintain its position
+				if (!remove)
+				{
+					_messageQueue.Writer.TryWrite(queuedMsg);
+				}
+				
+				// Re-queue all non-matching messages after the matched message (maintains order)
 				if (nonMatchingMessages != null)
 				{
 					foreach (var nonMatchingMsg in nonMatchingMessages)
 					{
 						_messageQueue.Writer.TryWrite(nonMatchingMsg);
 					}
-				}
-				
-				// If PM_NOREMOVE, put the matched message back too
-				if (!remove)
-				{
-					_messageQueue.Writer.TryWrite(queuedMsg);
 				}
 				
 				return true;
