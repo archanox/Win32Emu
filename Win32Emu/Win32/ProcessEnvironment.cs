@@ -2622,38 +2622,58 @@ public class ProcessEnvironment
 	{
 		message = default;
 
-		if (_messageQueue.Reader.TryRead(out var queuedMsg))
+		// We need to scan through the queue to find a matching message
+		// Collect messages that don't match filters so we can re-queue them
+		List<QueuedMessage>? requeueList = null;
+		bool foundMatch = false;
+
+		// Scan through available messages to find one matching our filters
+		while (_messageQueue.Reader.TryRead(out var queuedMsg))
 		{
-			// Apply filters if specified
+			// Check window filter
 			if (hwnd != 0 && queuedMsg.Hwnd != hwnd)
 			{
-				// Re-queue and return false
-				_messageQueue.Writer.TryWrite(queuedMsg);
-				return false;
+				// Message doesn't match window filter, hold it for re-queueing
+				requeueList ??= new List<QueuedMessage>();
+				requeueList.Add(queuedMsg);
+				continue;
 			}
 
+			// Check message range filter
 			if (msgFilterMin != 0 || msgFilterMax != 0)
 			{
 				if (queuedMsg.Message < msgFilterMin || queuedMsg.Message > msgFilterMax)
 				{
-					// Re-queue and return false
-					_messageQueue.Writer.TryWrite(queuedMsg);
-					return false;
+					// Message doesn't match range filter, hold it for re-queueing
+					requeueList ??= new List<QueuedMessage>();
+					requeueList.Add(queuedMsg);
+					continue;
 				}
 			}
 
+			// Found a matching message!
 			message = queuedMsg;
+			foundMatch = true;
 			
-			// If remove is false (PM_NOREMOVE), put the message back
+			// If remove is false (PM_NOREMOVE), put this message back too
 			if (!remove)
 			{
 				_messageQueue.Writer.TryWrite(queuedMsg);
 			}
-
-			return true;
+			
+			break;
 		}
 
-		return false;
+		// Re-queue all non-matching messages to preserve queue order
+		if (requeueList != null)
+		{
+			foreach (var msgToRequeue in requeueList)
+			{
+				_messageQueue.Writer.TryWrite(msgToRequeue);
+			}
+		}
+
+		return foundMatch;
 	}
 
 	/// <summary>
