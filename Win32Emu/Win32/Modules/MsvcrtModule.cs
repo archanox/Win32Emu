@@ -455,6 +455,9 @@ namespace Win32Emu.Win32.Modules
 				case "PUTS":
 					returnValue = (uint)puts(a.LpcStr(0));
 					return true;
+				case "_GETCH":
+					returnValue = (uint)_getch();
+					return true;
 				case "SSCANF":
 					returnValue = (uint)sscanf(a.UInt32(0), a.LpcStr(1), a.UInt32(2));
 					return true;
@@ -2417,6 +2420,21 @@ namespace Win32Emu.Win32.Modules
 		_env.WriteToStdOutput(s + "\n");
 		
 		return s.Length + 1; // Return non-negative value on success (number of chars including newline)
+	}
+
+	/// <summary>
+	/// _getch - Read a character from the console without echo
+	/// Reads a character from the console without echoing it to the screen and without buffering
+	/// </summary>
+	[DllModuleExport(0, CallingConvention = DllCallingConvention.Cdecl)]
+	private int _getch()
+	{
+		_logger.LogInformation("[msvcrt] _getch()");
+		// In a real implementation, this would read from stdin without echo
+		// For now, we return a newline character (Enter key) to allow programs to continue
+		// This is a minimal implementation that prevents programs from blocking forever
+		const int enterKey = 13; // ASCII code for Enter/Return
+		return enterKey;
 	}
 
 	/// <summary>

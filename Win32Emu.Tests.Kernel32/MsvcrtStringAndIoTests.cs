@@ -445,6 +445,20 @@ public sealed class MsvcrtStringAndIoTests : IDisposable
 		Assert.Equal(0x73u, returnValue); // Should return the character written
 	}
 
+	[Fact]
+	public void Getch_ShouldReturnEnterKey()
+	{
+		// Arrange - no arguments needed for _getch
+		
+		// Act - call _getch
+		_testEnv.Cpu.SetupStackArgs(_testEnv.Memory);
+		var success = _msvcrt.TryInvokeUnsafe("_getch", _testEnv.Cpu, _testEnv.Memory, out var returnValue);
+		
+		// Assert
+		Assert.True(success, "_getch should be implemented");
+		Assert.Equal(13u, returnValue); // Should return Enter key (ASCII 13)
+	}
+
 	public void Dispose()
 	{
 		_testEnv.Dispose();

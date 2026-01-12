@@ -361,6 +361,14 @@ namespace Win32Emu.Win32.Modules
 					returnValue = MessageBoxA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
 
+				case "MESSAGEBOXW":
+					returnValue = MessageBoxW(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
+					return true;
+
+				case "SOFTMODALMESSAGEBOX":
+					returnValue = SoftModalMessageBox(a.UInt32(0));
+					return true;
+
 				case "SYSTEMPARAMETERSINFOA":
 					returnValue = SystemParametersInfoA(a.UInt32(0), a.UInt32(1), a.UInt32(2), a.UInt32(3));
 					return true;
@@ -3565,6 +3573,50 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Fallback: return IDOK (1) if no host available
+			return 1;
+		}
+
+		[DllModuleExport(16)]
+		private uint MessageBoxW(uint hwnd, uint lpText, uint lpCaption, uint uType)
+		{
+			var text = lpText != 0 ? _env.ReadUnicodeString(lpText) : "";
+			var caption = lpCaption != 0 ? _env.ReadUnicodeString(lpCaption) : "";
+			_logger.LogInformation("[User32] MessageBoxW: \"{Caption}\" - \"{Text}\" type=0x{UType:X8}", caption, text, uType);
+
+			// If a host is available, show the message box through it
+			if (_host != null)
+			{
+				try
+				{
+					var msgBoxInfo = new MessageBoxInfo
+					{
+						ParentHandle = hwnd,
+						Text = text,
+						Caption = caption,
+						Type = uType
+					};
+
+					var result = _host.OnMessageBox(msgBoxInfo);
+					_logger.LogInformation("[User32] MessageBoxW: Host returned result {Result}", result);
+					return (uint)result;
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[User32] MessageBoxW: Exception calling host");
+				}
+			}
+
+			// Fallback: return IDOK (1) if no host available
+			return 1;
+		}
+
+		[DllModuleExport(20, IsStub = true)]
+		private uint SoftModalMessageBox(uint lpMsgBoxParams)
+		{
+			_logger.LogInformation("[User32] SoftModalMessageBox(lpMsgBoxParams=0x{LpMsgBoxParams:X8}) - Stub implementation", lpMsgBoxParams);
+			// SoftModalMessageBox is an undocumented internal Windows function
+			// It's used by Windows internally for message boxes in specific scenarios
+			// For compatibility, we return IDOK (1) to indicate success
 			return 1;
 		}
 

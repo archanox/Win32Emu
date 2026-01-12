@@ -345,6 +345,48 @@ public class ReactOSPortedTests_ResourcesAndSystem : IDisposable
 		Assert.Equal(IDOK, result);
 	}
 
+	[Fact]
+	public void MessageBoxW_WithValidParameters_ShouldReturnIDOK()
+	{
+		// Arrange
+		var textPtr = _testEnv.WriteStringW("Test message");
+		var captionPtr = _testEnv.WriteStringW("Test caption");
+
+		// Act
+		var result = _testEnv.CallUser32Api("MESSAGEBOXW", 0u, textPtr, captionPtr, MB_OK);
+
+		// Assert
+		Assert.Equal(IDOK, result);
+	}
+
+	[Fact]
+	public void MessageBoxW_WithUnicodeCharacters_ShouldReturnIDOK()
+	{
+		// Arrange
+		var textPtr = _testEnv.WriteStringW("Test message with Unicode: 你好世界");
+		var captionPtr = _testEnv.WriteStringW("Test caption: Тест");
+
+		// Act
+		var result = _testEnv.CallUser32Api("MESSAGEBOXW", 0u, textPtr, captionPtr, MB_OK);
+
+		// Assert
+		Assert.Equal(IDOK, result);
+	}
+
+	[Fact]
+	public void SoftModalMessageBox_ShouldReturnIDOK()
+	{
+		// Arrange - SoftModalMessageBox takes a pointer to a MSGBOXPARAMS structure
+		// For this stub test, we just pass a valid memory address
+		var paramsPtr = _testEnv.ProcessEnv.SimpleAlloc(64); // Allocate space for structure
+
+		// Act
+		var result = _testEnv.CallUser32Api("SOFTMODALMESSAGEBOX", paramsPtr);
+
+		// Assert
+		Assert.Equal(IDOK, result);
+	}
+
 	#endregion
 
 	#region GetStockObject Tests (GDI32)
