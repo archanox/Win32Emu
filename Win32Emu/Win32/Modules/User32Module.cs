@@ -3882,6 +3882,9 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// If the dialog procedure timed out, was cancelled, or failed during initialization, end the dialog immediately
+				_logger.LogInformation("[User32] DialogBoxParamAsync: Checking dialog flags - timedOut={TimedOut}, cancelled={Cancelled}, failed={Failed}, lpDialogFunc=0x{LpDialogFunc:X8}",
+					dialogProcTimedOut, dialogProcCancelled, dialogProcFailed, lpDialogFunc);
+				
 				if (dialogProcTimedOut || dialogProcCancelled || dialogProcFailed)
 				{
 					var status = dialogProcFailed ? "failed" : (dialogProcCancelled ? "cancelled" : "timed out");
@@ -3921,6 +3924,10 @@ namespace Win32Emu.Win32.Modules
 							dialogProcFailed = focusFailed;
 						}
 					}
+				}
+				else
+				{
+					_logger.LogWarning("[User32] DialogBoxParamAsync: UNEXPECTED - else branch taken. lpDialogFunc=0x{LpDialogFunc:X8}", lpDialogFunc);
 				}
 
 				// Run modal message loop until EndDialog is called
