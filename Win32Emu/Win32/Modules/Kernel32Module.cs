@@ -1696,7 +1696,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	private uint GetCurrentProcess() => 0xFFFFFFFF; // pseudo-handle
 
 	[DllModuleExport(7)]
-	public CodePage GetAcp() => CodePage.Utf8;
+	public CodePage GetAcp() => _env.AnsiCodePage;
 
 	[DllModuleExport(9)]
 	public uint GetCpInfo(CodePage codePage, NativeTypes.Lpcpinfo lpCpInfo)
@@ -1772,7 +1772,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	}
 
 	[DllModuleExport(17)]
-	private CodePage GetOemCp() => CodePage.Oem437; // IBM PC US (OEM code page)
+	private CodePage GetOemCp() => _env.OemCodePage;
 
 	[DllModuleExport(21)]
 	private uint GetStringTypeA(uint locale, uint dwInfoType, uint lpSrcStr, int cchSrc, uint lpCharType)
