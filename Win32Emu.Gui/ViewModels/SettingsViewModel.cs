@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Win32Emu.Gui.Configuration;
@@ -6,6 +7,12 @@ using Win32Emu.Gui.Models;
 using Win32Emu.Cpu.Jit;
 
 namespace Win32Emu.Gui.ViewModels;
+
+public class CodePageItem
+{
+	public string DisplayName { get; set; } = string.Empty;
+	public uint Value { get; set; }
+}
 
 public partial class SettingsViewModel : ViewModelBase
 {
@@ -85,6 +92,12 @@ public partial class SettingsViewModel : ViewModelBase
     
     [ObservableProperty]
     private uint _defaultOemCodePage;
+    
+    [ObservableProperty]
+    private CodePageItem? _selectedAnsiCodePage;
+    
+    [ObservableProperty]
+    private CodePageItem? _selectedOemCodePage;
 
     public ObservableCollection<string> RenderingBackends { get; } = new()
     {
@@ -120,6 +133,33 @@ public partial class SettingsViewModel : ViewModelBase
         "VHD",
         "VHDX"
     };
+    
+    public ObservableCollection<CodePageItem> AnsiCodePages { get; } = new()
+    {
+        new CodePageItem { DisplayName = "UTF-8 (65001) - Default", Value = 65001 },
+        new CodePageItem { DisplayName = "Western European (1252)", Value = 1252 },
+        new CodePageItem { DisplayName = "Japanese (932)", Value = 932 },
+        new CodePageItem { DisplayName = "Chinese Simplified (936)", Value = 936 },
+        new CodePageItem { DisplayName = "Korean (949)", Value = 949 },
+        new CodePageItem { DisplayName = "Chinese Traditional (950)", Value = 950 },
+        new CodePageItem { DisplayName = "Cyrillic (1251)", Value = 1251 },
+        new CodePageItem { DisplayName = "Central European (1250)", Value = 1250 },
+        new CodePageItem { DisplayName = "Greek (1253)", Value = 1253 },
+        new CodePageItem { DisplayName = "Turkish (1254)", Value = 1254 },
+        new CodePageItem { DisplayName = "Hebrew (1255)", Value = 1255 },
+        new CodePageItem { DisplayName = "Arabic (1256)", Value = 1256 },
+        new CodePageItem { DisplayName = "Baltic (1257)", Value = 1257 },
+        new CodePageItem { DisplayName = "Thai (874)", Value = 874 },
+        new CodePageItem { DisplayName = "Vietnamese (1258)", Value = 1258 }
+    };
+    
+    public ObservableCollection<CodePageItem> OemCodePages { get; } = new()
+    {
+        new CodePageItem { DisplayName = "US (437) - Default", Value = 437 },
+        new CodePageItem { DisplayName = "Multilingual Latin I (850)", Value = 850 },
+        new CodePageItem { DisplayName = "Latin II (852)", Value = 852 },
+        new CodePageItem { DisplayName = "Russian (866)", Value = 866 }
+    };
 
     public SettingsViewModel(EmulatorConfiguration configuration, ConfigurationService configService)
     {
@@ -150,6 +190,12 @@ public partial class SettingsViewModel : ViewModelBase
         _virtualDisksDirectory = configuration.VirtualDisksDirectory;
         _defaultAnsiCodePage = configuration.DefaultAnsiCodePage;
         _defaultOemCodePage = configuration.DefaultOemCodePage;
+        
+        // Set selected codepage items based on configuration
+        _selectedAnsiCodePage = AnsiCodePages.FirstOrDefault(cp => cp.Value == configuration.DefaultAnsiCodePage) 
+                              ?? AnsiCodePages.First(); // Default to UTF-8 if not found
+        _selectedOemCodePage = OemCodePages.FirstOrDefault(cp => cp.Value == configuration.DefaultOemCodePage)
+                             ?? OemCodePages.First(); // Default to US if not found
     }
 
     partial void OnRenderingBackendChanged(string value)
@@ -276,6 +322,26 @@ public partial class SettingsViewModel : ViewModelBase
     {
         _configuration.VirtualDisksDirectory = value;
         _configService.SaveEmulatorConfiguration(_configuration);
+    }
+    
+    partial void OnSelectedAnsiCodePageChanged(CodePageItem? value)
+    {
+        if (value != null)
+        {
+            _defaultAnsiCodePage = value.Value;
+            _configuration.DefaultAnsiCodePage = value.Value;
+            _configService.SaveEmulatorConfiguration(_configuration);
+        }
+    }
+    
+    partial void OnSelectedOemCodePageChanged(CodePageItem? value)
+    {
+        if (value != null)
+        {
+            _defaultOemCodePage = value.Value;
+            _configuration.DefaultOemCodePage = value.Value;
+            _configService.SaveEmulatorConfiguration(_configuration);
+        }
     }
     
     partial void OnDefaultAnsiCodePageChanged(uint value)
