@@ -4,7 +4,6 @@
 # Compiler settings
 CC = i686-w64-mingw32-gcc
 CFLAGS = -Wall -Wextra -O2 -m32
-LDFLAGS = -lkernel32 -luser32 -lgdi32 -lwinmm
 
 # Output directory
 OUTDIR = ../EXEs/NativeTests
@@ -25,9 +24,48 @@ all: $(OUTPUT_EXES)
 $(OUTDIR):
 	mkdir -p $(OUTDIR)
 
-# Build each executable
-$(OUTDIR)/%.exe: %.c | $(OUTDIR)
-	$(CC) $(CFLAGS) -o $@ $< $(LDFLAGS)
+# Build rules with target-specific library dependencies
+# Tests that only need kernel32
+$(OUTDIR)/test_getmodulefilename.exe: test_getmodulefilename.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+$(OUTDIR)/test_environment.exe: test_environment.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+$(OUTDIR)/test_heap.exe: test_heap.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+$(OUTDIR)/test_virtualalloc.exe: test_virtualalloc.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+$(OUTDIR)/test_fileio.exe: test_fileio.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+$(OUTDIR)/test_version.exe: test_version.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+$(OUTDIR)/test_commandline.exe: test_commandline.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+$(OUTDIR)/test_procaddress.exe: test_procaddress.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32
+	@echo "Built $@"
+
+# Tests that need kernel32 and user32
+$(OUTDIR)/test_messages.exe: test_messages.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32 -luser32 -lgdi32
+	@echo "Built $@"
+
+# Tests that need kernel32 and winmm
+$(OUTDIR)/test_multimedia.exe: test_multimedia.c | $(OUTDIR)
+	$(CC) $(CFLAGS) -o $@ $< -lkernel32 -lwinmm
 	@echo "Built $@"
 
 # Clean build artifacts
