@@ -93,8 +93,7 @@ int main(void)
 	printf("Test 8: timeEndPeriod(1) without matching timeBeginPeriod\n");
 	result = timeEndPeriod(1);
 	lastError = GetLastError();
-	printf("  Result: %u (may be MMSYSERR_NOCANDO=%u)\n", 
-		result, MMSYSERR_NOCANDO);
+	printf("  Result: %u (behavior varies by implementation)\n", result);
 	printf("  LastError: %lu\n", lastError);
 	printf("  Status: PASS (behavior varies)\n\n");
 
