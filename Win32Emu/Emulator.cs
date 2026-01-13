@@ -131,6 +131,11 @@ public sealed class Emulator : IDisposable
 
     private const int DOS_MAX_CURRENT_DIR_LENGTH = 63;
     
+    // IGN_TEAS texture loop tracking
+    private ulong _ignTeasLoopIterations = 0;
+    private ulong _ignTeasLastLoopLogIteration = 0;
+    private const ulong IGN_TEAS_LOOP_LOG_INTERVAL = 10000; // Log every 10K iterations in the problematic loop
+    
     /// <summary>
     /// DOS INT 21h function numbers
     /// </summary>
@@ -1154,6 +1159,185 @@ public sealed class Emulator : IDisposable
             }
         }
     }
+    
+    /// <summary>
+    /// Handles executable-specific function calls by providing C# overrides for diagnostics and debugging.
+    /// Returns true if the call was handled, false otherwise.
+    /// </summary>
+    private bool TryHandleExecutableSpecificCall(uint callTarget)
+    {
+	    if (_image == null || _vm == null || _env == null || _cpu == null)
+	    {
+		    return false;
+	    }
+	    
+	    var exeNameFromImage = Path.GetFileName(_image.FilePath ?? "").ToUpperInvariant();
+	    var exeNameFromEnv = Path.GetFileName(_env.ExecutablePath ?? "").ToUpperInvariant();
+	    
+	    // IGN_TEAS.EXE function overrides for debugging initialization flow
+	    if (exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromEnv == "IGN_TEAS.EXE" ||
+	        exeNameFromImage.Contains("IGN_TEAS") || exeNameFromEnv.Contains("IGN_TEAS"))
+	    {
+		    return HandleIgnTeasFunctionCall(callTarget);
+	    }
+	    
+	    return false;
+    }
+    
+    /// <summary>
+    /// Handles IGN_TEAS.EXE specific function calls for debugging.
+    /// Key functions based on Ghidra decompilation:
+    /// - 0x004023F0: Main initialization (calls texture loading and DirectDraw setup)
+    /// - 0x00402540: Heap/memory initialization
+    /// - 0x004025D0: Texture loading (contains the problematic loop at 0x004027A2-0x004027B4)
+    /// - 0x004027D0: DirectDraw/rendering initialization
+    /// - 0x00403140: WinMain (message loop setup)
+    /// - 0x00403510: DirectDraw creation and mode setup
+    /// - 0x004032A0: Main game tick function
+    /// - 0x00402410: Game logic update
+    /// </summary>
+    private bool HandleIgnTeasFunctionCall(uint callTarget)
+    {
+	    switch (callTarget)
+	    {
+		    case 0x004023F0: // Main initialization function
+			    _logger.LogWarning("[IGN_TEAS] Entering FUN_004023F0 (Main Initialization)");
+			    _logger.LogWarning("[IGN_TEAS]   This function calls: FUN_00402540, FUN_004025D0 (texture loading), FUN_004027D0, FUN_004011A0");
+			    return false; // Let it execute normally but we've logged it
+			    
+		    case 0x00402540: // Heap/memory initialization
+			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00402540 (Heap/Memory Initialization)");
+			    _logger.LogWarning("[IGN_TEAS]   Allocates memory regions for game data");
+			    return false; // Let it execute normally
+			    
+		    case 0x004025D0: // Texture loading function (contains the problematic loop)
+			    _logger.LogWarning("[IGN_TEAS] Entering FUN_004025D0 (Texture Loading - PROBLEMATIC FUNCTION)");
+			    _logger.LogWarning("[IGN_TEAS]   This function contains the texture data processing loop");
+			    _logger.LogWarning("[IGN_TEAS]   Loop at 0x004027A2-0x004027B4 calculates: uVar8 = sVar3 + 0xffff >> 0x10");
+			    _logger.LogWarning("[IGN_TEAS]   Expected iterations: ~16 per 1MB texture file");
+			    _logger.LogWarning("[IGN_TEAS]   In WASM, this loop may iterate millions of times due to arithmetic bug");
+			    return false; // Let it execute normally
+			    
+		    case 0x004027D0: // DirectDraw/rendering initialization
+			    _logger.LogWarning("[IGN_TEAS] Entering FUN_004027D0 (DirectDraw/Rendering Initialization)");
+			    _logger.LogWarning("[IGN_TEAS]   This should initialize DirectDraw surfaces and rendering");
+			    return false; // Let it execute normally
+			    
+		    case 0x00403140: // WinMain
+			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00403140 (WinMain - Main Entry Point)");
+			    _logger.LogWarning("[IGN_TEAS]   Registers window class, creates window, starts message loop");
+			    return false; // Let it execute normally
+			    
+		    case 0x00403510: // DirectDraw creation and mode setup
+			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00403510 (DirectDraw Creation)");
+			    _logger.LogWarning("[IGN_TEAS]   This should call DirectDrawCreate and set display mode");
+			    return false; // Let it execute normally
+			    
+		    case 0x004032A0: // Main game tick function
+			    var eip = _cpu.GetEip();
+			    _logger.LogDebug("[IGN_TEAS] Entering FUN_004032A0 (Main Game Tick) - EIP=0x{Eip:X8}", eip);
+			    _logger.LogDebug("[IGN_TEAS]   State check: DAT_0041c7a8 (game state), DAT_0041c828 (init flag)");
+			    // Log game state variables
+			    try
+			    {
+				    var gameState = _vm.Read32(0x0041c7a8);
+				    var initFlag = _vm.Read32(0x0041c828);
+				    var exitFlag = _vm.Read32(0x0041c82c);
+				    _logger.LogDebug("[IGN_TEAS]   Game State: DAT_0041c7a8={GameState}, DAT_0041c828={InitFlag}, DAT_0041c82c={ExitFlag}", 
+					    gameState, initFlag, exitFlag);
+			    }
+			    catch (Exception ex)
+			    {
+				    _logger.LogDebug(ex, "[IGN_TEAS]   Could not read game state variables");
+			    }
+			    return false; // Let it execute normally
+			    
+		    case 0x00402410: // Game logic update
+			    _logger.LogDebug("[IGN_TEAS] Entering FUN_00402410 (Game Logic Update)");
+			    return false; // Let it execute normally
+			    
+		    case 0x00402520: // Cleanup
+			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00402520 (Cleanup)");
+			    return false; // Let it execute normally
+			    
+		    default:
+			    return false; // Not a function we're tracking
+	    }
+    }
+    
+    /// <summary>
+    /// Tracks execution within the IGN_TEAS texture loading loop to diagnose infinite loop issues.
+    /// The loop at 0x004027A2-0x004027B4 in FUN_004025D0 should iterate ~16 times per texture file.
+    /// In WASM, it can iterate millions of times due to arithmetic operation bugs.
+    /// </summary>
+    private void TrackIgnTeasTextureLoop(uint eip)
+    {
+	    if (_image == null)
+	    {
+		    return;
+	    }
+	    
+	    var exeNameFromImage = Path.GetFileName(_image.FilePath ?? "").ToUpperInvariant();
+	    var exeNameFromEnv = Path.GetFileName(_env?.ExecutablePath ?? "").ToUpperInvariant();
+	    
+	    // Only track for IGN_TEAS.EXE
+	    if (!(exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromEnv == "IGN_TEAS.EXE" ||
+	          exeNameFromImage.Contains("IGN_TEAS") || exeNameFromEnv.Contains("IGN_TEAS")))
+	    {
+		    return;
+	    }
+	    
+	    // Track the problematic loop: 0x004027A2, 0x004027AB, 0x004027AC, 0x004027B4
+	    // This is the "do { *puVar10 = pvVar6; puVar10 = puVar10 + 1; pvVar6 = (void *)((int)pvVar6 + 0x10000); uVar8 = uVar8 - 1; } while (uVar8 != 0);"
+	    if (eip >= 0x004027A2 && eip <= 0x004027B4)
+	    {
+		    _ignTeasLoopIterations++;
+		    
+		    // Log periodically to track progress without spamming
+		    if (_ignTeasLoopIterations - _ignTeasLastLoopLogIteration >= IGN_TEAS_LOOP_LOG_INTERVAL)
+		    {
+			    _ignTeasLastLoopLogIteration = _ignTeasLoopIterations;
+			    
+			    // Read loop counter and pointer variables
+			    try
+			    {
+				    if (_cpu != null)
+				    {
+					    var eax = _cpu.GetRegister("EAX");
+					    var ebx = _cpu.GetRegister("EBX");
+					    var ecx = _cpu.GetRegister("ECX");
+					    var edx = _cpu.GetRegister("EDX");
+					    var esi = _cpu.GetRegister("ESI");
+					    var edi = _cpu.GetRegister("EDI");
+					    
+					    _logger.LogWarning("[IGN_TEAS] Texture loop iteration {Iterations} at EIP=0x{Eip:X8}", _ignTeasLoopIterations, eip);
+					    _logger.LogWarning("[IGN_TEAS]   Registers: EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8}",
+						    eax, ebx, ecx, edx, esi, edi);
+					    _logger.LogWarning("[IGN_TEAS]   Expected: ~16-32 iterations per 1MB texture file");
+					    _logger.LogWarning("[IGN_TEAS]   If this count keeps growing, we're in the WASM arithmetic bug");
+				    }
+			    }
+			    catch (Exception ex)
+			    {
+				    _logger.LogDebug(ex, "[IGN_TEAS] Could not read registers during loop tracking");
+			    }
+		    }
+	    }
+	    // Reset counter when we exit the loop
+	    else if (_ignTeasLoopIterations > 0)
+	    {
+		    if (_ignTeasLoopIterations > 100) // Only log if significant iterations occurred
+		    {
+			    _logger.LogWarning("[IGN_TEAS] Exited texture loop after {Iterations} total iterations", _ignTeasLoopIterations);
+			    if (_ignTeasLoopIterations > 1000)
+			    {
+				    _logger.LogError("[IGN_TEAS] ⚠️ Loop iterated {Iterations} times - this is excessive and indicates the WASM arithmetic bug!", _ignTeasLoopIterations);
+			    }
+		    }
+		    _ignTeasLoopIterations = 0;
+		    _ignTeasLastLoopLogIteration = 0;
+	    }
+    }
 
     public async Task RunAsync()
     {
@@ -1604,6 +1788,9 @@ public sealed class Emulator : IDisposable
                 
                 throw new InvalidOperationException($"EIP=0x{eipBeforeStep:X8} is in callback marker range. Callback return handling failed.");
             }
+            
+            // IGN_TEAS.EXE: Track the problematic texture loading loop
+            TrackIgnTeasTextureLoop(eipBeforeStep);
 
             CpuStepResult step;
             try
@@ -1855,7 +2042,11 @@ public sealed class Emulator : IDisposable
             */
             else if (step.IsCall)
             {
-	            // TODO: wire up to native program function overrides in c#
+	            // Check for executable-specific function overrides
+	            if (TryHandleExecutableSpecificCall(step.CallTarget))
+	            {
+		            continue; // Function was handled by override
+	            }
 	            // _logger.LogInformation("[Call] Call method at 0x{CallTarget:X8}", step.CallTarget);
             }
             
