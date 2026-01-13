@@ -498,12 +498,29 @@ public class ProcessEnvironment
 			_logger.LogWarning("[ProcessEnv] Could not determine directory from path: {Path}, defaulting to C:\\", exePath);
 		}
 		
-		// Build command line: quoted exe path + space + args (if any)
+		// Build command line: exe path + space + args (if any)
 		// IMPORTANT: Windows C runtime expects command line to be properly null-terminated
 		// When no arguments are provided, we need to ensure there's a null terminator after the exe name
-		var cmdLine = args.Length > 0 
-			? $"\"{exePath}\" {string.Join(" ", args)}"
-			: $"\"{exePath}\"";
+		// 
+		// NOTE: Older Win95-era CRT code may not handle quoted paths correctly in command line parsing.
+		// For compatibility with these older applications (like ign_teas), we provide unquoted paths
+		// when the path doesn't contain spaces. This matches Win95 behavior where 8.3 filenames
+		// (FAT16-style short names) were used without quotes.
+		var needsQuotes = exePath.Contains(' ');
+		string cmdLine;
+		if (needsQuotes)
+		{
+			cmdLine = args.Length > 0 
+				? $"\"{exePath}\" {string.Join(" ", args)}"
+				: $"\"{exePath}\"";
+		}
+		else
+		{
+			// Unquoted for Win95 compatibility (8.3 filename style, no spaces)
+			cmdLine = args.Length > 0 
+				? $"{exePath} {string.Join(" ", args)}"
+				: exePath;
+		}
 		
 		// Write command line with explicit null termination
 		// The C runtime parse_cmdline function reads until it hits a null terminator
