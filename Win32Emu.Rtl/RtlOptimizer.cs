@@ -422,6 +422,7 @@ public class RtlOptimizer
         // Step 2: Check for same operation on all loaded values
         var operations = new List<RtlBinaryOp>();
         string? opType = null;
+        RtlExpression? rightOperand = null;
         
         for (int i = 0; i < vectorSize; i++)
         {
@@ -432,10 +433,16 @@ public class RtlOptimizer
             if (opType == null)
             {
                 opType = binOp.Operator;
+                rightOperand = binOp.Right;
             }
-            else if (binOp.Operator != opType)
+            else
             {
-                return false;
+                if (binOp.Operator != opType)
+                    return false;
+                
+                // Verify all operations use the same right operand
+                if (!AreExpressionsEqual(rightOperand, binOp.Right))
+                    return false;
             }
             
             // Verify operand references the loaded temporary
@@ -691,5 +698,31 @@ public class RtlOptimizer
             log++;
         }
         return log;
+    }
+    
+    /// <summary>
+    /// Check if two RTL expressions are equivalent
+    /// </summary>
+    private bool AreExpressionsEqual(RtlExpression? expr1, RtlExpression? expr2)
+    {
+        if (expr1 == null && expr2 == null)
+            return true;
+        if (expr1 == null || expr2 == null)
+            return false;
+        
+        // Compare constants by value
+        if (expr1 is RtlConstant const1 && expr2 is RtlConstant const2)
+            return const1.Value == const2.Value;
+        
+        // Compare registers by name
+        if (expr1 is RtlRegister reg1 && expr2 is RtlRegister reg2)
+            return reg1.Name == reg2.Name;
+        
+        // Compare temporaries by ID
+        if (expr1 is RtlTemporary temp1 && expr2 is RtlTemporary temp2)
+            return temp1.Id == temp2.Id;
+        
+        // Different types or unsupported comparison
+        return false;
     }
 }

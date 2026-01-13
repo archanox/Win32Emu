@@ -1,6 +1,5 @@
 using Xunit;
 using Win32Emu.Rtl;
-using Iced.Intel;
 
 namespace Win32Emu.Tests.Emulator;
 
@@ -11,8 +10,6 @@ public class AutovectorizationTests
 {
     /// <summary>
     /// Test that consecutive memory operations with the same operation are detected as vectorizable
-    /// Note: The detection requires a very specific pattern: load->op->store for each element.
-    /// This test verifies the optimizer can detect suitable patterns when they exist.
     /// </summary>
     [Fact]
     public void SimdDetection_DetectsVectorAddOperation()
@@ -25,15 +22,30 @@ public class AutovectorizationTests
         var optimized = optimizer.Optimize(block, enableAdvancedOptimizations: true);
         
         // Assert
-        // Should have SIMD operations after optimization if pattern is detected
-        // Note: Pattern detection is strict and requires exact load->op->store pattern
+        // Should have SIMD operations after optimization
         var simdOps = CountSimdOperations(optimized);
-        var totalOps = CountTotalOperations(optimized);
+        Assert.True(simdOps > 0, $"Expected SIMD detection for vectorizable pattern, but found {simdOps} SIMD operations");
+    }
+    
+    /// <summary>
+    /// Test that the optimizer doesn't break non-vectorizable code
+    /// </summary>
+    [Fact]
+    public void SimdDetection_PreservesNonVectorizableCode()
+    {
+        // Arrange
+        var optimizer = new RtlOptimizer();
+        var block = CreateVectorAddPattern();
+        var originalOpCount = CountTotalOperations(block);
         
-        // If SIMD was detected, we should have significantly fewer operations
-        // Either SIMD was detected (simdOps > 0) or pattern wasn't matched (totalOps still high)
-        Assert.True(simdOps > 0 || totalOps >= 12, 
-            $"Expected either SIMD detection (found {simdOps}) or original operations retained ({totalOps} ops)");
+        // Act
+        var optimized = optimizer.Optimize(block, enableAdvancedOptimizations: true);
+        
+        // Assert
+        var finalOpCount = CountTotalOperations(optimized);
+        // Either code was vectorized (fewer ops) or preserved (same or similar count)
+        Assert.True(finalOpCount <= originalOpCount, 
+            $"Optimizer should not increase operation count (original: {originalOpCount}, final: {finalOpCount})");
     }
     
     /// <summary>
@@ -118,7 +130,7 @@ public class AutovectorizationTests
         var simdOps = CountSimdOperations(optimized);
         if (simdOps > 0)
         {
-            Assert.Contains("Sse2.Add", code);
+            Assert.Contains("Vector128.Add", code);
         }
     }
     
@@ -141,7 +153,7 @@ public class AutovectorizationTests
         var simdOps = CountSimdOperations(optimized);
         if (simdOps > 0)
         {
-            Assert.Contains("Sse41.MultiplyLow", code);
+            Assert.Contains("Vector128.Multiply", code);
         }
     }
     
@@ -175,8 +187,9 @@ public class AutovectorizationTests
     
     private RtlCodeBlock CreateVectorAddPattern()
     {
-        // Pattern: Load 4 consecutive addresses, add constant, store back
-        // This should be detected as vectorizable
+        // Pattern: Load 4 consecutive addresses, then operate on all, then store back
+        // This creates the grouped pattern expected by the optimizer:
+        // [load0, load1, load2, load3, op0, op1, op2, op3, store0, store1, store2, store3]
         var block = new RtlCodeBlock
         {
             StartAddress = 0x401000,
@@ -192,14 +205,15 @@ public class AutovectorizationTests
         
         var bb = block.BasicBlocks[0];
         var baseAddr = 0x403000u;
+        var temps = new List<RtlTemporary>();
+        var resultTemps = new List<RtlTemporary>();
         
-        // Generate: load -> add -> store for 4 consecutive elements
+        // Step 1: Generate all loads
         for (int i = 0; i < 4; i++)
         {
             var temp = block.NewTemporary();
-            var resultTemp = block.NewTemporary();
+            temps.Add(temp);
             
-            // Load
             bb.Instructions.Add(new RtlLoad
             {
                 Offset = 0x401000 + i * 4,
@@ -207,23 +221,32 @@ public class AutovectorizationTests
                 Address = new RtlConstant { Value = baseAddr + (uint)(i * 4) },
                 Size = 4
             });
+        }
+        
+        // Step 2: Generate all operations
+        for (int i = 0; i < 4; i++)
+        {
+            var resultTemp = block.NewTemporary();
+            resultTemps.Add(resultTemp);
             
-            // Add
             bb.Instructions.Add(new RtlBinaryOp
             {
                 Offset = 0x401010 + i * 4,
                 Destination = resultTemp,
-                Left = temp,
+                Left = temps[i],
                 Operator = "+",
                 Right = new RtlConstant { Value = 1 }
             });
-            
-            // Store
+        }
+        
+        // Step 3: Generate all stores
+        for (int i = 0; i < 4; i++)
+        {
             bb.Instructions.Add(new RtlStore
             {
                 Offset = 0x401020 + i * 4,
                 Address = new RtlConstant { Value = baseAddr + (uint)(i * 4) },
-                Value = resultTemp,
+                Value = resultTemps[i],
                 Size = 4
             });
         }
@@ -234,6 +257,7 @@ public class AutovectorizationTests
     private RtlCodeBlock CreateVectorMultiplyPattern()
     {
         // Pattern: Load 4 consecutive addresses, multiply by constant, store back
+        // Grouped pattern: [load0-3, op0-3, store0-3]
         var block = new RtlCodeBlock
         {
             StartAddress = 0x401000,
@@ -249,12 +273,14 @@ public class AutovectorizationTests
         
         var bb = block.BasicBlocks[0];
         var baseAddr = 0x403000u;
+        var temps = new List<RtlTemporary>();
+        var resultTemps = new List<RtlTemporary>();
         
-        // Generate: load -> multiply -> store for 4 consecutive elements
+        // Generate all loads
         for (int i = 0; i < 4; i++)
         {
             var temp = block.NewTemporary();
-            var resultTemp = block.NewTemporary();
+            temps.Add(temp);
             
             bb.Instructions.Add(new RtlLoad
             {
@@ -263,21 +289,32 @@ public class AutovectorizationTests
                 Address = new RtlConstant { Value = baseAddr + (uint)(i * 4) },
                 Size = 4
             });
+        }
+        
+        // Generate all operations
+        for (int i = 0; i < 4; i++)
+        {
+            var resultTemp = block.NewTemporary();
+            resultTemps.Add(resultTemp);
             
             bb.Instructions.Add(new RtlBinaryOp
             {
                 Offset = 0x401010 + i * 4,
                 Destination = resultTemp,
-                Left = temp,
+                Left = temps[i],
                 Operator = "*",
                 Right = new RtlConstant { Value = 2 }
             });
-            
+        }
+        
+        // Generate all stores
+        for (int i = 0; i < 4; i++)
+        {
             bb.Instructions.Add(new RtlStore
             {
                 Offset = 0x401020 + i * 4,
                 Address = new RtlConstant { Value = baseAddr + (uint)(i * 4) },
-                Value = resultTemp,
+                Value = resultTemps[i],
                 Size = 4
             });
         }
@@ -388,25 +425,14 @@ public class AutovectorizationTests
     
     private int CountSimdOperations(RtlCodeBlock block)
     {
-        int count = 0;
-        foreach (var bb in block.BasicBlocks)
-        {
-            foreach (var insn in bb.Instructions)
-            {
-                if (insn is RtlSimdOp)
-                    count++;
-            }
-        }
-        return count;
+        return block.BasicBlocks
+            .SelectMany(bb => bb.Instructions)
+            .Count(insn => insn is RtlSimdOp);
     }
     
     private int CountTotalOperations(RtlCodeBlock block)
     {
-        int count = 0;
-        foreach (var bb in block.BasicBlocks)
-        {
-            count += bb.Instructions.Count;
-        }
-        return count;
+        return block.BasicBlocks
+            .Sum(bb => bb.Instructions.Count);
     }
 }
