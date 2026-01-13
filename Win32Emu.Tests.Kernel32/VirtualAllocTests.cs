@@ -151,8 +151,11 @@ public class VirtualAllocTests
         var env = new ProcessEnvironment(vm, 0x01000000, null, NullLogger.Instance);
 
         // Allocate 1MB with MEM_RESERVE | MEM_COMMIT in one call (like Test 5)
-        uint addr = env.VirtualAlloc(0, 1048576, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        uint addr = env.VirtualAlloc(0, 0x00100000, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
         Assert.NotEqual(0u, addr);
+        
+        // Verify LastError is set to ERROR_SUCCESS on successful allocation
+        Assert.Equal(0u, env.LastError);
 
         // Write 1024 bytes of 0xAB (like Test 6)
         for (uint i = 0; i < 1024; i++)
