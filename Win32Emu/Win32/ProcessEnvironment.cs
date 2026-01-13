@@ -476,6 +476,43 @@ public class ProcessEnvironment
 	// Backward compatibility - old virtual registry (deprecated)
 	private uint _nextRegistryHandle = 0x80000000; // Registry handles typically use high values
 
+	/// <summary>
+	/// Quotes individual command line arguments if they contain spaces or special characters.
+	/// Properly escapes embedded quotes as required by Win32 command line parsing rules.
+	/// </summary>
+	private static IEnumerable<string> QuoteArgumentsIfNeeded(string[] args)
+	{
+		foreach (var arg in args)
+		{
+			if (string.IsNullOrEmpty(arg))
+			{
+				yield return "\"\"";
+				continue;
+			}
+
+			var needsQuoting = false;
+			for (var i = 0; i < arg.Length; i++)
+			{
+				if (char.IsWhiteSpace(arg[i]) || arg[i] == '"')
+				{
+					needsQuoting = true;
+					break;
+				}
+			}
+
+			if (!needsQuoting)
+			{
+				yield return arg;
+			}
+			else
+			{
+				// Escape embedded quotes and wrap in double quotes
+				var escaped = arg.Replace("\"", "\\\"");
+				yield return "\"" + escaped + "\"";
+			}
+		}
+	}
+
 	public void InitializeStrings(string exePath, string[] args)
 	{
 		Debug.Assert(exePath != null, nameof(exePath) + " != null");
@@ -507,20 +544,13 @@ public class ProcessEnvironment
 		// when the path doesn't contain spaces. This matches Win95 behavior where 8.3 filenames
 		// (FAT16-style short names) were used without quotes.
 		var needsQuotes = exePath.Contains(' ');
-		string cmdLine;
-		if (needsQuotes)
-		{
-			cmdLine = args.Length > 0 
-				? $"\"{exePath}\" {string.Join(" ", args)}"
-				: $"\"{exePath}\"";
-		}
-		else
-		{
-			// Unquoted for Win95 compatibility (8.3 filename style, no spaces)
-			cmdLine = args.Length > 0 
-				? $"{exePath} {string.Join(" ", args)}"
-				: exePath;
-		}
+		var cmdLine = needsQuotes
+			? (args.Length > 0
+				? $"\"{exePath}\" {string.Join(" ", QuoteArgumentsIfNeeded(args))}"
+				: $"\"{exePath}\"")
+			: (args.Length > 0
+				? $"{exePath} {string.Join(" ", QuoteArgumentsIfNeeded(args))}"
+				: exePath);
 		
 		// Write command line with explicit null termination
 		// The C runtime parse_cmdline function reads until it hits a null terminator
