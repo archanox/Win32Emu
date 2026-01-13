@@ -52,7 +52,7 @@ var vector1 = Vector128.Create(
     mem.Read32(baseAddr + 12)
 );
 var vector2 = Vector128.Create(1u);
-var result = Sse2.Add(vector1, vector2);
+var result = Vector128.Add(vector1, vector2);
 mem.Write32(baseAddr, result.GetElement(0));
 mem.Write32(baseAddr + 4, result.GetElement(1));
 mem.Write32(baseAddr + 8, result.GetElement(2));
@@ -63,10 +63,10 @@ mem.Write32(baseAddr + 12, result.GetElement(3));
 
 Autovectorization provides significant performance improvements:
 
-- **4x Throughput**: Process 4 elements with a single SIMD instruction
+- **Vectorized Operations**: Process 4 elements with vectorized arithmetic operations (actual throughput improvement depends on memory bandwidth)
 - **Better Cache Utilization**: Sequential memory access patterns
 - **CPU Pipeline Efficiency**: SIMD instructions are highly optimized in modern CPUs
-- **Cross-Platform**: Uses .NET intrinsics that work on x86, ARM, and WebAssembly
+- **Cross-Platform**: Uses .NET Vector128 intrinsics that work on x86, ARM, and WebAssembly
 
 ### Expected Speedup
 
@@ -108,7 +108,7 @@ var vector1 = Vector128.Create(
     mem.Read32(vecAddr + 12)
 );
 var vector2 = Vector128.Create(0x1u);
-var result = Sse2.Add(vector1, vector2);
+var result = Vector128.Add(vector1, vector2);
 mem.Write32(vecAddr, result.GetElement(0));
 mem.Write32(vecAddr + 4, result.GetElement(1));
 mem.Write32(vecAddr + 8, result.GetElement(2));
@@ -158,18 +158,22 @@ mov eax, [0x403100]     ; Not consecutive
 
 ## SIMD Intrinsics Mapping
 
-The autovectorizer uses appropriate SIMD intrinsics based on the host CPU:
+The autovectorizer uses platform-agnostic `Vector128<T>` operations from `System.Runtime.Intrinsics`:
 
-| Operation | x86 Intrinsic | Notes |
-|-----------|---------------|-------|
-| Add | Sse2.Add | SSE2 (universally available) |
-| Subtract | Sse2.Subtract | SSE2 |
-| Multiply | Sse41.MultiplyLow | SSE4.1 (32-bit int multiply) |
-| BitwiseAnd | Sse2.And | SSE2 |
-| BitwiseOr | Sse2.Or | SSE2 |
-| Xor | Sse2.Xor | SSE2 |
+| Operation | Vector128 Method | Notes |
+|-----------|------------------|-------|
+| Add | Vector128.Add | Platform-agnostic, mapped to SSE2 on x86, NEON on ARM |
+| Subtract | Vector128.Subtract | Platform-agnostic |
+| Multiply | Vector128.Multiply | Platform-agnostic, mapped to appropriate hardware instruction |
+| BitwiseAnd | Vector128.BitwiseAnd | Platform-agnostic |
+| BitwiseOr | Vector128.BitwiseOr | Platform-agnostic |
+| Xor | Vector128.Xor | Platform-agnostic |
 
-All intrinsics are cross-platform and work on x86, ARM (via NEON), and WebAssembly (via PackedSimd).
+These operations automatically map to the appropriate SIMD instructions on each platform:
+- **x86/x64**: SSE2, SSE4.1, or AVX instructions depending on availability
+- **ARM64**: NEON/AdvSimd instructions
+- **WebAssembly**: SIMD 128-bit operations when supported
+- **Fallback**: Software emulation when hardware SIMD is unavailable
 
 ## Testing
 
@@ -244,17 +248,17 @@ var result = Sse2.Add(pixels, brightness);
 ```asm
 ; Multiply array elements by 2
 mov eax, [arrayPtr]
-shl eax, 1              ; Multiply by 2 (optimized to shift)
+imul eax, 2
 mov [arrayPtr], eax
 
 mov eax, [arrayPtr+4]
-shl eax, 1
+imul eax, 2
 mov [arrayPtr+4], eax
 
 ... (continues for 4 elements)
 ```
 
-Vectorized to use SIMD shift instructions.
+Note: Shift-based multiplication patterns (using `shl`) are optimized by strength reduction but are not currently autovectorized. Only explicit arithmetic operations on consecutive memory are vectorized.
 
 ## See Also
 

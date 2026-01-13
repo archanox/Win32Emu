@@ -27,7 +27,6 @@ public class RtlToCSharpGenerator
         if (usesSIMD)
         {
             sb.AppendLine("using System.Runtime.Intrinsics;");
-            sb.AppendLine("using System.Runtime.Intrinsics.X86;");
         }
         sb.AppendLine("using Win32Emu.Cpu; // For CpuStepResult");
         sb.AppendLine();
@@ -178,15 +177,9 @@ public class RtlToCSharpGenerator
     /// </summary>
     private bool HasSimdInstructions(RtlCodeBlock rtlBlock)
     {
-        foreach (var bb in rtlBlock.BasicBlocks)
-        {
-            foreach (var insn in bb.Instructions)
-            {
-                if (insn is RtlSimdOp)
-                    return true;
-            }
-        }
-        return false;
+        return rtlBlock.BasicBlocks
+            .SelectMany(bb => bb.Instructions)
+            .Any(insn => insn is RtlSimdOp);
     }
     
     /// <summary>
@@ -200,10 +193,15 @@ public class RtlToCSharpGenerator
             return $"// {simd.Comment}";
         }
         
+        if (simd.BaseAddress == null)
+        {
+            return "// ERROR: SIMD memory operation requires a non-null BaseAddress";
+        }
+        
         var sb = new StringBuilder();
         sb.AppendLine($"{{ // {simd.Comment}");
         
-        var baseAddr = ExpressionToString(simd.BaseAddress!);
+        var baseAddr = ExpressionToString(simd.BaseAddress);
         
         // Generate vector load
         sb.AppendLine($"                // Load vector from memory");
@@ -232,15 +230,15 @@ public class RtlToCSharpGenerator
             }
         }
         
-        // Generate vector operation
+        // Generate vector operation using platform-agnostic Vector128 operations
         var intrinsicOp = simd.Operation switch
         {
-            "Add" => "Sse2.Add",
-            "Subtract" => "Sse2.Subtract",
-            "Multiply" => "Sse41.MultiplyLow", // SSE4.1 for 32-bit int multiply
-            "BitwiseAnd" => "Sse2.And",
-            "BitwiseOr" => "Sse2.Or",
-            "Xor" => "Sse2.Xor",
+            "Add" => "Vector128.Add",
+            "Subtract" => "Vector128.Subtract",
+            "Multiply" => "Vector128.Multiply",
+            "BitwiseAnd" => "Vector128.BitwiseAnd",
+            "BitwiseOr" => "Vector128.BitwiseOr",
+            "Xor" => "Vector128.Xor",
             _ => $"/* Unsupported: {simd.Operation} */"
         };
         
