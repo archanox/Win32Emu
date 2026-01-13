@@ -1468,6 +1468,9 @@ public sealed class Emulator : IDisposable
     
     // IGN_TEAS.EXE: Track if we ever reach key addresses after CRT
     private bool _ignTeasReachedBeyondCrt = false;
+    private ulong _ignTeasPostCrtInstructions = 0;
+    private uint _ignTeasLastPostCrtEip = 0;
+    
     private void TrackIgnTeasProgress(uint eip)
     {
 	    if (_image == null)
@@ -1481,6 +1484,25 @@ public sealed class Emulator : IDisposable
 	    if (!(exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromImage.Contains("IGN_TEAS")))
 	    {
 		    return;
+	    }
+	    
+	    // Track ALL execution after CRT range (0x00413000+) to see where it goes
+	    if (eip >= 0x00413000 && eip < 0x00420000)
+	    {
+		    _ignTeasPostCrtInstructions++;
+		    
+		    // Log every 1000 instructions in this range
+		    if (_ignTeasPostCrtInstructions % 1000 == 0)
+		    {
+			    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing in 0x00413XXX-0x0041XXXX range: EIP=0x{Eip:X8} ({Count} instructions)", eip, _ignTeasPostCrtInstructions);
+		    }
+		    
+		    // Track if stuck in tight loop
+		    if (_ignTeasLastPostCrtEip == eip)
+		    {
+			    _logger.LogError("[IGN_TEAS POST-CRT] ⚠️ Stuck at EIP=0x{Eip:X8} - same address consecutively!", eip);
+		    }
+		    _ignTeasLastPostCrtEip = eip;
 	    }
 	    
 	    // Check if we've reached addresses beyond CRT initialization (0x00403XXX range = WinMain area)
@@ -1499,6 +1521,18 @@ public sealed class Emulator : IDisposable
 	    else if (eip == 0x004023F0)
 	    {
 		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅✅ Reached Main Init at 0x004023F0!");
+	    }
+	    
+	    // Track if execution is stuck in a specific range that might be problematic
+	    // Check 0x00411XXX-0x00413XXX (between CRT and entry)
+	    if (eip >= 0x00411000 && eip < 0x00413000)
+	    {
+		    // This is post-CRT but pre-entry - where the hang likely is
+		    // Log periodically to see if stuck here
+		    if (_ignTeasPostCrtInstructions % 5000 == 0)
+		    {
+			    _logger.LogWarning("[IGN_TEAS LIMBO] Still in post-CRT range 0x00411XXX-0x00413XXX at EIP=0x{Eip:X8}", eip);
+		    }
 	    }
     }
 
@@ -1975,26 +2009,6 @@ public sealed class Emulator : IDisposable
                 _logger.LogError(ex, "[Emulator] Exception during SingleStep at EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}: {Message}", 
                     eipBeforeStep, esp, ebp, ex.Message);
                 throw; // Re-throw to stop emulation
-            }
-            
-            // IGN_TEAS diagnostic logging - investigating infinite loop after GetModuleFileNameA
-            // The game returns from GetModuleFileNameA to 0x004123B8 and then enters a loop
-            // Previous investigation found it cycles through: 0x00412551 → 0x004125E9 → 0x0041251D → 0x00412554
-            var eipNow = _cpu.GetEip();
-            if (eipNow >= 0x00412300 && eipNow <= 0x00412700)
-            {
-                // Log every instruction in this critical range
-                var esp = _cpu.GetRegister("ESP");
-                var ebp = _cpu.GetRegister("EBP");
-                var eax = _cpu.GetRegister("EAX");
-                var ebx = _cpu.GetRegister("EBX");
-                var ecx = _cpu.GetRegister("ECX");
-                var edx = _cpu.GetRegister("EDX");
-                var esi = _cpu.GetRegister("ESI");
-                var edi = _cpu.GetRegister("EDI");
-                
-                _logger.LogInformation("[IGN_TEAS Loop] Iteration {Iter}: EIP 0x{Before:X8}→0x{After:X8}, ESP=0x{ESP:X8}, EBP=0x{EBP:X8}, EAX=0x{EAX:X8}, EBX=0x{EBX:X8}, ECX=0x{ECX:X8}, EDX=0x{EDX:X8}, ESI=0x{ESI:X8}, EDI=0x{EDI:X8}",
-                    iterationCount, eipBeforeStep, eipNow, esp, ebp, eax, ebx, ecx, edx, esi, edi);
             }
             
             // Instruction-level tracing for debugging
