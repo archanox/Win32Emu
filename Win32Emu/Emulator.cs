@@ -142,6 +142,61 @@ public sealed class Emulator : IDisposable
     private const ulong IGN_TEAS_CRT_LOG_INTERVAL = 100; // Log every 100 iterations in CRT loop (lowered to capture shorter loops)
     private bool _ignTeasCrtStringLogged = false; // Only log string content once
     
+    // IGN_TEAS diagnostic constants - function addresses from Ghidra decompilation
+    private const uint IGN_TEAS_MAIN_INIT_ADDR = 0x004023F0;          // Main initialization (calls texture loading, DirectDraw setup)
+    private const uint IGN_TEAS_HEAP_INIT_ADDR = 0x00402540;          // Heap/memory initialization
+    private const uint IGN_TEAS_TEXTURE_LOADING_ADDR = 0x004025D0;    // Texture loading (contains problematic loop)
+    private const uint IGN_TEAS_GAME_LOGIC_ADDR = 0x00402410;         // Game logic update
+    private const uint IGN_TEAS_CLEANUP_ADDR = 0x00402520;            // Cleanup function
+    private const uint IGN_TEAS_DDRAW_INIT_ADDR = 0x004027D0;         // DirectDraw/rendering initialization
+    private const uint IGN_TEAS_WINMAIN_ADDR = 0x00403140;            // WinMain entry point (message loop setup)
+    private const uint IGN_TEAS_DDRAW_CREATE_ADDR = 0x00403510;       // DirectDraw creation
+    private const uint IGN_TEAS_MAIN_TICK_ADDR = 0x004032A0;          // Main game tick
+    
+    // IGN_TEAS texture loop address range (problematic arithmetic loop)
+    private const uint IGN_TEAS_TEXTURE_LOOP_START = 0x004027A2;
+    private const uint IGN_TEAS_TEXTURE_LOOP_END = 0x004027B4;
+    
+    // IGN_TEAS CRT startup loop address ranges
+    private const uint IGN_TEAS_CRT_ENTRY_1 = 0x00411060;             // CRT entry point 1
+    private const uint IGN_TEAS_CRT_ENTRY_2 = 0x00412620;             // CRT entry point 2
+    private const uint IGN_TEAS_CRT_LOOP_START = 0x00412422;          // CRT parsing loop start
+    private const uint IGN_TEAS_CRT_LOOP_END = 0x00412676;            // CRT parsing loop end
+    
+    // IGN_TEAS game state memory addresses
+    private const uint IGN_TEAS_GAME_STATE_ADDR = 0x0041c7a8;         // Game state: 0=init, 1=running, 2=cleanup
+    private const uint IGN_TEAS_INIT_FLAG_ADDR = 0x0041c828;          // Initialization complete flag
+    private const uint IGN_TEAS_EXIT_FLAG_ADDR = 0x0041c82c;          // Exit/cleanup flag
+    
+    // IGN_TEAS execution ranges for progress tracking
+    private const uint IGN_TEAS_POST_CRT_START = 0x00413000;          // Post-CRT but pre-entry code start
+    private const uint IGN_TEAS_POST_CRT_END = 0x00420000;            // Post-CRT code end
+    private const uint IGN_TEAS_WINMAIN_RANGE_START = 0x00403000;     // WinMain area start
+    private const uint IGN_TEAS_WINMAIN_RANGE_END = 0x00404000;       // WinMain area end
+    private const uint IGN_TEAS_LIMBO_START = 0x00411000;             // Post-CRT "limbo" area start
+    private const uint IGN_TEAS_LIMBO_END = 0x00413000;               // Post-CRT "limbo" area end
+    
+    // IGN_TEAS diagnostic thresholds
+    private const ulong MIN_SIGNIFICANT_TEXTURE_LOOP_ITERATIONS = 100;     // Minimum iterations before logging texture loop
+    private const ulong EXCESSIVE_TEXTURE_LOOP_THRESHOLD = 1000;           // Threshold indicating arithmetic bug in texture loop
+    private const ulong CRT_LOOP_STUCK_THRESHOLD = 5000;                   // Threshold indicating CRT loop is stuck
+    private const ulong CRT_LOOP_PARSING_BUG_THRESHOLD = 1000;             // Threshold indicating potential CRT parsing bug
+    private const ulong IGN_TEAS_POST_CRT_LOG_INTERVAL = 1000;             // Log every N instructions in post-CRT range
+    private const ulong IGN_TEAS_LIMBO_LOG_INTERVAL = 5000;                // Log every N instructions in "limbo" range
+    
+    // IGN_TEAS memory validation constants
+    private const uint IGN_TEAS_VALID_MEMORY_START = 0x00400000;           // Valid memory range start
+    private const uint IGN_TEAS_VALID_MEMORY_END = 0x00500000;             // Valid memory range end
+    private const int IGN_TEAS_STRING_BUFFER_SIZE = 256;                   // String buffer size for diagnostics
+    private const int IGN_TEAS_HEX_DUMP_MAX_LENGTH = 150;                  // Maximum hex dump string length
+    private const int IGN_TEAS_ASCII_STRING_MAX_LENGTH = 100;              // Maximum ASCII string length
+    private const byte ASCII_PRINTABLE_MIN = 32;                           // Minimum ASCII printable character
+    private const byte ASCII_PRINTABLE_MAX = 127;                          // Maximum ASCII printable character (exclusive)
+    
+    // IGN_TEAS post-CRT progress tracking
+    private ulong _ignTeasPostCrtInstructions = 0;
+    private ulong _ignTeasLimboInstructions = 0;
+    
     /// <summary>
     /// DOS INT 21h function numbers
     /// </summary>
@@ -1206,17 +1261,17 @@ public sealed class Emulator : IDisposable
     {
 	    switch (callTarget)
 	    {
-		    case 0x004023F0: // Main initialization function
+		    case IGN_TEAS_MAIN_INIT_ADDR: // Main initialization function
 			    _logger.LogWarning("[IGN_TEAS] Entering FUN_004023F0 (Main Initialization)");
 			    _logger.LogWarning("[IGN_TEAS]   This function calls: FUN_00402540, FUN_004025D0 (texture loading), FUN_004027D0, FUN_004011A0");
 			    return false; // Let it execute normally but we've logged it
 			    
-		    case 0x00402540: // Heap/memory initialization
+		    case IGN_TEAS_HEAP_INIT_ADDR: // Heap/memory initialization
 			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00402540 (Heap/Memory Initialization)");
 			    _logger.LogWarning("[IGN_TEAS]   Allocates memory regions for game data");
 			    return false; // Let it execute normally
 			    
-		    case 0x004025D0: // Texture loading function (contains the problematic loop)
+		    case IGN_TEAS_TEXTURE_LOADING_ADDR: // Texture loading function (contains the problematic loop)
 			    _logger.LogWarning("[IGN_TEAS] Entering FUN_004025D0 (Texture Loading - PROBLEMATIC FUNCTION)");
 			    _logger.LogWarning("[IGN_TEAS]   This function contains the texture data processing loop");
 			    _logger.LogWarning("[IGN_TEAS]   Loop at 0x004027A2-0x004027B4 calculates: uVar8 = sVar3 + 0xffff >> 0x10");
@@ -1224,31 +1279,31 @@ public sealed class Emulator : IDisposable
 			    _logger.LogWarning("[IGN_TEAS]   In WASM, this loop may iterate millions of times due to arithmetic bug");
 			    return false; // Let it execute normally
 			    
-		    case 0x004027D0: // DirectDraw/rendering initialization
+		    case IGN_TEAS_DDRAW_INIT_ADDR: // DirectDraw/rendering initialization
 			    _logger.LogWarning("[IGN_TEAS] Entering FUN_004027D0 (DirectDraw/Rendering Initialization)");
 			    _logger.LogWarning("[IGN_TEAS]   This should initialize DirectDraw surfaces and rendering");
 			    return false; // Let it execute normally
 			    
-		    case 0x00403140: // WinMain
+		    case IGN_TEAS_WINMAIN_ADDR: // WinMain
 			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00403140 (WinMain - Main Entry Point)");
 			    _logger.LogWarning("[IGN_TEAS]   Registers window class, creates window, starts message loop");
 			    return false; // Let it execute normally
 			    
-		    case 0x00403510: // DirectDraw creation and mode setup
+		    case IGN_TEAS_DDRAW_CREATE_ADDR: // DirectDraw creation and mode setup
 			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00403510 (DirectDraw Creation)");
 			    _logger.LogWarning("[IGN_TEAS]   This should call DirectDrawCreate and set display mode");
 			    return false; // Let it execute normally
 			    
-		    case 0x004032A0: // Main game tick function
+		    case IGN_TEAS_MAIN_TICK_ADDR: // Main game tick function
 			    var eip = _cpu.GetEip();
 			    _logger.LogDebug("[IGN_TEAS] Entering FUN_004032A0 (Main Game Tick) - EIP=0x{Eip:X8}", eip);
 			    _logger.LogDebug("[IGN_TEAS]   State check: DAT_0041c7a8 (game state), DAT_0041c828 (init flag)");
 			    // Log game state variables
 			    try
 			    {
-				    var gameState = _vm.Read32(0x0041c7a8);
-				    var initFlag = _vm.Read32(0x0041c828);
-				    var exitFlag = _vm.Read32(0x0041c82c);
+				    var gameState = _vm.Read32(IGN_TEAS_GAME_STATE_ADDR);
+				    var initFlag = _vm.Read32(IGN_TEAS_INIT_FLAG_ADDR);
+				    var exitFlag = _vm.Read32(IGN_TEAS_EXIT_FLAG_ADDR);
 				    _logger.LogDebug("[IGN_TEAS]   Game State: DAT_0041c7a8={GameState}, DAT_0041c828={InitFlag}, DAT_0041c82c={ExitFlag}", 
 					    gameState, initFlag, exitFlag);
 			    }
@@ -1258,11 +1313,11 @@ public sealed class Emulator : IDisposable
 			    }
 			    return false; // Let it execute normally
 			    
-		    case 0x00402410: // Game logic update
+		    case IGN_TEAS_GAME_LOGIC_ADDR: // Game logic update
 			    _logger.LogDebug("[IGN_TEAS] Entering FUN_00402410 (Game Logic Update)");
 			    return false; // Let it execute normally
 			    
-		    case 0x00402520: // Cleanup
+		    case IGN_TEAS_CLEANUP_ADDR: // Cleanup
 			    _logger.LogWarning("[IGN_TEAS] Entering FUN_00402520 (Cleanup)");
 			    return false; // Let it execute normally
 			    
@@ -1293,9 +1348,9 @@ public sealed class Emulator : IDisposable
 		    return;
 	    }
 	    
-	    // Track the problematic loop: 0x004027A2, 0x004027AB, 0x004027AC, 0x004027B4
+	    // Track the problematic loop: 0x004027A2 through 0x004027B4
 	    // This is the "do { *puVar10 = pvVar6; puVar10 = puVar10 + 1; pvVar6 = (void *)((int)pvVar6 + 0x10000); uVar8 = uVar8 - 1; } while (uVar8 != 0);"
-	    if (eip >= 0x004027A2 && eip <= 0x004027B4)
+	    if (eip >= IGN_TEAS_TEXTURE_LOOP_START && eip <= IGN_TEAS_TEXTURE_LOOP_END)
 	    {
 		    _ignTeasLoopIterations++;
 		    
@@ -1332,10 +1387,10 @@ public sealed class Emulator : IDisposable
 	    // Reset counter when we exit the loop
 	    else if (_ignTeasLoopIterations > 0)
 	    {
-		    if (_ignTeasLoopIterations > 100) // Only log if significant iterations occurred
+		    if (_ignTeasLoopIterations > MIN_SIGNIFICANT_TEXTURE_LOOP_ITERATIONS) // Only log if significant iterations occurred
 		    {
 			    _logger.LogWarning("[IGN_TEAS] Exited texture loop after {Iterations} total iterations", _ignTeasLoopIterations);
-			    if (_ignTeasLoopIterations > 1000)
+			    if (_ignTeasLoopIterations > EXCESSIVE_TEXTURE_LOOP_THRESHOLD)
 			    {
 				    _logger.LogError("[IGN_TEAS] ⚠️ Loop iterated {Iterations} times - this is excessive and indicates the WASM arithmetic bug!", _ignTeasLoopIterations);
 			    }
@@ -1367,9 +1422,9 @@ public sealed class Emulator : IDisposable
 		    return;
 	    }
 	    
-	    // Track the CRT startup loop: 0x00411060, 0x00412620, 0x00412422-0x00412676 (expanded range)
-	    bool inCrtLoop = (eip == 0x00411060 || eip == 0x00412620 || 
-	                      (eip >= 0x00412422 && eip <= 0x00412676));
+	    // Track the CRT startup loop: entry points and main parsing loop
+	    bool inCrtLoop = (eip == IGN_TEAS_CRT_ENTRY_1 || eip == IGN_TEAS_CRT_ENTRY_2 || 
+	                      (eip >= IGN_TEAS_CRT_LOOP_START && eip <= IGN_TEAS_CRT_LOOP_END));
 	    
 	    if (inCrtLoop)
 	    {
@@ -1396,24 +1451,24 @@ public sealed class Emulator : IDisposable
 				    _logger.LogWarning("[IGN_TEAS CRT]   ESI=0x{Esi:X8} (iterator) EDI=0x{Edi:X8} ESP=0x{Esp:X8} EBP=0x{Ebp:X8}", esi, edi, esp, ebp);
 				    
 				    // Log string buffer content once to see what's being parsed
-				    if (!_ignTeasCrtStringLogged && ecx != 0 && ecx >= 0x00400000 && ecx < 0x00500000)
+				    if (!_ignTeasCrtStringLogged && ecx != 0 && ecx >= IGN_TEAS_VALID_MEMORY_START && ecx < IGN_TEAS_VALID_MEMORY_END)
 				    {
 					    try
 					    {
 						    _logger.LogWarning("[IGN_TEAS CRT] String buffer at ECX=0x{Ecx:X8}:", ecx);
-						    var bytes = new byte[256];
-						    for (int i = 0; i < 256; i++)
+						    var bytes = new byte[IGN_TEAS_STRING_BUFFER_SIZE];
+						    for (int i = 0; i < IGN_TEAS_STRING_BUFFER_SIZE; i++)
 						    {
 							    bytes[i] = _vm.Read8(ecx + (uint)i);
 						    }
 						    
 						    // Log as hex dump
 						    var hex = BitConverter.ToString(bytes).Replace("-", " ");
-						    _logger.LogWarning("[IGN_TEAS CRT]   Hex: {Hex}", hex.Substring(0, Math.Min(150, hex.Length)));
+						    _logger.LogWarning("[IGN_TEAS CRT]   Hex: {Hex}", hex.Substring(0, Math.Min(IGN_TEAS_HEX_DUMP_MAX_LENGTH, hex.Length)));
 						    
 						    // Try to interpret as ASCII string
 						    var str = System.Text.Encoding.ASCII.GetString(bytes).Replace("\0", "\\0").Replace("\r", "\\r").Replace("\n", "\\n");
-						    _logger.LogWarning("[IGN_TEAS CRT]   ASCII: {Str}", str.Substring(0, Math.Min(100, str.Length)));
+						    _logger.LogWarning("[IGN_TEAS CRT]   ASCII: {Str}", str.Substring(0, Math.Min(IGN_TEAS_ASCII_STRING_MAX_LENGTH, str.Length)));
 						    
 						    _ignTeasCrtStringLogged = true;
 					    }
@@ -1424,16 +1479,16 @@ public sealed class Emulator : IDisposable
 				    }
 				    
 				    // Log current byte being examined at ESI
-				    if (esi >= 0x00400000 && esi < 0x00500000)
+				    if (esi >= IGN_TEAS_VALID_MEMORY_START && esi < IGN_TEAS_VALID_MEMORY_END)
 				    {
 					    try
 					    {
 						    var currentByte = _vm.Read8(esi);
 						    var nextByte = _vm.Read8(esi + 1);
-						    var prevByte = esi > 0x00400000 ? _vm.Read8(esi - 1) : (byte)0;
+						    var prevByte = esi > IGN_TEAS_VALID_MEMORY_START ? _vm.Read8(esi - 1) : (byte)0;
 						    
 						    _logger.LogWarning("[IGN_TEAS CRT]   Current position ESI=0x{Esi:X8}: prev=0x{Prev:X2} current=0x{Current:X2} ('{CurrentChar}') next=0x{Next:X2}", 
-							    esi, prevByte, currentByte, (char)(currentByte >= 32 && currentByte < 127 ? (char)currentByte : '.'), nextByte);
+							    esi, prevByte, currentByte, (char)(currentByte >= ASCII_PRINTABLE_MIN && currentByte < ASCII_PRINTABLE_MAX ? (char)currentByte : '.'), nextByte);
 					    }
 					    catch (Exception ex)
 					    {
@@ -1441,7 +1496,7 @@ public sealed class Emulator : IDisposable
 					    }
 				    }
 				    
-				    if (_ignTeasCrtLoopIterations > 5000)
+				    if (_ignTeasCrtLoopIterations > CRT_LOOP_STUCK_THRESHOLD)
 				    {
 					    _logger.LogError("[IGN_TEAS CRT] ⚠️ CRT loop has iterated {Iterations} times - definitely stuck!", _ignTeasCrtLoopIterations);
 				    }
@@ -1456,7 +1511,7 @@ public sealed class Emulator : IDisposable
 	    else if (_ignTeasCrtLoopIterations > 0)
 	    {
 		    _logger.LogWarning("[IGN_TEAS CRT] Exited CRT loop after {Iterations} total iterations", _ignTeasCrtLoopIterations);
-		    if (_ignTeasCrtLoopIterations > 1000)
+		    if (_ignTeasCrtLoopIterations > CRT_LOOP_PARSING_BUG_THRESHOLD)
 		    {
 			    _logger.LogError("[IGN_TEAS CRT] ⚠️ CRT loop iterated {Iterations} times - this indicates a parsing bug!", _ignTeasCrtLoopIterations);
 		    }
@@ -1468,7 +1523,6 @@ public sealed class Emulator : IDisposable
     
     // IGN_TEAS.EXE: Track if we ever reach key addresses after CRT
     private bool _ignTeasReachedBeyondCrt = false;
-    private ulong _ignTeasPostCrtInstructions = 0;
     private uint _ignTeasLastPostCrtEip = 0;
     
     private void TrackIgnTeasProgress(uint eip)
@@ -1486,13 +1540,13 @@ public sealed class Emulator : IDisposable
 		    return;
 	    }
 	    
-	    // Track ALL execution after CRT range (0x00413000+) to see where it goes
-	    if (eip >= 0x00413000 && eip < 0x00420000)
+	    // Track ALL execution after CRT range to see where it goes
+	    if (eip >= IGN_TEAS_POST_CRT_START && eip < IGN_TEAS_POST_CRT_END)
 	    {
 		    _ignTeasPostCrtInstructions++;
 		    
-		    // Log every 1000 instructions in this range
-		    if (_ignTeasPostCrtInstructions % 1000 == 0)
+		    // Log periodically in this range
+		    if (_ignTeasPostCrtInstructions % IGN_TEAS_POST_CRT_LOG_INTERVAL == 0)
 		    {
 			    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing in 0x00413XXX-0x0041XXXX range: EIP=0x{Eip:X8} ({Count} instructions)", eip, _ignTeasPostCrtInstructions);
 		    }
@@ -1505,8 +1559,8 @@ public sealed class Emulator : IDisposable
 		    _ignTeasLastPostCrtEip = eip;
 	    }
 	    
-	    // Check if we've reached addresses beyond CRT initialization (0x00403XXX range = WinMain area)
-	    if (!_ignTeasReachedBeyondCrt && eip >= 0x00403000 && eip < 0x00404000)
+	    // Check if we've reached addresses beyond CRT initialization (WinMain area)
+	    if (!_ignTeasReachedBeyondCrt && eip >= IGN_TEAS_WINMAIN_RANGE_START && eip < IGN_TEAS_WINMAIN_RANGE_END)
 	    {
 		    _ignTeasReachedBeyondCrt = true;
 		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅ Reached address 0x{Eip:X8} - BEYOND CRT initialization!", eip);
@@ -1514,22 +1568,21 @@ public sealed class Emulator : IDisposable
 	    }
 	    
 	    // Known key addresses
-	    if (eip == 0x00403140)
+	    if (eip == IGN_TEAS_WINMAIN_ADDR)
 	    {
 		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅✅ Reached WinMain at 0x00403140!");
 	    }
-	    else if (eip == 0x004023F0)
+	    else if (eip == IGN_TEAS_MAIN_INIT_ADDR)
 	    {
 		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅✅ Reached Main Init at 0x004023F0!");
 	    }
 	    
-	    // Track if execution is stuck in a specific range that might be problematic
-	    // Check 0x00411XXX-0x00413XXX (between CRT and entry)
-	    if (eip >= 0x00411000 && eip < 0x00413000)
+	    // Track if execution is stuck in "limbo" range (between CRT and entry)
+	    if (eip >= IGN_TEAS_LIMBO_START && eip < IGN_TEAS_LIMBO_END)
 	    {
-		    // This is post-CRT but pre-entry - where the hang likely is
+		    _ignTeasLimboInstructions++;
 		    // Log periodically to see if stuck here
-		    if (_ignTeasPostCrtInstructions % 5000 == 0)
+		    if (_ignTeasLimboInstructions % IGN_TEAS_LIMBO_LOG_INTERVAL == 0)
 		    {
 			    _logger.LogWarning("[IGN_TEAS LIMBO] Still in post-CRT range 0x00411XXX-0x00413XXX at EIP=0x{Eip:X8}", eip);
 		    }
