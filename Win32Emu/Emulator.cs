@@ -136,6 +136,12 @@ public sealed class Emulator : IDisposable
     private ulong _ignTeasLastLoopLogIteration = 0;
     private const ulong IGN_TEAS_LOOP_LOG_INTERVAL = 10000; // Log every 10K iterations in the problematic loop
     
+    // IGN_TEAS CRT startup loop tracking
+    private ulong _ignTeasCrtLoopIterations = 0;
+    private ulong _ignTeasCrtLastLogIteration = 0;
+    private const ulong IGN_TEAS_CRT_LOG_INTERVAL = 1000; // Log every 1K iterations in CRT loop
+    private bool _ignTeasCrtStringLogged = false; // Only log string content once
+    
     /// <summary>
     /// DOS INT 21h function numbers
     /// </summary>
@@ -1338,6 +1344,127 @@ public sealed class Emulator : IDisposable
 		    _ignTeasLastLoopLogIteration = 0;
 	    }
     }
+    
+    /// <summary>
+    /// Tracks execution within the IGN_TEAS CRT startup loop to diagnose the infinite loop.
+    /// The loop at 0x00411060 → 0x00412620 → 0x004124C3-0x00412611 is CharNext-style string parsing.
+    /// Logs memory contents and register state to identify why termination condition is never met.
+    /// </summary>
+    private void TrackIgnTeasCrtLoop(uint eip)
+    {
+	    if (_image == null || _vm == null || _cpu == null)
+	    {
+		    return;
+	    }
+	    
+	    var exeNameFromImage = Path.GetFileName(_image.FilePath ?? "").ToUpperInvariant();
+	    var exeNameFromEnv = Path.GetFileName(_env?.ExecutablePath ?? "").ToUpperInvariant();
+	    
+	    // Only track for IGN_TEAS.EXE
+	    if (!(exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromEnv == "IGN_TEAS.EXE" ||
+	          exeNameFromImage.Contains("IGN_TEAS") || exeNameFromEnv.Contains("IGN_TEAS")))
+	    {
+		    return;
+	    }
+	    
+	    // Track the CRT startup loop: 0x00411060, 0x00412620, 0x00412422-0x00412676 (expanded range)
+	    bool inCrtLoop = (eip == 0x00411060 || eip == 0x00412620 || 
+	                      (eip >= 0x00412422 && eip <= 0x00412676));
+	    
+	    if (inCrtLoop)
+	    {
+		    _ignTeasCrtLoopIterations++;
+		    
+		    // Log periodically with detailed information
+		    if (_ignTeasCrtLoopIterations - _ignTeasCrtLastLogIteration >= IGN_TEAS_CRT_LOG_INTERVAL)
+		    {
+			    _ignTeasCrtLastLogIteration = _ignTeasCrtLoopIterations;
+			    
+			    try
+			    {
+				    var eax = _cpu.GetRegister("EAX");
+				    var ebx = _cpu.GetRegister("EBX");
+				    var ecx = _cpu.GetRegister("ECX");
+				    var edx = _cpu.GetRegister("EDX");
+				    var esi = _cpu.GetRegister("ESI");
+				    var edi = _cpu.GetRegister("EDI");
+				    var esp = _cpu.GetRegister("ESP");
+				    var ebp = _cpu.GetRegister("EBP");
+				    
+				    _logger.LogWarning("[IGN_TEAS CRT] Loop iteration {Iterations} at EIP=0x{Eip:X8}", _ignTeasCrtLoopIterations, eip);
+				    _logger.LogWarning("[IGN_TEAS CRT]   Registers: EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8}", eax, ebx, ecx, edx);
+				    _logger.LogWarning("[IGN_TEAS CRT]   ESI=0x{Esi:X8} (iterator) EDI=0x{Edi:X8} ESP=0x{Esp:X8} EBP=0x{Ebp:X8}", esi, edi, esp, ebp);
+				    
+				    // Log string buffer content once to see what's being parsed
+				    if (!_ignTeasCrtStringLogged && ecx != 0 && ecx >= 0x00400000 && ecx < 0x00500000)
+				    {
+					    try
+					    {
+						    _logger.LogWarning("[IGN_TEAS CRT] String buffer at ECX=0x{Ecx:X8}:", ecx);
+						    var bytes = new byte[256];
+						    for (int i = 0; i < 256; i++)
+						    {
+							    bytes[i] = _vm.Read8(ecx + (uint)i);
+						    }
+						    
+						    // Log as hex dump
+						    var hex = BitConverter.ToString(bytes).Replace("-", " ");
+						    _logger.LogWarning("[IGN_TEAS CRT]   Hex: {Hex}", hex.Substring(0, Math.Min(150, hex.Length)));
+						    
+						    // Try to interpret as ASCII string
+						    var str = System.Text.Encoding.ASCII.GetString(bytes).Replace("\0", "\\0").Replace("\r", "\\r").Replace("\n", "\\n");
+						    _logger.LogWarning("[IGN_TEAS CRT]   ASCII: {Str}", str.Substring(0, Math.Min(100, str.Length)));
+						    
+						    _ignTeasCrtStringLogged = true;
+					    }
+					    catch (Exception ex)
+					    {
+						    _logger.LogWarning(ex, "[IGN_TEAS CRT] Failed to read string buffer at ECX");
+					    }
+				    }
+				    
+				    // Log current byte being examined at ESI
+				    if (esi >= 0x00400000 && esi < 0x00500000)
+				    {
+					    try
+					    {
+						    var currentByte = _vm.Read8(esi);
+						    var nextByte = _vm.Read8(esi + 1);
+						    var prevByte = esi > 0x00400000 ? _vm.Read8(esi - 1) : (byte)0;
+						    
+						    _logger.LogWarning("[IGN_TEAS CRT]   Current position ESI=0x{Esi:X8}: prev=0x{Prev:X2} current=0x{Current:X2} ('{CurrentChar}') next=0x{Next:X2}", 
+							    esi, prevByte, currentByte, (char)(currentByte >= 32 && currentByte < 127 ? (char)currentByte : '.'), nextByte);
+					    }
+					    catch (Exception ex)
+					    {
+						    _logger.LogDebug(ex, "[IGN_TEAS CRT] Failed to read byte at ESI");
+					    }
+				    }
+				    
+				    if (_ignTeasCrtLoopIterations > 5000)
+				    {
+					    _logger.LogError("[IGN_TEAS CRT] ⚠️ CRT loop has iterated {Iterations} times - definitely stuck!", _ignTeasCrtLoopIterations);
+				    }
+			    }
+			    catch (Exception ex)
+			    {
+				    _logger.LogDebug(ex, "[IGN_TEAS CRT] Could not read registers during CRT loop tracking");
+			    }
+		    }
+	    }
+	    // Reset counter when we exit the loop
+	    else if (_ignTeasCrtLoopIterations > 0)
+	    {
+		    _logger.LogWarning("[IGN_TEAS CRT] Exited CRT loop after {Iterations} total iterations", _ignTeasCrtLoopIterations);
+		    if (_ignTeasCrtLoopIterations > 1000)
+		    {
+			    _logger.LogError("[IGN_TEAS CRT] ⚠️ CRT loop iterated {Iterations} times - this indicates a parsing bug!", _ignTeasCrtLoopIterations);
+		    }
+		    _ignTeasCrtLoopIterations = 0;
+		    _ignTeasCrtLastLogIteration = 0;
+		    _ignTeasCrtStringLogged = false;
+	    }
+    }
 
     public async Task RunAsync()
     {
@@ -1791,6 +1918,9 @@ public sealed class Emulator : IDisposable
             
             // IGN_TEAS.EXE: Track the problematic texture loading loop
             TrackIgnTeasTextureLoop(eipBeforeStep);
+            
+            // IGN_TEAS.EXE: Track the CRT startup loop (earlier hang point)
+            TrackIgnTeasCrtLoop(eipBeforeStep);
 
             CpuStepResult step;
             try
