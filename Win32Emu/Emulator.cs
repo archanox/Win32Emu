@@ -139,7 +139,7 @@ public sealed class Emulator : IDisposable
     // IGN_TEAS CRT startup loop tracking
     private ulong _ignTeasCrtLoopIterations = 0;
     private ulong _ignTeasCrtLastLogIteration = 0;
-    private const ulong IGN_TEAS_CRT_LOG_INTERVAL = 1000; // Log every 1K iterations in CRT loop
+    private const ulong IGN_TEAS_CRT_LOG_INTERVAL = 100; // Log every 100 iterations in CRT loop (lowered to capture shorter loops)
     private bool _ignTeasCrtStringLogged = false; // Only log string content once
     
     /// <summary>
@@ -1465,6 +1465,42 @@ public sealed class Emulator : IDisposable
 		    _ignTeasCrtStringLogged = false;
 	    }
     }
+    
+    // IGN_TEAS.EXE: Track if we ever reach key addresses after CRT
+    private bool _ignTeasReachedBeyondCrt = false;
+    private void TrackIgnTeasProgress(uint eip)
+    {
+	    if (_image == null)
+	    {
+		    return;
+	    }
+	    
+	    var exeNameFromImage = Path.GetFileName(_image.FilePath ?? "").ToUpperInvariant();
+	    
+	    // Only track for IGN_TEAS.EXE
+	    if (!(exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromImage.Contains("IGN_TEAS")))
+	    {
+		    return;
+	    }
+	    
+	    // Check if we've reached addresses beyond CRT initialization (0x00403XXX range = WinMain area)
+	    if (!_ignTeasReachedBeyondCrt && eip >= 0x00403000 && eip < 0x00404000)
+	    {
+		    _ignTeasReachedBeyondCrt = true;
+		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅ Reached address 0x{Eip:X8} - BEYOND CRT initialization!", eip);
+		    _logger.LogWarning("[IGN_TEAS PROGRESS] This means CRT completed successfully and we're in game code");
+	    }
+	    
+	    // Known key addresses
+	    if (eip == 0x00403140)
+	    {
+		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅✅ Reached WinMain at 0x00403140!");
+	    }
+	    else if (eip == 0x004023F0)
+	    {
+		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅✅ Reached Main Init at 0x004023F0!");
+	    }
+    }
 
     public async Task RunAsync()
     {
@@ -1921,6 +1957,9 @@ public sealed class Emulator : IDisposable
             
             // IGN_TEAS.EXE: Track the CRT startup loop (earlier hang point)
             TrackIgnTeasCrtLoop(eipBeforeStep);
+            
+            // IGN_TEAS.EXE: Track progress beyond CRT
+            TrackIgnTeasProgress(eipBeforeStep);
 
             CpuStepResult step;
             try
