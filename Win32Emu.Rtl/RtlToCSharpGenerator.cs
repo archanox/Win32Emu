@@ -19,8 +19,16 @@ public class RtlToCSharpGenerator
     {
         var sb = new StringBuilder();
         
+        // Check if we need SIMD namespaces
+        var usesSIMD = HasSimdInstructions(rtlBlock);
+        
         sb.AppendLine("using System;");
         sb.AppendLine("using System.Threading.Tasks;");
+        if (usesSIMD)
+        {
+            sb.AppendLine("using System.Runtime.Intrinsics;");
+            sb.AppendLine("using System.Runtime.Intrinsics.X86;");
+        }
         sb.AppendLine("using Win32Emu.Cpu; // For CpuStepResult");
         sb.AppendLine();
         sb.AppendLine("namespace Win32Emu.Jit.Generated");
@@ -98,7 +106,7 @@ public class RtlToCSharpGenerator
             RtlReturn ret => GenerateReturn(ret),
             RtlLoad load => $"{ExpressionToString(load.Destination)} = mem.Read{load.Size * 8}({ExpressionToString(load.Address)});",
             RtlStore store => $"mem.Write{store.Size * 8}({ExpressionToString(store.Address)}, {ExpressionToString(store.Value)});",
-            RtlSimdOp simd => $"// {simd.Comment}",
+            RtlSimdOp simd => GenerateSimdOperation(simd),
             RtlNop => "// nop",
             _ => "// unknown instruction"
         };
@@ -163,6 +171,100 @@ public class RtlToCSharpGenerator
             RtlUnaryExpression unExpr => $"{unExpr.Operator}({ExpressionToString(unExpr.Operand)})",
             _ => "0"
         };
+    }
+    
+    /// <summary>
+    /// Check if the RTL block contains SIMD instructions
+    /// </summary>
+    private bool HasSimdInstructions(RtlCodeBlock rtlBlock)
+    {
+        foreach (var bb in rtlBlock.BasicBlocks)
+        {
+            foreach (var insn in bb.Instructions)
+            {
+                if (insn is RtlSimdOp)
+                    return true;
+            }
+        }
+        return false;
+    }
+    
+    /// <summary>
+    /// Generate C# code for SIMD operations using System.Runtime.Intrinsics
+    /// </summary>
+    private string GenerateSimdOperation(RtlSimdOp simd)
+    {
+        if (!simd.IsMemoryOperation)
+        {
+            // Legacy comment-only SIMD marker
+            return $"// {simd.Comment}";
+        }
+        
+        var sb = new StringBuilder();
+        sb.AppendLine($"{{ // {simd.Comment}");
+        
+        var baseAddr = ExpressionToString(simd.BaseAddress!);
+        
+        // Generate vector load
+        sb.AppendLine($"                // Load vector from memory");
+        sb.AppendLine($"                var vecAddr = {baseAddr};");
+        
+        // For 4x uint32, we need to load 16 bytes
+        sb.AppendLine($"                var v1_0 = mem.Read32(vecAddr);");
+        sb.AppendLine($"                var v1_1 = mem.Read32(vecAddr + 4);");
+        sb.AppendLine($"                var v1_2 = mem.Read32(vecAddr + 8);");
+        sb.AppendLine($"                var v1_3 = mem.Read32(vecAddr + 12);");
+        sb.AppendLine($"                var vector1 = Vector128.Create(v1_0, v1_1, v1_2, v1_3);");
+        
+        // Generate operand2 (either vector or scalar to broadcast)
+        if (simd.Operand2 != null)
+        {
+            var operand2Str = ExpressionToString(simd.Operand2);
+            if (simd.Operand2 is RtlConstant)
+            {
+                // Broadcast scalar to vector
+                sb.AppendLine($"                var vector2 = Vector128.Create({operand2Str});");
+            }
+            else
+            {
+                // Assume it's another vector (would need address)
+                sb.AppendLine($"                var vector2 = Vector128.Create({operand2Str});");
+            }
+        }
+        
+        // Generate vector operation
+        var intrinsicOp = simd.Operation switch
+        {
+            "Add" => "Sse2.Add",
+            "Subtract" => "Sse2.Subtract",
+            "Multiply" => "Sse41.MultiplyLow", // SSE4.1 for 32-bit int multiply
+            "BitwiseAnd" => "Sse2.And",
+            "BitwiseOr" => "Sse2.Or",
+            "Xor" => "Sse2.Xor",
+            _ => $"/* Unsupported: {simd.Operation} */"
+        };
+        
+        if (simd.Operand2 != null)
+        {
+            sb.AppendLine($"                var result = {intrinsicOp}(vector1, vector2);");
+        }
+        else
+        {
+            sb.AppendLine($"                var result = {intrinsicOp}(vector1);");
+        }
+        
+        // Extract and store results
+        if (simd.IsStore)
+        {
+            sb.AppendLine($"                // Store vector result to memory");
+            sb.AppendLine($"                mem.Write32(vecAddr, result.GetElement(0));");
+            sb.AppendLine($"                mem.Write32(vecAddr + 4, result.GetElement(1));");
+            sb.AppendLine($"                mem.Write32(vecAddr + 8, result.GetElement(2));");
+            sb.AppendLine($"                mem.Write32(vecAddr + 12, result.GetElement(3));");
+        }
+        
+        sb.Append("            }");
+        return sb.ToString();
     }
     
     /// <summary>

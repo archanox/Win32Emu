@@ -125,6 +125,12 @@ public class RtlSimdOp : RtlInstruction
     public string Operation { get; set; } = "";
     public int VectorSize { get; set; } // Number of elements in vector (4, 8, 16)
     public string Comment { get; set; } = "";
+    public RtlExpression? BaseAddress { get; set; } // Base memory address for vector load/store
+    public RtlExpression? Destination { get; set; } // Destination for vector operation result
+    public RtlExpression? Operand1 { get; set; } // First operand
+    public RtlExpression? Operand2 { get; set; } // Second operand (for binary ops)
+    public bool IsMemoryOperation { get; set; } // True for vector load/store
+    public bool IsStore { get; set; } // True for vector store, false for load
     
     public override string ToReadableString() => $"SIMD[{VectorSize}]: {Operation} // {Comment}";
 }
