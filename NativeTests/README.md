@@ -108,10 +108,12 @@ Tests multimedia timer functions (as used by ign_teas.exe):
 ## Building on Windows
 
 ### Using Visual Studio
-1. Open the solution file `Win32Emu.slnx` in Visual Studio
-2. The projects are configured to build for Win32 (x86)
-3. Build configuration: Debug or Release
-4. Output directory: `EXEs/NativeTests/Debug/` or `EXEs/NativeTests/Release/`
+**Note:** The `.vcxproj` files are not included in the main solution to avoid build errors on Linux/macOS. To build these tests in Visual Studio:
+
+1. Open the individual `.vcxproj` files directly in Visual Studio, or
+2. Use the command-line methods below
+
+The projects are configured to build for Win32 (x86) with output to `EXEs/NativeTests/Debug/` or `EXEs/NativeTests/Release/`
 
 ### Using Visual Studio Command Prompt
 ```cmd

@@ -60,12 +60,6 @@
     <File Path="NativeTests\test_environment.c" />
     <File Path="NativeTests\test_environment.vcxproj" />
   </Folder>
-  <Project Path="NativeTests/test_environment.vcxproj">
-    <Platform Project="Win32" />
-  </Project>
-  <Project Path="NativeTests/test_getmodulefilename.vcxproj">
-    <Platform Project="Win32" />
-  </Project>
   <Project Path="Win32Emu.CallingConvention\Win32Emu.CallingConvention.csproj">
     <Configuration Solution="Debug|x64" Project="Debug|Any CPU" />
     <Configuration Solution="Debug|x86" Project="Debug|Any CPU" />
