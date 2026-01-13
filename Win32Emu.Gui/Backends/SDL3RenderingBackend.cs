@@ -95,7 +95,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 // Create frame texture
                 var textureCreateInfo = new SDL.GPUTextureCreateInfo
                 {
-                    Type = SDL.GPUTextureType.Texturetype2D,
+                    Type = SDL.GPUTextureType.TextureType2D,
                     Format = SDL.GPUTextureFormat.R8G8B8A8Unorm,
                     Usage = SDL.GPUTextureUsageFlags.Sampler | SDL.GPUTextureUsageFlags.ColorTarget,
                     Width = (uint)width,
