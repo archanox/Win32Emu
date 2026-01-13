@@ -335,10 +335,21 @@ public class RtlOptimizer
         foreach (var bb in block.BasicBlocks)
         {
             // Look for patterns of consecutive operations on adjacent memory locations
-            for (int i = 0; i < bb.Instructions.Count - 3; i++)
+            // We need at least 12 instructions for a full vector pattern (4 * (load + op + store))
+            for (int i = 0; i < bb.Instructions.Count; i++)
             {
-                // Pattern: 4 consecutive loads from adjacent addresses
-                if (IsConsecutiveMemoryOps(bb.Instructions, i, 4))
+                // Pattern 1: Consecutive loads + operations + stores (full vector operation)
+                if (TryDetectVectorOperation(bb.Instructions, i, out var vectorOp))
+                {
+                    bb.Instructions[i] = vectorOp;
+                    // Remove the replaced instructions (load + op + store for each element)
+                    bb.Instructions.RemoveRange(i + 1, vectorOp.VectorSize * 3 - 1);
+                    continue;
+                }
+                
+                // Pattern 2: Simple consecutive loads (can be optimized to vector load)
+                // This is a fallback for patterns that don't match the full load-op-store
+                if (i < bb.Instructions.Count - 3 && IsConsecutiveMemoryOps(bb.Instructions, i, 4))
                 {
                     // Check if followed by same operation (e.g., all ADD)
                     if (AreSimilarOperations(bb.Instructions, i, 4, out var operation))
@@ -349,7 +360,8 @@ public class RtlOptimizer
                             Offset = bb.Instructions[i].Offset,
                             Operation = operation,
                             VectorSize = 4,
-                            Comment = $"SIMD: Vectorized {operation} operation (4 elements)"
+                            Comment = $"SIMD: Vectorized {operation} operation (4 elements)",
+                            IsMemoryOperation = false
                         };
                         
                         // Remove the replaced instructions
@@ -358,6 +370,132 @@ public class RtlOptimizer
                 }
             }
         }
+    }
+    
+    /// <summary>
+    /// Detect complete vector operations: load -> operate -> store pattern
+    /// Patterns:
+    /// - Load 4 consecutive addresses (stride=4) into temps
+    /// - Apply same operation to all temps  
+    /// - Store results to consecutive addresses
+    /// </summary>
+    private bool TryDetectVectorOperation(List<RtlInstruction> instructions, int startIndex, out RtlSimdOp vectorOp)
+    {
+        vectorOp = new RtlSimdOp();
+        var vectorSize = 4; // Start with 128-bit vectors (4 x 32-bit elements)
+        
+        // Need at least vectorSize * 3 instructions (load + op + store for each element)
+        if (startIndex + vectorSize * 3 > instructions.Count)
+            return false;
+        
+        // Step 1: Check for consecutive loads
+        var loads = new List<(RtlLoad load, RtlTemporary dest)>();
+        uint? baseAddr = null;
+        
+        for (int i = 0; i < vectorSize; i++)
+        {
+            var idx = startIndex + i;
+            if (instructions[idx] is not RtlLoad load)
+                return false;
+            
+            if (load.Size != 4) // Only 32-bit loads for now
+                return false;
+            
+            if (load.Address is not RtlConstant addrConst)
+                return false;
+            
+            if (load.Destination is not RtlTemporary dest)
+                return false;
+            
+            if (baseAddr == null)
+            {
+                baseAddr = addrConst.Value;
+            }
+            else if (addrConst.Value != baseAddr.Value + (uint)(i * 4))
+            {
+                return false;
+            }
+            
+            loads.Add((load, dest));
+        }
+        
+        // Step 2: Check for same operation on all loaded values
+        var operations = new List<RtlBinaryOp>();
+        string? opType = null;
+        
+        for (int i = 0; i < vectorSize; i++)
+        {
+            var idx = startIndex + vectorSize + i;
+            if (instructions[idx] is not RtlBinaryOp binOp)
+                return false;
+            
+            if (opType == null)
+            {
+                opType = binOp.Operator;
+            }
+            else if (binOp.Operator != opType)
+            {
+                return false;
+            }
+            
+            // Verify operand references the loaded temporary
+            if (binOp.Left is not RtlTemporary leftTemp || leftTemp.Id != loads[i].dest.Id)
+                return false;
+            
+            operations.Add(binOp);
+        }
+        
+        // Step 3: Check for consecutive stores
+        for (int i = 0; i < vectorSize; i++)
+        {
+            var idx = startIndex + vectorSize * 2 + i;
+            if (instructions[idx] is not RtlStore store)
+                return false;
+            
+            if (store.Size != 4)
+                return false;
+            
+            if (store.Address is not RtlConstant storeAddrConst)
+                return false;
+            
+            // Verify stores to same addresses as loads (in-place operation)
+            if (storeAddrConst.Value != baseAddr!.Value + (uint)(i * 4))
+                return false;
+            
+            // Verify value being stored is the operation result
+            if (store.Value is not RtlTemporary storeTemp)
+                return false;
+            
+            if (operations[i].Destination is not RtlTemporary opDest || opDest.Id != storeTemp.Id)
+                return false;
+        }
+        
+        // Successfully detected vector operation pattern!
+        // Determine the vector operation type
+        var simdOp = opType switch
+        {
+            "+" => "Add",
+            "-" => "Subtract",
+            "*" => "Multiply",
+            "&" => "BitwiseAnd",
+            "|" => "BitwiseOr",
+            "^" => "Xor",
+            _ => opType
+        };
+        
+        vectorOp = new RtlSimdOp
+        {
+            Offset = instructions[startIndex].Offset,
+            Operation = simdOp!,
+            VectorSize = vectorSize,
+            Comment = $"Vectorized {simdOp} (4x uint32)",
+            BaseAddress = new RtlConstant { Value = baseAddr!.Value },
+            Operand2 = operations[0].Right, // Second operand (if constant, will be broadcast)
+            IsMemoryOperation = true,
+            IsStore = true
+        };
+        
+        return true;
     }
     
     /// <summary>
