@@ -821,9 +821,7 @@ public class ProcessEnvironment
 		
 		// Add current directory for C: drive (extracted from CurrentDirectory property)
 		// This ensures the variable matches the actual working directory
-		// Fallback to C:\ if CurrentDirectory is not set (should not happen, but be defensive)
-		var currentDir = !string.IsNullOrEmpty(CurrentDirectory) ? CurrentDirectory : @"C:\";
-		envBlock.Append($"=C:={currentDir}");
+		envBlock.Append($"=C:={CurrentDirectory}");
 		envBlock.Append('\0');
 		
 		// Add the special "=::=::\" variable seen in real Windows environment blocks
