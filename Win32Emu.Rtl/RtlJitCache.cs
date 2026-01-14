@@ -61,19 +61,20 @@ public class RtlJitCache
     }
     
     /// <summary>
-    /// Selects the appropriate decompiler adapter based on environment configuration.
-    /// Tries Reko if enabled, falls back to CustomRTL.
+    /// Selects the appropriate decompiler adapter based on configuration.
+    /// For proof of concept: Uses Reko by default if environment variable is set, otherwise CustomRTL.
     /// </summary>
     private static IDecompilerAdapter SelectDecompilerAdapter(ILogger? logger)
     {
-        // Try Reko first if enabled
-        var rekoAdapter = new RekoDecompilerAdapter(logger);
-        if (rekoAdapter.IsAvailable)
+        // Check if Reko is explicitly requested via environment variable
+        var useReko = Environment.GetEnvironmentVariable("WIN32EMU_USE_REKO");
+        if (useReko?.ToLowerInvariant() == "true")
         {
-            return rekoAdapter;
+            logger?.LogInformation("[RtlJitCache] Reko requested via WIN32EMU_USE_REKO environment variable");
+            return new RekoDecompilerAdapter(logger);
         }
         
-        // Fall back to CustomRTL (always available)
+        // Default to CustomRTL (MIT-licensed)
         return new CustomRtlDecompilerAdapter(logger);
     }
     
