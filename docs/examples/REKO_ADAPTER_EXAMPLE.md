@@ -15,8 +15,8 @@ var logger = loggerFactory.CreateLogger<Program>();
 
 // Create JIT cache (uses CustomRTL by default)
 var cache = new RtlJitCache(cacheDir: "./cache", logger: logger);
-logger.LogInformation("Using decompiler: {Name}", cache.DecompilerName);
-// Output: Using decompiler: CustomRTL (MIT License - Part of Win32Emu)
+// To check which adapter is being used, inspect logs:
+// Output: [RtlJitCache] Using decompiler: CustomRTL (MIT License - Part of Win32Emu)
 
 // Compile x86 instructions
 var instructions = new List<Instruction> {
