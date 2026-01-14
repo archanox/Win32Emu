@@ -1529,6 +1529,37 @@ public sealed class Emulator : IDisposable
 	    {
 		    _ignTeasPostCrtExecutionCount++;
 		    
+		    // Dump buffer once at start to see what was written
+		    if (_ignTeasPostCrtExecutionCount == 1 && _vm != null)
+		    {
+			    _logger.LogWarning("[IGN_TEAS POST-CRT] Dumping environment buffer at 0x00480200 (bytes 0-99, 320-349):");
+			    try
+			    {
+				    // First 100 bytes
+				    var buffer = new byte[100];
+				    for (int i = 0; i < 100; i++)
+				    {
+					    buffer[i] = _vm.Read8(0x00480200 + (uint)i);
+				    }
+				    var hex = BitConverter.ToString(buffer).Replace("-", " ");
+				    _logger.LogWarning("[IGN_TEAS POST-CRT]   Bytes 0-99 Hex: {Hex}", hex);
+				    
+				    // Last 30 bytes around 329 (0x149)
+				    var endBuffer = new byte[30];
+				    for (int i = 0; i < 30; i++)
+				    {
+					    endBuffer[i] = _vm.Read8(0x00480200 + 320 + (uint)i);
+				    }
+				    var endHex = BitConverter.ToString(endBuffer).Replace("-", " ");
+				    _logger.LogWarning("[IGN_TEAS POST-CRT]   Bytes 320-349 Hex: {Hex}", endHex);
+				    _logger.LogWarning("[IGN_TEAS POST-CRT]   (Byte 329 is at index 329, should be double-null at 327-328 or 328-329)");
+			    }
+			    catch (Exception ex)
+			    {
+				    _logger.LogError(ex, "[IGN_TEAS POST-CRT] Failed to dump buffer");
+			    }
+		    }
+		    
 		    // Log periodically to see where we are
 		    if (_ignTeasPostCrtExecutionCount % IGN_TEAS_POST_FINAL_CRT_LOG_INTERVAL == 0)
 		    {
