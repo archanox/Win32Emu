@@ -815,18 +815,16 @@ public class ProcessEnvironment
 	{
 		// CRITICAL: Windows environment blocks start with special "drive current directory" variables
 		// These hidden variables begin with "=" and store the current directory for each drive
-		// Format: =<drive>:=<path> (e.g., "=C:=C:\MyApp", "=D:=D:\")
+		// Format: =<drive>:=<path> (e.g., "=C:=C:\WINDOWS", "=D:=D:\")
 		// The CRT initialization code expects these variables at the start of the environment block
 		// Without them, CRT parsing loops may not terminate correctly
 		
 		// Add current directory for C: drive (extracted from CurrentDirectory property)
 		// This ensures the variable matches the actual working directory
-		var currentDir = CurrentDirectory;
-		if (!string.IsNullOrEmpty(currentDir))
-		{
-			envBlock.Append($"=C:={currentDir}");
-			envBlock.Append('\0');
-		}
+		// Fallback to C:\ if CurrentDirectory is not set (should not happen, but be defensive)
+		var currentDir = !string.IsNullOrEmpty(CurrentDirectory) ? CurrentDirectory : @"C:\";
+		envBlock.Append($"=C:={currentDir}");
+		envBlock.Append('\0');
 		
 		// Add the special "=::=::\" variable seen in real Windows environment blocks
 		// This appears to be related to UNC path handling
