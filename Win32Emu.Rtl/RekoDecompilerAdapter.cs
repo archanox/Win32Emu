@@ -100,15 +100,111 @@ public class RekoDecompilerAdapter : IDecompilerAdapter
 	
 	private async Task<string> GenerateRekoIntegrationStubAsync(uint startAddress, List<Instruction> instructions, string className)
 	{
-		// This is a placeholder showing how Reko integration would work
-		// Actual implementation would use Reko's API to:
-		// 1. Create Reko.Core.Architecture instance for x86
-		// 2. Load instructions into Reko's MemoryArea
-		// 3. Use Reko's Rewriter to convert to RTL
-		// 4. Use Reko's Decompiler to generate high-level code
-		// 5. Convert Reko's output (typically C) to C# format
+		try
+		{
+			// Use reflection to call Reko API without hard dependency
+			var csharpCode = await DecompileUsingRekoAsync(startAddress, instructions, className);
+			return csharpCode;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[RekoAdapter] Error during Reko decompilation, falling back to stub");
+			return GenerateFallbackStub(startAddress, instructions, className, ex.Message);
+		}
+	}
+	
+	private async Task<string> DecompileUsingRekoAsync(uint startAddress, List<Instruction> instructions, string className)
+	{
+		// Convert Iced.Intel instructions to byte array for Reko
+		var instructionBytes = ConvertInstructionsToBytes(instructions);
 		
+		// Use reflection to call Reko API
+		var addressType = Type.GetType("Reko.Core.Address, Reko.Core") 
+			?? throw new InvalidOperationException("Reko.Core.Address type not found");
+		var memoryAreaType = Type.GetType("Reko.Core.Memory.ByteMemoryArea, Reko.Core") 
+			?? throw new InvalidOperationException("Reko.Core.Memory.ByteMemoryArea type not found");
+		var archType = Type.GetType("Reko.Arch.X86.X86ArchitectureFlat32, Reko.Arch.X86") 
+			?? throw new InvalidOperationException("Reko.Arch.X86.X86ArchitectureFlat32 type not found");
+		var serviceContainerType = Type.GetType("System.ComponentModel.Design.ServiceContainer, System.ComponentModel.TypeConverter") 
+			?? throw new InvalidOperationException("ServiceContainer type not found");
+		
+		// Create Address instance: Address.Ptr32(startAddress)
+		var ptr32Method = addressType.GetMethod("Ptr32", new[] { typeof(uint) })
+			?? throw new InvalidOperationException("Address.Ptr32 method not found");
+		var address = ptr32Method.Invoke(null, new object[] { startAddress });
+		
+		// Create ByteMemoryArea: new ByteMemoryArea(address, bytes)
+		var memoryAreaCtor = memoryAreaType.GetConstructor(new[] { addressType, typeof(byte[]) })
+			?? throw new InvalidOperationException("ByteMemoryArea constructor not found");
+		var memoryArea = memoryAreaCtor.Invoke(new[] { address, instructionBytes });
+		
+		// Create ServiceContainer
+		var serviceContainer = Activator.CreateInstance(serviceContainerType)
+			?? throw new InvalidOperationException("Failed to create ServiceContainer");
+		
+		// Create X86ArchitectureFlat32: new X86ArchitectureFlat32(serviceContainer, "x86-protected-32")
+		var archCtor = archType.GetConstructor(new[] { serviceContainerType, typeof(string) })
+			?? throw new InvalidOperationException("X86ArchitectureFlat32 constructor not found");
+		var arch = archCtor.Invoke(new[] { serviceContainer, "x86-protected-32" });
+		
+		// Create ImageReader: arch.CreateImageReader(memoryArea, address)
+		var createImageReaderMethod = archType.GetMethod("CreateImageReader", new[] { memoryAreaType, addressType })
+			?? throw new InvalidOperationException("CreateImageReader method not found");
+		var imageReader = createImageReaderMethod.Invoke(arch, new[] { memoryArea, address });
+		
+		// Create Rewriter: arch.CreateRewriter(imageReader)
+		var createRewriterMethod = archType.GetMethod("CreateRewriter", new[] { imageReader!.GetType().GetInterfaces()[0] })
+			?? throw new InvalidOperationException("CreateRewriter method not found");
+		var rewriter = createRewriterMethod.Invoke(arch, new[] { imageReader });
+		
+		// Collect RTL instructions from rewriter
+		var rtlInstructions = new List<string>();
+		var enumerator = ((System.Collections.IEnumerable)rewriter!).GetEnumerator();
+		int instructionCount = 0;
+		while (enumerator.MoveNext() && instructionCount < instructions.Count * 3) // Limit to avoid infinite loops
+		{
+			var rtlCluster = enumerator.Current;
+			if (rtlCluster != null)
+			{
+				rtlInstructions.Add(rtlCluster.ToString() ?? "");
+				instructionCount++;
+			}
+		}
+		
+		// Generate C# code from RTL instructions
+		return await Task.FromResult(GenerateCSharpFromRtl(startAddress, rtlInstructions, className));
+	}
+	
+	private byte[] ConvertInstructionsToBytes(List<Instruction> instructions)
+	{
+		// Use Iced.Intel's Encoder to convert instructions back to bytes
+		var codeWriter = new CodeWriterImpl();
+		var encoder = Iced.Intel.Encoder.Create(32, codeWriter); // 32-bit mode
+		
+		foreach (var instruction in instructions)
+		{
+			// Encode the instruction to bytes
+			encoder.Encode(instruction, instruction.IP);
+		}
+		
+		return codeWriter.ToArray();
+	}
+	
+	// Helper class for Iced.Intel encoding
+	private class CodeWriterImpl : Iced.Intel.CodeWriter
+	{
+		private readonly List<byte> _bytes = new();
+		
+		public override void WriteByte(byte value) => _bytes.Add(value);
+		
+		public byte[] ToArray() => _bytes.ToArray();
+	}
+	
+	private string GenerateCSharpFromRtl(uint startAddress, List<string> rtlInstructions, string className)
+	{
 		var sb = new StringBuilder();
+		
+		// File header
 		sb.AppendLine("using System;");
 		sb.AppendLine("using System.Threading.Tasks;");
 		sb.AppendLine();
@@ -119,17 +215,57 @@ public class RekoDecompilerAdapter : IDecompilerAdapter
 		sb.AppendLine($"\tpublic class {className}");
 		sb.AppendLine("\t{");
 		sb.AppendLine($"\t\t// Block at 0x{startAddress:X8}");
-		sb.AppendLine($"\t\t// Contains {instructions.Count} x86 instructions");
+		sb.AppendLine($"\t\t// Reko RTL instructions: {rtlInstructions.Count}");
 		sb.AppendLine();
 		sb.AppendLine("\t\tpublic async Task<dynamic> Execute(dynamic cpu, dynamic mem)");
 		sb.AppendLine("\t\t{");
-		sb.AppendLine("\t\t\t// TODO: Integrate Reko's decompilation output here");
-		sb.AppendLine("\t\t\t// See RekoDecompilerAdapter implementation for integration details");
-		sb.AppendLine("\t\t\tthrow new NotImplementedException(\"Reko integration requires additional implementation\");");
+		
+		// Add RTL instructions as comments and attempt basic conversion
+		sb.AppendLine("\t\t\t// Reko RTL representation:");
+		foreach (var rtl in rtlInstructions.Take(50)) // Limit for readability
+		{
+			sb.AppendLine($"\t\t\t// {rtl}");
+		}
+		
+		if (rtlInstructions.Count > 50)
+		{
+			sb.AppendLine($"\t\t\t// ... and {rtlInstructions.Count - 50} more RTL instructions");
+		}
+		
+		sb.AppendLine();
+		sb.AppendLine("\t\t\t// TODO: Convert Reko RTL to executable C# code");
+		sb.AppendLine("\t\t\t// This requires mapping RTL operations to CPU state modifications");
+		sb.AppendLine("\t\t\tthrow new NotImplementedException(\"RTL to C# conversion not yet implemented\");");
 		sb.AppendLine("\t\t}");
 		sb.AppendLine("\t}");
 		sb.AppendLine("}");
 		
-		return await Task.FromResult(sb.ToString());
+		return sb.ToString();
+	}
+	
+	private string GenerateFallbackStub(uint startAddress, List<Instruction> instructions, string className, string errorMessage)
+	{
+		var sb = new StringBuilder();
+		sb.AppendLine("using System;");
+		sb.AppendLine("using System.Threading.Tasks;");
+		sb.AppendLine();
+		sb.AppendLine("namespace Win32Emu.Generated");
+		sb.AppendLine("{");
+		sb.AppendLine($"\t// Decompilation attempted using Reko (GPLv2) but failed");
+		sb.AppendLine($"\t// Error: {errorMessage}");
+		sb.AppendLine($"\tpublic class {className}");
+		sb.AppendLine("\t{");
+		sb.AppendLine($"\t\t// Block at 0x{startAddress:X8}");
+		sb.AppendLine($"\t\t// Contains {instructions.Count} x86 instructions");
+		sb.AppendLine();
+		sb.AppendLine("\t\tpublic async Task<dynamic> Execute(dynamic cpu, dynamic mem)");
+		sb.AppendLine("\t\t{");
+		sb.AppendLine("\t\t\t// Reko decompilation failed, fallback needed");
+		sb.AppendLine("\t\t\tthrow new NotImplementedException(\"Reko integration failed\");");
+		sb.AppendLine("\t\t}");
+		sb.AppendLine("\t}");
+		sb.AppendLine("}");
+		
+		return sb.ToString();
 	}
 }
