@@ -716,6 +716,18 @@ public sealed class Emulator : IDisposable
         _cpu.SetRegister("ESP", initialEsp);
         _cpu.SetRegister("EBP", initialEsp); // Initialize frame pointer to match stack pointer
         
+        // CRITICAL: Zero-initialize the ENTIRE stack reserve region for Win95 compatibility
+        // Win95-era CRT expects stack memory to be zero-filled (similar to VirtualAlloc with MEM_COMMIT)
+        // Without this, REPNZ SCASB instructions scanning for null terminators will read garbage data
+        // and loop indefinitely (e.g., ign_teas CRT initialization at 0x004122CF)
+        // NOTE: We zero the entire reserve (not just commit) because the stack grows during CRT init
+        _logger.LogInformation("[Loader] Zero-initializing entire stack reserve region (0x{Start:X8} - 0x{End:X8}, {Size} bytes)",
+            _stackLimit, _stackBase, stackReserve);
+        for (uint addr = _stackLimit; addr < _stackBase; addr++)
+        {
+            _vm!.Write8(addr, 0);
+        }
+        
         // Store heap base for use in checks
         _heapBase = CalculateHeapBase(_image);
         
