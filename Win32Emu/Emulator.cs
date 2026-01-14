@@ -1532,14 +1532,33 @@ public sealed class Emulator : IDisposable
 		    // Log periodically to see where we are
 		    if (_ignTeasPostCrtExecutionCount % IGN_TEAS_POST_FINAL_CRT_LOG_INTERVAL == 0)
 		    {
-			    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing after final CRT exit: EIP=0x{Eip:X8} ({Count} instructions since exit)", eip, _ignTeasPostCrtExecutionCount);
-			    
-			    // Check if stuck in tight loop
-			    if (_ignTeasLastPostCrtEipForLoop == eip)
+			    try
 			    {
-				    _logger.LogError("[IGN_TEAS POST-CRT] ⚠️ Stuck at same EIP=0x{Eip:X8} - infinite loop detected!", eip);
+				    var eax = _cpu!.GetRegister("EAX");
+				    var ebx = _cpu!.GetRegister("EBX");
+				    var ecx = _cpu!.GetRegister("ECX");
+				    var edx = _cpu!.GetRegister("EDX");
+				    var esi = _cpu!.GetRegister("ESI");
+				    var edi = _cpu!.GetRegister("EDI");
+				    var esp = _cpu!.GetRegister("ESP");
+				    var ebp = _cpu!.GetRegister("EBP");
+				    
+				    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing after final CRT exit: EIP=0x{Eip:X8} ({Count} instructions since exit)", eip, _ignTeasPostCrtExecutionCount);
+				    _logger.LogWarning("[IGN_TEAS POST-CRT]   Registers: EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8}", eax, ebx, ecx, edx);
+				    _logger.LogWarning("[IGN_TEAS POST-CRT]   ESI=0x{Esi:X8} EDI=0x{Edi:X8} ESP=0x{Esp:X8} EBP=0x{Ebp:X8}", esi, edi, esp, ebp);
+				    
+				    // Check if stuck in tight loop
+				    if (_ignTeasLastPostCrtEipForLoop == eip)
+				    {
+					    _logger.LogError("[IGN_TEAS POST-CRT] ⚠️ Stuck at same EIP=0x{Eip:X8} - infinite loop detected!", eip);
+				    }
+				    _ignTeasLastPostCrtEipForLoop = eip;
 			    }
-			    _ignTeasLastPostCrtEipForLoop = eip;
+			    catch (Exception ex)
+			    {
+				    _logger.LogDebug(ex, "[IGN_TEAS POST-CRT] Could not read registers");
+				    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing after final CRT exit: EIP=0x{Eip:X8} ({Count} instructions since exit)", eip, _ignTeasPostCrtExecutionCount);
+			    }
 		    }
 	    }
     }
