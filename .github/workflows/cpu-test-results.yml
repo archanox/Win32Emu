@@ -143,16 +143,16 @@ jobs:
           # Copy the generated api-status.json for the PE Analyzer to use
           cp pages/api-status.json pages/pe-analyzer/
 
-      - name: Build Emulator WASM (Debug)
+      - name: Build Emulator WASM
         run: >
           dotnet publish
           Win32Emu.Wasm/Win32Emu.Wasm.csproj
-          --configuration Debug
+          --configuration Release
 
       - name: Copy Emulator WASM
         run: |
           mkdir -p pages/emulator
-          cp -r Win32Emu.Wasm/bin/Debug/net10.0/publish/wwwroot/* pages/emulator/
+          cp -r Win32Emu.Wasm/bin/Release/net10.0/publish/wwwroot/* pages/emulator/
 
       - name: Create main index page
         run: |
