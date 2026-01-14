@@ -811,7 +811,22 @@ public class ProcessEnvironment
 	{
 		var envBlock = new StringBuilder();
 		
-		// Add each environment variable as "NAME=VALUE\0"
+		// CRITICAL: Windows environment blocks start with special "drive current directory" variables
+		// These hidden variables begin with "=" and store the current directory for each drive
+		// Format: =<drive>:=<path> (e.g., "=C:=C:\", "=D:=D:\")
+		// The CRT initialization code expects these variables at the start of the environment block
+		// Without them, CRT parsing loops may not terminate correctly
+		
+		// Add current directory for C: drive (the executable's drive)
+		envBlock.Append("=C:=C:\\ign_teas");
+		envBlock.Append('\0');
+		
+		// Add the special "=::=::\" variable seen in real Windows environment blocks
+		// This appears to be related to UNC path handling
+		envBlock.Append("=::=::\\");
+		envBlock.Append('\0');
+		
+		// Now add each regular environment variable as "NAME=VALUE\0"
 		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
 		{
 			envBlock.Append($"{kvp.Key}={kvp.Value}");
@@ -840,7 +855,22 @@ public class ProcessEnvironment
 	{
 		var envBlock = new StringBuilder();
 		
-		// Add each environment variable as "NAME=VALUE\0"
+		// CRITICAL: Windows environment blocks start with special "drive current directory" variables
+		// These hidden variables begin with "=" and store the current directory for each drive
+		// Format: =<drive>:=<path> (e.g., "=C:=C:\", "=D:=D:\")
+		// The CRT initialization code expects these variables at the start of the environment block
+		// Without them, CRT parsing loops may not terminate correctly
+		
+		// Add current directory for C: drive (the executable's drive)
+		envBlock.Append("=C:=C:\\ign_teas");
+		envBlock.Append('\0');
+		
+		// Add the special "=::=::\" variable seen in real Windows environment blocks
+		// This appears to be related to UNC path handling
+		envBlock.Append("=::=::\\");
+		envBlock.Append('\0');
+		
+		// Now add each regular environment variable as "NAME=VALUE\0"
 		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
 		{
 			envBlock.Append($"{kvp.Key}={kvp.Value}");
