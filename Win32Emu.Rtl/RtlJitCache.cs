@@ -15,15 +15,14 @@ namespace Win32Emu.Rtl;
 /// RTL-based JIT cache with readable C# code generation and assembly persistence.
 /// Implements the full pipeline: x86 → RTL → Optimized RTL → C# → Assembly
 /// Uses Lokad.ILPack to save assemblies with decompilable C# source.
+/// Supports pluggable decompiler adapters (CustomRTL, Reko, etc.).
 /// </summary>
 public class RtlJitCache
 {
     private readonly ILogger _logger;
     private readonly string _cacheDirectory;
     private readonly string _sourceDirectory;
-    private readonly X86ToRtlConverter _rtlConverter;
-    private readonly RtlOptimizer _optimizer;
-    private readonly RtlToCSharpGenerator _codeGenerator;
+    private readonly IDecompilerAdapter _decompilerAdapter;
     private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
     private readonly string _instanceId; // Unique ID for this cache instance to avoid assembly name conflicts
     
@@ -40,7 +39,7 @@ public class RtlJitCache
         "Source"
     );
     
-    public RtlJitCache(string? cacheDirectory = null, ILogger? logger = null)
+    public RtlJitCache(string? cacheDirectory = null, ILogger? logger = null, IDecompilerAdapter? decompilerAdapter = null)
     {
         _logger = logger ?? NullLogger.Instance;
         _cacheDirectory = cacheDirectory ?? DefaultCacheDirectory;
@@ -52,18 +51,36 @@ public class RtlJitCache
         Directory.CreateDirectory(_cacheDirectory);
         Directory.CreateDirectory(_sourceDirectory);
         
-        _rtlConverter = new X86ToRtlConverter(_logger);
-        _optimizer = new RtlOptimizer();
-        _codeGenerator = new RtlToCSharpGenerator();
+        // Use pluggable decompiler adapter - defaults to CustomRTL
+        _decompilerAdapter = decompilerAdapter ?? SelectDecompilerAdapter(logger);
         
         _logger.LogInformation("[RtlJitCache] Initialized RTL-based JIT cache at {Directory}", _cacheDirectory);
+        _logger.LogInformation("[RtlJitCache] Using decompiler: {Name} ({License})", 
+            _decompilerAdapter.Name, _decompilerAdapter.LicenseInfo);
         _logger.LogInformation("[RtlJitCache] C# source code will be saved to {SourceDir}", _sourceDirectory);
     }
     
     /// <summary>
-    /// Compile an x86 code block through the RTL pipeline
+    /// Selects the appropriate decompiler adapter based on environment configuration.
+    /// Tries Reko if enabled, falls back to CustomRTL.
     /// </summary>
-    public RtlCompiledBlock CompileBlock(uint startAddress, List<Instruction> instructions)
+    private static IDecompilerAdapter SelectDecompilerAdapter(ILogger? logger)
+    {
+        // Try Reko first if enabled
+        var rekoAdapter = new RekoDecompilerAdapter(logger);
+        if (rekoAdapter.IsAvailable)
+        {
+            return rekoAdapter;
+        }
+        
+        // Fall back to CustomRTL (always available)
+        return new CustomRtlDecompilerAdapter(logger);
+    }
+    
+    /// <summary>
+    /// Compile an x86 code block through the decompiler pipeline
+    /// </summary>
+    public async Task<RtlCompiledBlock> CompileBlockAsync(uint startAddress, List<Instruction> instructions)
     {
         if (_compiledBlocks.TryGetValue(startAddress, out var cached))
         {
@@ -74,45 +91,44 @@ public class RtlJitCache
         _logger.LogInformation("[RtlJitCache] Compiling block at 0x{Address:X8} ({Count} instructions)",
             startAddress, instructions.Count);
         
-        // Step 1: x86 → RTL
-        var rtlBlock = _rtlConverter.Convert(startAddress, instructions);
-        _logger.LogDebug("[RtlJitCache] Generated RTL with {BlockCount} basic blocks", rtlBlock.BasicBlocks.Count);
-        
-        // Step 2: Optimize RTL
-        rtlBlock = _optimizer.Optimize(rtlBlock);
-        _logger.LogDebug("[RtlJitCache] Optimized RTL");
-        
-        // Step 3: RTL → C# Code
+        // Generate C# code using the pluggable decompiler adapter
         var className = $"JitBlock_{_instanceId}_{startAddress:X8}";
-        var methodName = "Execute";
-        var csharpCode = _codeGenerator.GenerateCSharpCode(rtlBlock, className, methodName);
+        var csharpCode = await _decompilerAdapter.DecompileToCSharpAsync(startAddress, instructions, className);
         
         // Save C# source for inspection
         var sourceFile = Path.Combine(_sourceDirectory, $"{className}.cs");
         File.WriteAllText(sourceFile, csharpCode);
         _logger.LogInformation("[RtlJitCache] Saved C# source to {SourceFile}", sourceFile);
         
-        // Step 4: C# → Compiled Assembly
+        // Compile C# → Assembly
         var assembly = CompileCSharpToAssembly(csharpCode, className);
         
-        // Step 5: Save assembly to disk with Lokad.ILPack
+        // Save assembly to disk with Lokad.ILPack
         var assemblyFile = Path.Combine(_cacheDirectory, $"{className}.dll");
         SaveAssemblyToDisk(assembly, assemblyFile);
         
         var compiled = new RtlCompiledBlock
         {
             StartAddress = startAddress,
-            RtlCode = rtlBlock,
+            RtlCode = null, // RTL is internal to the decompiler adapter
             CSharpSource = csharpCode,
             Assembly = assembly,
             ClassName = className,
-            MethodName = methodName
+            MethodName = "Execute"
         };
         
         _compiledBlocks[startAddress] = compiled;
         
         _logger.LogInformation("[RtlJitCache] Successfully compiled block at 0x{Address:X8}", startAddress);
         return compiled;
+    }
+    
+    /// <summary>
+    /// Synchronous wrapper for CompileBlockAsync (for backward compatibility)
+    /// </summary>
+    public RtlCompiledBlock CompileBlock(uint startAddress, List<Instruction> instructions)
+    {
+        return CompileBlockAsync(startAddress, instructions).GetAwaiter().GetResult();
     }
     
     /// <summary>
