@@ -1560,6 +1560,53 @@ public sealed class Emulator : IDisposable
 			    }
 		    }
 		    
+		    // Check if we're at the REPNZ SCAS instruction at 0x004122CF
+		    // This instruction scans [ESP+0x14] for a null byte
+		    if (eip == 0x004122CF)
+		    {
+			    try
+			    {
+				    var esp = _cpu!.GetRegister("ESP");
+				    var edi = _cpu!.GetRegister("EDI");
+				    var ecx = _cpu!.GetRegister("ECX");
+				    var stackBufAddr = esp + 0x14;
+				    
+				    // Log every 100000th time we hit this instruction
+				    if (_ignTeasPostCrtExecutionCount % 100000 == 0)
+				    {
+					    _logger.LogError("[IGN_TEAS SCAS] At REPNZ SCAS (0x004122CF): ESP=0x{Esp:X8}, EDI=0x{Edi:X8}, ECX=0x{Ecx:X8}", esp, edi, ecx);
+					    _logger.LogError("[IGN_TEAS SCAS] Stack buffer at [ESP+0x14]=0x{Addr:X8}", stackBufAddr);
+					    
+					    // Dump first 64 bytes of stack buffer
+					    try
+					    {
+						    var stackBuf = new byte[64];
+						    for (int i = 0; i < 64; i++)
+						    {
+							    stackBuf[i] = _vm!.Read8(stackBufAddr + (uint)i);
+						    }
+						    var hex = BitConverter.ToString(stackBuf).Replace("-", " ");
+						    var ascii = new System.Text.StringBuilder();
+						    for (int i = 0; i < 64; i++)
+						    {
+							    var b = stackBuf[i];
+							    ascii.Append(b >= 32 && b < 127 ? (char)b : '.');
+						    }
+						    _logger.LogError("[IGN_TEAS SCAS] Stack buffer: {Hex}", hex);
+						    _logger.LogError("[IGN_TEAS SCAS] Stack ASCII: {Ascii}", ascii.ToString());
+					    }
+					    catch (Exception ex)
+					    {
+						    _logger.LogError(ex, "[IGN_TEAS SCAS] Failed to read stack buffer");
+					    }
+				    }
+			    }
+			    catch (Exception ex)
+			    {
+				    _logger.LogError(ex, "[IGN_TEAS SCAS] Failed to read registers");
+			    }
+		    }
+		    
 		    // Log periodically to see where we are
 		    if (_ignTeasPostCrtExecutionCount % IGN_TEAS_POST_FINAL_CRT_LOG_INTERVAL == 0)
 		    {
