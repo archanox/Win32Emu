@@ -56,7 +56,7 @@ public class IgnitionTeaserTests
     }
 
     [Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
-    public void IgnitionTeaser_ShouldLoadAndRun()
+    public async Task IgnitionTeaser_ShouldLoadAndRun()
     {
         // Arrange
         // Find the repository root by looking for the .sln file
@@ -108,14 +108,18 @@ public class IgnitionTeaserTests
             var timeout = TimeSpan.FromSeconds(60);
             
             var runTask = Task.Run(() => emulator.Run());
-            var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
+            var completedTask = await Task.WhenAny(runTask, Task.Delay(timeout));
             
             if (completedTask != runTask)
             {
                 _output.WriteLine("Test timed out after 60 seconds - stopping emulator");
                 emulator.Stop();
                 // Give the emulator up to 2 seconds to shut down gracefully
-                if (!runTask.Wait(TimeSpan.FromSeconds(2)))
+                try
+                {
+                    await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+                }
+                catch
                 {
                     _output.WriteLine("Emulator did not stop within 2 seconds after timeout.");
                 }
@@ -227,7 +231,7 @@ public class IgnitionTeaserTests
     }
 
     [Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
-    public void IgnitionTeaser_ShouldLoadAndRun_WithJitCpu()
+    public async Task IgnitionTeaser_ShouldLoadAndRun_WithJitCpu()
     {
         // Arrange
         // Find the repository root by looking for the .sln file
@@ -280,14 +284,18 @@ public class IgnitionTeaserTests
             var timeout = TimeSpan.FromSeconds(60);
             
             var runTask = Task.Run(() => emulator.Run());
-            var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
+            var completedTask = await Task.WhenAny(runTask, Task.Delay(timeout));
             
             if (completedTask != runTask)
             {
                 _output.WriteLine("Test timed out after 60 seconds - stopping emulator");
                 emulator.Stop();
                 // Give the emulator up to 2 seconds to shut down gracefully
-                if (!runTask.Wait(TimeSpan.FromSeconds(2)))
+                try
+                {
+                    await runTask.WaitAsync(TimeSpan.FromSeconds(2));
+                }
+                catch
                 {
                     _output.WriteLine("Emulator did not stop within 2 seconds after timeout.");
                 }
@@ -399,7 +407,7 @@ public class IgnitionTeaserTests
     }
 
     [Fact(Skip = "Very verbose - enable manually to see detailed debugging output")]
-    public void IgnitionTeaser_ShouldLoadAndRun_WithDebugLogging()
+    public async Task IgnitionTeaser_ShouldLoadAndRun_WithDebugLogging()
     {
         // This test is identical to the main test but runs with debug logging enabled
         // to capture all the detailed execution information
@@ -443,12 +451,12 @@ public class IgnitionTeaserTests
             
             try
             {
-                runTask.Wait(cancellationTokenSource.Token);
+                await runTask.WaitAsync(cancellationTokenSource.Token);
             }
             catch (OperationCanceledException)
             {
                 emulator.Stop();
-                runTask.Wait(TimeSpan.FromSeconds(2));
+                await runTask.WaitAsync(TimeSpan.FromSeconds(2));
             }
         }
         catch (Exception ex)

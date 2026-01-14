@@ -23,7 +23,7 @@ public class IgnitionTeaserIATDebugTests
 	}
 
 	[Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
-	public void IgnitionTeaser_ValidateIATAtEachStep()
+	public async Task IgnitionTeaser_ValidateIATAtEachStep()
 	{
 		var exePath = FindExecutable("IGN_TEAS.EXE");
 		if (!File.Exists(exePath))
@@ -80,13 +80,13 @@ public class IgnitionTeaserIATDebugTests
 
 			// Give it time to execute
 			var timeout = TimeSpan.FromSeconds(2);
-			var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
+			var completedTask = await Task.WhenAny(runTask, Task.Delay(timeout));
 
 			if (completedTask != runTask)
 			{
 				_output.WriteLine("\nExecution reached timeout - stopping");
 				emulator.Stop();
-				runTask.Wait(TimeSpan.FromSeconds(2));
+				await runTask.WaitAsync(TimeSpan.FromSeconds(2));
 			}
 		}
 		catch (Exception ex)

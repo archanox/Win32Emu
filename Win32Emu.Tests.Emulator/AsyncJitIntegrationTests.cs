@@ -126,7 +126,7 @@ public class AsyncJitIntegrationTests
 		var result = await cpu.ExecuteBlockAsync(mem);
 		
 		// Assert
-		Assert.NotNull(result);
+		// result is a struct (CpuStepResult) so it can't be null
 		// EAX should be unchanged (NOPs don't modify registers)
 		Assert.Equal(100u, cpu.GetRegister("EAX"));
 	}

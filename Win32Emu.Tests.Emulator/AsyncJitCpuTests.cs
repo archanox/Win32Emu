@@ -79,7 +79,8 @@ public class AsyncJitCpuTests
 		var result = await cpu.ExecuteBlockAsync(mem);
 		
 		// Assert - execution should stop at RET
-		Assert.NotNull(result);
+		// result is a struct (CpuStepResult) so it can't be null
+		Assert.False(result.IsCall);
 	}
 
 	[Fact]
@@ -209,7 +210,7 @@ public class AsyncJitCpuTests
 		var result = await cpu.ExecuteBlockAsync(mem);
 		
 		// Assert
-		Assert.NotNull(result);
+		// result is a struct (CpuStepResult) so it can't be null
 		Assert.True(result.IsCall); // Should stop at CALL
 		// EIP should have advanced by executing instructions
 		Assert.NotEqual(initialEip, cpu.GetEip());
