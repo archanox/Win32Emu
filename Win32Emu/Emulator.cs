@@ -3072,6 +3072,19 @@ public sealed class Emulator : IDisposable
             
             _cpu.SetRegister("ESP", esp + 4);
             
+            // CRITICAL: Win95/Win32 ABI requires direction flag to be CLEARED on entry to Win32 API functions
+            // Per Microsoft documentation: "The direction flag must be cleared (set to 0) before calling any Win32 API function"
+            // If the CRT or application code sets DF=1 (via STD instruction), we must clear it here
+            // to ensure string operations inside the API (and after return) work correctly.
+            // This fixes ign_teas CRT infinite loop where string scanning goes in wrong direction.
+            const uint FLAG_DF = 1u << 10;  // Direction Flag at bit 10
+            var eflags = _cpu.GetRegister("EFLAGS");
+            if ((eflags & FLAG_DF) != 0)
+            {
+                _logger.LogWarning("[Syscall] Direction Flag (DF) was SET before API call - clearing per Win32 ABI (EFLAGS=0x{Eflags:X8})", eflags);
+                _cpu.SetRegister("EFLAGS", eflags & ~FLAG_DF);
+            }
+            
             // Use async dispatcher to support async Win32 API implementations (required for WASM)
             var (success, ret, argBytes, callingConvention) = await _dispatcher!.TryInvokeAsync(dll, name, _cpu, _vm!, cancellationToken).ConfigureAwait(false);
             if (success)
@@ -3117,6 +3130,16 @@ public sealed class Emulator : IDisposable
                 
                 // Set return value in EAX (stdcall convention)
                 _cpu.SetRegister("EAX", ret);
+                
+                // CRITICAL: Win95/Win32 ABI requires direction flag to be CLEARED on exit from Win32 API functions
+                // Even though we cleared it on entry, the API implementation might have used string operations
+                // that could modify it. Per Win32 ABI, we must ensure DF=0 when returning to application code.
+                var eflagsAfter = _cpu.GetRegister("EFLAGS");
+                if ((eflagsAfter & FLAG_DF) != 0)
+                {
+                    _logger.LogWarning("[Syscall] Direction Flag (DF) was SET after API call - clearing per Win32 ABI (EFLAGS=0x{Eflags:X8})", eflagsAfter);
+                    _cpu.SetRegister("EFLAGS", eflagsAfter & ~FLAG_DF);
+                }
                 
                 // Restore ESP to original value so CPU can execute RET instructions naturally
                 _cpu.SetRegister("ESP", originalEsp);
