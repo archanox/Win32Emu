@@ -8,9 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="../Win32Emu/Win32Emu.csproj" />
   </ItemGroup>
 
