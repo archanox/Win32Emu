@@ -12,6 +12,7 @@
     <PackageReference Include="Lokad.ILPack" Version="0.3.0" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
+    <PackageReference Include="Reko.Decompiler.Runtime" Version="0.11.6" />
   </ItemGroup>
 
 </Project>
