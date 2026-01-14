@@ -1565,6 +1565,34 @@ public sealed class Emulator : IDisposable
 				    var endHex = BitConverter.ToString(endBuffer).Replace("-", " ");
 				    _logger.LogWarning("[IGN_TEAS POST-CRT]   Bytes 320-349 Hex: {Hex}", endHex);
 				    _logger.LogWarning("[IGN_TEAS POST-CRT]   (Byte 329 is at index 329, should be double-null at 327-328 or 328-329)");
+				    
+				    // Check what's at EBP (frame pointer) - CRT may expect environment pointer there
+				    var ebp = _cpu!.GetRegister("EBP");
+				    var ptrAtEbp = _vm.Read32(ebp);
+				    _logger.LogError("[IGN_TEAS POST-CRT] ⚠️  EBP=0x{Ebp:X8}, value at [EBP]=0x{PtrAtEbp:X8}", ebp, ptrAtEbp);
+				    
+				    // Check what's at that pointer (if it looks valid)
+				    if (ptrAtEbp >= 0x00400000 && ptrAtEbp < 0x10000000)
+				    {
+					    try
+					    {
+						    var firstBytes = new byte[32];
+						    for (int i = 0; i < 32; i++)
+						    {
+							    firstBytes[i] = _vm.Read8(ptrAtEbp + (uint)i);
+						    }
+						    var ptrHex = BitConverter.ToString(firstBytes).Replace("-", " ");
+						    _logger.LogError("[IGN_TEAS POST-CRT] Data at [EBP] pointer 0x{Ptr:X8}: {Hex}", ptrAtEbp, ptrHex);
+					    }
+					    catch (Exception ex)
+					    {
+						    _logger.LogError(ex, "[IGN_TEAS POST-CRT] Failed to read from pointer at [EBP]");
+					    }
+				    }
+				    else
+				    {
+					    _logger.LogError("[IGN_TEAS POST-CRT] Pointer at [EBP] looks invalid (0x{Ptr:X8}) - should point to environment", ptrAtEbp);
+				    }
 			    }
 			    catch (Exception ex)
 			    {
