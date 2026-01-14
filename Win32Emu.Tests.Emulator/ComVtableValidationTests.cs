@@ -26,7 +26,7 @@ public class ComVtableValidationTests
 	/// Tests the full flow: DirectDrawCreate -> SetCooperativeLevel -> SetDisplayMode -> CreateSurface
 	/// </summary>
 	[Fact]
-	public void DirectDrawComSequence_ShouldExecuteAllMethodsCorrectly()
+	public async Task DirectDrawComSequence_ShouldExecuteAllMethodsCorrectly()
 	{
 		var exePath = FindRetrowin32Executable("cpp/ddraw.exe");
 		
@@ -44,13 +44,13 @@ public class ComVtableValidationTests
 		_output.WriteLine("Starting emulation with 3 second timeout...");
 		var timeout = TimeSpan.FromSeconds(3);
 		var runTask = Task.Run(() => emulator.Run());
-		var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
+		var completedTask = await Task.WhenAny(runTask, Task.Delay(timeout));
 
 		if (completedTask != runTask)
 		{
 			_output.WriteLine("Test timed out (expected for message loop test)");
 			emulator.Stop();
-			runTask.Wait(TimeSpan.FromSeconds(2));
+			await runTask.WaitAsync(TimeSpan.FromSeconds(2));
 		}
 
 		// Verify that the expected stdout messages were printed
@@ -79,7 +79,7 @@ public class ComVtableValidationTests
 	/// This ensures argBytes calculation is accurate for various method signatures.
 	/// </summary>
 	[Fact]
-	public void DirectDrawComMethods_ShouldHandleVariousParameterCounts()
+	public async Task DirectDrawComMethods_ShouldHandleVariousParameterCounts()
 	{
 		var exePath = FindRetrowin32Executable("cpp/ddraw.exe");
 		var testHost = new TestEmulatorHost(_output);
@@ -89,12 +89,12 @@ public class ComVtableValidationTests
 		emulator.LoadExecutable(exePath, debugMode: false, reservedMemoryMb: 256);
 
 		var runTask = Task.Run(() => emulator.Run());
-		Task.WhenAny(runTask, Task.Delay(TimeSpan.FromSeconds(3))).Wait();
+		await Task.WhenAny(runTask, Task.Delay(TimeSpan.FromSeconds(3)));
 		
 		if (!runTask.IsCompleted)
 		{
 			emulator.Stop();
-			runTask.Wait(TimeSpan.FromSeconds(2));
+			await runTask.WaitAsync(TimeSpan.FromSeconds(2));
 		}
 
 		// SetCooperativeLevel has 2 parameters (+ pThis)

@@ -18,7 +18,7 @@ public class IgnitionTeaserDiagnosticTests
     }
 
     [Fact(Skip = "Headless mode available - ign_teas integration tests no longer needed")]
-    public void Diagnostic_LogExecutionAfterLastApiCall()
+    public async Task Diagnostic_LogExecutionAfterLastApiCall()
     {
         var currentDir = Directory.GetCurrentDirectory();
         var repoRoot = currentDir;
@@ -49,13 +49,13 @@ public class IgnitionTeaserDiagnosticTests
         
         var timeout = TimeSpan.FromSeconds(2);
         var runTask = Task.Run(() => emulator.Run());
-        var completedTask = Task.WhenAny(runTask, Task.Delay(timeout)).Result;
+        var completedTask = await Task.WhenAny(runTask, Task.Delay(timeout));
         
         if (completedTask != runTask)
         {
             _output.WriteLine("\nTest timed out - stopping emulator");
             emulator.Stop();
-            runTask.Wait(TimeSpan.FromSeconds(2));
+            await runTask.WaitAsync(TimeSpan.FromSeconds(2));
         }
         
         _output.WriteLine($"\nDiagnostic Summary:");

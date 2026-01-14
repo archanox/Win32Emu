@@ -156,7 +156,8 @@ public class GameDbIntegrationTests : IDisposable
         // If there are games, verify the structure is valid
         foreach (var game in allGames)
         {
-            Assert.NotNull(game.Id);
+            // game.Id is a Guid (value type) so it can't be null
+            Assert.NotEqual(Guid.Empty, game.Id);
             Assert.NotNull(game.Title);
             Assert.NotNull(game.Executables);
         }
