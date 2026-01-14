@@ -52,6 +52,9 @@ public sealed class Emulator : IDisposable
     // Note: Based on instruction count, not real time - actual latency depends on CPU performance
     private const ulong EVENT_PROCESSING_INTERVAL = 1000;
     
+    // x86 CPU flags
+    private const uint FLAG_DF = 1u << 10;  // Direction Flag (bit 10) - used for Win95 ABI compliance
+    
     // x86 instruction opcodes for import stub patching
     private const byte RET_OPCODE = 0xC3;           // RET - return (no stack cleanup)
     private const byte RET_IMM16_OPCODE = 0xC2;     // RET imm16 - return with stack cleanup
@@ -141,10 +144,6 @@ public sealed class Emulator : IDisposable
     private ulong _ignTeasCrtLastLogIteration = 0;
     private const ulong IGN_TEAS_CRT_LOG_INTERVAL = 100; // Log every 100 iterations in CRT loop (lowered to capture shorter loops)
     private bool _ignTeasCrtStringLogged = false; // Only log string content once
-    private int _ignTeasCrtLoopExitCount = 0; // Track how many times we've exited the CRT loop
-    private ulong _ignTeasPostCrtExecutionCount = 0; // Track instructions executed after final CRT exit
-    private uint _ignTeasLastPostCrtEipForLoop = 0; // Track last EIP after CRT for loop detection  
-    private const ulong IGN_TEAS_POST_FINAL_CRT_LOG_INTERVAL = 10000; // Log every 10K instructions after final CRT
     
     // IGN_TEAS diagnostic constants - function addresses from Ghidra decompilation
     private const uint IGN_TEAS_MAIN_INIT_ADDR = 0x004023F0;          // Main initialization (calls texture loading, DirectDraw setup)
@@ -719,14 +718,14 @@ public sealed class Emulator : IDisposable
         // CRITICAL: Zero-initialize the ENTIRE stack reserve region for Win95 compatibility
         // Win95-era CRT expects stack memory to be zero-filled (similar to VirtualAlloc with MEM_COMMIT)
         // Without this, REPNZ SCASB instructions scanning for null terminators will read garbage data
-        // and loop indefinitely (e.g., ign_teas CRT initialization at 0x004122CF)
+        // and loop indefinitely
         // NOTE: We zero the entire reserve (not just commit) because the stack grows during CRT init
         _logger.LogInformation("[Loader] Zero-initializing entire stack reserve region (0x{Start:X8} - 0x{End:X8}, {Size} bytes)",
             _stackLimit, _stackBase, stackReserve);
-        for (uint addr = _stackLimit; addr < _stackBase; addr++)
-        {
-            _vm!.Write8(addr, 0);
-        }
+        
+        // Use bulk zero operation for efficiency instead of byte-by-byte writes
+        var zeroBuffer = new byte[stackReserve];
+        _vm!.WriteBytes(_stackLimit, zeroBuffer);
         
         // Store heap base for use in checks
         _heapBase = CalculateHeapBase(_image);
@@ -1526,8 +1525,7 @@ public sealed class Emulator : IDisposable
 	    // Reset counter when we exit the loop
 	    else if (_ignTeasCrtLoopIterations > 0)
 	    {
-		    _ignTeasCrtLoopExitCount++;
-		    _logger.LogWarning("[IGN_TEAS CRT] Exited CRT loop after {Iterations} total iterations (exit #{ExitCount})", _ignTeasCrtLoopIterations, _ignTeasCrtLoopExitCount);
+		    _logger.LogWarning("[IGN_TEAS CRT] Exited CRT loop after {Iterations} total iterations", _ignTeasCrtLoopIterations);
 		    if (_ignTeasCrtLoopIterations > CRT_LOOP_PARSING_BUG_THRESHOLD)
 		    {
 			    _logger.LogError("[IGN_TEAS CRT] ⚠️ CRT loop iterated {Iterations} times - this indicates a parsing bug!", _ignTeasCrtLoopIterations);
@@ -1535,149 +1533,6 @@ public sealed class Emulator : IDisposable
 		    _ignTeasCrtLoopIterations = 0;
 		    _ignTeasCrtLastLogIteration = 0;
 		    _ignTeasCrtStringLogged = false;
-	    }
-	    // Track execution after CRT exits (after 4th exit, start logging to see where it goes)
-	    else if (_ignTeasCrtLoopExitCount >= 4)
-	    {
-		    _ignTeasPostCrtExecutionCount++;
-		    
-		    // Dump buffer once at start to see what was written
-		    if (_ignTeasPostCrtExecutionCount == 1 && _vm != null)
-		    {
-			    _logger.LogWarning("[IGN_TEAS POST-CRT] Dumping environment buffer at 0x00480200 (bytes 0-99, 320-349):");
-			    try
-			    {
-				    // First 100 bytes
-				    var buffer = new byte[100];
-				    for (int i = 0; i < 100; i++)
-				    {
-					    buffer[i] = _vm.Read8(0x00480200 + (uint)i);
-				    }
-				    var hex = BitConverter.ToString(buffer).Replace("-", " ");
-				    _logger.LogWarning("[IGN_TEAS POST-CRT]   Bytes 0-99 Hex: {Hex}", hex);
-				    
-				    // Last 30 bytes around 329 (0x149)
-				    var endBuffer = new byte[30];
-				    for (int i = 0; i < 30; i++)
-				    {
-					    endBuffer[i] = _vm.Read8(0x00480200 + 320 + (uint)i);
-				    }
-				    var endHex = BitConverter.ToString(endBuffer).Replace("-", " ");
-				    _logger.LogWarning("[IGN_TEAS POST-CRT]   Bytes 320-349 Hex: {Hex}", endHex);
-				    _logger.LogWarning("[IGN_TEAS POST-CRT]   (Byte 329 is at index 329, should be double-null at 327-328 or 328-329)");
-				    
-				    // Check what's at EBP (frame pointer) - CRT may expect environment pointer there
-				    var ebp = _cpu!.GetRegister("EBP");
-				    var ptrAtEbp = _vm.Read32(ebp);
-				    _logger.LogError("[IGN_TEAS POST-CRT] ⚠️  EBP=0x{Ebp:X8}, value at [EBP]=0x{PtrAtEbp:X8}", ebp, ptrAtEbp);
-				    
-				    // Check what's at that pointer (if it looks valid)
-				    if (ptrAtEbp >= 0x00400000 && ptrAtEbp < 0x10000000)
-				    {
-					    try
-					    {
-						    var firstBytes = new byte[32];
-						    for (int i = 0; i < 32; i++)
-						    {
-							    firstBytes[i] = _vm.Read8(ptrAtEbp + (uint)i);
-						    }
-						    var ptrHex = BitConverter.ToString(firstBytes).Replace("-", " ");
-						    _logger.LogError("[IGN_TEAS POST-CRT] Data at [EBP] pointer 0x{Ptr:X8}: {Hex}", ptrAtEbp, ptrHex);
-					    }
-					    catch (Exception ex)
-					    {
-						    _logger.LogError(ex, "[IGN_TEAS POST-CRT] Failed to read from pointer at [EBP]");
-					    }
-				    }
-				    else
-				    {
-					    _logger.LogError("[IGN_TEAS POST-CRT] Pointer at [EBP] looks invalid (0x{Ptr:X8}) - should point to environment", ptrAtEbp);
-				    }
-			    }
-			    catch (Exception ex)
-			    {
-				    _logger.LogError(ex, "[IGN_TEAS POST-CRT] Failed to dump buffer");
-			    }
-		    }
-		    
-		    // Check if we're at the REPNZ SCAS instruction at 0x004122CF
-		    // This instruction scans [ESP+0x14] for a null byte
-		    if (eip == 0x004122CF)
-		    {
-			    try
-			    {
-				    var esp = _cpu!.GetRegister("ESP");
-				    var edi = _cpu!.GetRegister("EDI");
-				    var ecx = _cpu!.GetRegister("ECX");
-				    var stackBufAddr = esp + 0x14;
-				    
-				    // Log every 100000th time we hit this instruction
-				    if (_ignTeasPostCrtExecutionCount % 100000 == 0)
-				    {
-					    _logger.LogError("[IGN_TEAS SCAS] At REPNZ SCAS (0x004122CF): ESP=0x{Esp:X8}, EDI=0x{Edi:X8}, ECX=0x{Ecx:X8}", esp, edi, ecx);
-					    _logger.LogError("[IGN_TEAS SCAS] Stack buffer at [ESP+0x14]=0x{Addr:X8}", stackBufAddr);
-					    
-					    // Dump first 64 bytes of stack buffer
-					    try
-					    {
-						    var stackBuf = new byte[64];
-						    for (int i = 0; i < 64; i++)
-						    {
-							    stackBuf[i] = _vm!.Read8(stackBufAddr + (uint)i);
-						    }
-						    var hex = BitConverter.ToString(stackBuf).Replace("-", " ");
-						    var ascii = new System.Text.StringBuilder();
-						    for (int i = 0; i < 64; i++)
-						    {
-							    var b = stackBuf[i];
-							    ascii.Append(b >= 32 && b < 127 ? (char)b : '.');
-						    }
-						    _logger.LogError("[IGN_TEAS SCAS] Stack buffer: {Hex}", hex);
-						    _logger.LogError("[IGN_TEAS SCAS] Stack ASCII: {Ascii}", ascii.ToString());
-					    }
-					    catch (Exception ex)
-					    {
-						    _logger.LogError(ex, "[IGN_TEAS SCAS] Failed to read stack buffer");
-					    }
-				    }
-			    }
-			    catch (Exception ex)
-			    {
-				    _logger.LogError(ex, "[IGN_TEAS SCAS] Failed to read registers");
-			    }
-		    }
-		    
-		    // Log periodically to see where we are
-		    if (_ignTeasPostCrtExecutionCount % IGN_TEAS_POST_FINAL_CRT_LOG_INTERVAL == 0)
-		    {
-			    try
-			    {
-				    var eax = _cpu!.GetRegister("EAX");
-				    var ebx = _cpu!.GetRegister("EBX");
-				    var ecx = _cpu!.GetRegister("ECX");
-				    var edx = _cpu!.GetRegister("EDX");
-				    var esi = _cpu!.GetRegister("ESI");
-				    var edi = _cpu!.GetRegister("EDI");
-				    var esp = _cpu!.GetRegister("ESP");
-				    var ebp = _cpu!.GetRegister("EBP");
-				    
-				    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing after final CRT exit: EIP=0x{Eip:X8} ({Count} instructions since exit)", eip, _ignTeasPostCrtExecutionCount);
-				    _logger.LogWarning("[IGN_TEAS POST-CRT]   Registers: EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8}", eax, ebx, ecx, edx);
-				    _logger.LogWarning("[IGN_TEAS POST-CRT]   ESI=0x{Esi:X8} EDI=0x{Edi:X8} ESP=0x{Esp:X8} EBP=0x{Ebp:X8}", esi, edi, esp, ebp);
-				    
-				    // Check if stuck in tight loop
-				    if (_ignTeasLastPostCrtEipForLoop == eip)
-				    {
-					    _logger.LogError("[IGN_TEAS POST-CRT] ⚠️ Stuck at same EIP=0x{Eip:X8} - infinite loop detected!", eip);
-				    }
-				    _ignTeasLastPostCrtEipForLoop = eip;
-			    }
-			    catch (Exception ex)
-			    {
-				    _logger.LogDebug(ex, "[IGN_TEAS POST-CRT] Could not read registers");
-				    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing after final CRT exit: EIP=0x{Eip:X8} ({Count} instructions since exit)", eip, _ignTeasPostCrtExecutionCount);
-			    }
-		    }
 	    }
     }
     
@@ -3163,8 +3018,6 @@ public sealed class Emulator : IDisposable
             // Per Microsoft documentation: "The direction flag must be cleared (set to 0) before calling any Win32 API function"
             // If the CRT or application code sets DF=1 (via STD instruction), we must clear it here
             // to ensure string operations inside the API (and after return) work correctly.
-            // This fixes ign_teas CRT infinite loop where string scanning goes in wrong direction.
-            const uint FLAG_DF = 1u << 10;  // Direction Flag at bit 10
             var eflags = _cpu.GetRegister("EFLAGS");
             if ((eflags & FLAG_DF) != 0)
             {

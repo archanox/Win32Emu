@@ -4585,34 +4585,10 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 				_logger.LogDebug("[Kernel32] WideCharToMultiByte: Writing {BytesLength} bytes to 0x{LpMultiByteStr:X8}", multiByteBytes.Length, lpMultiByteStr);
 				_env.MemWriteBytes(lpMultiByteStr, multiByteBytes);
 				
-				// Log last 10 bytes for debugging environment block issues
-				if (multiByteBytes.Length >= 10)
-				{
-					var lastBytes = multiByteBytes[(multiByteBytes.Length - 10)..];
-					var hex = BitConverter.ToString(lastBytes).Replace("-", " ");
-					_logger.LogInformation("[Kernel32] WideCharToMultiByte: Last 10 bytes written: {Hex}", hex);
-				}
-				
 				// If input was null-terminated, add null terminator to output
 				if (cchWideChar == unchecked((uint)-1))
 				{
 					_env.MemWrite8(lpMultiByteStr + (uint)multiByteBytes.Length, 0);
-					_logger.LogInformation("[Kernel32] WideCharToMultiByte: Added null terminator at offset {Offset}", multiByteBytes.Length);
-				}
-				
-				// WORKAROUND: For environment blocks (large strings with embedded nulls),
-				// write additional null bytes after the buffer to ensure CRT scanning loops can find a terminator
-				// even if they read slightly past the reported size due to bugs or alignment assumptions.
-				// This fixes infinite loop in ign_teas CRT initialization at 0x004122C4.
-				if (multiByteBytes.Length > 200 && cchWideChar != unchecked((uint)-1))
-				{
-					// This looks like an environment block (large, not null-terminated input)
-					// Write extra nulls after it to prevent CRT from reading garbage
-					for (uint i = 0; i < 64; i++)
-					{
-						_env.MemWrite8(lpMultiByteStr + (uint)multiByteBytes.Length + i, 0);
-					}
-					_logger.LogInformation("[Kernel32] WideCharToMultiByte: Added 64 bytes of null padding after large buffer (len={Len}) for CRT compatibility", multiByteBytes.Length);
 				}
 			}
 
