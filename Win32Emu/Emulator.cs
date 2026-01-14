@@ -141,6 +141,10 @@ public sealed class Emulator : IDisposable
     private ulong _ignTeasCrtLastLogIteration = 0;
     private const ulong IGN_TEAS_CRT_LOG_INTERVAL = 100; // Log every 100 iterations in CRT loop (lowered to capture shorter loops)
     private bool _ignTeasCrtStringLogged = false; // Only log string content once
+    private int _ignTeasCrtLoopExitCount = 0; // Track how many times we've exited the CRT loop
+    private ulong _ignTeasPostCrtExecutionCount = 0; // Track instructions executed after final CRT exit
+    private uint _ignTeasLastPostCrtEipForLoop = 0; // Track last EIP after CRT for loop detection  
+    private const ulong IGN_TEAS_POST_FINAL_CRT_LOG_INTERVAL = 10000; // Log every 10K instructions after final CRT
     
     // IGN_TEAS diagnostic constants - function addresses from Ghidra decompilation
     private const uint IGN_TEAS_MAIN_INIT_ADDR = 0x004023F0;          // Main initialization (calls texture loading, DirectDraw setup)
@@ -1510,7 +1514,8 @@ public sealed class Emulator : IDisposable
 	    // Reset counter when we exit the loop
 	    else if (_ignTeasCrtLoopIterations > 0)
 	    {
-		    _logger.LogWarning("[IGN_TEAS CRT] Exited CRT loop after {Iterations} total iterations", _ignTeasCrtLoopIterations);
+		    _ignTeasCrtLoopExitCount++;
+		    _logger.LogWarning("[IGN_TEAS CRT] Exited CRT loop after {Iterations} total iterations (exit #{ExitCount})", _ignTeasCrtLoopIterations, _ignTeasCrtLoopExitCount);
 		    if (_ignTeasCrtLoopIterations > CRT_LOOP_PARSING_BUG_THRESHOLD)
 		    {
 			    _logger.LogError("[IGN_TEAS CRT] ⚠️ CRT loop iterated {Iterations} times - this indicates a parsing bug!", _ignTeasCrtLoopIterations);
@@ -1518,6 +1523,24 @@ public sealed class Emulator : IDisposable
 		    _ignTeasCrtLoopIterations = 0;
 		    _ignTeasCrtLastLogIteration = 0;
 		    _ignTeasCrtStringLogged = false;
+	    }
+	    // Track execution after CRT exits (after 4th exit, start logging to see where it goes)
+	    else if (_ignTeasCrtLoopExitCount >= 4)
+	    {
+		    _ignTeasPostCrtExecutionCount++;
+		    
+		    // Log periodically to see where we are
+		    if (_ignTeasPostCrtExecutionCount % IGN_TEAS_POST_FINAL_CRT_LOG_INTERVAL == 0)
+		    {
+			    _logger.LogWarning("[IGN_TEAS POST-CRT] Executing after final CRT exit: EIP=0x{Eip:X8} ({Count} instructions since exit)", eip, _ignTeasPostCrtExecutionCount);
+			    
+			    // Check if stuck in tight loop
+			    if (_ignTeasLastPostCrtEipForLoop == eip)
+			    {
+				    _logger.LogError("[IGN_TEAS POST-CRT] ⚠️ Stuck at same EIP=0x{Eip:X8} - infinite loop detected!", eip);
+			    }
+			    _ignTeasLastPostCrtEipForLoop = eip;
+		    }
 	    }
     }
     
