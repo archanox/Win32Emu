@@ -807,26 +807,41 @@ public class ProcessEnvironment
 		}
 	}
 
-	public uint GetEnvironmentStringsW()
+	/// <summary>
+	/// Builds the special Windows drive current directory variables prefix for environment blocks.
+	/// These hidden variables begin with "=" and are required by Win95/Win98 CRT initialization.
+	/// </summary>
+	private void AppendSpecialEnvironmentVariables(StringBuilder envBlock)
 	{
-		var envBlock = new StringBuilder();
-		
 		// CRITICAL: Windows environment blocks start with special "drive current directory" variables
 		// These hidden variables begin with "=" and store the current directory for each drive
-		// Format: =<drive>:=<path> (e.g., "=C:=C:\", "=D:=D:\")
+		// Format: =<drive>:=<path> (e.g., "=C:=C:\MyApp", "=D:=D:\")
 		// The CRT initialization code expects these variables at the start of the environment block
 		// Without them, CRT parsing loops may not terminate correctly
 		
-		// Add current directory for C: drive (the executable's drive)
-		envBlock.Append("=C:=C:\\ign_teas");
-		envBlock.Append('\0');
+		// Add current directory for C: drive (extracted from CurrentDirectory property)
+		// This ensures the variable matches the actual working directory
+		var currentDir = CurrentDirectory;
+		if (!string.IsNullOrEmpty(currentDir))
+		{
+			envBlock.Append($"=C:={currentDir}");
+			envBlock.Append('\0');
+		}
 		
 		// Add the special "=::=::\" variable seen in real Windows environment blocks
 		// This appears to be related to UNC path handling
 		envBlock.Append("=::=::\\");
 		envBlock.Append('\0');
+	}
+
+	public uint GetEnvironmentStringsW()
+	{
+		var envBlock = new StringBuilder();
 		
-		// Now add each regular environment variable as "NAME=VALUE\0"
+		// Add special drive directory variables at the start
+		AppendSpecialEnvironmentVariables(envBlock);
+		
+		// Add each regular environment variable as "NAME=VALUE\0"
 		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
 		{
 			envBlock.Append($"{kvp.Key}={kvp.Value}");
@@ -855,22 +870,10 @@ public class ProcessEnvironment
 	{
 		var envBlock = new StringBuilder();
 		
-		// CRITICAL: Windows environment blocks start with special "drive current directory" variables
-		// These hidden variables begin with "=" and store the current directory for each drive
-		// Format: =<drive>:=<path> (e.g., "=C:=C:\", "=D:=D:\")
-		// The CRT initialization code expects these variables at the start of the environment block
-		// Without them, CRT parsing loops may not terminate correctly
+		// Add special drive directory variables at the start
+		AppendSpecialEnvironmentVariables(envBlock);
 		
-		// Add current directory for C: drive (the executable's drive)
-		envBlock.Append("=C:=C:\\ign_teas");
-		envBlock.Append('\0');
-		
-		// Add the special "=::=::\" variable seen in real Windows environment blocks
-		// This appears to be related to UNC path handling
-		envBlock.Append("=::=::\\");
-		envBlock.Append('\0');
-		
-		// Now add each regular environment variable as "NAME=VALUE\0"
+		// Add each regular environment variable as "NAME=VALUE\0"
 		foreach (var kvp in _environmentVariables.OrderBy(x => x.Key))
 		{
 			envBlock.Append($"{kvp.Key}={kvp.Value}");
