@@ -199,6 +199,8 @@ public sealed class Emulator : IDisposable
     // IGN_TEAS post-CRT progress tracking
     private ulong _ignTeasPostCrtInstructions = 0;
     private ulong _ignTeasLimboInstructions = 0;
+    private ulong _ignTeasAnywhereCalls = 0;
+    private bool _ignTeasHadCrtExit = false; // True if we've seen at least one CRT loop exit
     
     /// <summary>
     /// DOS INT 21h function numbers
@@ -1533,6 +1535,9 @@ public sealed class Emulator : IDisposable
 		    _ignTeasCrtLoopIterations = 0;
 		    _ignTeasCrtLastLogIteration = 0;
 		    _ignTeasCrtStringLogged = false;
+		    _ignTeasHadCrtExit = true; // Mark that we've had at least one CRT exit
+		    _ignTeasAnywhereCalls = 0; // Reset the post-CRT counter
+		    _logger.LogWarning("[IGN_TEAS CRT] ⚠️ CRT EXITED at EIP=0x{Eip:X8} - Will track execution until next CRT or WinMain", eip);
 	    }
     }
     
@@ -1553,6 +1558,61 @@ public sealed class Emulator : IDisposable
 	    if (!(exeNameFromImage == "IGN_TEAS.EXE" || exeNameFromImage.Contains("IGN_TEAS")))
 	    {
 		    return;
+	    }
+	    
+	    // Check if we're currently in CRT range
+	    bool inCrtNow = (eip == IGN_TEAS_CRT_ENTRY_1 || eip == IGN_TEAS_CRT_ENTRY_2 || 
+	                     (eip >= IGN_TEAS_CRT_LOOP_START && eip <= IGN_TEAS_CRT_LOOP_END));
+	    
+	    // If we've had at least one CRT exit, we're NOT currently in CRT, and we haven't reached WinMain yet, track EVERYTHING
+	    if (_ignTeasHadCrtExit && !inCrtNow && !_ignTeasReachedBeyondCrt)
+	    {
+		    // We're outside CRT but haven't reached WinMain yet
+		    _ignTeasAnywhereCalls++;
+		    
+		    // Log every 1000 instructions to see where we're stuck
+		    if (_ignTeasAnywhereCalls % 1000 == 0)
+		    {
+			    _logger.LogWarning("[IGN_TEAS POST-CRT-EXIT] Still executing after CRT exit, at EIP=0x{Eip:X8} ({Count} instructions since last CRT exit)", eip, _ignTeasAnywhereCalls);
+			    
+			    // Log a sample of the code to see what's being executed
+			    try
+			    {
+				    if (_vm != null && _cpu != null)
+				    {
+					    var esp = _cpu.GetRegister("ESP");
+					    var ebp = _cpu.GetRegister("EBP");
+					    var eax = _cpu.GetRegister("EAX");
+					    _logger.LogWarning("[IGN_TEAS POST-CRT-EXIT]   Registers: ESP=0x{Esp:X8} EBP=0x{Ebp:X8} EAX=0x{Eax:X8}", esp, ebp, eax);
+					    
+					    // Read a few bytes at EIP to see what instruction is being executed
+					    var bytes = new byte[16];
+					    for (int i = 0; i < 16; i++)
+					    {
+						    try
+						    {
+							    bytes[i] = _vm.Read8(eip + (uint)i);
+						    }
+						    catch
+						    {
+							    break;
+						    }
+					    }
+					    var hex = BitConverter.ToString(bytes).Replace("-", " ");
+					    _logger.LogWarning("[IGN_TEAS POST-CRT-EXIT]   Code at EIP: {Hex}", hex);
+				    }
+			    }
+			    catch (Exception ex)
+			    {
+				    _logger.LogDebug(ex, "[IGN_TEAS POST-CRT-EXIT] Failed to read registers");
+			    }
+		    }
+		    
+		    // If we've executed more than 100K instructions since CRT exit without reaching WinMain, something is wrong
+		    if (_ignTeasAnywhereCalls > 100000)
+		    {
+			    _logger.LogError("[IGN_TEAS POST-CRT-EXIT] ⚠️⚠️ Executed {Count} instructions since CRT exit without reaching WinMain - likely stuck in infinite loop!", _ignTeasAnywhereCalls);
+		    }
 	    }
 	    
 	    // Track ALL execution after CRT range to see where it goes
@@ -1580,6 +1640,7 @@ public sealed class Emulator : IDisposable
 		    _ignTeasReachedBeyondCrt = true;
 		    _logger.LogWarning("[IGN_TEAS PROGRESS] ✅ Reached address 0x{Eip:X8} - BEYOND CRT initialization!", eip);
 		    _logger.LogWarning("[IGN_TEAS PROGRESS] This means CRT completed successfully and we're in game code");
+		    _logger.LogWarning("[IGN_TEAS PROGRESS] Executed {Count} instructions between last CRT exit and WinMain", _ignTeasAnywhereCalls);
 	    }
 	    
 	    // Known key addresses
