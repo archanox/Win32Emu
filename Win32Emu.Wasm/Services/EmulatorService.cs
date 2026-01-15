@@ -306,6 +306,9 @@ public class EmulatorService : IDisposable
 		{
 			_isRunning = true;
 			_isPaused = false;
+			
+			// Ensure old cancellation token source is disposed before creating a new one
+			_emulationCts?.Dispose();
 			_emulationCts = new CancellationTokenSource();
 			
 			EmitDebugOutput("Starting emulation...");
