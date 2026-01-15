@@ -637,7 +637,25 @@ public sealed class Emulator : IDisposable
         // Create unified CPU backend (JitCpu with interpreter mode)
         // JitCpu uses JIT compilation when available (native platforms) and falls back to
         // interpreter mode in WASM or when forceInterpreterMode is true
-        var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps, forceInterpreterMode: forceInterpreterMode);
+        // Use a persistent cache directory in the repository for better performance across runs
+        // Try to find the repository root by looking for the .git directory
+        var currentDir = Directory.GetCurrentDirectory();
+        var repoRoot = currentDir;
+        while (repoRoot != null && !Directory.Exists(Path.Combine(repoRoot, ".git")))
+        {
+            var parent = Directory.GetParent(repoRoot);
+            if (parent == null) break;
+            repoRoot = parent.FullName;
+        }
+        // If we couldn't find .git, use current directory as fallback
+        if (!Directory.Exists(Path.Combine(repoRoot, ".git")))
+        {
+            repoRoot = currentDir;
+        }
+        var persistentCacheDir = Path.Combine(repoRoot, ".jitcache");
+        _logger.LogInformation("[Loader] Using JIT cache directory: {CacheDir}", persistentCacheDir);
+        
+        var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps, forceInterpreterMode: forceInterpreterMode, cacheDirectory: persistentCacheDir);
         _cpu = jitCpu;
         
         // Wire up ProcessEnvironment to JitCpu for transpiled function support
