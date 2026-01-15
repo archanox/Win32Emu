@@ -125,9 +125,18 @@ public class EmulatorService : IDisposable
 		try
 		{
 			// Stop any running emulation before loading a new executable
+			// This ensures proper cleanup of the previous emulation session
 			if (_isRunning)
 			{
 				await StopAsync();
+			}
+			else
+			{
+				// Even if not running, ensure cleanup of any lingering emulation resources
+				// This handles cases where the emulation stopped on its own (e.g., program exit)
+				_emulationCts?.Dispose();
+				_emulationCts = null;
+				_emulationTask = null;
 			}
 			
 			EmitDebugOutput($"Loading executable: {fileName} ({executableBytes.Length} bytes)");
@@ -418,6 +427,12 @@ public class EmulatorService : IDisposable
 				ExecutableName = _loadedExecutableName
 			});
 		}
+		
+		// Clean up emulation task and cancellation token source regardless of _isRunning state
+		// This ensures proper cleanup even if the emulation was already stopped or failed
+		_emulationCts?.Dispose();
+		_emulationCts = null;
+		_emulationTask = null;
 	}
 	
 	/// <summary>
