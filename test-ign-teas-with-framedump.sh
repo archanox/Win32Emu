@@ -8,7 +8,7 @@ PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
 IGN_TEAS_EXE="$PROJECT_ROOT/EXEs/ign_teas/IGN_TEAS.EXE"
 FRAME_DUMP_DIR="$PROJECT_ROOT/test-screenshots/ign_teas_frames"
 LOG_FILE="$PROJECT_ROOT/diagnostic_logs/ign_teas_framedump_$(date +%Y%m%d_%H%M%S).log"
-TIMEOUT_SECONDS=15
+TIMEOUT_SECONDS=120
 
 echo "🎮 IGN_TEAS Framebuffer Dump Test"
 echo "================================="

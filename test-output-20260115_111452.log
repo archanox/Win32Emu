@@ -1,0 +1,42 @@
+🎮 IGN_TEAS Framebuffer Dump Test
+=================================
+
+📁 Frame dump directory: /home/runner/work/Win32Emu/Win32Emu/test-screenshots/ign_teas_frames
+📝 Log file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_framedump_20260115_111452.log
+
+🔧 Configuration:
+   - Backend: Software (CPU rendering)
+   - Display: Headless (SDL_VIDEODRIVER=dummy)
+   - Frame dumping: Enabled
+   - Timeout: 120s
+
+🚀 Starting emulation...
+
+Using launch settings from /home/runner/work/Win32Emu/Win32Emu/Win32Emu.Gui/Properties/launchSettings.json...
+Unhandled exception: An error occurred trying to start process '/home/runner/work/Win32Emu/Win32Emu/Win32Emu.Gui/bin/Release/net10.0/Win32Emu.Gui' with working directory '/home/runner/work/Win32Emu/Win32Emu/EXEs/ign_teas'. No such file or directory
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Results
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ Application crashed with exit code: 1
+
+🖼️  Frames captured: 0
+⚠️  No frames were captured!
+
+Possible issues:
+  - Emulator didn't reach frame rendering code
+  - DirectDraw not initialized properly
+  - Check log file for errors
+
+📝 Log files:
+   Main log: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_framedump_20260115_111452.log
+   Stdout:   /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_framedump_20260115_111452.log.stdout
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ Test complete!
+
+To view captured frames:
+   ls /home/runner/work/Win32Emu/Win32Emu/test-screenshots/ign_teas_frames/
+
+To create a video from frames (requires ffmpeg):
+   ffmpeg -framerate 30 -pattern_type glob -i '/home/runner/work/Win32Emu/Win32Emu/test-screenshots/ign_teas_frames/frame_*.png' -c:v libx264 -pix_fmt yuv420p /home/runner/work/Win32Emu/Win32Emu/ign_teas_output.mp4

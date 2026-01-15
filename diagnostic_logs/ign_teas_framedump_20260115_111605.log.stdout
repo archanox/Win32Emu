@@ -1,0 +1,1062 @@
+Using launch settings from /home/runner/work/Win32Emu/Win32Emu/Win32Emu.Gui/Properties/launchSettings.json...
+Warning: Could not enable file logging: File not found: Software
+info: Win32Emu.Emulator[0]
+      Logging to file: /home/runner/work/Win32Emu/Win32Emu/diagnostic_logs/ign_teas_framedump_20260115_111605.log
+info: Win32Emu.Emulator[0]
+      Creating virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Created and formatted Vhd disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (536870912 bytes)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (Read-Write)
+info: Win32Emu.Emulator[0]
+      Created root directory: \ign_teas
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Starting copy of 32 files to virtual disk
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 1/32: IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133310.log
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133310.log'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133310.log'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133310.log (118513 bytes) [1/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 2/32: IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133903.log
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133903.log'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133903.log'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_133903.log (47070 bytes) [2/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 3/32: IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS.EXE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='IGN_TEAS.EXE'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN_TEAS.EXE (290816 bytes) [3/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 4/32: README.TXT
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\README.TXT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='README.TXT'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied README.TXT (2662 bytes) [4/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 5/32: IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_134417.log
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_134417.log'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas', filename='IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_134417.log'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN_TEAS_42aeaf49af6191400fa18ba3e3c47e48_20260108_134417.log (492564 bytes) [5/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 6/32: IGN3.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN3.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN3.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN3.TEX (65536 bytes) [6/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 7/32: IGN.PSQ
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.PSQ'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.PSQ'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.PSQ (288 bytes) [7/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 8/32: IGN6.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN6.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN6.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN6.DPS (23059 bytes) [8/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 9/32: IGN.PFM
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.PFM'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.PFM'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.PFM (5831571 bytes) [9/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 10/32: IGN5.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN5.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN5.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN5.DPS (23088 bytes) [10/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 11/32: IGN0.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN0.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN0.PIC'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN0.PIC (64846 bytes) [11/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 12/32: IGN1.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN1.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN1.PIC'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN1.PIC (308046 bytes) [12/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 13/32: IGN3.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN3.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN3.PIC'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN3.PIC (308046 bytes) [13/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 14/32: IGN8.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN8.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN8.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN8.TEX (65536 bytes) [14/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 15/32: IGN4.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN4.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN4.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN4.DPS (23066 bytes) [15/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 16/32: IGN4.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN4.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN4.PIC'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN4.PIC (308046 bytes) [16/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 17/32: IGN2.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN2.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN2.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN2.TEX (393280 bytes) [17/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 18/32: IGN7.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN7.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN7.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN7.DPS (23055 bytes) [18/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 19/32: IGN.PAN
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.PAN'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.PAN'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.PAN (65536 bytes) [19/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 20/32: IGN1.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN1.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN1.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN1.DPS (45272 bytes) [20/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 21/32: IGN2.PIC
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN2.PIC'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN2.PIC'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN2.PIC (308046 bytes) [21/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 22/32: IGN6.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN6.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN6.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN6.TEX (32768 bytes) [22/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 23/32: IGN2.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN2.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN2.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN2.DPS (23049 bytes) [23/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 24/32: IGN1.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN1.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN1.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN1.TEX (1048768 bytes) [24/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 25/32: IGN7.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN7.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN7.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN7.TEX (65536 bytes) [25/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 26/32: IGN.SHD
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.SHD'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.SHD'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.SHD (65536 bytes) [26/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 27/32: IGN3.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN3.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN3.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN3.DPS (23097 bytes) [27/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 28/32: IGN35.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN35.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN35.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN35.DPS (23030 bytes) [28/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 29/32: IGN25.DPS
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN25.DPS'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN25.DPS'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN25.DPS (23046 bytes) [29/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 30/32: IGN4.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN4.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN4.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN4.TEX (65536 bytes) [30/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 31/32: IGN.COL
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN.COL'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN.COL'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN.COL (776 bytes) [31/32]
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Copying file 32/32: IGN5.TEX
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\DATA\IGN5.TEX'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\ign_teas\DATA', filename='IGN5.TEX'
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Successfully copied IGN5.TEX (65536 bytes) [32/32]
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Disposed
+info: Win32Emu.Emulator[0]
+      [VHD Creation] Virtual disk created successfully: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (32/32 files copied)
+info: Win32Emu.Emulator[0]
+      Using virtual disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+info: Win32Emu.Emulator[0]
+      Executable VFS path: C:\ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [Loader] Extracting executable from virtual disk: C:\ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (Read-Write)
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\ign_teas\IGN_TEAS.EXE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: File exists as-is: '\ign_teas\IGN_TEAS.EXE'
+info: Win32Emu.Emulator[0]
+      [Loader] Extracted 290816 bytes from virtual disk
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Disposed
+info: Win32Emu.Emulator[0]
+      [Loader] Host OS: Ubuntu 24.04.3 LTS
+info: Win32Emu.Emulator[0]
+      [Loader] Host OS Architecture: X64
+info: Win32Emu.Emulator[0]
+      [Loader] Host Process Architecture: X64
+info: Win32Emu.Emulator[0]
+      [Loader] Host Framework: .NET 10.0.1
+info: Win32Emu.Emulator[0]
+      [Loader] Host Runtime Identifier: linux-x64
+info: Win32Emu.Emulator[0]
+      [Memory] Configured size: 256 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
+info: Win32Emu.Emulator[0]
+      [Loader] Detected format: PE32
+info: Win32Emu.Emulator[0]
+      [Loader] Created syscall dispatcher at 0x0E000000
+info: Win32Emu.Emulator[0]
+      [Loader] Processing imports from DLL: USER32.dll (30 symbols)
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!ClientToScreen -> IAT VA 0x004552E0 = synthetic 0x0F000000
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!DispatchMessageA -> IAT VA 0x004552E4 = synthetic 0x0F000010
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!SetRect -> IAT VA 0x004552E8 = synthetic 0x0F000020
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!GetMessageA -> IAT VA 0x004552EC = synthetic 0x0F000030
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!PeekMessageA -> IAT VA 0x004552F0 = synthetic 0x0F000040
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!RegisterClassA -> IAT VA 0x004552F4 = synthetic 0x0F000050
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!LoadIconA -> IAT VA 0x004552F8 = synthetic 0x0F000060
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!LoadCursorA -> IAT VA 0x004552FC = synthetic 0x0F000070
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!DefWindowProcA -> IAT VA 0x00455300 = synthetic 0x0F000080
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!DestroyWindow -> IAT VA 0x00455304 = synthetic 0x0F000090
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!SetCursor -> IAT VA 0x00455308 = synthetic 0x0F0000A0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!PostMessageA -> IAT VA 0x0045530C = synthetic 0x0F0000B0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!PostQuitMessage -> IAT VA 0x00455310 = synthetic 0x0F0000C0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!GetSystemMetrics -> IAT VA 0x00455314 = synthetic 0x0F0000D0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!GetClientRect -> IAT VA 0x00455318 = synthetic 0x0F0000E0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!SetWindowPos -> IAT VA 0x0045531C = synthetic 0x0F0000F0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!AdjustWindowRectEx -> IAT VA 0x00455320 = synthetic 0x0F000100
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!CreateWindowExA -> IAT VA 0x00455324 = synthetic 0x0F000110
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!UpdateWindow -> IAT VA 0x00455328 = synthetic 0x0F000120
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!TranslateMessage -> IAT VA 0x0045532C = synthetic 0x0F000130
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!GetDC -> IAT VA 0x00455330 = synthetic 0x0F000140
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!ShowWindow -> IAT VA 0x00455334 = synthetic 0x0F000150
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!MessageBoxA -> IAT VA 0x00455338 = synthetic 0x0F000160
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!GetWindowRect -> IAT VA 0x0045533C = synthetic 0x0F000170
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!SystemParametersInfoA -> IAT VA 0x00455340 = synthetic 0x0F000180
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!ReleaseDC -> IAT VA 0x00455344 = synthetic 0x0F000190
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!SetFocus -> IAT VA 0x00455348 = synthetic 0x0F0001A0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!GetMenu -> IAT VA 0x0045534C = synthetic 0x0F0001B0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!SetWindowLongA -> IAT VA 0x00455350 = synthetic 0x0F0001C0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: USER32.DLL!GetWindowLongA -> IAT VA 0x00455354 = synthetic 0x0F0001D0
+info: Win32Emu.Emulator[0]
+      [Loader] Processing imports from DLL: GDI32.dll (2 symbols)
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: GDI32.DLL!GetDeviceCaps -> IAT VA 0x00455220 = synthetic 0x0F0001E0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: GDI32.DLL!GetStockObject -> IAT VA 0x00455224 = synthetic 0x0F0001F0
+info: Win32Emu.Emulator[0]
+      [Loader] Processing imports from DLL: DDRAW.dll (1 symbols)
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: DDRAW.DLL!DirectDrawCreate -> IAT VA 0x00455208 = synthetic 0x0F000200
+info: Win32Emu.Emulator[0]
+      [Loader] Processing imports from DLL: DSOUND.dll (1 symbols)
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: DSOUND.DLL!DirectSoundCreate -> IAT VA 0x00455218 = synthetic 0x0F000210
+info: Win32Emu.Emulator[0]
+      [Loader] Processing imports from DLL: DINPUT.dll (1 symbols)
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: DINPUT.DLL!DirectInputCreateA -> IAT VA 0x00455210 = synthetic 0x0F000220
+info: Win32Emu.Emulator[0]
+      [Loader] Processing imports from DLL: WINMM.dll (4 symbols)
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: WINMM.DLL!timeGetTime -> IAT VA 0x0045535C = synthetic 0x0F000230
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: WINMM.DLL!timeBeginPeriod -> IAT VA 0x00455360 = synthetic 0x0F000240
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: WINMM.DLL!timeEndPeriod -> IAT VA 0x00455364 = synthetic 0x0F000250
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: WINMM.DLL!timeKillEvent -> IAT VA 0x00455368 = synthetic 0x0F000260
+info: Win32Emu.Emulator[0]
+      [Loader] Processing imports from DLL: KERNEL32.dll (44 symbols)
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetModuleFileNameA -> IAT VA 0x0045522C = synthetic 0x0F000270
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetEnvironmentStringsW -> IAT VA 0x00455230 = synthetic 0x0F000280
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!WideCharToMultiByte -> IAT VA 0x00455234 = synthetic 0x0F000290
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetStringTypeA -> IAT VA 0x00455238 = synthetic 0x0F0002A0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!CreateFileA -> IAT VA 0x0045523C = synthetic 0x0F0002B0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!FlushFileBuffers -> IAT VA 0x00455240 = synthetic 0x0F0002C0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!SetStdHandle -> IAT VA 0x00455244 = synthetic 0x0F0002D0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!LoadLibraryA -> IAT VA 0x00455248 = synthetic 0x0F0002E0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!SetFilePointer -> IAT VA 0x0045524C = synthetic 0x0F0002F0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!ReadFile -> IAT VA 0x00455250 = synthetic 0x0F000300
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!CloseHandle -> IAT VA 0x00455254 = synthetic 0x0F000310
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!VirtualAlloc -> IAT VA 0x00455258 = synthetic 0x0F000320
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!WriteFile -> IAT VA 0x0045525C = synthetic 0x0F000330
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!VirtualFree -> IAT VA 0x00455260 = synthetic 0x0F000340
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!RaiseException -> IAT VA 0x00455264 = synthetic 0x0F000350
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!SetEndOfFile -> IAT VA 0x00455268 = synthetic 0x0F000360
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!LCMapStringW -> IAT VA 0x0045526C = synthetic 0x0F000370
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!LCMapStringA -> IAT VA 0x00455270 = synthetic 0x0F000380
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetStringTypeW -> IAT VA 0x00455274 = synthetic 0x0F000390
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!ExitProcess -> IAT VA 0x00455278 = synthetic 0x0F0003A0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!TerminateProcess -> IAT VA 0x0045527C = synthetic 0x0F0003B0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetCurrentProcess -> IAT VA 0x00455280 = synthetic 0x0F0003C0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetModuleHandleA -> IAT VA 0x00455284 = synthetic 0x0F0003D0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetStartupInfoA -> IAT VA 0x00455288 = synthetic 0x0F0003E0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetCommandLineA -> IAT VA 0x0045528C = synthetic 0x0F0003F0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetVersion -> IAT VA 0x00455290 = synthetic 0x0F000400
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!HeapAlloc -> IAT VA 0x00455294 = synthetic 0x0F000410
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!HeapFree -> IAT VA 0x00455298 = synthetic 0x0F000420
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetLastError -> IAT VA 0x0045529C = synthetic 0x0F000430
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!HeapDestroy -> IAT VA 0x004552A0 = synthetic 0x0F000440
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!HeapCreate -> IAT VA 0x004552A4 = synthetic 0x0F000450
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetProcAddress -> IAT VA 0x004552A8 = synthetic 0x0F000460
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!RtlUnwind -> IAT VA 0x004552AC = synthetic 0x0F000470
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!UnhandledExceptionFilter -> IAT VA 0x004552B0 = synthetic 0x0F000480
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetFileType -> IAT VA 0x004552B4 = synthetic 0x0F000490
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!FreeEnvironmentStringsA -> IAT VA 0x004552B8 = synthetic 0x0F0004A0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!MultiByteToWideChar -> IAT VA 0x004552BC = synthetic 0x0F0004B0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetEnvironmentStrings -> IAT VA 0x004552C0 = synthetic 0x0F0004C0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!FreeEnvironmentStringsW -> IAT VA 0x004552C4 = synthetic 0x0F0004D0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!SetHandleCount -> IAT VA 0x004552C8 = synthetic 0x0F0004E0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetStdHandle -> IAT VA 0x004552CC = synthetic 0x0F0004F0
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetCPInfo -> IAT VA 0x004552D0 = synthetic 0x0F000500
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetACP -> IAT VA 0x004552D4 = synthetic 0x0F000510
+info: Win32Emu.Emulator[0]
+      [Loader] Mapped import: KERNEL32.DLL!GetOEMCP -> IAT VA 0x004552D8 = synthetic 0x0F000520
+info: Win32Emu.Emulator[0]
+      [Loader] Import mapping complete: 83 imports mapped to addresses 0x0F000000 - 0x0F000520
+info: Win32Emu.Emulator[0]
+      [Loader] IAT verification passed: all 83 entries are correct
+info: Win32Emu.Emulator[0]
+      [Loader] Registered 83 IAT entries for runtime protection
+info: Win32Emu.Emulator[0]
+      [Loader] Extracted 8 sections from PE file
+info: Win32Emu.Emulator[0]
+      [ProcessEnvironment] Console allocated - stdin=0x00000001, stdout=0x00000002, stderr=0x00000003
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SYSTEM
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SOFTWARE
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: NTUSER.DAT
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized 3 registry hives
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized system environment variables
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized user environment variables
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Registry hive initialized
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Synced environment variables from registry
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: BUTTON with WndProc=0x0D000000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: EDIT with WndProc=0x0D000001
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: STATIC with WndProc=0x0D000002
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: LISTBOX with WndProc=0x0D000003
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: COMBOBOX with WndProc=0x0D000004
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: SCROLLBAR with WndProc=0x0D000005
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: MDICLIENT with WndProc=0x0D000006
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: COMBOLBOX with WndProc=0x0D000007
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: DDEMLEVENT with WndProc=0x0D000008
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: MESSAGE with WndProc=0x0D000009
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32768 with WndProc=0x0D00000A
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32769 with WndProc=0x0D00000B
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32770 with WndProc=0x0D00000C
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32771 with WndProc=0x0D00000D
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Pre-registered standard control class: #32772 with WndProc=0x0D00000E
+info: Win32Emu.Emulator[0]
+      [Loader] Initializing virtual file system with disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+info: Win32Emu.Emulator[0]
+      [DiskVFS] Mounted VHD: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd (Read-Write)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Virtual File System initialized with disk: /tmp/Win32Emu_VHDs/IGN_TEAS_6b3405f4a47c285e.vhd
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Disposed registry hive manager
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SYSTEM'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32\Config', filename='SYSTEM'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32\Config'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32', filename='Config'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows', filename='System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Invalid path (no separator): '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32\Config'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SYSTEM
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config\SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32\Config', filename='SOFTWARE'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32\Config'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32\Config'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows\System32', filename='Config'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows\System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows\System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Windows', filename='System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Invalid path (no separator): '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Windows\System32\Config'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: SOFTWARE
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Users\User\NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Users\User', filename='NTUSER.DAT'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Users\User'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Users\User'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Checking directory='\Users', filename='User'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory doesn't exist, recursing: '\Users'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Searching for '\Users'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Invalid path (no separator): '\Users'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Users'
+info: Win32Emu.Emulator[0]
+      [DiskVFS] FindCaseInsensitivePath: Directory still doesn't exist after recursion: '\Users\User'
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Created in-memory hive: NTUSER.DAT
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized 3 registry hives
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized system environment variables
+info: Win32Emu.Emulator[0]
+      [RegistryHive] Initialized user environment variables
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Registry hive initialized
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Synced environment variables from registry
+info: Win32Emu.Emulator[0]
+      [Loader] Virtual file system initialized successfully (disk)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Registered main executable: C:\ign_teas\IGN_TEAS.EXE at 0x00400000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Set current directory to: C:\ign_teas
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] TEB allocated at 0x00470040
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] PEB allocated at 0x00471040
+info: Win32Emu.Emulator[0]
+      [ProcessEnvironment] Detected GUI subsystem, no console allocated
+info: Win32Emu.Emulator[0]
+      [RtlJitCache] Initialized RTL-based JIT cache at /tmp/Win32Emu/RtlJitCache
+info: Win32Emu.Emulator[0]
+      [RtlJitCache] Using decompiler: CustomRTL (MIT License - Part of Win32Emu)
+info: Win32Emu.Emulator[0]
+      [RtlJitCache] C# source code will be saved to /tmp/Win32Emu/RtlJitCache/Source
+info: Win32Emu.Emulator[0]
+      [JitCpu] Initialized RTL-based JIT CPU backend with readable C# code generation
+info: Win32Emu.Emulator[0]
+      [JitCache] Initialized with cache directory: /tmp/Win32Emu/JitCache
+info: Win32Emu.Emulator[0]
+      [JitCpu] Metadata cache initialized for block analysis metadata persistence
+info: Win32Emu.Emulator[0]
+      [Loader] Unified JitCpu backend enabled (JIT compilation: True, Interpreter mode: False)
+info: Win32Emu.Emulator[0]
+      [JitCpu] Set executable path: C:\ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [Loader] JIT cache: Set executable path to C:\ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [RtlJitCache] No cache metadata found for C:\ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [JitCpu] RTL cache loaded: 0 blocks from /tmp/Win32Emu/RtlJitCache/Source
+info: Win32Emu.Emulator[0]
+      [JitCache] No cache file found for C:\ign_teas\IGN_TEAS.EXE
+info: Win32Emu.Emulator[0]
+      [JitCpu] Metadata cache loaded: 0 blocks, 0 instructions
+info: Win32Emu.Emulator[0]
+      [Loader] Selected CPU Emulator: JitCpu
+info: Win32Emu.Emulator[0]
+      [Loader] Zero-initializing entire stack reserve region (0x00100000 - 0x00200000, 1048576 bytes)
+info: Win32Emu.Emulator[0]
+      [Loader] Stack initialized: Base=0x00200000 Limit=0x00100000 ESP=0x001FF000 Reserve=0x100000 Commit=0x1000
+info: Win32Emu.Emulator[0]
+      [Loader] Heap base: 0x00470000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc: allocated at 0x00473000, size=0x00001000, reserve=False, commit=True, topDown=False
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc: allocated at 0x00474000, size=0x00001000, reserve=False, commit=True, topDown=False
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc: allocated at 0x00475000, size=0x00001000, reserve=False, commit=True, topDown=False
+info: Win32Emu.Emulator[0]
+      [ThreadScheduler] Initialized main thread 1 (handle=0x00001000)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] Main thread initialized with ID=1
+info: Win32Emu.Emulator[0]
+      [Loader] Fixing up data imports
+info: Win32Emu.Emulator[0]
+      [Loader] Fixed up 0 data import(s)
+info: Win32Emu.Emulator[0]
+      [Emulator] Checking for executable-specific workarounds
+info: Win32Emu.Emulator[0]
+      [Emulator] IGN_TEAS.EXE detected - enabled IGN_TEAS_DEBUG environment variable
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetVersion from stub at 0x0F000400
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF7C = 0x00410FFC
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetVersion at EIP=0x0E000002 ESP=0x001FEF7C stack=FC 0F 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetVersion at EIP=0x0E000002 ESP=0x001FEF7C stack=FC 0F 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetVersion returned 0x040003B6, argBytes=0, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF7C = 0x00410FFC
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!HeapCreate from stub at 0x0F000450
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF6C = 0x00412C6F
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!HeapCreate at EIP=0x0E000002 ESP=0x001FEF6C stack=6F 2C 41 00 01 00 00 00 00 10 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!HeapCreate at EIP=0x0E000002 ESP=0x001FEF6C stack=6F 2C 41 00 01 00 00 00 00 10 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!HeapCreate returned 0x00476000, argBytes=12, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF6C = 0x00412C6F
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!VirtualAlloc from stub at 0x0F000320
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF54 = 0x00413018
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=18 30 41 00 00 00 00 00 00 00 40 00 00 20 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=18 30 41 00 00 00 00 00 00 00 40 00 00 20 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] VirtualAlloc(lpAddress=0x00000000, dwSize=0x00400000, alloc=0x00002000, protect=0x00000004)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00400000, alloc=0x00002000, prot=0x00000004)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc: allocated at 0x00480000, size=0x00400000, reserve=True, commit=False, topDown=False
+info: Win32Emu.Emulator[0]
+      [Kernel32] VirtualAlloc -> 0x00480000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!VirtualAlloc returned 0x00480000, argBytes=16, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF54 = 0x00413018
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!VirtualAlloc from stub at 0x0F000320
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF54 = 0x00413031
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=31 30 41 00 00 00 48 00 00 00 01 00 00 10 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!VirtualAlloc at EIP=0x0E000002 ESP=0x001FEF54 stack=31 30 41 00 00 00 48 00 00 00 01 00 00 10 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] VirtualAlloc(lpAddress=0x00480000, dwSize=0x00010000, alloc=0x00001000, protect=0x00000004)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc(lp=0x00480000, size=0x00010000, alloc=0x00001000, prot=0x00000004)
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc: Re-committing already allocated region at 0x00480000
+info: Win32Emu.Emulator[0]
+      [ProcessEnv] VirtualAlloc: Allocated 0x10000 bytes at specific address 0x00480000 (reserve=False, commit=True)
+info: Win32Emu.Emulator[0]
+      [Kernel32] VirtualAlloc -> 0x00480000
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!VirtualAlloc returned 0x00480000, argBytes=16, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF54 = 0x00413031
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStartupInfoA from stub at 0x0F0003E0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412AEE
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF20 stack=EE 2A 41 00 38 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStartupInfoA at EIP=0x0E000002 ESP=0x001FEF20 stack=EE 2A 41 00 38 EF 1F 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStartupInfoA returned 0x00000000, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412AEE
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0004F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F6 FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F6 FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000001, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 01 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 01 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000002, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0004F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F5 FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F5 FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000002, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 02 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 02 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000002, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetStdHandle from stub at 0x0F0004F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C05
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F4 FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetStdHandle at EIP=0x0E000002 ESP=0x001FEF20 stack=05 2C 41 00 F4 FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetStdHandle returned 0x00000003, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C05
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetFileType from stub at 0x0F000490
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C13
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 03 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetFileType at EIP=0x0E000002 ESP=0x001FEF20 stack=13 2C 41 00 03 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetFileType returned 0x00000002, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C13
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!SetHandleCount from stub at 0x0F0004E0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF20 = 0x00412C50
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF20 stack=50 2C 41 00 20 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!SetHandleCount at EIP=0x0E000002 ESP=0x001FEF20 stack=50 2C 41 00 20 00 00 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!SetHandleCount returned 0x00000020, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF20 = 0x00412C50
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetACP from stub at 0x0F000510
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004127C1
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetACP at EIP=0x0E000002 ESP=0x001FEF44 stack=C1 27 41 00 FD FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetACP at EIP=0x0E000002 ESP=0x001FEF44 stack=C1 27 41 00 FD FF FF FF FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetACP returned 0x0000FDE9, argBytes=0, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004127C1
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetCPInfo from stub at 0x0F000500
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF40 = 0x0041281A
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF40 stack=1A 28 41 00 E9 FD 00 00 60 EF 1F 00 FC EF 1F 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetCPInfo at EIP=0x0E000002 ESP=0x001FEF40 stack=1A 28 41 00 E9 FD 00 00 60 EF 1F 00 FC EF 1F 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCPInfo called: codePage=Utf8 lpCpInfo=0x001FEF60
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCPInfo: actualCodePage=Utf8
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetCPInfo returned 0x00000001, argBytes=8, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF40 = 0x0041281A
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetCommandLineA from stub at 0x0F0003F0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF7C = 0x0041105B
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF7C stack=5B 10 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetCommandLineA at EIP=0x0E000002 ESP=0x001FEF7C stack=5B 10 41 00 00 00 00 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetCommandLineA returning 0x00470000: "C:\ign_teas\IGN_TEAS.EXE"
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetCommandLineA returned 0x00470000, argBytes=0, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF7C = 0x0041105B
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Exited CRT loop after 12 total iterations
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetEnvironmentStringsW from stub at 0x0F000280
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF64 = 0x0041263B
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=3B 26 41 00 FC EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF64 stack=3B 26 41 00 FC EF 1F 00 00 00 00 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetEnvironmentStringsW returned 0x00880000, argBytes=0, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF64 = 0x0041263B
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Exited CRT loop after 7 total iterations
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000290
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004126C6
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=C6 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=C6 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: CP=Acp cchWide=353 lpWide=0x00880000 cbMulti=0 lpMulti=0x00000000
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Read 353 chars (specified count)
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Returning size 353
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000161, argBytes=32, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004126C6
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!WideCharToMultiByte from stub at 0x0F000290
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF44 = 0x004126ED
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=ED 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!WideCharToMultiByte at EIP=0x0E000002 ESP=0x001FEF44 stack=ED 26 41 00 00 00 00 00 00 00 00 00 00 00 88 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: CP=Acp cchWide=353 lpWide=0x00880000 cbMulti=353 lpMulti=0x00480200
+info: Win32Emu.Emulator[0]
+      [Kernel32] WideCharToMultiByte: Read 353 chars (specified count)
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!WideCharToMultiByte returned 0x00000161, argBytes=32, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF44 = 0x004126ED
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!FreeEnvironmentStringsW from stub at 0x0F0004D0
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF60 = 0x00412703
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF60 stack=03 27 41 00 00 00 88 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!FreeEnvironmentStringsW at EIP=0x0E000002 ESP=0x001FEF60 stack=03 27 41 00 00 00 88 00 FC EF 1F 00 00 00 00 00
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!FreeEnvironmentStringsW returned 0x00000001, argBytes=4, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF60 = 0x00412703
+info: Win32Emu.Emulator[0]
+      [Syscall] KERNEL32.DLL!GetModuleFileNameA from stub at 0x0F000270
+info: Win32Emu.Emulator[0]
+      [Syscall] BEFORE API: Return address at 0x001FEF5C = 0x004123B8
+info: Win32Emu.Emulator[0]
+      Dispatching async KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=B8 23 41 00 00 00 00 00 60 27 45 00 04 01 00 00
+info: Win32Emu.Emulator[0]
+      Dispatching KERNEL32.DLL!GetModuleFileNameA at EIP=0x0E000002 ESP=0x001FEF5C stack=B8 23 41 00 00 00 00 00 60 27 45 00 04 01 00 00
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetModuleFileNameA called: h=0x00000000 lp=0x00452760 n=260
+info: Win32Emu.Emulator[0]
+      [Kernel32] GetModuleFileNameA returning 24
+info: Win32Emu.Emulator[0]
+      [Dispatcher] KERNEL32.DLL!GetModuleFileNameA returned 0x00000018, argBytes=12, convention=Stdcall
+info: Win32Emu.Emulator[0]
+      [Syscall] AFTER API: Return address at 0x001FEF5C = 0x004123B8
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 100 at EIP=0x004124A1
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x00000000 EBX=0x0000006E ECX=0x001FEF78 EDX=0x001FEF6E
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x00470006 (iterator) EDI=0x00000000 ESP=0x001FEF44 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x00470006: prev=0x6E current=0x5F ('_') next=0x74
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 200 at EIP=0x00412485
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x00000000 EBX=0x0000005C ECX=0x001FEF78 EDX=0x001FEF49
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x0047000D (iterator) EDI=0x00000000 ESP=0x001FEF44 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x0047000D: prev=0x49 current=0x47 ('G') next=0x4E
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 300 at EIP=0x00412477
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x00000000 EBX=0x00000041 ECX=0x001FEF78 EDX=0x001FEF41
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x00470013 (iterator) EDI=0x00000000 ESP=0x001FEF44 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x00470013: prev=0x41 current=0x53 ('S') next=0x2E
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 400 at EIP=0x0041260F
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x00000000 EBX=0x00000000 ECX=0x001FEF78 EDX=0x001FEF74
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x00470000 (iterator) EDI=0x00000000 ESP=0x001FEF54 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x00470000: prev=0x00 current=0x43 ('C') next=0x3A
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Exited CRT loop after 401 total iterations
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 100 at EIP=0x00412489
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x0048037D EBX=0x00000067 ECX=0x001FEF78 EDX=0x00480367
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x00470005 (iterator) EDI=0x00480370 ESP=0x001FEF44 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x00470005: prev=0x67 current=0x6E ('n') next=0x5F
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 200 at EIP=0x0041247B
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x00480382 EBX=0x00000061 ECX=0x001FEF78 EDX=0x00480361
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x0047000A (iterator) EDI=0x00480370 ESP=0x001FEF44 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x0047000A: prev=0x61 current=0x73 ('s') next=0x5C
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 300 at EIP=0x0041249E
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x00480388 EBX=0x0000005F ECX=0x001FEF78 EDX=0x0048035F
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x00470010 (iterator) EDI=0x00480370 ESP=0x001FEF44 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x00470010: prev=0x5F current=0x54 ('T') next=0x45
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Loop iteration 400 at EIP=0x0041247F
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Registers: EAX=0x0048038D EBX=0x0000002E ECX=0x001FEF78 EDX=0x00480345
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   ESI=0x00470015 (iterator) EDI=0x00480370 ESP=0x001FEF44 EBP=0x001FEFFC
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT]   Current position ESI=0x00470015: prev=0x2E current=0x45 ('E') next=0x58
+warn: Win32Emu.Emulator[0]
+      [IGN_TEAS CRT] Exited CRT loop after 490 total iterations
