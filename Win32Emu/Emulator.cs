@@ -801,10 +801,11 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, peLoader, _logger));
         
-        var msvcrtModule = new MsvcrtModule(_env, _image.BaseAddress, peLoader, _logger);
-        msvcrtModule.SetDispatcher(_dispatcher);
-        msvcrtModule.SetLoadedImage(_image);
-        _dispatcher.RegisterModule(msvcrtModule);
+        // DISABLED: C# CRT reimplementation - let the native CRT code execute via JIT instead
+        // var msvcrtModule = new MsvcrtModule(_env, _image.BaseAddress, peLoader, _logger);
+        // msvcrtModule.SetDispatcher(_dispatcher);
+        // msvcrtModule.SetLoadedImage(_image);
+        // _dispatcher.RegisterModule(msvcrtModule);
         
         _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Wavmix32Module(_env, _image.BaseAddress, peLoader, _logger));
@@ -821,8 +822,10 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new NtdllModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new ShlwapiModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new WininetModule(_env, _image.BaseAddress, peLoader, _logger));
-        _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, peLoader, _logger));
-        _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, peLoader, _logger));
+        // DISABLED: C# UCRT reimplementation - let the native CRT code execute via JIT instead
+        // _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, peLoader, _logger));
+        // DISABLED: C# Vcruntime140 reimplementation - let the native CRT code execute via JIT instead
+        // _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, peLoader, _logger));
 
         // Register Win16 thunking modules for NE format executables
         if (format == ExecutableFormat.NE)
@@ -1569,6 +1572,12 @@ public sealed class Emulator : IDisposable
 	    {
 		    // We're outside CRT but haven't reached WinMain yet
 		    _ignTeasAnywhereCalls++;
+		    
+		    // Log the first few instructions immediately to see where we go after CRT exit
+		    if (_ignTeasAnywhereCalls <= 10)
+		    {
+			    _logger.LogWarning("[IGN_TEAS POST-CRT-EXIT] Instruction #{Count} after CRT exit at EIP=0x{Eip:X8}", _ignTeasAnywhereCalls, eip);
+		    }
 		    
 		    // Log every 1000 instructions to see where we're stuck
 		    if (_ignTeasAnywhereCalls % 1000 == 0)
