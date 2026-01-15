@@ -124,20 +124,10 @@ public class EmulatorService : IDisposable
 	{
 		try
 		{
-			// Stop any running emulation before loading a new executable
-			// This ensures proper cleanup of the previous emulation session
-			if (_isRunning)
-			{
-				await StopAsync();
-			}
-			else
-			{
-				// Even if not running, ensure cleanup of any lingering emulation resources
-				// This handles cases where the emulation stopped on its own (e.g., program exit)
-				_emulationCts?.Dispose();
-				_emulationCts = null;
-				_emulationTask = null;
-			}
+			// Always route cleanup through StopAsync to ensure any background task
+			// is properly awaited and we don't lose track of a still-running task.
+			// This handles both explicit stops and cases where emulation stopped on its own.
+			await StopAsync();
 			
 			EmitDebugOutput($"Loading executable: {fileName} ({executableBytes.Length} bytes)");
 			
@@ -302,12 +292,19 @@ public class EmulatorService : IDisposable
 			return true;
 		}
 		
+		// Ensure there is no still-running emulation task before starting a new one
+		if (_emulationTask != null && !_emulationTask.IsCompleted)
+		{
+			EmitDebugOutput("Cannot start: Previous emulation task is still running");
+			return false;
+		}
+		
 		try
 		{
 			_isRunning = true;
 			_isPaused = false;
 			
-			// Ensure old cancellation token source is disposed before creating a new one
+			// Dispose old cancellation token source only after confirming previous task has completed
 			_emulationCts?.Dispose();
 			_emulationCts = new CancellationTokenSource();
 			
