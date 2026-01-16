@@ -1864,6 +1864,22 @@ public sealed class Emulator : IDisposable
         // WASM emergency yield: Track last yield time to prevent prolonged browser freezes
         // If more than 100ms passes without yielding, force an emergency yield
         var lastYieldTime = DateTime.UtcNow;
+        
+        // Infinite loop detection: Track EIP to detect tight loops
+        var lastEip = 0u;
+        var sameEipCounter = 0ul;
+        var lastSameEipLogIteration = 0ul;
+        
+        // Infinite loop detection: Track iterations since last syscall
+        var iterationsSinceLastSyscall = 0ul;
+        
+        // Select thresholds based on platform
+        var maxSameEipIterations = PlatformHelpers.IsWasm 
+            ? MAX_SAME_EIP_ITERATIONS_WASM 
+            : MAX_SAME_EIP_ITERATIONS_NATIVE;
+        var maxIterationsWithoutSyscall = PlatformHelpers.IsWasm 
+            ? MAX_ITERATIONS_WITHOUT_SYSCALL_WASM 
+            : MAX_ITERATIONS_WITHOUT_SYSCALL_NATIVE;
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested)
@@ -2303,11 +2319,65 @@ public sealed class Emulator : IDisposable
                     "This indicates a corrupted return address or bad function pointer.");
             }
             
+            // Infinite loop detection: Track same EIP iterations
+            if (eipAfterStep == lastEip)
+            {
+                sameEipCounter++;
+                
+                // Log periodically to avoid spam (every STUCK_EIP_LOG_INTERVAL iterations)
+                if (sameEipCounter - lastSameEipLogIteration >= STUCK_EIP_LOG_INTERVAL)
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    _logger.LogWarning("[Emulator] Stuck at EIP=0x{Eip:X8} for {Count} iterations (ESP=0x{Esp:X8}). Possible infinite loop.", 
+                        eipAfterStep, sameEipCounter, esp);
+                    lastSameEipLogIteration = sameEipCounter;
+                }
+                
+                // Check if we've exceeded the threshold
+                if (sameEipCounter >= maxSameEipIterations)
+                {
+                    var esp = _cpu.GetRegister("ESP");
+                    var ebp = _cpu.GetRegister("EBP");
+                    _logger.LogError("[Emulator] INFINITE LOOP DETECTED: Stuck at EIP=0x{Eip:X8} for {Count} iterations (ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}). Stopping emulation.", 
+                        eipAfterStep, sameEipCounter, esp, ebp);
+                    _logger.LogError("[Emulator] This indicates the program is stuck in a tight loop. The loop may be waiting for a message, event, or condition that will never occur.");
+                    
+                    // Stop emulation
+                    _env!.ExitRequested = true;
+                    break;
+                }
+            }
+            else
+            {
+                // EIP changed - reset counter
+                lastEip = eipAfterStep;
+                sameEipCounter = 0;
+                lastSameEipLogIteration = 0;
+            }
+            
+            // Infinite loop detection: Track iterations without syscall
+            iterationsSinceLastSyscall++;
+            if (iterationsSinceLastSyscall >= maxIterationsWithoutSyscall)
+            {
+                var esp = _cpu.GetRegister("ESP");
+                var ebp = _cpu.GetRegister("EBP");
+                _logger.LogError("[Emulator] INFINITE LOOP DETECTED: {Count} iterations without syscall (EIP=0x{Eip:X8}, ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}). Stopping emulation.", 
+                    iterationsSinceLastSyscall, eipAfterStep, esp, ebp);
+                _logger.LogError("[Emulator] This indicates the program is not making Win32 API calls for an extended period. The program may be stuck in internal processing or waiting for an event.");
+                
+                // Stop emulation
+                _env!.ExitRequested = true;
+                break;
+            }
+            
             // Check for syscall (INT 0x80 from import stubs)
             // This is the retrowin32-style approach where import stubs CALL syscall dispatcher
             // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
             if (step.IsSyscall)
             {
+                // Reset syscall counter when we make a Win32 API call
+                iterationsSinceLastSyscall = 0;
+                
                 // Use async syscall handler to support async Win32 API implementations
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
