@@ -1,0 +1,40 @@
+{
+  "Version": 1,
+  "ExecutablePath": "C:\\ign_teas\\IGN_TEAS.EXE",
+  "Timestamp": "2026-01-16T01:05:00Z",
+  "Blocks": [
+    {
+      "StartAddress": 4235360,
+      "InstructionCount": 5,
+      "ByteLength": 12,
+      "CodeHash": "CRT_ENTRY_POINT_1",
+      "FirstCompiled": "2026-01-16T01:00:00Z",
+      "ExecutionCount": 1,
+      "EndsWithCall": false,
+      "EndsWithReturn": false,
+      "DirectTarget": null
+    },
+    {
+      "StartAddress": 4268576,
+      "InstructionCount": 8,
+      "ByteLength": 24,
+      "CodeHash": "CRT_ENTRY_POINT_2",
+      "FirstCompiled": "2026-01-16T01:00:00Z",
+      "ExecutionCount": 1,
+      "EndsWithCall": false,
+      "EndsWithReturn": false,
+      "DirectTarget": null
+    },
+    {
+      "StartAddress": 4268066,
+      "InstructionCount": 3,
+      "ByteLength": 8,
+      "CodeHash": "CRT_LOOP_START",
+      "FirstCompiled": "2026-01-16T01:00:00Z",
+      "ExecutionCount": 400,
+      "EndsWithCall": false,
+      "EndsWithReturn": false,
+      "DirectTarget": null
+    }
+  ]
+}
