@@ -1,0 +1,18 @@
+{
+  "Version": 1,
+  "ExecutablePath": "/home/runner/work/Win32Emu/Win32Emu/EXEs/ign_install/SETUP.EXE",
+  "Timestamp": "2026-01-16T12:05:11.8624907Z",
+  "Blocks": [
+    {
+      "StartAddress": 4198704,
+      "InstructionCount": 2,
+      "ByteLength": 10,
+      "CodeHash": "1490146FFDE796F3DD0E6F08C91ECE73B5F36A40F66B94F592C7CA29CF13268E",
+      "FirstCompiled": "2026-01-16T12:05:11.8178858Z",
+      "ExecutionCount": 0,
+      "EndsWithCall": true,
+      "EndsWithReturn": false,
+      "DirectTarget": 4204576
+    }
+  ]
+}

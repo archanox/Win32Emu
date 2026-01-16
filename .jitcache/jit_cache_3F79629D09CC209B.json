@@ -1,0 +1,18 @@
+{
+  "Version": 1,
+  "ExecutablePath": "/home/runner/work/Win32Emu/Win32Emu/retrowin32/exe/cpp/dib.exe",
+  "Timestamp": "2026-01-16T12:04:29.2955439Z",
+  "Blocks": [
+    {
+      "StartAddress": 4198400,
+      "InstructionCount": 8,
+      "ByteLength": 23,
+      "CodeHash": "A735254DA2F11B003376CB33A9C6F3043743CC02A9E359B5629A2941AFE95729",
+      "FirstCompiled": "2026-01-16T12:04:24.513714Z",
+      "ExecutionCount": 0,
+      "EndsWithCall": false,
+      "EndsWithReturn": false,
+      "DirectTarget": 4199096
+    }
+  ]
+}
