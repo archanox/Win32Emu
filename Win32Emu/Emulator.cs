@@ -638,21 +638,28 @@ public sealed class Emulator : IDisposable
         // JitCpu uses JIT compilation when available (native platforms) and falls back to
         // interpreter mode in WASM or when forceInterpreterMode is true
         // Use a persistent cache directory in the repository for better performance across runs
-        // Try to find the repository root by looking for the .git directory
-        var currentDir = Directory.GetCurrentDirectory();
-        var repoRoot = currentDir;
-        while (repoRoot != null && !Directory.Exists(Path.Combine(repoRoot, ".git")))
+        // Check for environment variable first, then try to find repository root
+        var persistentCacheDir = Environment.GetEnvironmentVariable("WIN32EMU_JIT_CACHE_DIR");
+        
+        if (string.IsNullOrEmpty(persistentCacheDir))
         {
-            var parent = Directory.GetParent(repoRoot);
-            if (parent == null) break;
-            repoRoot = parent.FullName;
+            // Try to find the repository root by looking for the .git directory
+            var currentDir = Directory.GetCurrentDirectory();
+            var repoRoot = currentDir;
+            while (repoRoot != null && !Directory.Exists(Path.Combine(repoRoot, ".git")))
+            {
+                var parent = Directory.GetParent(repoRoot);
+                if (parent == null) break;
+                repoRoot = parent.FullName;
+            }
+            // If we couldn't find .git, use current directory as fallback
+            if (!Directory.Exists(Path.Combine(repoRoot, ".git")))
+            {
+                repoRoot = currentDir;
+            }
+            persistentCacheDir = Path.Combine(repoRoot, ".jitcache");
         }
-        // If we couldn't find .git, use current directory as fallback
-        if (!Directory.Exists(Path.Combine(repoRoot, ".git")))
-        {
-            repoRoot = currentDir;
-        }
-        var persistentCacheDir = Path.Combine(repoRoot, ".jitcache");
+        
         _logger.LogInformation("[Loader] Using JIT cache directory: {CacheDir}", persistentCacheDir);
         
         var jitCpu = new Cpu.Jit.JitCpu(_vm, _logger, decoderOptions, enableInstructionAnalyzer, _image.BaseAddress, stackLimit, stackBase, bitness: 32, force32BitStackOps: force32BitStackOps, forceInterpreterMode: forceInterpreterMode, cacheDirectory: persistentCacheDir);
@@ -819,11 +826,11 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new Shell32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new DsetupModule(_env, _image.BaseAddress, peLoader, _logger));
         
-        // DISABLED: C# CRT reimplementation - let the native CRT code execute via JIT instead
-        // var msvcrtModule = new MsvcrtModule(_env, _image.BaseAddress, peLoader, _logger);
-        // msvcrtModule.SetDispatcher(_dispatcher);
-        // msvcrtModule.SetLoadedImage(_image);
-        // _dispatcher.RegisterModule(msvcrtModule);
+        // Re-enabled: C# CRT reimplementation (testing showed native CRT via JIT has same performance)
+        var msvcrtModule = new MsvcrtModule(_env, _image.BaseAddress, peLoader, _logger);
+        msvcrtModule.SetDispatcher(_dispatcher);
+        msvcrtModule.SetLoadedImage(_image);
+        _dispatcher.RegisterModule(msvcrtModule);
         
         _dispatcher.RegisterModule(new Wsock32Module(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new Wavmix32Module(_env, _image.BaseAddress, peLoader, _logger));
@@ -840,10 +847,10 @@ public sealed class Emulator : IDisposable
         _dispatcher.RegisterModule(new NtdllModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new ShlwapiModule(_env, _image.BaseAddress, peLoader, _logger));
         _dispatcher.RegisterModule(new WininetModule(_env, _image.BaseAddress, peLoader, _logger));
-        // DISABLED: C# UCRT reimplementation - let the native CRT code execute via JIT instead
-        // _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, peLoader, _logger));
-        // DISABLED: C# Vcruntime140 reimplementation - let the native CRT code execute via JIT instead
-        // _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, peLoader, _logger));
+        // Re-enabled: C# UCRT reimplementation (testing showed native CRT via JIT has same performance)
+        _dispatcher.RegisterModule(new UcrtbaseModule(_env, _image.BaseAddress, peLoader, _logger));
+        // Re-enabled: C# Vcruntime140 reimplementation (testing showed native CRT via JIT has same performance)
+        _dispatcher.RegisterModule(new Vcruntime140Module(_env, _image.BaseAddress, peLoader, _logger));
 
         // Register Win16 thunking modules for NE format executables
         if (format == ExecutableFormat.NE)

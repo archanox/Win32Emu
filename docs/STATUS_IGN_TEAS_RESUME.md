@@ -90,7 +90,7 @@ After comprehensive analysis of the codebase and documentation, **ign_teas appea
 
 ## Evidence from API Monitor
 
-From `ApiMon Logs/ign_teas/ign_teas.exe.csv` (native Windows run):
+From an external API Monitor capture of a native Windows run (analyst-local path `ApiMon Logs/ign_teas/ign_teas.exe.csv`, not tracked in this repository):
 
 ### Initialization Sequence (11:56:13.236 PM - 11:56:14.209 PM)
 1. ✅ GetVersion → 602931718 (Windows ME)

@@ -13,9 +13,9 @@ echo "Starting emulator in background..."
 # Set up environment for headless operation
 export SDL_VIDEODRIVER=dummy
 
-# Run the emulator in background, capturing PID
+# Run the emulator in background, capturing PID (removed --no-build to ensure binary exists)
 cd EXEs/ign_teas
-dotnet run --project ../../Win32Emu.Gui/Win32Emu.Gui.csproj --configuration Release --no-build -- --nogui --backend Software IGN_TEAS.EXE > "$SCRIPT_DIR/cache-population.log" 2>&1 &
+dotnet run --project ../../Win32Emu.Gui/Win32Emu.Gui.csproj --configuration Release -- --nogui --backend Software IGN_TEAS.EXE > "$SCRIPT_DIR/cache-population.log" 2>&1 &
 EMU_PID=$!
 
 echo "Emulator started with PID: $EMU_PID"
