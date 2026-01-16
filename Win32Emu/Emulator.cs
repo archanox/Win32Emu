@@ -1895,6 +1895,48 @@ public sealed class Emulator : IDisposable
                 lastLogTime = now;
             }
             
+            // DIAGNOSTIC: Log every 100000 iterations at WARNING level to always see progress
+            if (iterationCount % 100000 == 0)
+            {
+                var diagEip = _cpu!.GetEip();
+                var diagEsp = _cpu.GetRegister("ESP");
+                _logger.LogWarning("[Emulator] DIAGNOSTIC: {Iterations} iterations, EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", 
+                    iterationCount, diagEip, diagEsp);
+                
+                // DIAGNOSTIC: If stuck at 0x004122D1, trace the instruction
+                if (diagEip == 0x004122D1)
+                {
+                    var eax = _cpu.GetRegister("EAX");
+                    var ebx = _cpu.GetRegister("EBX");
+                    var ecx = _cpu.GetRegister("ECX");
+                    var edx = _cpu.GetRegister("EDX");
+                    var esi = _cpu.GetRegister("ESI");
+                    var edi = _cpu.GetRegister("EDI");
+                    _logger.LogWarning("[Emulator] STUCK AT 0x004122D1: EAX=0x{Eax:X8} EBX=0x{Ebx:X8} ECX=0x{Ecx:X8} EDX=0x{Edx:X8} ESI=0x{Esi:X8} EDI=0x{Edi:X8}", 
+                        eax, ebx, ecx, edx, esi, edi);
+                    
+                    // Read memory at EDX (environment string pointer)
+                    try
+                    {
+                        var edxVal = _vm!.Read32(edx);
+                        var byte0 = _vm.Read8(edx);
+                        var byte1 = _vm.Read8(edx + 1);
+                        var byte2 = _vm.Read8(edx + 2);
+                        var byte3 = _vm.Read8(edx + 3);
+                        _logger.LogWarning("[Emulator] STUCK: EDX points to bytes: {B0:X2} {B1:X2} {B2:X2} {B3:X2} (chars: {C0}{C1}{C2}{C3})", 
+                            byte0, byte1, byte2, byte3, 
+                            (char)(byte0 > 31 && byte0 < 127 ? byte0 : '.'),
+                            (char)(byte1 > 31 && byte1 < 127 ? byte1 : '.'),
+                            (char)(byte2 > 31 && byte2 < 127 ? byte2 : '.'),
+                            (char)(byte3 > 31 && byte3 < 127 ? byte3 : '.'));
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning("[Emulator] STUCK: Could not read memory at EDX: {Error}", ex.Message);
+                    }
+                }
+            }
+            
             
             // Check pause state periodically without blocking
             if (!_pauseEvent.WaitOne(0))
