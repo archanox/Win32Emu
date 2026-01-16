@@ -422,3 +422,4 @@ FodyWeavers.xsd
 *.msp
 *.DS_Store
 *.bak
+.jitcache/
