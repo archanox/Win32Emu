@@ -52,6 +52,10 @@ public sealed class Emulator : IDisposable
     // Note: Based on instruction count, not real time - actual latency depends on CPU performance
     private const ulong EVENT_PROCESSING_INTERVAL = 1000;
     
+    // Idle processing interval - when all threads are waiting, process idle state periodically
+    // Set to match EVENT_PROCESSING_INTERVAL to avoid excessive overhead while maintaining responsiveness
+    private const ulong IDLE_PROCESSING_INTERVAL = 1000;
+    
     // x86 CPU flags
     private const uint FLAG_DF = 1u << 10;  // Direction Flag (bit 10) - used for Win95 ABI compliance
     
@@ -1854,6 +1858,9 @@ public sealed class Emulator : IDisposable
         var lastHeapEipWarning = 0u;
         var consecutiveHeapExecutions = 0ul; // Track consecutive executions in heap to detect stuck execution
         
+        // Track last idle processing iteration to avoid excessive overhead
+        var lastIdleProcessingIteration = 0ul;
+        
         // WASM emergency yield: Track last yield time to prevent prolonged browser freezes
         // If more than 100ms passes without yielding, force an emergency yield
         var lastYieldTime = DateTime.UtcNow;
@@ -1976,20 +1983,26 @@ public sealed class Emulator : IDisposable
                 // We have waiting threads - process idle state to potentially wake them up
                 // This is a generalized idle processing mechanism that handles timers, events, and messages
                 // Critical for headless mode where threads may be waiting for GetMessageA
-                try
+                // Only process periodically to avoid excessive overhead (every IDLE_PROCESSING_INTERVAL iterations)
+                if (iterationCount - lastIdleProcessingIteration >= IDLE_PROCESSING_INTERVAL)
                 {
-                    // Get User32Module for timer processing if available
-                    object? user32Module = null;
-                    if (_dispatcher != null && _dispatcher.TryGetModule("USER32.DLL", out var module))
-                    {
-                        user32Module = module;
-                    }
+                    lastIdleProcessingIteration = iterationCount;
                     
-                    await _env.ProcessIdleStateAsync(user32Module).ConfigureAwait(false);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[Emulator] Error during idle state processing");
+                    try
+                    {
+                        // Get User32Module for timer processing if available
+                        object? user32Module = null;
+                        if (_dispatcher != null && _dispatcher.TryGetModule("USER32.DLL", out var module))
+                        {
+                            user32Module = module;
+                        }
+                        
+                        await _env.ProcessIdleStateAsync(user32Module).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "[Emulator] Error during idle state processing");
+                    }
                 }
                 
                 // Give the event processing loop a chance to complete
