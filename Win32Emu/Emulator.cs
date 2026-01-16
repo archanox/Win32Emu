@@ -1973,7 +1973,19 @@ public sealed class Emulator : IDisposable
                     break;
                 }
                 
-                // We have waiting threads - give the event processing loop a chance to post messages/fire timers
+                // We have waiting threads - process events to potentially wake them up
+                // This is critical for headless mode where threads may be waiting for GetMessageA
+                _env?.ProcessAllBackendEvents();
+                
+                // Post a synthetic WM_PAINT message to wake up threads waiting in GetMessageA
+                // This prevents the emulator from deadlocking when all threads are blocked on message waits
+                var firstWindow = _env?.GetAllWindowHandles().FirstOrDefault() ?? 0;
+                if (firstWindow != 0)
+                {
+                    _env?.PostMessage(firstWindow, (uint)Win32.Messaging.WM.PAINT, 0, 0);
+                }
+                
+                // Give the event processing loop a chance to post messages/fire timers
                 // by yielding briefly. This prevents busy-waiting when all threads are blocked.
                 await Task.Delay(1).ConfigureAwait(false);
                 continue;
