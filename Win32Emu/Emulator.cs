@@ -2343,7 +2343,7 @@ public sealed class Emulator : IDisposable
                     _logger.LogError("[Emulator] This indicates the program is stuck in a tight loop. The loop may be waiting for a message, event, or condition that will never occur.");
                     
                     // Stop emulation
-                    _env!.ExitRequested = true;
+                    _env!.RequestExit();
                     break;
                 }
             }
@@ -2366,7 +2366,7 @@ public sealed class Emulator : IDisposable
                 _logger.LogError("[Emulator] This indicates the program is not making Win32 API calls for an extended period. The program may be stuck in internal processing or waiting for an event.");
                 
                 // Stop emulation
-                _env!.ExitRequested = true;
+                _env!.RequestExit();
                 break;
             }
             
