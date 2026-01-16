@@ -1,0 +1,11 @@
+{
+  "ExecutablePath": "/home/runner/work/Win32Emu/Win32Emu/EXEs/ign_demo/IGN_DEMO.EXE",
+  "Timestamp": "2026-01-16T12:04:56.329558Z",
+  "Blocks": [
+    {
+      "StartAddress": 4265040,
+      "ClassName": "JitBlock_0f18c821_00411450",
+      "MethodName": "Execute"
+    }
+  ]
+}

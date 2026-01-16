@@ -1,0 +1,11 @@
+{
+  "ExecutablePath": "/home/runner/work/Win32Emu/Win32Emu/EXEs/ign_win/Ign_win_fix.exe",
+  "Timestamp": "2026-01-16T12:04:41.131375Z",
+  "Blocks": [
+    {
+      "StartAddress": 4268880,
+      "ClassName": "JitBlock_5be518ff_00412350",
+      "MethodName": "Execute"
+    }
+  ]
+}
