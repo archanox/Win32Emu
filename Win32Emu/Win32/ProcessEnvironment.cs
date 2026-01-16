@@ -3330,6 +3330,51 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Process idle state when all threads are blocked.
+	/// This is a generalized idle processing mechanism that handles various wait states and messages.
+	/// Called when no threads are runnable to:
+	/// - Process backend events (window/input events)
+	/// - Fire pending timers (WM_TIMER)
+	/// - Post synthetic messages (WM_PAINT) to wake threads
+	/// </summary>
+	/// <param name="user32Module">Optional User32Module instance for timer processing</param>
+	public async Task ProcessIdleStateAsync(object? user32Module = null)
+	{
+		// 1. Process backend events (window/input events)
+		ProcessAllBackendEvents();
+		
+		// 2. Process timers if User32Module is available
+		if (user32Module != null)
+		{
+			// Use reflection to call ProcessTimersAsync if available
+			var processTimersMethod = user32Module.GetType().GetMethod("ProcessTimersAsync");
+			if (processTimersMethod != null)
+			{
+				try
+				{
+					var task = processTimersMethod.Invoke(user32Module, new object[] { CancellationToken.None });
+					if (task is Task asyncTask)
+					{
+						await asyncTask.ConfigureAwait(false);
+					}
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[ProcessEnv] Error processing timers during idle state");
+				}
+			}
+		}
+		
+		// 3. Post a synthetic WM_PAINT message to wake up threads waiting in GetMessageA
+		// This is a fallback to ensure threads don't deadlock when no other events occur
+		var firstWindow = GetAllWindowHandles().FirstOrDefault();
+		if (firstWindow != 0)
+		{
+			PostMessage(firstWindow, (uint)Messaging.WM.PAINT, 0, 0);
+		}
+	}
+
+	/// <summary>
 	/// Handle UI events from rendering/input backends and translate them to Win32 messages.
 	/// This is the event handler that gets called when backends raise UI events.
 	/// </summary>

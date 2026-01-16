@@ -1973,19 +1973,26 @@ public sealed class Emulator : IDisposable
                     break;
                 }
                 
-                // We have waiting threads - process events to potentially wake them up
-                // This is critical for headless mode where threads may be waiting for GetMessageA
-                _env?.ProcessAllBackendEvents();
-                
-                // Post a synthetic WM_PAINT message to wake up threads waiting in GetMessageA
-                // This prevents the emulator from deadlocking when all threads are blocked on message waits
-                var firstWindow = _env?.GetAllWindowHandles().FirstOrDefault() ?? 0;
-                if (firstWindow != 0)
+                // We have waiting threads - process idle state to potentially wake them up
+                // This is a generalized idle processing mechanism that handles timers, events, and messages
+                // Critical for headless mode where threads may be waiting for GetMessageA
+                try
                 {
-                    _env?.PostMessage(firstWindow, (uint)Win32.Messaging.WM.PAINT, 0, 0);
+                    // Get User32Module for timer processing if available
+                    object? user32Module = null;
+                    if (_dispatcher != null && _dispatcher.TryGetModule("USER32.DLL", out var module))
+                    {
+                        user32Module = module;
+                    }
+                    
+                    await _env.ProcessIdleStateAsync(user32Module).ConfigureAwait(false);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[Emulator] Error during idle state processing");
                 }
                 
-                // Give the event processing loop a chance to post messages/fire timers
+                // Give the event processing loop a chance to complete
                 // by yielding briefly. This prevents busy-waiting when all threads are blocked.
                 await Task.Delay(1).ConfigureAwait(false);
                 continue;
