@@ -2560,57 +2560,59 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecScasbWithRep(in Instruction insn, uint oldEip)
+	/// <summary>
+	/// Delegate type for string instruction executors (SCAS*, CMPS*)
+	/// </summary>
+	private delegate void StringInstructionExecutor();
+	
+	/// <summary>
+	/// Generic helper method for handling REP/REPNE prefix for string comparison instructions.
+	/// Reduces code duplication across SCASB, SCASW, SCASD, CMPSB, CMPSW, CMPSD.
+	/// </summary>
+	private void ExecStringCompareWithRep(StringInstructionExecutor execInstruction, in Instruction insn, uint oldEip)
 	{
-		// Handle REP/REPNE prefix for SCASB
+		// Handle REP/REPNE prefix for string comparison instructions
 		// REP/REPE (F3): repeat while ZF=1 (equal) and ECX != 0
 		// REPNE/REPNZ (F2): repeat while ZF=0 (not equal) and ECX != 0
 		
 		bool hasRepne = insn.HasRepnePrefix;  // F2 - REPNE/REPNZ
 		bool hasRep = insn.HasRepPrefix;      // F3 - REP/REPE/REPZ
 		
+		// No REP prefix - just execute once
 		if (!hasRepne && !hasRep)
 		{
-			// No REP prefix - just execute once
-			ExecScasb();
+			execInstruction();
 			return;
 		}
 		
-		// With REP prefix:
-		// 1. If ECX == 0, don't execute at all
+		// With REP prefix: if ECX == 0, don't execute at all
 		if (_ecx == 0)
 		{
 			return;
 		}
 		
-		// 2. Execute SCASB (compare AL with [EDI])
-		ExecScasb();
+		// Execute the string instruction
+		execInstruction();
 		
-		// 3. Decrement ECX
+		// Decrement ECX
 		_ecx--;
 		
-		// 4. Check termination condition
+		// Check termination condition
 		bool zf = GetFlag(Zf);
+		bool shouldContinue = hasRepne
+			? !zf && _ecx != 0   // REPNE: terminate when ZF=1 (found match) or ECX=0
+			: zf && _ecx != 0;   // REPE: terminate when ZF=0 (found mismatch) or ECX=0
 		
-		// For REPNE: continue while ZF=0 (not found) and ECX != 0
-		// For REPE: continue while ZF=1 (found/equal) and ECX != 0
-		bool shouldContinue;
-		if (hasRepne)
-		{
-			// REPNE: terminate when ZF=1 (found match) or ECX=0
-			shouldContinue = !zf && _ecx != 0;
-		}
-		else
-		{
-			// REPE: terminate when ZF=0 (found mismatch) or ECX=0
-			shouldContinue = zf && _ecx != 0;
-		}
-		
-		// 5. If should continue, reset EIP to start of instruction
+		// If should continue, reset EIP to start of instruction
 		if (shouldContinue)
 		{
 			_eip = oldEip;
 		}
+	}
+	
+	private void ExecScasbWithRep(in Instruction insn, uint oldEip)
+	{
+		ExecStringCompareWithRep(ExecScasb, in insn, oldEip);
 	}
 	
 	private void ExecScasw()
@@ -2781,107 +2783,27 @@ public class JitCpu : IAsyncCpu
 	
 	private void ExecScaswWithRep(in Instruction insn, uint oldEip)
 	{
-		// Handle REP/REPNE prefix for SCASW (same logic as SCASB)
-		bool hasRepne = insn.HasRepnePrefix;
-		bool hasRep = insn.HasRepPrefix;
-		
-		if (!hasRepne && !hasRep)
-		{
-			ExecScasw();
-			return;
-		}
-		
-		if (_ecx == 0) return;
-		ExecScasw();
-		_ecx--;
-		
-		bool zf = GetFlag(Zf);
-		bool shouldContinue = hasRepne ? (!zf && _ecx != 0) : (zf && _ecx != 0);
-		if (shouldContinue) _eip = oldEip;
+		ExecStringCompareWithRep(ExecScasw, in insn, oldEip);
 	}
 	
 	private void ExecScasdWithRep(in Instruction insn, uint oldEip)
 	{
-		// Handle REP/REPNE prefix for SCASD (same logic as SCASB)
-		bool hasRepne = insn.HasRepnePrefix;
-		bool hasRep = insn.HasRepPrefix;
-		
-		if (!hasRepne && !hasRep)
-		{
-			ExecScasd();
-			return;
-		}
-		
-		if (_ecx == 0) return;
-		ExecScasd();
-		_ecx--;
-		
-		bool zf = GetFlag(Zf);
-		bool shouldContinue = hasRepne ? (!zf && _ecx != 0) : (zf && _ecx != 0);
-		if (shouldContinue) _eip = oldEip;
+		ExecStringCompareWithRep(ExecScasd, in insn, oldEip);
 	}
 	
 	private void ExecCmpsbWithRep(in Instruction insn, uint oldEip)
 	{
-		// Handle REP/REPNE prefix for CMPSB (same logic as SCASB)
-		bool hasRepne = insn.HasRepnePrefix;
-		bool hasRep = insn.HasRepPrefix;
-		
-		if (!hasRepne && !hasRep)
-		{
-			ExecCmpsb();
-			return;
-		}
-		
-		if (_ecx == 0) return;
-		ExecCmpsb();
-		_ecx--;
-		
-		bool zf = GetFlag(Zf);
-		bool shouldContinue = hasRepne ? (!zf && _ecx != 0) : (zf && _ecx != 0);
-		if (shouldContinue) _eip = oldEip;
+		ExecStringCompareWithRep(ExecCmpsb, in insn, oldEip);
 	}
 	
 	private void ExecCmpswWithRep(in Instruction insn, uint oldEip)
 	{
-		// Handle REP/REPNE prefix for CMPSW (same logic as SCASB)
-		bool hasRepne = insn.HasRepnePrefix;
-		bool hasRep = insn.HasRepPrefix;
-		
-		if (!hasRepne && !hasRep)
-		{
-			ExecCmpsw();
-			return;
-		}
-		
-		if (_ecx == 0) return;
-		ExecCmpsw();
-		_ecx--;
-		
-		bool zf = GetFlag(Zf);
-		bool shouldContinue = hasRepne ? (!zf && _ecx != 0) : (zf && _ecx != 0);
-		if (shouldContinue) _eip = oldEip;
+		ExecStringCompareWithRep(ExecCmpsw, in insn, oldEip);
 	}
 	
 	private void ExecCmpsdWithRep(in Instruction insn, uint oldEip)
 	{
-		// Handle REP/REPNE prefix for CMPSD (same logic as SCASB)
-		bool hasRepne = insn.HasRepnePrefix;
-		bool hasRep = insn.HasRepPrefix;
-		
-		if (!hasRepne && !hasRep)
-		{
-			ExecCmpsd();
-			return;
-		}
-		
-		if (_ecx == 0) return;
-		ExecCmpsd();
-		_ecx--;
-		
-		bool zf = GetFlag(Zf);
-		bool shouldContinue = hasRepne ? (!zf && _ecx != 0) : (zf && _ecx != 0);
-		if (shouldContinue) _eip = oldEip;
+		ExecStringCompareWithRep(ExecCmpsd, in insn, oldEip);
 	}
 	
 	private void ExecInsb()
