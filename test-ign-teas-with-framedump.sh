@@ -45,12 +45,11 @@ cd "$(dirname "$IGN_TEAS_EXE")"
 echo "🚀 Starting emulation..."
 echo ""
 
-# Run with timeout
+# Run with timeout (removed --no-build to ensure binary exists)
 set +e
 timeout $TIMEOUT_SECONDS dotnet run \
     --project "$PROJECT_ROOT/Win32Emu.Gui/Win32Emu.Gui.csproj" \
     --configuration Release \
-    --no-build \
     -- \
     --nogui \
     --backend Software \
