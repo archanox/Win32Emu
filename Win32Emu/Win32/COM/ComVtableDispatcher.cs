@@ -151,6 +151,34 @@ public class ComVtableDispatcher
 			return true;
 		}
 		
+		// Fall back to async handler if no sync handler exists
+		// Execute async handler synchronously by blocking on Result
+		// This is necessary when COM objects are created with async handlers but invoked through sync path
+		if (_vtableAsyncHandlers.TryGetValue(address, out var asyncHandler))
+		{
+			_logger.LogInformation("[COM] Invoking async vtable method (sync fallback): {MethodName} at address 0x{Address:X8}", methodName, address);
+			_logger.LogWarning("[COM] PERFORMANCE WARNING: Executing async handler {MethodName} synchronously - consider using async invocation path", methodName);
+			
+			try
+			{
+				// Execute async handler synchronously
+				// NOTE: This uses .Result which blocks until completion
+				// On WASM this may cause issues, but it's a fallback for when async path is not used
+				returnValue = asyncHandler(cpu, memory).Result;
+				_logger.LogDebug("[COM] {MethodName} async handler (sync fallback) completed successfully", methodName);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[COM] Exception in {MethodName} async handler (sync fallback)", methodName);
+				returnValue = 0x80004005; // E_FAIL
+			}
+			
+			// Get argument byte count for stack cleanup
+			argBytes = _vtableArgBytes.GetValueOrDefault(address, 0);
+			_logger.LogInformation("[COM] {MethodName} returned 0x{ReturnValue:X8} (argBytes={ArgBytes})", methodName, returnValue, argBytes);
+			return true;
+		}
+		
 		_logger.LogWarning("[COM] Unhandled COM vtable call at 0x{Address:X8} (method: {MethodName})", address, methodName);
 		return false;
 	}
