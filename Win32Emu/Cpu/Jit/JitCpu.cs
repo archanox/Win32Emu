@@ -105,6 +105,9 @@ public class JitCpu : IAsyncCpu
 	// JIT compilation infrastructure - now using RTL pipeline
 	private readonly Dictionary<uint, RtlCompiledBlock> _compiledBlocks = new();
 	
+	// Instance cache for non-static generated methods to avoid repeated instantiation overhead
+	private readonly Dictionary<Type, object> _generatedTypeInstances = new();
+	
 	// RTL-based JIT cache for persistent storage with readable C# output
 	// Note: Only used when not in WASM environment
 	private readonly RtlJitCache? _rtlJitCache;
@@ -1670,13 +1673,14 @@ public class JitCpu : IAsyncCpu
 			object? instance = null;
 			if (!method.IsStatic)
 			{
-				// Non-static method - create an instance of the generated class
-				// Safe to use Activator.CreateInstance as type is from our controlled JIT assembly
-				instance = Activator.CreateInstance(type);
-				if (instance == null)
+				// Non-static method - get or create cached instance of the generated class
+				// Caching improves performance for frequently executed blocks
+				if (!_generatedTypeInstances.TryGetValue(type, out instance))
 				{
-					_logger.LogError("[JitCpu] Could not create instance of type {TypeName}", fullTypeName);
-					return new CpuStepResult { IsCall = false, CallTarget = 0 };
+					// Safe to use Activator.CreateInstance as type is from our controlled JIT assembly
+					// CreateInstance throws exceptions on failure rather than returning null for reference types
+					instance = Activator.CreateInstance(type)!;
+					_generatedTypeInstances[type] = instance;
 				}
 			}
 			
