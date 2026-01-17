@@ -85,7 +85,7 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            cpu.SetRegister(\"EBP\", EBP);");
         sb.AppendLine("            cpu.SetRegister(\"ESP\", ESP);");
         sb.AppendLine();
-        sb.AppendLine("            return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });");
+        sb.AppendLine("            return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
         sb.AppendLine("}");
@@ -154,7 +154,7 @@ public class RtlToCSharpGenerator
         }
         sb.AppendLine("                cpu.SetEip(retAddr);");
         sb.AppendLine("                cpu.SetRegister(\"ESP\", ESP);");
-        sb.AppendLine("                return await Task.FromResult(new CpuStepResult { IsCall = false, CallTarget = 0 });");
+        sb.AppendLine("                return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));");
         sb.Append("            }");
         return sb.ToString();
     }
@@ -275,11 +275,4 @@ public class RtlToCSharpGenerator
     }
 }
 
-/// <summary>
-/// Helper struct for CPU step results (matches Win32Emu.Cpu.CpuStepResult)
-/// </summary>
-public struct CpuStepResult
-{
-    public bool IsCall { get; set; }
-    public uint CallTarget { get; set; }
-}
+
