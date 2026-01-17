@@ -141,7 +141,7 @@ public class RekoDecompilerAdapter : IDecompilerAdapter
 		sb.AppendLine($"\t\t// Block at 0x{startAddress:X8}");
 		sb.AppendLine($"\t\t// Reko RTL clusters: {rtlClusters.Count}");
 		sb.AppendLine();
-		sb.AppendLine("\t\tpublic async Task<dynamic> Execute(dynamic cpu, dynamic mem)");
+		sb.AppendLine("\t\tpublic static async Task<dynamic> Execute(dynamic cpu, dynamic mem)");
 		sb.AppendLine("\t\t{");
 		
 		// Initialize local variables for CPU registers
@@ -373,7 +373,7 @@ public class RekoDecompilerAdapter : IDecompilerAdapter
 		sb.AppendLine($"\t\t// Block at 0x{startAddress:X8}");
 		sb.AppendLine($"\t\t// Contains {instructions.Count} x86 instructions");
 		sb.AppendLine();
-		sb.AppendLine("\t\tpublic async Task<dynamic> Execute(dynamic cpu, dynamic mem)");
+		sb.AppendLine("\t\tpublic static async Task<dynamic> Execute(dynamic cpu, dynamic mem)");
 		sb.AppendLine("\t\t{");
 		sb.AppendLine("\t\t\t// Reko decompilation failed, fallback needed");
 		sb.AppendLine("\t\t\tthrow new NotImplementedException(\"Reko integration failed\");");
