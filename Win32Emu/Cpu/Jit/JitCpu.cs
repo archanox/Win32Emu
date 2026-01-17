@@ -1666,10 +1666,12 @@ public class JitCpu : IAsyncCpu
 			}
 			
 			// Invoke the generated method (handle both static and non-static methods)
+			// Note: Type is from our JIT-compiled assembly (block.Assembly), ensuring it's trusted
 			object? instance = null;
 			if (!method.IsStatic)
 			{
 				// Non-static method - create an instance of the generated class
+				// Safe to use Activator.CreateInstance as type is from our controlled JIT assembly
 				instance = Activator.CreateInstance(type);
 				if (instance == null)
 				{
