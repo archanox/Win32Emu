@@ -21,7 +21,7 @@ public class HeadlessRenderingBackend : IRenderingBackend
 	private byte[]? _frameBuffer;
 	private readonly string? _frameDumpPath;
 	private int _frameCounter;
-	private bool _enableFrameDumping;
+	private readonly bool _enableFrameDumping;
 
 	/// <summary>
 	/// Event fired when a UI event occurs (never fired in headless mode)
