@@ -5185,6 +5185,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Handles COM vtable calls and import function calls during CPU emulation.
 		/// This consolidates the duplicated logic from CallWindowProcedure and CallDialogProcedureAsync.
+		/// Note: This is a wrapper that calls the async version synchronously. Consider migrating callers to async.
 		/// </summary>
 		/// <param name="step">The current CPU step result</param>
 		/// <param name="cpu">The CPU instance</param>
@@ -5194,72 +5195,13 @@ namespace Win32Emu.Win32.Modules
 		/// <returns>True if the step was handled (COM or import call), false if it should be processed normally</returns>
 		private bool HandleComAndImportCalls(CpuStepResult step, ICpu cpu, VirtualMemory memory, string logContext, out string? stepDesc, out bool shouldBreak)
 		{
-			stepDesc = null;
-			shouldBreak = false;
-
-			// Check for COM vtable method calls
-			if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
-			{
-				var logLevel = logContext.Contains("Dialog") ? LogLevel.Information : LogLevel.Debug;
-				_logger.Log(logLevel, "[User32] {Context}: COM vtable call at 0x{CallTarget:X8}", logContext, step.CallTarget);
-
-				// Save callee-saved registers (EBX, ESI, EDI, EBP)
-				var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
-
-				var (success, comRet, comArgBytes) = _env.ComDispatcher.TryInvokeAsync(step.CallTarget, cpu, memory).GetAwaiter().GetResult();
-				if (success)
-				{
-					stepDesc = $"COM vtable call -> 0x{step.CallTarget:X8}";
-					var currentEsp = cpu.GetRegister("ESP");
-					var retEip = memory.Read32(currentEsp);
-
-					// Validate return address before jumping
-					if (!IsValidReturnAddress(retEip, _image))
-					{
-						_logger.LogError("[User32] {Context}: Invalid return address 0x{RetEip:X8} from COM call", logContext, retEip);
-						shouldBreak = true;
-						return true;
-					}
-
-					currentEsp += 4 + (uint)comArgBytes; // Pop return address + arguments
-					cpu.SetRegister("ESP", currentEsp);
-					cpu.SetRegister("EAX", comRet);
-					cpu.SetEip(retEip);
-
-					// Restore callee-saved registers, skipping invalid EBP values (e.g., import hooks)
-					CpuHelpers.RestoreCalleeSavedRegisters(cpu, saved, skipInvalidEbp: true, memorySize: memory.Size);
-				}
-				return true;
-			}
-			// Check for import calls
-			else if (step.IsCall && _image != null && _image.ImportAddressMap.TryGetValue(step.CallTarget, out var imp))
-			{
-				var dll = imp.dll.ToUpperInvariant();
-				var name = imp.name;
-				var logLevel = logContext.Contains("Dialog") ? LogLevel.Information : LogLevel.Debug;
-				_logger.Log(logLevel, "[User32] {Context}: Import call {Dll}!{Name} at 0x{CallTarget:X8}", logContext, dll, name, step.CallTarget);
-				stepDesc = $"Import call {dll}!{name}";
-
-				// Use shared import call handler
-				var handled = ImportCallHelper.HandleImportCall(
-					dll, name, cpu, memory, _dispatcher, _image, _logger,
-					"User32:" + logContext, (addr) => IsValidReturnAddress(addr, _image), out shouldBreak);
-				
-				// After successful call, check if handle-returning function returned NULL
-				if (handled && !shouldBreak)
-				{
-					var ret = cpu.GetRegister("EAX");
-					if (ret == 0 && IsHandleReturningFunction(name))
-					{
-						_logger.LogWarning("[User32] {Context}: {Dll}!{Name} returned NULL (0) - this may cause NULL pointer dereference if used as function pointer or handle", logContext, dll, name);
-					}
-				}
-				
-				return handled;
-			}
-
-		return false;
-	}
+			// Call async version and wait for result
+			// This is a compatibility wrapper for sync callers
+			var result = HandleComAndImportCallsAsync(step, cpu, memory, logContext).GetAwaiter().GetResult();
+			stepDesc = result.stepDesc;
+			shouldBreak = result.shouldBreak;
+			return result.handled;
+		}
 
 	/// <summary>
 	/// Handles syscalls (INT 0x80) encountered during window/dialog procedure execution.
@@ -8118,10 +8060,14 @@ namespace Win32Emu.Win32.Modules
 					var step = _cpu.SingleStep(_memory!);
 
 					// Handle COM vtable and import calls (if requested)
-					if (handleComAndImports && HandleComAndImportCalls(step, _cpu, _memory!, logContext, out var stepDesc, out var shouldBreak) && shouldBreak)
+					if (handleComAndImports)
 					{
-						executionSuccessful = false;
-						break;
+						var (handled, stepDesc, shouldBreak) = await HandleComAndImportCallsAsync(step, _cpu, _memory!, logContext).ConfigureAwait(false);
+						if (handled && shouldBreak)
+						{
+							executionSuccessful = false;
+							break;
+						}
 					}
 
 					steps++;
