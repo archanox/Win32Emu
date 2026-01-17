@@ -1665,8 +1665,20 @@ public class JitCpu : IAsyncCpu
 				return new CpuStepResult { IsCall = false, CallTarget = 0 };
 			}
 			
-			// Invoke the generated method
-			var result = method.Invoke(null, new object[] { cpu, mem });
+			// Invoke the generated method (handle both static and non-static methods)
+			object? instance = null;
+			if (!method.IsStatic)
+			{
+				// Non-static method - create an instance of the generated class
+				instance = Activator.CreateInstance(type);
+				if (instance == null)
+				{
+					_logger.LogError("[JitCpu] Could not create instance of type {TypeName}", fullTypeName);
+					return new CpuStepResult { IsCall = false, CallTarget = 0 };
+				}
+			}
+			
+			var result = method.Invoke(instance, new object[] { cpu, mem });
 			
 			if (result is Task<CpuStepResult> task)
 			{
