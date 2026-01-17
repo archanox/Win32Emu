@@ -120,9 +120,9 @@ public static class EmulatorLauncher
 		BackendType? selectedBackendType = null;
 		var backendIndex = Array.IndexOf(args, "--backend");
 		if (backendIndex >= 0 && backendIndex + 1 < args.Length &&
-		    Enum.TryParse<Rendering.BackendType>(args[backendIndex + 1], ignoreCase: true, out var backendType))
+		    Enum.TryParse<Rendering.BackendType>(args[backendIndex + 1], ignoreCase: true, out var parsedBackendType))
 		{
-			selectedBackendType = backendType;
+			selectedBackendType = parsedBackendType;
 		}
 		
 		// If backendFactory was provided and a backend type was specified, configure it
