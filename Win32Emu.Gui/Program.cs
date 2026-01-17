@@ -81,7 +81,10 @@ sealed class Program
                 {
                     // No backend specified via CLI or environment, default to Headless for nogui mode
                     backendFactory.CurrentBackendType = Rendering.BackendType.Headless;
-                    Console.WriteLine("[Win32Emu] Using Headless backend (no display output) for --nogui mode");
+                    
+                    // Log using ILogger for consistency with project logging standards
+                    var logger = loggerFactory.CreateLogger<Program>();
+                    logger.LogInformation("[Win32Emu] Using Headless backend (no display output) for --nogui mode");
                 }
             }
             
