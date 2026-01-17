@@ -174,6 +174,13 @@ public class SynchronizationManager(ILogger? logger = null)
 	/// <summary>
 	/// Opens an existing named mutex object
 	/// </summary>
+	/// <param name="name">The name of the mutex object</param>
+	/// <param name="dwDesiredAccess">The access rights for the mutex object (currently not validated - all accesses allowed)</param>
+	/// <returns>Handle to the mutex, or 0 if not found</returns>
+	/// <remarks>
+	/// Note: Access control (dwDesiredAccess validation) is not implemented.
+	/// All access requests are granted if the mutex exists.
+	/// </remarks>
 	public uint OpenMutex(string name, uint dwDesiredAccess)
 	{
 		lock (_lock)
