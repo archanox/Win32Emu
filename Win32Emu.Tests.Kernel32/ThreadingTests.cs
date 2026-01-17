@@ -897,7 +897,7 @@ public sealed class ThreadingTests : IDisposable
         
         // Check that LastError indicates the mutex was not found
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        const uint ERROR_FILE_NOT_FOUND = 2;
+        var ERROR_FILE_NOT_FOUND = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
         Assert.Equal(ERROR_FILE_NOT_FOUND, lastError);
     }
 
