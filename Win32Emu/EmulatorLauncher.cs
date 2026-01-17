@@ -117,14 +117,18 @@ public static class EmulatorLauncher
 		}
 
 		// Check for backend selection
-		// Note: Backend selection is now handled by the GUI layer through IBackendFactory
+		BackendType? selectedBackendType = null;
 		var backendIndex = Array.IndexOf(args, "--backend");
 		if (backendIndex >= 0 && backendIndex + 1 < args.Length &&
 		    Enum.TryParse<Rendering.BackendType>(args[backendIndex + 1], ignoreCase: true, out var backendType))
 		{
-			// BackendFactory is no longer static - handled by GUI layer
-			// The backendType value is parsed but not used here since backends are managed in GUI
-			_ = backendType; // Acknowledge the parsed value
+			selectedBackendType = backendType;
+		}
+		
+		// If backendFactory was provided and a backend type was specified, configure it
+		if (backendFactory != null && selectedBackendType.HasValue)
+		{
+			backendFactory.CurrentBackendType = selectedBackendType.Value;
 		}
 		
 		// Build list of flag argument indices (those that start with -- and their values)
@@ -349,7 +353,7 @@ public static class EmulatorLauncher
 		Console.WriteLine("  --interactive-debug  Enable interactive step-through debugger (GDB-like)");
 		Console.WriteLine("  --gdb-server [port]  Start GDB server for remote debugging (default port: 1234)");
 		Console.WriteLine("  --interpreter        Force interpreter mode (disable JIT compilation)");
-		Console.WriteLine("  --backend <SDL|GLFW|Vulkan|Metal|Software> Select rendering backend (default: SDL)");
+		Console.WriteLine("  --backend <SDL|GLFW|Vulkan|Metal|Software|Headless> Select rendering backend (default: SDL, or Headless with --nogui)");
 		Console.WriteLine("  --trace-api [file]   Enable comprehensive API call tracing (optional output file)");
 		Console.WriteLine("  --compare-apimon <csv> Compare behavior against API Monitor CSV log");
 		Console.WriteLine("  --log-file [path]    Enable logging to file (auto-generates MD5-based filename if path not provided)");
@@ -360,7 +364,7 @@ public static class EmulatorLauncher
 		Console.WriteLine("  --oem-codepage <codepage>    Set default OEM code page (CP_OEMCP) - e.g., 437 (US), 850 (Multilingual Latin I)");
 		Console.WriteLine();
 		Console.WriteLine("Environment Variables:");
-		Console.WriteLine("  WIN32EMU_BACKEND             Set backend type (SDL, GLFW, Vulkan, Metal, or Software)");
+		Console.WriteLine("  WIN32EMU_BACKEND             Set backend type (SDL, GLFW, Vulkan, Metal, Software, or Headless)");
 		Console.WriteLine("  OTEL_EXPORTER_OTLP_ENDPOINT  OpenTelemetry OTLP endpoint (e.g., http://localhost:4317)");
 		Console.WriteLine();
 		Console.WriteLine("Examples:");
@@ -376,6 +380,8 @@ public static class EmulatorLauncher
 		Console.WriteLine("  Win32Emu game.exe --backend Vulkan");
 		Console.WriteLine("  Win32Emu game.exe --backend Metal");
 		Console.WriteLine("  Win32Emu game.exe --backend Software");
+		Console.WriteLine("  Win32Emu game.exe --backend Headless  # For headless/CI environments");
+		Console.WriteLine("  Win32Emu game.exe --nogui              # Auto-selects Headless backend");
 		Console.WriteLine("  Win32Emu game.exe --interactive-debug");
 		Console.WriteLine("  Win32Emu game.exe --gdb-server");
 		Console.WriteLine("  Win32Emu game.exe --gdb-server 5678");
