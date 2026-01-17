@@ -8,6 +8,11 @@ namespace Win32Emu.Rendering;
 public interface IBackendFactory
 {
 	/// <summary>
+	/// Get or set the current backend type
+	/// </summary>
+	BackendType CurrentBackendType { get; set; }
+	
+	/// <summary>
 	/// Create a rendering backend instance
 	/// </summary>
 	IRenderingBackend CreateRenderingBackend(ILogger logger);

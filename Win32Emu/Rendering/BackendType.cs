@@ -31,6 +31,12 @@ public enum BackendType
     Software,
 
     /// <summary>
+    /// Headless rendering backend - no display output, no GUI dependencies (SDL/GLFW/etc)
+    /// Suitable for CI/CD, headless servers, and automated testing
+    /// </summary>
+    Headless,
+
+    /// <summary>
     /// Avalonia UI integration backend - renders to Avalonia WriteableBitmap instead of separate window
     /// </summary>
     Avalonia

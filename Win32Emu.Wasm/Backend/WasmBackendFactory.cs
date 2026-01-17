@@ -12,6 +12,13 @@ public class WasmBackendFactory : IBackendFactory
 	private readonly IJSRuntime _jsRuntime;
 	private readonly ILoggerFactory _loggerFactory;
 
+	// WASM always uses its own backend type, not configurable
+	public BackendType CurrentBackendType 
+	{ 
+		get => BackendType.Software; // WASM uses software rendering in browser
+		set { /* No-op: WASM backend type is fixed */ }
+	}
+
 	public WasmBackendFactory(IJSRuntime jsRuntime, ILoggerFactory loggerFactory)
 	{
 		_jsRuntime = jsRuntime;

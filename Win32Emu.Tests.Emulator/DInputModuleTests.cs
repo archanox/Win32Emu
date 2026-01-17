@@ -17,6 +17,9 @@ public class DInputModuleTests
 	/// </summary>
 	private class MockBackendFactory : IBackendFactory
 	{
+		// Test mock doesn't need configurable backend type
+		public BackendType CurrentBackendType { get; set; } = BackendType.Headless;
+		
 		public IRenderingBackend CreateRenderingBackend(ILogger logger) => throw new NotImplementedException();
 		public IRenderingBackend CreateRenderingBackendWithHost(ILogger logger, IEmulatorHost? host) => throw new NotImplementedException();
 		public IAudioBackend CreateAudioBackend(ILogger logger) => throw new NotImplementedException();

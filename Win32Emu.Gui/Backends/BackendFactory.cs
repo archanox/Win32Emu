@@ -49,6 +49,7 @@ public class BackendFactory : IBackendFactory
 			BackendType.Vulkan => new SilkVulkanRenderingBackend(logger),
 			BackendType.Metal => new SharpMetalRenderingBackend(logger),
 			BackendType.Software => new SoftwareRenderingBackend(logger),
+			BackendType.Headless => new HeadlessRenderingBackend(logger),
 			_ => new Sdl3RenderingBackend(logger)
 		};
 	}
@@ -78,8 +79,8 @@ public class BackendFactory : IBackendFactory
 	/// </summary>
 	public IAudioBackend CreateAudioBackend(ILogger logger)
 	{
-		// Software backend uses null audio (no audio output)
-		if (CurrentBackendType == BackendType.Software)
+		// Software and Headless backends use null audio (no audio output)
+		if (CurrentBackendType == BackendType.Software || CurrentBackendType == BackendType.Headless)
 		{
 			return new NullAudioBackend(logger);
 		}
@@ -105,6 +106,12 @@ public class BackendFactory : IBackendFactory
 	/// </summary>
 	public IInputBackend CreateInputBackend(ILogger logger)
 	{
+		// Headless backend uses null input (no input devices)
+		if (CurrentBackendType == BackendType.Headless)
+		{
+			return new NullInputBackend(logger);
+		}
+		
 		// Use SDL3 input when SDL backend is selected, otherwise use Silk.NET
 		return CurrentBackendType switch
 		{

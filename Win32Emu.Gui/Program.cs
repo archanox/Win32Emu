@@ -71,6 +71,20 @@ sealed class Program
             // This enables DirectDraw and other graphics APIs to work even without a GUI
             var backendFactory = new Backends.BackendFactory();
             
+            // If no explicit backend was specified with --backend, default to Headless for --nogui mode
+            // This avoids SDL3/GLFW/Vulkan dependencies in headless environments
+            if (!args.Any(arg => arg == "--backend"))
+            {
+                // Check if WIN32EMU_BACKEND environment variable is set
+                var envBackend = Environment.GetEnvironmentVariable("WIN32EMU_BACKEND");
+                if (string.IsNullOrEmpty(envBackend))
+                {
+                    // No backend specified via CLI or environment, default to Headless for nogui mode
+                    backendFactory.CurrentBackendType = Rendering.BackendType.Headless;
+                    Console.WriteLine("[Win32Emu] Using Headless backend (no display output) for --nogui mode");
+                }
+            }
+            
             // Run the emulator directly on the main thread with the logger factory and backend factory (no GUI)
             return EmulatorLauncher.Launch(emuArgs, loggerFactory, backendFactory);
         }
