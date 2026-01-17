@@ -2625,15 +2625,14 @@ public sealed class Emulator : IDisposable
                 // Check for COM vtable method calls
                 if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
                 {
-                    // Logging now handled by ComVtableDispatcher.TryInvoke
+                    // Logging now handled by ComVtableDispatcher.TryInvokeAsync
                     
                     // Use consolidated helper for register preservation and stdcall convention
                     CpuHelpers.InvokeWithRegisterPreservation(
                         _cpu,
                         _vm!,
                         () => {
-                            var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
-                            // Return logging now handled by ComVtableDispatcher.TryInvoke
+                            var (success, returnValue, argBytes) = _env.ComDispatcher.TryInvokeAsync(step.CallTarget, _cpu, _vm!).GetAwaiter().GetResult();
                             return (success, returnValue, argBytes);
                         },
                         _vm!.Size,
@@ -2791,20 +2790,19 @@ public sealed class Emulator : IDisposable
             // Check for COM vtable method calls
             if (step.IsCall && _env.ComDispatcher.IsComVtableAddress(step.CallTarget))
             {
-                // Logging now handled by ComVtableDispatcher.TryInvoke
+                // Logging now handled by ComVtableDispatcher.TryInvokeAsync
                 
                 // Use consolidated helper for register preservation and stdcall convention
                 CpuHelpers.InvokeWithRegisterPreservation(
                     _cpu,
                     _vm!,
                     () => {
-                        var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
-                        // Return logging now handled by ComVtableDispatcher.TryInvoke
+                        var (success, returnValue, argBytes) = _env.ComDispatcher.TryInvokeAsync(step.CallTarget, _cpu, _vm!).GetAwaiter().GetResult();
                         return (success, returnValue, argBytes);
                     },
                     _vm!.Size,
                     _logger,
-                    "COM vtable",
+                    "COM vtable (debugger)",
                     _image);
             }
             else if (step.IsCall && !IsImportStubAddress(step.CallTarget))

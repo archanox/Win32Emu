@@ -5129,7 +5129,8 @@ namespace Win32Emu.Win32.Modules
 				// Save callee-saved registers (EBX, ESI, EDI, EBP)
 				var saved = CpuHelpers.SaveCalleeSavedRegisters(cpu);
 
-				if (_env.ComDispatcher.TryInvoke(step.CallTarget, cpu, memory, out var comRet, out var comArgBytes))
+				var (success, comRet, comArgBytes) = _env.ComDispatcher.TryInvokeAsync(step.CallTarget, cpu, memory).GetAwaiter().GetResult();
+			if (success)
 				{
 					stepDesc = $"COM vtable call -> 0x{step.CallTarget:X8}";
 					var currentEsp = cpu.GetRegister("ESP");
