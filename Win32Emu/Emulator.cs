@@ -2793,29 +2793,19 @@ public sealed class Emulator : IDisposable
             {
                 // Logging now handled by ComVtableDispatcher.TryInvoke
                 
-                // Save callee-saved registers (EBX, ESI, EDI, EBP) per x86 calling convention
-                var savedEbx = _cpu.GetRegister("EBX");
-                var savedEsi = _cpu.GetRegister("ESI");
-                var savedEdi = _cpu.GetRegister("EDI");
-                var savedEbp = _cpu.GetRegister("EBP");
-                
-                if (_env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var ret, out var comArgBytes))
-                {
-                    // Return logging now handled by ComVtableDispatcher.TryInvoke
-                    var esp = _cpu.GetRegister("ESP");
-                    var retEip = _vm!.Read32(esp);
-                    // COM methods use stdcall convention - callee cleans up the stack
-                    esp += 4 + (uint)comArgBytes; // Pop return address + arguments
-                    _cpu.SetRegister("ESP", esp);
-                    _cpu.SetRegister("EAX", ret); // Return value in EAX
-                    _cpu.SetEip(retEip);
-                    
-                    // Restore callee-saved registers
-                    _cpu.SetRegister("EBX", savedEbx);
-                    _cpu.SetRegister("ESI", savedEsi);
-                    _cpu.SetRegister("EDI", savedEdi);
-                    _cpu.SetRegister("EBP", savedEbp);
-                }
+                // Use consolidated helper for register preservation and stdcall convention
+                CpuHelpers.InvokeWithRegisterPreservation(
+                    _cpu,
+                    _vm!,
+                    () => {
+                        var success = _env.ComDispatcher.TryInvoke(step.CallTarget, _cpu, _vm!, out var returnValue, out var argBytes);
+                        // Return logging now handled by ComVtableDispatcher.TryInvoke
+                        return (success, returnValue, argBytes);
+                    },
+                    _vm!.Size,
+                    _logger,
+                    "COM vtable",
+                    _image);
             }
             else if (step.IsCall && !IsImportStubAddress(step.CallTarget))
             {
