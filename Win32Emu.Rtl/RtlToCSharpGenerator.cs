@@ -38,7 +38,7 @@ public class RtlToCSharpGenerator
         sb.AppendLine($"    /// </summary>");
         sb.AppendLine($"    public class {className}");
         sb.AppendLine("    {");
-        sb.AppendLine($"        public async Task<CpuStepResult> {methodName}(dynamic cpu, dynamic mem)");
+        sb.AppendLine($"        public static async Task<CpuStepResult> {methodName}(dynamic cpu, dynamic mem)");
         sb.AppendLine("        {");
         sb.AppendLine("            // CPU state");
         sb.AppendLine("            uint EAX = cpu.GetRegister(\"EAX\");");
