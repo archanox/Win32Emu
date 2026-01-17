@@ -751,7 +751,7 @@ public sealed class ThreadingTests : IDisposable
         Assert.NotEqual(0u, handle); // Should return a valid handle
         
         // The mutex should be owned, so trying to wait with zero timeout should succeed immediately
-        const uint WAIT_OBJECT_0 = 0;
+        var WAIT_OBJECT_0 = (uint)NativeTypes.WaitResult.WAIT_OBJECT_0;
         var waitResult = _testEnv.CallKernel32Api("WAITFORSINGLEOBJECT", handle, 0u);
         Assert.Equal(WAIT_OBJECT_0, waitResult); // Should acquire immediately (recursive acquisition)
     }
@@ -762,7 +762,7 @@ public sealed class ThreadingTests : IDisposable
         // Arrange - Create a named mutex
         var lpMutexAttributes = 0u;
         var bInitialOwner = 0u;
-        var mutexName = "TestMutex_" + Guid.NewGuid().ToString();
+        var mutexName = "TestMutex_" + Guid.NewGuid();
         var lpName = _testEnv.WriteString(mutexName);
 
         // Act
@@ -778,7 +778,7 @@ public sealed class ThreadingTests : IDisposable
         // Arrange - Create two mutexes with the same name
         var lpMutexAttributes = 0u;
         var bInitialOwner = 0u;
-        var mutexName = "TestMutex_" + Guid.NewGuid().ToString();
+        var mutexName = "TestMutex_" + Guid.NewGuid();
         var lpName = _testEnv.WriteString(mutexName);
 
         // Act
@@ -836,7 +836,7 @@ public sealed class ThreadingTests : IDisposable
         Assert.NotEqual(0u, handle);
 
         // Act - Wait for the mutex with zero timeout
-        const uint WAIT_OBJECT_0 = 0;
+        var WAIT_OBJECT_0 = (uint)NativeTypes.WaitResult.WAIT_OBJECT_0;
         var result = _testEnv.CallKernel32Api("WAITFORSINGLEOBJECT", handle, 0u);
 
         // Assert
@@ -856,7 +856,7 @@ public sealed class ThreadingTests : IDisposable
         _testEnv.CallKernel32Api("RELEASEMUTEX", handle);
 
         // Act - Wait with zero timeout (should succeed as mutex is now free)
-        const uint WAIT_OBJECT_0 = 0;
+        var WAIT_OBJECT_0 = (uint)NativeTypes.WaitResult.WAIT_OBJECT_0;
         var result = _testEnv.CallKernel32Api("WAITFORSINGLEOBJECT", handle, 0u);
 
         // Assert
@@ -867,13 +867,13 @@ public sealed class ThreadingTests : IDisposable
     public void OpenMutexA_OnExistingNamedMutex_ShouldReturnSameHandle()
     {
         // Arrange - Create a named mutex
-        var mutexName = "TestMutex_" + Guid.NewGuid().ToString();
+        var mutexName = "TestMutex_" + Guid.NewGuid();
         var lpName = _testEnv.WriteString(mutexName);
         var createdHandle = _testEnv.CallKernel32Api("CREATEMUTEXA", 0u, 0u, lpName);
         Assert.NotEqual(0u, createdHandle);
 
         // Act - Open the existing mutex
-        const uint SYNCHRONIZE = 0x00100000;
+        var SYNCHRONIZE = (uint)NativeTypes.StandardAccessRights.SYNCHRONIZE;
         var openedHandle = _testEnv.CallKernel32Api("OPENMUTEXA", SYNCHRONIZE, 0u, lpName);
 
         // Assert
@@ -885,11 +885,11 @@ public sealed class ThreadingTests : IDisposable
     public void OpenMutexA_OnNonExistentMutex_ShouldReturnNull()
     {
         // Arrange - Try to open a mutex that doesn't exist
-        var mutexName = "NonExistentMutex_" + Guid.NewGuid().ToString();
+        var mutexName = "NonExistentMutex_" + Guid.NewGuid();
         var lpName = _testEnv.WriteString(mutexName);
 
         // Act
-        const uint SYNCHRONIZE = 0x00100000;
+        var SYNCHRONIZE = (uint)NativeTypes.StandardAccessRights.SYNCHRONIZE;
         var handle = _testEnv.CallKernel32Api("OPENMUTEXA", SYNCHRONIZE, 0u, lpName);
 
         // Assert
