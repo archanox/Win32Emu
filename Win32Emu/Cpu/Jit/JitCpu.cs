@@ -1648,7 +1648,7 @@ public class JitCpu : IAsyncCpu
 			if (block.Assembly == null)
 			{
 				_logger.LogError("[JitCpu] RTL block assembly is null at 0x{Address:X8}", block.StartAddress);
-				return new CpuStepResult { IsCall = false, CallTarget = 0 };
+				return new CpuStepResult(IsCall: false, CallTarget: 0);
 			}
 			
 			var fullTypeName = $"Win32Emu.Jit.Generated.{block.ClassName}";
@@ -1657,7 +1657,7 @@ public class JitCpu : IAsyncCpu
 			if (type == null)
 			{
 				_logger.LogError("[JitCpu] Could not find type {TypeName} in assembly", fullTypeName);
-				return new CpuStepResult { IsCall = false, CallTarget = 0 };
+				return new CpuStepResult(IsCall: false, CallTarget: 0);
 			}
 			
 			var method = type.GetMethod(block.MethodName);
@@ -1665,7 +1665,7 @@ public class JitCpu : IAsyncCpu
 			{
 				_logger.LogError("[JitCpu] Could not find method {MethodName} in type {TypeName}", 
 					block.MethodName, fullTypeName);
-				return new CpuStepResult { IsCall = false, CallTarget = 0 };
+				return new CpuStepResult(IsCall: false, CallTarget: 0);
 			}
 			
 			// Invoke the generated method (handle both static and non-static methods)
@@ -1692,12 +1692,12 @@ public class JitCpu : IAsyncCpu
 			}
 			
 			_logger.LogError("[JitCpu] Method returned unexpected type");
-			return new CpuStepResult { IsCall = false, CallTarget = 0 };
+			return new CpuStepResult(IsCall: false, CallTarget: 0);
 		}
 		catch (Exception ex)
 		{
 			_logger.LogError(ex, "[JitCpu] Failed to execute RTL block at 0x{Address:X8}", block.StartAddress);
-			return new CpuStepResult { IsCall = false, CallTarget = 0 };
+			return new CpuStepResult(IsCall: false, CallTarget: 0);
 		}
 	}
 
