@@ -33,6 +33,7 @@ public static class EmulatorLauncher
 		var gdbServerMode = args.Contains("--gdb-server");
 		var gdbServerPort = 1234; // Default port
 		var force32BitStackOps = !args.Contains("--no-force-32bit-stack-ops"); // Default to true for Win32 compatibility
+		var forceInterpreterMode = args.Contains("--interpreter"); // Force interpreter mode, disable JIT compilation
 		
 		// Check for custom GDB server port
 		if (gdbServerMode)
@@ -278,7 +279,7 @@ public static class EmulatorLauncher
 					// Let critical exceptions propagate
 					
 					using var emulator = new Emulator(null, logger, telemetryService, backendFactory);
-					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, false, virtualDiskPath, null, null, force32BitStackOps, ansiCodePage, oemCodePage);
+					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, forceInterpreterMode, virtualDiskPath, null, null, force32BitStackOps, ansiCodePage, oemCodePage);
 					
 					// Enable API tracing if requested
 					if (enableApiTrace && emulator.Environment != null)
@@ -347,6 +348,7 @@ public static class EmulatorLauncher
 		Console.WriteLine("  --debug              Enable enhanced debugging to catch memory access errors");
 		Console.WriteLine("  --interactive-debug  Enable interactive step-through debugger (GDB-like)");
 		Console.WriteLine("  --gdb-server [port]  Start GDB server for remote debugging (default port: 1234)");
+		Console.WriteLine("  --interpreter        Force interpreter mode (disable JIT compilation)");
 		Console.WriteLine("  --backend <SDL|GLFW|Vulkan|Metal|Software> Select rendering backend (default: SDL)");
 		Console.WriteLine("  --trace-api [file]   Enable comprehensive API call tracing (optional output file)");
 		Console.WriteLine("  --compare-apimon <csv> Compare behavior against API Monitor CSV log");
@@ -364,6 +366,7 @@ public static class EmulatorLauncher
 		Console.WriteLine("Examples:");
 		Console.WriteLine("  Win32Emu game.exe");
 		Console.WriteLine("  Win32Emu game.exe --debug");
+		Console.WriteLine("  Win32Emu game.exe --interpreter");
 		Console.WriteLine("  Win32Emu game.exe --log-file");
 		Console.WriteLine("  Win32Emu game.exe --log-file custom.log");
 		Console.WriteLine("  Win32Emu game.exe --trace-api trace.log");
