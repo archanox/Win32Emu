@@ -717,4 +717,222 @@ public sealed class ThreadingTests : IDisposable
     {
         _testEnv.Dispose();
     }
+
+    #region Mutex Tests
+
+    [Fact]
+    public void CreateMutexA_WithoutInitialOwner_ShouldReturnValidHandle()
+    {
+        // Arrange - Create an unnamed mutex without initial ownership
+        var lpMutexAttributes = 0u; // NULL (default security)
+        var bInitialOwner = 0u; // FALSE - not initially owned
+        var lpName = 0u; // NULL (unnamed mutex)
+
+        // Act
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXA", lpMutexAttributes, bInitialOwner, lpName);
+
+        // Assert
+        Assert.NotEqual(0u, handle); // Should return a valid handle
+    }
+
+    [Fact]
+    public void CreateMutexA_WithInitialOwner_ShouldReturnValidHandleAndBeOwned()
+    {
+        // Arrange - Create an unnamed mutex with initial ownership
+        var lpMutexAttributes = 0u; // NULL (default security)
+        var bInitialOwner = 1u; // TRUE - initially owned by creating thread
+        var lpName = 0u; // NULL (unnamed mutex)
+
+        // Act
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXA", lpMutexAttributes, bInitialOwner, lpName);
+
+        // Assert
+        Assert.NotEqual(0u, handle); // Should return a valid handle
+        
+        // The mutex should be owned, so trying to wait with zero timeout should succeed immediately
+        const uint WAIT_OBJECT_0 = 0;
+        var waitResult = _testEnv.CallKernel32Api("WAITFORSINGLEOBJECT", handle, 0u);
+        Assert.Equal(WAIT_OBJECT_0, waitResult); // Should acquire immediately (recursive acquisition)
+    }
+
+    [Fact]
+    public void CreateMutexA_WithName_ShouldReturnValidHandle()
+    {
+        // Arrange - Create a named mutex
+        var lpMutexAttributes = 0u;
+        var bInitialOwner = 0u;
+        var mutexName = "TestMutex_" + Guid.NewGuid().ToString();
+        var lpName = _testEnv.WriteString(mutexName);
+
+        // Act
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXA", lpMutexAttributes, bInitialOwner, lpName);
+
+        // Assert
+        Assert.NotEqual(0u, handle);
+    }
+
+    [Fact]
+    public void CreateMutexA_WithSameName_ShouldReturnSameHandle()
+    {
+        // Arrange - Create two mutexes with the same name
+        var lpMutexAttributes = 0u;
+        var bInitialOwner = 0u;
+        var mutexName = "TestMutex_" + Guid.NewGuid().ToString();
+        var lpName = _testEnv.WriteString(mutexName);
+
+        // Act
+        var handle1 = _testEnv.CallKernel32Api("CREATEMUTEXA", lpMutexAttributes, bInitialOwner, lpName);
+        var handle2 = _testEnv.CallKernel32Api("CREATEMUTEXA", lpMutexAttributes, bInitialOwner, lpName);
+
+        // Assert
+        Assert.NotEqual(0u, handle1);
+        Assert.Equal(handle1, handle2); // Should return the same handle for the same name
+        
+        // Check that LastError indicates the mutex already exists
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        const uint ERROR_ALREADY_EXISTS = 183;
+        Assert.Equal(ERROR_ALREADY_EXISTS, lastError);
+    }
+
+    [Fact]
+    public void ReleaseMutex_OnOwnedMutex_ShouldSucceed()
+    {
+        // Arrange - Create and acquire a mutex
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXA", 0u, 1u, 0u);
+        Assert.NotEqual(0u, handle);
+
+        // Act - Release the mutex
+        var result = _testEnv.CallKernel32Api("RELEASEMUTEX", handle);
+
+        // Assert
+        Assert.Equal(1u, result); // TRUE - success
+    }
+
+    [Fact]
+    public void ReleaseMutex_OnUnownedMutex_ShouldFail()
+    {
+        // Arrange - Create a mutex without acquiring it
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXA", 0u, 0u, 0u);
+        Assert.NotEqual(0u, handle);
+
+        // Act - Try to release the mutex (should fail - not owned)
+        var result = _testEnv.CallKernel32Api("RELEASEMUTEX", handle);
+
+        // Assert
+        Assert.Equal(0u, result); // FALSE - failure
+        
+        // Check that LastError indicates not the owner
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        const uint ERROR_NOT_OWNER = 288;
+        Assert.Equal(ERROR_NOT_OWNER, lastError);
+    }
+
+    [Fact]
+    public void WaitForSingleObject_OnFreeMutex_ShouldAcquireImmediately()
+    {
+        // Arrange - Create a free (unowned) mutex
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXA", 0u, 0u, 0u);
+        Assert.NotEqual(0u, handle);
+
+        // Act - Wait for the mutex with zero timeout
+        const uint WAIT_OBJECT_0 = 0;
+        var result = _testEnv.CallKernel32Api("WAITFORSINGLEOBJECT", handle, 0u);
+
+        // Assert
+        Assert.Equal(WAIT_OBJECT_0, result); // Should acquire immediately
+    }
+
+    [Fact]
+    public void WaitForSingleObject_WithTimeout_ShouldReturnTimeout()
+    {
+        // Arrange - Create an owned mutex
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXA", 0u, 1u, 0u);
+        Assert.NotEqual(0u, handle);
+        
+        // Acquire it again (recursive) and release twice to make it unowned
+        _testEnv.CallKernel32Api("WAITFORSINGLEOBJECT", handle, 0u);
+        _testEnv.CallKernel32Api("RELEASEMUTEX", handle);
+        _testEnv.CallKernel32Api("RELEASEMUTEX", handle);
+
+        // Act - Wait with zero timeout (should succeed as mutex is now free)
+        const uint WAIT_OBJECT_0 = 0;
+        var result = _testEnv.CallKernel32Api("WAITFORSINGLEOBJECT", handle, 0u);
+
+        // Assert
+        Assert.Equal(WAIT_OBJECT_0, result); // Should acquire successfully
+    }
+
+    [Fact]
+    public void OpenMutexA_OnExistingNamedMutex_ShouldReturnSameHandle()
+    {
+        // Arrange - Create a named mutex
+        var mutexName = "TestMutex_" + Guid.NewGuid().ToString();
+        var lpName = _testEnv.WriteString(mutexName);
+        var createdHandle = _testEnv.CallKernel32Api("CREATEMUTEXA", 0u, 0u, lpName);
+        Assert.NotEqual(0u, createdHandle);
+
+        // Act - Open the existing mutex
+        const uint SYNCHRONIZE = 0x00100000;
+        var openedHandle = _testEnv.CallKernel32Api("OPENMUTEXA", SYNCHRONIZE, 0u, lpName);
+
+        // Assert
+        Assert.NotEqual(0u, openedHandle);
+        Assert.Equal(createdHandle, openedHandle); // Should return the same handle
+    }
+
+    [Fact]
+    public void OpenMutexA_OnNonExistentMutex_ShouldReturnNull()
+    {
+        // Arrange - Try to open a mutex that doesn't exist
+        var mutexName = "NonExistentMutex_" + Guid.NewGuid().ToString();
+        var lpName = _testEnv.WriteString(mutexName);
+
+        // Act
+        const uint SYNCHRONIZE = 0x00100000;
+        var handle = _testEnv.CallKernel32Api("OPENMUTEXA", SYNCHRONIZE, 0u, lpName);
+
+        // Assert
+        Assert.Equal(0u, handle); // NULL handle
+        
+        // Check that LastError indicates the mutex was not found
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        const uint ERROR_FILE_NOT_FOUND = 2;
+        Assert.Equal(ERROR_FILE_NOT_FOUND, lastError);
+    }
+
+    [Fact]
+    public void OpenMutexA_WithEmptyName_ShouldReturnNull()
+    {
+        // Arrange - Try to open a mutex with empty name
+        var lpName = _testEnv.WriteString("");
+
+        // Act
+        const uint SYNCHRONIZE = 0x00100000;
+        var handle = _testEnv.CallKernel32Api("OPENMUTEXA", SYNCHRONIZE, 0u, lpName);
+
+        // Assert
+        Assert.Equal(0u, handle); // NULL handle
+        
+        // Check that LastError indicates invalid parameter
+        var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
+        const uint ERROR_INVALID_PARAMETER = 87;
+        Assert.Equal(ERROR_INVALID_PARAMETER, lastError);
+    }
+
+    [Fact]
+    public void CreateMutexW_WithoutInitialOwner_ShouldReturnValidHandle()
+    {
+        // Arrange - Create an unnamed mutex without initial ownership (Unicode version)
+        var lpMutexAttributes = 0u;
+        var bInitialOwner = 0u;
+        var lpName = 0u;
+
+        // Act
+        var handle = _testEnv.CallKernel32Api("CREATEMUTEXW", lpMutexAttributes, bInitialOwner, lpName);
+
+        // Assert
+        Assert.NotEqual(0u, handle); // Should return a valid handle
+    }
+
+    #endregion
 }

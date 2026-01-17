@@ -171,6 +171,34 @@ public class SynchronizationManager(ILogger? logger = null)
 		}
 	}
 
+	/// <summary>
+	/// Opens an existing named mutex object
+	/// </summary>
+	public uint OpenMutex(string name, uint dwDesiredAccess)
+	{
+		lock (_lock)
+		{
+			const uint NULL_HANDLE = 0;
+			
+			// Check if named mutex exists
+			if (string.IsNullOrEmpty(name) || !_namedObjects.TryGetValue(name, out var existingHandle))
+			{
+				_logger.LogWarning("[SyncMgr] OpenMutex: mutex '{Name}' not found", name);
+				return NULL_HANDLE;
+			}
+
+			// Verify it's actually a mutex (not an event or semaphore)
+			if (!_mutexes.ContainsKey(existingHandle))
+			{
+				_logger.LogWarning("[SyncMgr] OpenMutex: handle 0x{Handle:X8} is not a mutex", existingHandle);
+				return NULL_HANDLE;
+			}
+
+			_logger.LogInformation("[SyncMgr] Opened existing mutex '{Name}' (handle=0x{Handle:X8})", name, existingHandle);
+			return existingHandle;
+		}
+	}
+
 	#endregion
 
 	#region Event Operations
