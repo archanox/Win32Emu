@@ -1,5 +1,6 @@
 using Xunit;
 using Win32Emu.Tests.Infrastructure;
+using Win32Emu.Win32;
 
 namespace Win32Emu.Tests.Kernel32;
 
@@ -790,7 +791,7 @@ public sealed class ThreadingTests : IDisposable
         
         // Check that LastError indicates the mutex already exists
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        const uint ERROR_ALREADY_EXISTS = 183;
+        var ERROR_ALREADY_EXISTS = (uint)NativeTypes.Win32Error.ERROR_ALREADY_EXISTS;
         Assert.Equal(ERROR_ALREADY_EXISTS, lastError);
     }
 
@@ -823,7 +824,7 @@ public sealed class ThreadingTests : IDisposable
         
         // Check that LastError indicates not the owner
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        const uint ERROR_NOT_OWNER = 288;
+        var ERROR_NOT_OWNER = (uint)NativeTypes.Win32Error.ERROR_NOT_OWNER;
         Assert.Equal(ERROR_NOT_OWNER, lastError);
     }
 
@@ -915,7 +916,7 @@ public sealed class ThreadingTests : IDisposable
         
         // Check that LastError indicates invalid parameter
         var lastError = _testEnv.CallKernel32Api("GETLASTERROR");
-        const uint ERROR_INVALID_PARAMETER = 87;
+        var ERROR_INVALID_PARAMETER = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
         Assert.Equal(ERROR_INVALID_PARAMETER, lastError);
     }
 
