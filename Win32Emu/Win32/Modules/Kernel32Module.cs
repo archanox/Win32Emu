@@ -1336,16 +1336,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		return CreateEvent(lpEventAttributes, bManualReset, bInitialState, lpName);
 	}
 
-	[DllModuleExport(194, entryPoint: 0x00007532, Version = "4.90.0.3000", IsStub = true)]
-	[DllModuleExport(93, entryPoint: 0x0000E9DF, Version = "5.1.2600.6532", IsStub = true)]
+	[DllModuleExport(194, entryPoint: 0x00007532, Version = "4.90.0.3000")]
+	[DllModuleExport(93, entryPoint: 0x0000E9DF, Version = "5.1.2600.6532")]
 	private uint CreateMutexA(uint lpMutexAttributes, uint bInitialOwner, LpcStr lpName)
 	{
 		_logger.LogInformation("[kernel32] CreateMutexA: lpMutexAttributes={lpMutexAttributes}, bInitialOwner={bInitialOwner}, lpName={lpName}", lpMutexAttributes, bInitialOwner, lpName);
 		return CreateMutex(lpMutexAttributes, bInitialOwner, lpName);
 	}
 
-	[DllModuleExport(195, entryPoint: 0x00039B03, Version = "4.90.0.3000", IsStub = true)]
-	[DllModuleExport(94, entryPoint: 0x0000E957, Version = "5.1.2600.6532", IsStub = true)]
+	[DllModuleExport(195, entryPoint: 0x00039B03, Version = "4.90.0.3000")]
+	[DllModuleExport(94, entryPoint: 0x0000E957, Version = "5.1.2600.6532")]
 	public uint CreateMutexW(uint lpMutexAttributes, uint bInitialOwner, LpcStr lpName)
 	{
 		_logger.LogInformation("[kernel32] CreateMutexW: lpMutexAttributes={lpMutexAttributes}, bInitialOwner={bInitialOwner}, lpName={lpName}", lpMutexAttributes, bInitialOwner, lpName);
@@ -7749,7 +7749,29 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		var name = lpName.Read(_env.Memory) ?? string.Empty;
 		_logger.LogInformation("[Kernel32] OpenMutexA(dwDesiredAccess=0x{DwDesiredAccess:X}, bInheritHandle={BInheritHandle}, lpName=\"{Name}\")",
 			dwDesiredAccess, bInheritHandle, name);
-		return 0; // NULL - mutex doesn't exist
+
+		if (_env.SynchronizationManager == null)
+		{
+			_logger.LogWarning("[Kernel32] OpenMutexA: SynchronizationManager not available");
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_FUNCTION;
+			return 0; // NULL handle
+		}
+
+		if (string.IsNullOrEmpty(name))
+		{
+			_logger.LogWarning("[Kernel32] OpenMutexA: name is empty");
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_INVALID_PARAMETER;
+			return 0; // NULL handle
+		}
+
+		var handle = _env.SynchronizationManager.OpenMutex(name, dwDesiredAccess);
+		
+		if (handle == 0)
+		{
+			_env.LastError = (uint)NativeTypes.Win32Error.ERROR_FILE_NOT_FOUND;
+		}
+
+		return handle;
 	}
 
 	[DllModuleExport(4)]
