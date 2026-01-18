@@ -6719,11 +6719,13 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (executable.Contains('\\') || executable.Contains('/'))
 		{
 			var normalizedPath = executable.Replace('/', '\\');
-			return Path.Combine(_env.CurrentDirectory, normalizedPath);
+			// Use Path.Combine and normalize to Windows path separators
+			var combined = Path.Combine(_env.CurrentDirectory, normalizedPath);
+			return combined.Replace('/', '\\');
 		}
 
 		// Search in current directory first
-		var currentDirPath = Path.Combine(_env.CurrentDirectory, executable);
+		var currentDirPath = Path.Combine(_env.CurrentDirectory, executable).Replace('/', '\\');
 		if (FileExistsInVfs(currentDirPath))
 		{
 			return currentDirPath;
@@ -6733,7 +6735,7 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 		if (!executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
 		{
 			var withExt = executable + ".exe";
-			var currentDirPathWithExt = Path.Combine(_env.CurrentDirectory, withExt);
+			var currentDirPathWithExt = Path.Combine(_env.CurrentDirectory, withExt).Replace('/', '\\');
 			if (FileExistsInVfs(currentDirPathWithExt))
 			{
 				return currentDirPathWithExt;

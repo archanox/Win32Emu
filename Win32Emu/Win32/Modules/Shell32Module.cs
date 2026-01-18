@@ -969,11 +969,13 @@ public partial class Shell32Module : IWin32ModuleAsync
 		if (file.Contains('\\') || file.Contains('/'))
 		{
 			var normalizedPath = file.Replace('/', '\\');
-			return Path.Combine(workingDirectory, normalizedPath);
+			// Use Path.Combine and normalize to Windows path separators
+			var combined = Path.Combine(workingDirectory, normalizedPath);
+			return combined.Replace('/', '\\');
 		}
 
 		// Search in working directory first
-		var workingDirPath = Path.Combine(workingDirectory, file);
+		var workingDirPath = Path.Combine(workingDirectory, file).Replace('/', '\\');
 		if (FileExistsInVfs(workingDirPath))
 		{
 			return workingDirPath;
@@ -983,7 +985,7 @@ public partial class Shell32Module : IWin32ModuleAsync
 		if (!file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
 		{
 			var withExt = file + ".exe";
-			var workingDirPathWithExt = Path.Combine(workingDirectory, withExt);
+			var workingDirPathWithExt = Path.Combine(workingDirectory, withExt).Replace('/', '\\');
 			if (FileExistsInVfs(workingDirPathWithExt))
 			{
 				return workingDirPathWithExt;
