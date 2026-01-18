@@ -600,8 +600,12 @@ public class EmulatorService : IDisposable
 					_emulator = new Emulator(_emulatorHost, _loggerFactory.CreateLogger<Emulator>(), null, _backendFactory);
 					
 					// Load child executable with VFS
-					EmitDebugOutput($"[ChildProcess] Loading child executable: {System.IO.Path.GetFileName(childPath)}");
-					var childFileName = System.IO.Path.GetFileName(childPath);
+					// Extract filename manually instead of using System.IO.Path.GetFileName
+					// because in WASM/browser environments, System.IO.Path may not correctly handle
+					// Windows-style backslash paths, returning the entire path instead of just the filename
+					var lastBackslash = childPath.LastIndexOf('\\');
+					var childFileName = lastBackslash >= 0 ? childPath.Substring(lastBackslash + 1) : childPath;
+					EmitDebugOutput($"[ChildProcess] Loading child executable: {childFileName}");
 					_loadedExecutableName = childFileName;
 					_emulator.LoadExecutableFromBytes(
 						childBytes, 
