@@ -538,14 +538,21 @@ public class EmulatorService : IDisposable
 					// The path is already resolved by WinExec, but we need to convert it to VFS format
 					var childPath = childRequest.ExecutablePath;
 					
-					// Convert Windows path (C:\WASM\setup.exe) to VFS path (WASM\setup.exe)
+					// Convert Windows path (C:\WASM\setup.exe) to VFS path (\WASM\setup.exe)
+					// Note: BrowserVirtualFileSystem normalizes paths to include a leading backslash
 					if (childPath.StartsWith(@"C:\", StringComparison.OrdinalIgnoreCase))
 					{
-						childPath = childPath.Substring(3); // Remove "C:\" prefix
+						childPath = childPath.Substring(2); // Remove "C:" prefix, keep the leading backslash
 					}
 					else if (childPath.StartsWith(@"C:", StringComparison.OrdinalIgnoreCase))
 					{
-						childPath = childPath.Substring(2); // Remove "C:" prefix
+						// No leading backslash after C:, add it
+						childPath = "\\" + childPath.Substring(2);
+					}
+					else if (!childPath.StartsWith("\\"))
+					{
+						// Ensure leading backslash for paths without drive letter
+						childPath = "\\" + childPath;
 					}
 					
 					// Check if the child executable exists in VFS
@@ -557,7 +564,7 @@ public class EmulatorService : IDisposable
 					}
 					
 					// Get the child executable bytes from VFS
-					// Note: BrowserVirtualFileSystem stores files with normalized paths
+					// Files dictionary is case-insensitive and uses normalized paths (with leading backslash)
 					var vfsFiles = _browserVfs.Files;
 					if (!vfsFiles.TryGetValue(childPath, out var childBytes) || childBytes == null || childBytes.Length == 0)
 					{
