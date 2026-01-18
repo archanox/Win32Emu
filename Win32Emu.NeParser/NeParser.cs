@@ -508,9 +508,38 @@ namespace Win32Emu.NeParser
 		
 		var moduleCount = header.ModuleReferenceCount;
 		
-		// According to NE specification, Module Reference Table is an array of 2-byte offsets
-		// into the Imported Names Table (which contains Pascal strings)
-		// Each offset is relative to the start of the Imported Names Table
+		// According to NE specification, Module Reference Table is an array of 2-byte offsets.
+		// Standard interpretation: offsets are relative to the start of the Imported Names Table.
+		// However, some NE files (particularly older ones) may use offsets relative to the NE header base.
+		// We try the standard interpretation first, and if it produces invalid names, try the alternative.
+		
+		// Try standard interpretation (relative to Imported Names Table)
+		var standardModules = TryParseModuleNames(bytes, header, moduleTableOffset, importNamesOffset, moduleCount, relativeToImportedNames: true);
+		
+		// Validate results - if we got valid-looking module names, use them
+		if (IsValidModuleList(standardModules, moduleCount))
+		{
+			return standardModules;
+		}
+		
+		// If standard interpretation failed, try alternative (relative to NE header base)
+		var alternativeModules = TryParseModuleNames(bytes, header, moduleTableOffset, header.BaseOffset, moduleCount, relativeToImportedNames: false);
+		
+		if (IsValidModuleList(alternativeModules, moduleCount))
+		{
+			return alternativeModules;
+		}
+		
+		// If both failed, return the standard interpretation results (may be empty or partial)
+		return standardModules;
+	}
+	
+	/// <summary>
+	/// Attempts to parse module names using a specific offset interpretation.
+	/// </summary>
+	private static List<string> TryParseModuleNames(byte[] bytes, NeHeader header, int moduleTableOffset, int baseOffset, ushort moduleCount, bool relativeToImportedNames)
+	{
+		var modules = new List<string>();
 		
 		for (var i = 0; i < moduleCount; i++)
 		{
@@ -525,8 +554,8 @@ namespace Win32Emu.NeParser
 			if (nameOffset == 0)
 				continue;
 			
-			// The offset is relative to the Imported Names Table start
-			var actualOffset = importNamesOffset + nameOffset;
+			// Calculate actual offset based on interpretation
+			var actualOffset = baseOffset + nameOffset;
 			
 			if (actualOffset + 1 > bytes.Length)
 				continue;
@@ -540,23 +569,21 @@ namespace Win32Emu.NeParser
 			if (actualOffset + nameLength + 1 > bytes.Length)
 				continue;
 			
-			// Quick validation: skip if the name contains null bytes
-			// Check before decoding to avoid unnecessary string allocation
-			bool containsNull = false;
+			// Quick validation: skip if the name contains null bytes or non-printable characters
+			bool containsInvalidChar = false;
 			for (var j = 1; j <= nameLength; j++)
 			{
-				if (bytes[actualOffset + j] == 0)
+				var ch = bytes[actualOffset + j];
+				if (ch == 0 || ch < 0x20 || ch > 0x7E)
 				{
-					containsNull = true;
+					containsInvalidChar = true;
 					break;
 				}
 			}
-			if (containsNull)
+			if (containsInvalidChar)
 				continue;
 			
 			// Read the module name
-			// Note: Some NE files may have module names with non-standard characters
-			// We allow these and let the caller handle them appropriately
 			var moduleName = Encoding.ASCII.GetString(bytes, actualOffset + 1, nameLength);
 			
 			// Skip if the name is all whitespace
@@ -567,6 +594,37 @@ namespace Win32Emu.NeParser
 		}
 		
 		return modules;
+	}
+	
+	/// <summary>
+	/// Validates that a list of module names looks reasonable for a Win16 NE file.
+	/// </summary>
+	private static bool IsValidModuleList(List<string> modules, ushort expectedCount)
+	{
+		// If we got no modules, it's likely invalid
+		if (modules.Count == 0)
+			return false;
+		
+		// If we got significantly fewer modules than expected, it might be invalid
+		// Allow up to 50% missing due to null entries or parsing issues
+		if (modules.Count < expectedCount / 2)
+			return false;
+		
+		// Check if module names look like valid Win16 module names
+		// Common Win16 modules: KERNEL, USER, GDI, KEYBOARD, SYSTEM, SOUND, etc.
+		// Valid names should be short (usually < 12 chars) and alphanumeric
+		var validCount = 0;
+		foreach (var module in modules)
+		{
+			// Check if name looks like a valid module name
+			if (module.Length <= 12 && module.All(c => char.IsLetterOrDigit(c) || c == '_'))
+			{
+				validCount++;
+			}
+		}
+		
+		// If at least 50% of modules look valid, consider the list valid
+		return validCount >= modules.Count / 2;
 	}
 	
 	/// <summary>
