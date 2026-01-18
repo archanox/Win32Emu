@@ -32,6 +32,9 @@ public class EmulatorService : IDisposable
 	private bool _isPaused;
 	private string? _loadedExecutableName;
 	
+	// Maximum depth for child process chains to prevent infinite loops
+	private const int MaxChildProcessRecursionDepth = 10;
+	
 	// Events for UI updates
 	public event EventHandler<string>? OnStdOutput;
 	public event EventHandler<string>? OnDebugOutput;
@@ -492,15 +495,16 @@ public class EmulatorService : IDisposable
 	/// which is important for WASM where Task.Run doesn't create real background threads.
 	/// Automatically handles child process requests by recursively loading and running child executables.
 	/// </summary>
-	/// <param name="cancellationToken">Currently unused. Cancellation is handled via _emulator.Stop().
-	/// Kept for potential future use if cooperative cancellation is needed.</param>
+	/// <param name="cancellationToken">
+	/// Cancellation token that is checked between child process launches to allow cooperative
+	/// cancellation of the entire emulation and child-process chain, in addition to _emulator.Stop().
+	/// </param>
 	private async Task RunEmulationLoopAsync(CancellationToken cancellationToken)
 	{
 		// Track recursion depth to prevent infinite loops (e.g., A calls B, B calls A)
-		var maxRecursionDepth = 10;
 		var recursionDepth = 0;
 		
-		while (recursionDepth < maxRecursionDepth && !cancellationToken.IsCancellationRequested)
+		while (recursionDepth < MaxChildProcessRecursionDepth && !cancellationToken.IsCancellationRequested)
 		{
 			try
 			{
@@ -568,8 +572,8 @@ public class EmulatorService : IDisposable
 					var cmdLine = childRequest.CommandLine;
 					var args = Array.Empty<string>();
 					
-					// Simple command line parsing: split by spaces, respecting quotes
-					// For now, just pass the full command line as-is (the executable can parse it)
+					// TODO: Implement proper command line parsing (split by spaces, respecting quotes)
+					// For now, just pass empty args - the child executable will receive the full command line
 					if (!string.IsNullOrEmpty(cmdLine) && cmdLine != childRequest.ExecutablePath)
 					{
 						// There are arguments after the executable path
@@ -585,17 +589,19 @@ public class EmulatorService : IDisposable
 					EmitDebugOutput("[ChildProcess] Creating new emulator for child process...");
 					_emulator = new Emulator(_emulatorHost, _loggerFactory.CreateLogger<Emulator>(), _backendFactory);
 					
-					// Initialize VFS for child emulator
-					if (_browserVfs != null)
-					{
-						_emulator.InitializeVirtualFileSystem(_browserVfs);
-					}
-					
-					// Load child executable
+					// Load child executable with VFS
 					EmitDebugOutput($"[ChildProcess] Loading child executable: {System.IO.Path.GetFileName(childPath)}");
 					var childFileName = System.IO.Path.GetFileName(childPath);
 					_loadedExecutableName = childFileName;
-					_emulator.LoadExecutable(childBytes, childFileName, args);
+					_emulator.LoadExecutableFromBytes(
+						childBytes, 
+						childFileName, 
+						args, 
+						debugMode: false, 
+						reservedMemoryMb: 256, 
+						virtualFileSystem: _browserVfs, 
+						force32BitStackOps: true, 
+						forceInterpreterMode: true);
 					
 					EmitStdOutput($"\n=== Launching child process: {childFileName} ===\n");
 					
@@ -629,9 +635,9 @@ public class EmulatorService : IDisposable
 		}
 		
 		// Check if we hit the recursion limit
-		if (recursionDepth >= maxRecursionDepth)
+		if (recursionDepth >= MaxChildProcessRecursionDepth)
 		{
-			EmitDebugOutput($"[EmulationLoop] WARNING: Maximum child process recursion depth ({maxRecursionDepth}) reached");
+			EmitDebugOutput($"[EmulationLoop] WARNING: Maximum child process recursion depth ({MaxChildProcessRecursionDepth}) reached");
 			EmitStdOutput($"ERROR: Maximum child process chain depth exceeded\n");
 		}
 		
