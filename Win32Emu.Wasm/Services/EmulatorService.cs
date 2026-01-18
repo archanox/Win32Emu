@@ -587,7 +587,7 @@ public class EmulatorService : IDisposable
 					
 					// Create new emulator for child process
 					EmitDebugOutput("[ChildProcess] Creating new emulator for child process...");
-					_emulator = new Emulator(_emulatorHost, _loggerFactory.CreateLogger<Emulator>(), _backendFactory);
+					_emulator = new Emulator(_emulatorHost, _loggerFactory.CreateLogger<Emulator>(), null, _backendFactory);
 					
 					// Load child executable with VFS
 					EmitDebugOutput($"[ChildProcess] Loading child executable: {System.IO.Path.GetFileName(childPath)}");
