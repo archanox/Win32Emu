@@ -145,7 +145,10 @@ public class EmulatorService : IDisposable
 			// Note: EmulatorHost is now initialized in the constructor, no need to create it here
 			
 			// Create browser-based virtual file system
-			_browserVfs?.Dispose();
+			// Note: Do NOT dispose _browserVfs here if an emulator exists, as the old emulator's
+			// ProcessEnvironment.Cleanup() will dispose it. Disposing it here would cause an
+			// ObjectDisposedException when the old emulator tries to cleanup its registry.
+			// The old VFS will be properly disposed when _emulator.Dispose() is called below.
 			_browserVfs = new BrowserVirtualFileSystem(_loggerFactory.CreateLogger<BrowserVirtualFileSystem>());
 			
 			// Add the main executable to VFS
