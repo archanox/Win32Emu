@@ -915,8 +915,104 @@ public partial class Shell32Module : IWin32ModuleAsync
 
 		LogShellExecuteA(hwnd, operation, file, parameters, directory, nShowCmd);
 
-		// Stub - return value > 32 indicates success
+		// Handle "open" operation to execute programs
+		if (string.IsNullOrEmpty(operation) || operation.Equals("open", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!string.IsNullOrEmpty(file))
+			{
+				// Construct full command line
+				var cmdLine = string.IsNullOrEmpty(parameters) ? file : $"{file} {parameters}";
+				
+				// Use specified directory or current directory
+				var workingDir = string.IsNullOrEmpty(directory) ? _env.CurrentDirectory : directory;
+				
+				// Resolve the executable path
+				var resolvedPath = ResolveShellExecutePath(file, workingDir);
+				if (resolvedPath != null)
+				{
+					_logger.LogInformation("[Shell32] ShellExecuteA: Resolved path to: \"{ResolvedPath}\"", resolvedPath);
+					
+					// Request child process execution through ProcessEnvironment
+					_env.RequestChildProcess(resolvedPath, cmdLine, workingDir, nShowCmd);
+					
+					// Return value > 32 indicates success
+					return 33; // Success
+				}
+				else
+				{
+					_logger.LogWarning("[Shell32] ShellExecuteA: Could not resolve file: \"{File}\"", file);
+					return 2; // ERROR_FILE_NOT_FOUND
+				}
+			}
+		}
+
+		// For other operations (print, explore, etc.), just return success
 		return 33; // Success
+	}
+
+	/// <summary>
+	/// Resolves an executable path for ShellExecute relative to the specified directory.
+	/// </summary>
+	private string? ResolveShellExecutePath(string file, string workingDirectory)
+	{
+		// If absolute path (starts with drive letter or UNC path), return as-is
+		if (file.Length >= 3 && file[1] == ':' && file[2] == '\\')
+		{
+			return file;
+		}
+		if (file.StartsWith("\\\\"))
+		{
+			return file;
+		}
+
+		// If relative path with directory separators, resolve relative to working directory
+		if (file.Contains('\\') || file.Contains('/'))
+		{
+			var normalizedPath = file.Replace('/', '\\');
+			return Path.Combine(workingDirectory, normalizedPath);
+		}
+
+		// Search in working directory first
+		var workingDirPath = Path.Combine(workingDirectory, file);
+		if (FileExistsInVfs(workingDirPath))
+		{
+			return workingDirPath;
+		}
+
+		// Add .exe extension if missing
+		if (!file.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+		{
+			var withExt = file + ".exe";
+			var workingDirPathWithExt = Path.Combine(workingDirectory, withExt);
+			if (FileExistsInVfs(workingDirPathWithExt))
+			{
+				return workingDirPathWithExt;
+			}
+		}
+
+		// If not found, return path relative to working directory anyway
+		// The emulator will handle the error when trying to load it
+		return workingDirPath;
+	}
+
+	/// <summary>
+	/// Checks if a file exists in the virtual file system.
+	/// </summary>
+	private bool FileExistsInVfs(string path)
+	{
+		if (_env.VirtualFileSystem == null)
+		{
+			return false;
+		}
+
+		try
+		{
+			return _env.VirtualFileSystem.FileExists(path);
+		}
+		catch
+		{
+			return false;
+		}
 	}
 
 	/// <summary>

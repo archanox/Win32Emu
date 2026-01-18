@@ -6683,10 +6683,86 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 
 		_logger.LogInformation("[Kernel32] WinExec: Parsed executable path: \"{Executable}\"", executable);
 
-		// For now, we just log that an attempt was made to execute a program
-		// A full implementation would need to support launching child processes
+		// Resolve the executable path relative to current directory if not absolute
+		var resolvedPath = ResolveExecutablePath(executable);
+		if (resolvedPath == null)
+		{
+			_logger.LogWarning("[Kernel32] WinExec: Could not resolve executable path: \"{Executable}\"", executable);
+			return 2; // ERROR_FILE_NOT_FOUND
+		}
+
+		_logger.LogInformation("[Kernel32] WinExec: Resolved path to: \"{ResolvedPath}\"", resolvedPath);
+
+		// Request child process execution through ProcessEnvironment
+		_env.RequestChildProcess(resolvedPath, cmdLine, _env.CurrentDirectory, (int)uCmdShow);
+
 		// Return success (33 or higher indicates success in WinExec)
 		return 33; // SE_ERR_SUCCESS (actually any value > 31 indicates success)
+	}
+
+	/// <summary>
+	/// Resolves an executable path relative to the current directory and search paths.
+	/// </summary>
+	private string? ResolveExecutablePath(string executable)
+	{
+		// If absolute path (starts with drive letter or UNC path), return as-is
+		if (executable.Length >= 3 && executable[1] == ':' && executable[2] == '\\')
+		{
+			return executable;
+		}
+		if (executable.StartsWith("\\\\"))
+		{
+			return executable;
+		}
+
+		// If relative path with directory separators, resolve relative to current directory
+		if (executable.Contains('\\') || executable.Contains('/'))
+		{
+			var normalizedPath = executable.Replace('/', '\\');
+			return Path.Combine(_env.CurrentDirectory, normalizedPath);
+		}
+
+		// Search in current directory first
+		var currentDirPath = Path.Combine(_env.CurrentDirectory, executable);
+		if (FileExistsInVfs(currentDirPath))
+		{
+			return currentDirPath;
+		}
+
+		// Add .exe extension if missing
+		if (!executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+		{
+			var withExt = executable + ".exe";
+			var currentDirPathWithExt = Path.Combine(_env.CurrentDirectory, withExt);
+			if (FileExistsInVfs(currentDirPathWithExt))
+			{
+				return currentDirPathWithExt;
+			}
+		}
+
+		// If not found, return path relative to current directory anyway
+		// The emulator will handle the error when trying to load it
+		return currentDirPath;
+	}
+
+	/// <summary>
+	/// Checks if a file exists in the virtual file system.
+	/// </summary>
+	private bool FileExistsInVfs(string path)
+	{
+		if (_env.VirtualFileSystem == null)
+		{
+			return false;
+		}
+
+		try
+		{
+			return _env.VirtualFileSystem.FileExists(path);
+		}
+		catch
+		{
+			return false;
+		}
 	}
 
 	// Critical section synchronization functions
