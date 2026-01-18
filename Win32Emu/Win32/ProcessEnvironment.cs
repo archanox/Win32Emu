@@ -63,6 +63,45 @@ public class ProcessEnvironment
 	private readonly HashSet<IRenderingBackend> _subscribedRenderingBackends = new();
 	private readonly HashSet<IInputBackend> _subscribedInputBackends = new();
 
+	// Child process execution request
+	/// <summary>
+	/// Holds information about a requested child process to be executed.
+	/// When set, the emulator should terminate the current process and load the child.
+	/// </summary>
+	public sealed class ChildProcessRequest
+	{
+		public string ExecutablePath { get; }
+		public string CommandLine { get; }
+		public string WorkingDirectory { get; }
+		public int ShowCommand { get; }
+
+		public ChildProcessRequest(string executablePath, string commandLine, string workingDirectory, int showCommand)
+		{
+			ExecutablePath = executablePath;
+			CommandLine = commandLine;
+			WorkingDirectory = workingDirectory;
+			ShowCommand = showCommand;
+		}
+	}
+
+	private ChildProcessRequest? _childProcessRequest;
+
+	/// <summary>
+	/// Gets the pending child process request, if any.
+	/// </summary>
+	public ChildProcessRequest? PendingChildProcessRequest => _childProcessRequest;
+
+	/// <summary>
+	/// Requests execution of a child process. The emulator will handle this request
+	/// by terminating the current process and loading the child executable.
+	/// </summary>
+	public void RequestChildProcess(string executablePath, string commandLine, string workingDirectory, int showCommand)
+	{
+		_childProcessRequest = new ChildProcessRequest(executablePath, commandLine, workingDirectory, showCommand);
+		_logger.LogInformation("[ProcessEnv] Child process requested: {Path} with command line: {CmdLine}", 
+			executablePath, commandLine);
+	}
+
 	// Virtual File System
 
 	// Threading infrastructure

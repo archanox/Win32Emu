@@ -288,6 +288,15 @@ public sealed class Emulator : IDisposable
     }
 
     /// <summary>
+    /// Gets the pending child process request if a Win32 API function requested process execution.
+    /// Returns null if no child process was requested.
+    /// </summary>
+    public ProcessEnvironment.ChildProcessRequest? GetPendingChildProcessRequest()
+    {
+        return _env?.PendingChildProcessRequest;
+    }
+
+    /// <summary>
     /// Request the emulator to pause execution
     /// </summary>
     public void Pause()
@@ -1829,6 +1838,11 @@ public sealed class Emulator : IDisposable
                 exitMessage = "[Exit] Process requested exit.";
                 LogDebug(exitMessage);
             }
+            else if (_env.PendingChildProcessRequest != null)
+            {
+                exitMessage = $"[Exit] Child process requested: {_env.PendingChildProcessRequest.ExecutablePath}";
+                LogDebug(exitMessage);
+            }
             else
             {
                 exitMessage = "[Exit] Execution completed.";
@@ -1866,7 +1880,7 @@ public sealed class Emulator : IDisposable
         var lastYieldTime = DateTime.UtcNow;
 
         // Run indefinitely until stop/exit requested or no threads running
-        while (!_stopRequested && !_env!.ExitRequested)
+        while (!_stopRequested && !_env!.ExitRequested && _env.PendingChildProcessRequest == null)
         {
             iterationCount++;
             
