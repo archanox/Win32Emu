@@ -102,6 +102,80 @@ public class ProcessEnvironment
 			executablePath, commandLine);
 	}
 
+	/// <summary>
+	/// Resolves an executable path relative to the specified directory.
+	/// Handles absolute paths, relative paths, and automatically appends .exe extension if missing.
+	/// </summary>
+	/// <param name="executable">The executable path to resolve</param>
+	/// <param name="baseDirectory">The base directory to resolve relative paths against</param>
+	/// <returns>The resolved absolute path with Windows path separators</returns>
+	public string ResolveExecutablePath(string executable, string baseDirectory)
+	{
+		// If absolute path (starts with drive letter or UNC path), return as-is
+		if (executable.Length >= 3 && executable[1] == ':' && executable[2] == '\\')
+		{
+			return executable;
+		}
+		if (executable.StartsWith("\\\\"))
+		{
+			return executable;
+		}
+
+		// If relative path with directory separators, resolve relative to base directory
+		if (executable.Contains('\\') || executable.Contains('/'))
+		{
+			var normalizedPath = executable.Replace('/', '\\');
+			// Use Path.Combine and normalize to Windows path separators
+			var combined = Path.Combine(baseDirectory, normalizedPath);
+			return combined.Replace('/', '\\');
+		}
+
+		// Search in base directory first
+		var baseDirPath = Path.Combine(baseDirectory, executable).Replace('/', '\\');
+		if (FileExistsInVfs(baseDirPath))
+		{
+			return baseDirPath;
+		}
+
+		// Add .exe extension if missing
+		if (!executable.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+		{
+			var withExt = executable + ".exe";
+			var baseDirPathWithExt = Path.Combine(baseDirectory, withExt).Replace('/', '\\');
+			if (FileExistsInVfs(baseDirPathWithExt))
+			{
+				return baseDirPathWithExt;
+			}
+		}
+
+		// If not found, return path relative to base directory anyway
+		// The emulator will handle the error when trying to load it
+		return baseDirPath;
+	}
+
+	/// <summary>
+	/// Checks if a file exists in the virtual file system.
+	/// </summary>
+	/// <param name="path">The path to check</param>
+	/// <returns>True if the file exists, false otherwise</returns>
+	public bool FileExistsInVfs(string path)
+	{
+		if (VirtualFileSystem == null)
+		{
+			return false;
+		}
+
+		try
+		{
+			return VirtualFileSystem.FileExists(path);
+		}
+		catch (Exception ex)
+		{
+			_logger.LogDebug(ex, "[ProcessEnv] FileExistsInVfs failed for path '{Path}'", path);
+			return false;
+		}
+	}
+
 	// Virtual File System
 
 	// Threading infrastructure
