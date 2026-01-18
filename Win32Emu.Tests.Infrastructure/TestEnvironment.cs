@@ -230,6 +230,25 @@ public class TestEnvironment : IDisposable
 	}
 
 	/// <summary>
+	/// Call a Shell32 API function registered in the dispatcher
+	/// </summary>
+	public uint CallShell32Api(string functionName, params uint[] args)
+	{
+		if (Dispatcher == null)
+		{
+			throw new InvalidOperationException("Dispatcher not initialized. Call constructor with initializeDispatcher: true");
+		}
+		
+		Cpu.SetupStackArgs(Memory, args);
+		var (success, returnValue, _, _) = Dispatcher.TryInvokeAsync("SHELL32.DLL", functionName, Cpu, Memory, CancellationToken.None).GetAwaiter().GetResult();
+		if (!success)
+		{
+			throw new InvalidOperationException($"Failed to invoke {functionName}");
+		}
+		return returnValue;
+	}
+
+	/// <summary>
 	/// Call a Comctl32 API function with the given arguments
 	/// </summary>
 	public uint CallComctl32Api(string functionName, params uint[] args)
