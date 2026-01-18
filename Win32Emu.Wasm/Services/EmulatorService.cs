@@ -490,53 +490,163 @@ public class EmulatorService : IDisposable
 	/// Helper method to run emulation loop with proper error handling and state management.
 	/// This is extracted to a separate method to allow calling RunAsync directly without Task.Run,
 	/// which is important for WASM where Task.Run doesn't create real background threads.
+	/// Automatically handles child process requests by recursively loading and running child executables.
 	/// </summary>
 	/// <param name="cancellationToken">Currently unused. Cancellation is handled via _emulator.Stop().
 	/// Kept for potential future use if cooperative cancellation is needed.</param>
 	private async Task RunEmulationLoopAsync(CancellationToken cancellationToken)
 	{
-		try
+		// Track recursion depth to prevent infinite loops (e.g., A calls B, B calls A)
+		var maxRecursionDepth = 10;
+		var recursionDepth = 0;
+		
+		while (recursionDepth < maxRecursionDepth && !cancellationToken.IsCancellationRequested)
 		{
-			// Log that we're starting the emulation loop
-			EmitDebugOutput("[EmulationLoop] Starting emulator.RunAsync()...");
-			
-			// Note: cancellationToken is not used here because Emulator.RunAsync() doesn't support
-			// cancellation tokens. Cancellation is handled via _emulator.Stop() in StopAsync().
-			await _emulator!.RunAsync();
-			
-			// If we get here, emulation completed normally
-			EmitDebugOutput("[EmulationLoop] Emulation completed successfully");
-		}
-		catch (OperationCanceledException)
-		{
-			// Expected when cancellation is requested
-			EmitDebugOutput("[EmulationLoop] Emulation cancelled");
-		}
-		catch (Exception ex)
-		{
-			_logger.LogError(ex, "[EmulationLoop] Emulation error");
-			EmitDebugOutput($"[EmulationLoop] Emulation error: {ex.GetType().Name}: {ex.Message}");
-			
-			// Log stack trace for debugging
-			if (ex.StackTrace != null)
+			try
 			{
-				EmitDebugOutput($"[EmulationLoop] Stack trace: {ex.StackTrace}");
+				// Log that we're starting the emulation loop
+				if (recursionDepth == 0)
+				{
+					EmitDebugOutput("[EmulationLoop] Starting emulator.RunAsync()...");
+				}
+				else
+				{
+					EmitDebugOutput($"[EmulationLoop] Starting child process (depth {recursionDepth})...");
+				}
+				
+				// Note: cancellationToken is not used here because Emulator.RunAsync() doesn't support
+				// cancellation tokens. Cancellation is handled via _emulator.Stop() in StopAsync().
+				await _emulator!.RunAsync();
+				
+				// If we get here, emulation completed normally
+				EmitDebugOutput("[EmulationLoop] Emulation completed successfully");
+				
+				// Check if a child process was requested
+				var childRequest = _emulator.GetPendingChildProcessRequest();
+				if (childRequest != null)
+				{
+					EmitDebugOutput($"[ChildProcess] Child process requested: {childRequest.ExecutablePath}");
+					EmitDebugOutput($"[ChildProcess] Command line: {childRequest.CommandLine}");
+					EmitDebugOutput($"[ChildProcess] Working directory: {childRequest.WorkingDirectory}");
+					EmitDebugOutput($"[ChildProcess] Show command: {childRequest.ShowCommand}");
+					
+					// Resolve the child executable path in VFS
+					// The path is already resolved by WinExec, but we need to convert it to VFS format
+					var childPath = childRequest.ExecutablePath;
+					
+					// Convert Windows path (C:\WASM\setup.exe) to VFS path (WASM\setup.exe)
+					if (childPath.StartsWith(@"C:\", StringComparison.OrdinalIgnoreCase))
+					{
+						childPath = childPath.Substring(3); // Remove "C:\" prefix
+					}
+					else if (childPath.StartsWith(@"C:", StringComparison.OrdinalIgnoreCase))
+					{
+						childPath = childPath.Substring(2); // Remove "C:" prefix
+					}
+					
+					// Check if the child executable exists in VFS
+					if (_browserVfs == null || !_browserVfs.FileExists(childPath))
+					{
+						EmitDebugOutput($"[ChildProcess] ERROR: Child executable not found in VFS: {childPath}");
+						EmitStdOutput($"ERROR: Child executable not found: {childPath}\n");
+						break;
+					}
+					
+					// Get the child executable bytes from VFS
+					// Note: BrowserVirtualFileSystem stores files with normalized paths
+					var vfsFiles = _browserVfs.Files;
+					if (!vfsFiles.TryGetValue(childPath, out var childBytes) || childBytes == null || childBytes.Length == 0)
+					{
+						EmitDebugOutput($"[ChildProcess] ERROR: Child executable is empty or could not be read: {childPath}");
+						EmitStdOutput($"ERROR: Could not read child executable: {childPath}\n");
+						break;
+					}
+					
+					EmitDebugOutput($"[ChildProcess] Found child executable in VFS: {childPath} ({childBytes.Length} bytes)");
+					
+					// Parse command line to extract arguments (if any)
+					var cmdLine = childRequest.CommandLine;
+					var args = Array.Empty<string>();
+					
+					// Simple command line parsing: split by spaces, respecting quotes
+					// For now, just pass the full command line as-is (the executable can parse it)
+					if (!string.IsNullOrEmpty(cmdLine) && cmdLine != childRequest.ExecutablePath)
+					{
+						// There are arguments after the executable path
+						EmitDebugOutput($"[ChildProcess] Command line arguments: {cmdLine}");
+					}
+					
+					// Dispose current emulator
+					EmitDebugOutput("[ChildProcess] Disposing parent emulator...");
+					_emulator.Dispose();
+					_emulator = null;
+					
+					// Create new emulator for child process
+					EmitDebugOutput("[ChildProcess] Creating new emulator for child process...");
+					_emulator = new Emulator(_emulatorHost, _loggerFactory.CreateLogger<Emulator>(), _backendFactory);
+					
+					// Initialize VFS for child emulator
+					if (_browserVfs != null)
+					{
+						_emulator.InitializeVirtualFileSystem(_browserVfs);
+					}
+					
+					// Load child executable
+					EmitDebugOutput($"[ChildProcess] Loading child executable: {System.IO.Path.GetFileName(childPath)}");
+					var childFileName = System.IO.Path.GetFileName(childPath);
+					_loadedExecutableName = childFileName;
+					_emulator.LoadExecutable(childBytes, childFileName, args);
+					
+					EmitStdOutput($"\n=== Launching child process: {childFileName} ===\n");
+					
+					// Increment recursion depth and continue the loop to run the child
+					recursionDepth++;
+					continue;
+				}
+				
+				// No child process requested, we're done
+				EmitDebugOutput("[EmulationLoop] No child process requested, emulation complete");
+				break;
+			}
+			catch (OperationCanceledException)
+			{
+				// Expected when cancellation is requested
+				EmitDebugOutput("[EmulationLoop] Emulation cancelled");
+				break;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[EmulationLoop] Emulation error");
+				EmitDebugOutput($"[EmulationLoop] Emulation error: {ex.GetType().Name}: {ex.Message}");
+				
+				// Log stack trace for debugging
+				if (ex.StackTrace != null)
+				{
+					EmitDebugOutput($"[EmulationLoop] Stack trace: {ex.StackTrace}");
+				}
+				break;
 			}
 		}
-		finally
+		
+		// Check if we hit the recursion limit
+		if (recursionDepth >= maxRecursionDepth)
 		{
-			_isRunning = false;
-			EmitDebugOutput("[EmulationLoop] Emulation stopped, updating state...");
-			
-			OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
-			{
-				IsLoaded = true,
-				IsRunning = false,
-				ExecutableName = _loadedExecutableName
-			});
-			
-			EmitDebugOutput("[EmulationLoop] State updated");
+			EmitDebugOutput($"[EmulationLoop] WARNING: Maximum child process recursion depth ({maxRecursionDepth}) reached");
+			EmitStdOutput($"ERROR: Maximum child process chain depth exceeded\n");
 		}
+		
+		// Final cleanup
+		_isRunning = false;
+		EmitDebugOutput("[EmulationLoop] Emulation stopped, updating state...");
+		
+		OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
+		{
+			IsLoaded = true,
+			IsRunning = false,
+			ExecutableName = _loadedExecutableName
+		});
+		
+		EmitDebugOutput("[EmulationLoop] State updated");
 	}
 	
 	public void Dispose()
