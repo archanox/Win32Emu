@@ -358,7 +358,7 @@ The virtual keyboard component provides a full on-screen keyboard for mobile and
 5. Calls `inputBackendRef.invokeMethodAsync('OnKeyDown', 0x41)` (line 1116)
 6. C# `WasmInputBackend.OnKeyDown(0x41)` executes (WasmInputBackend.cs:146)
 7. Sets `_keyboardState.KeyStates[0x41] = true` (line 149)
-8. After 100ms, calls `OnKeyUp(0x41)` to release key (line 1122)
+8. After 50ms, calls `OnKeyUp(0x41)` to release key (line 1122)
 9. Game calls DirectInput `GetDeviceData()`
 10. DInputModule polls `WasmInputBackend.PollDevice()` (DInputModule.cs:717)
 11. Gets keyboard state with key 0x41 pressed
