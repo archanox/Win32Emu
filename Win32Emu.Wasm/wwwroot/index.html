@@ -1435,14 +1435,16 @@
 				// Open terminal in container
 				terminal.open(container);
 				
+				// Declare resizeHandler outside the if block so it's in scope for storage
+				let resizeHandler = null;
+				
 				// Fit to container if addon is loaded
 				if (fitAddon) {
 					fitAddon.fit();
 					
 					// Auto-fit on window resize
-					const resizeHandler = () => fitAddon.fit();
+					resizeHandler = () => fitAddon.fit();
 					window.addEventListener('resize', resizeHandler);
-					
 				}
 				
 				// Store terminal instance
@@ -1450,7 +1452,7 @@
 					terminal: terminal,
 					fitAddon: fitAddon,
 					container: container,
-					resizeHandler: fitAddon ? resizeHandler : null
+					resizeHandler: resizeHandler
 				};
 				
 				console.log(`Created xterm.js terminal: ${terminalId} (${cols}x${rows})`);
