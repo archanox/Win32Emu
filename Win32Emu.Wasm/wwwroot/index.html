@@ -12,6 +12,8 @@
 	<link rel="icon" type="image/png" href="favicon.png" />
 	<link href="Win32Emu.Wasm.styles.css" rel="stylesheet" />
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+	<!-- xterm.js for terminal emulation -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.min.css" />
 </head>
 
 <body>
@@ -1368,6 +1370,176 @@
 				return false;
 			}
 		};
+		
+		// ===========================================
+		// xterm.js Terminal Emulation
+		// ===========================================
+		
+		// Global terminal instances
+		window.xtermTerminals = {};
+		
+		// Create a new xterm.js terminal instance
+		window.createXtermTerminal = async function(terminalId, cols = 80, rows = 24, enableFit = true) {
+			try {
+				// Dynamically import xterm.js modules
+				const { Terminal } = await import('https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/+esm');
+				const { FitAddon } = await import('https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/+esm');
+				
+				const container = document.getElementById(terminalId);
+				if (!container) {
+					console.error(`Terminal container not found: ${terminalId}`);
+					return;
+				}
+				
+				// Create terminal with custom theme matching Win32Emu style
+				const terminal = new Terminal({
+					cols: cols,
+					rows: rows,
+					cursorBlink: true,
+					theme: {
+						background: '#1e1e1e',
+						foreground: '#d4d4d4',
+						cursor: '#00ff00',
+						selectionBackground: '#264f78',
+						black: '#000000',
+						red: '#cd3131',
+						green: '#0dbc79',
+						yellow: '#e5e510',
+						blue: '#2472c8',
+						magenta: '#bc3fbc',
+						cyan: '#11a8cd',
+						white: '#e5e5e5',
+						brightBlack: '#666666',
+						brightRed: '#f14c4c',
+						brightGreen: '#23d18b',
+						brightYellow: '#f5f543',
+						brightBlue: '#3b8eea',
+						brightMagenta: '#d670d6',
+						brightCyan: '#29b8db',
+						brightWhite: '#ffffff'
+					},
+					fontFamily: 'Consolas, "Courier New", monospace',
+					fontSize: 14,
+					lineHeight: 1.2,
+					scrollback: 10000,
+					convertEol: true
+				});
+				
+				// Load fit addon if enabled
+				let fitAddon = null;
+				if (enableFit) {
+					fitAddon = new FitAddon();
+					terminal.loadAddon(fitAddon);
+				}
+				
+				// Open terminal in container
+				terminal.open(container);
+				
+				// Fit to container if addon is loaded
+				if (fitAddon) {
+					fitAddon.fit();
+					
+					// Auto-fit on window resize
+					const resizeHandler = () => fitAddon.fit();
+					window.addEventListener('resize', resizeHandler);
+					
+					// Store resize handler for cleanup
+					terminal._resizeHandler = resizeHandler;
+				}
+				
+				// Store terminal instance
+				window.xtermTerminals[terminalId] = {
+					terminal: terminal,
+					fitAddon: fitAddon,
+					container: container
+				};
+				
+				console.log(`Created xterm.js terminal: ${terminalId} (${cols}x${rows})`);
+			} catch (error) {
+				console.error(`Error creating terminal ${terminalId}:`, error);
+			}
+		};
+		
+		// Write text to an xterm.js terminal
+		window.writeToXtermTerminal = function(terminalId, text) {
+			const termData = window.xtermTerminals[terminalId];
+			if (!termData || !termData.terminal) {
+				console.warn(`Terminal not found: ${terminalId}`);
+				return;
+			}
+			
+			try {
+				termData.terminal.write(text);
+			} catch (error) {
+				console.error(`Error writing to terminal ${terminalId}:`, error);
+			}
+		};
+		
+		// Clear an xterm.js terminal
+		window.clearXtermTerminal = function(terminalId) {
+			const termData = window.xtermTerminals[terminalId];
+			if (!termData || !termData.terminal) {
+				console.warn(`Terminal not found: ${terminalId}`);
+				return;
+			}
+			
+			try {
+				termData.terminal.clear();
+			} catch (error) {
+				console.error(`Error clearing terminal ${terminalId}:`, error);
+			}
+		};
+		
+		// Resize an xterm.js terminal
+		window.resizeXtermTerminal = function(terminalId, cols, rows) {
+			const termData = window.xtermTerminals[terminalId];
+			if (!termData || !termData.terminal) {
+				console.warn(`Terminal not found: ${terminalId}`);
+				return;
+			}
+			
+			try {
+				termData.terminal.resize(cols, rows);
+				
+				// Re-fit if fit addon is enabled
+				if (termData.fitAddon) {
+					termData.fitAddon.fit();
+				}
+			} catch (error) {
+				console.error(`Error resizing terminal ${terminalId}:`, error);
+			}
+		};
+		
+		// Destroy an xterm.js terminal and clean up resources
+		window.destroyXtermTerminal = function(terminalId) {
+			const termData = window.xtermTerminals[terminalId];
+			if (!termData) {
+				return;
+			}
+			
+			try {
+				// Remove resize handler if it exists
+				if (termData.terminal._resizeHandler) {
+					window.removeEventListener('resize', termData.terminal._resizeHandler);
+				}
+				
+				// Dispose terminal
+				if (termData.terminal) {
+					termData.terminal.dispose();
+				}
+				
+				// Remove from registry
+				delete window.xtermTerminals[terminalId];
+				
+				console.log(`Destroyed xterm.js terminal: ${terminalId}`);
+			} catch (error) {
+				console.error(`Error destroying terminal ${terminalId}:`, error);
+			}
+		};
+		
+		// ===========================================
+		// End xterm.js Terminal Emulation
+		// ===========================================
 		
 		// Get storage usage estimate
 		window.getVfsStorageUsage = async function() {
