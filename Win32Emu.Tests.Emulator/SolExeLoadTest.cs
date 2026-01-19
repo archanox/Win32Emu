@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
-using System.Collections.Concurrent;
 using Win32Emu;
 using Win32Emu.Loader;
+using Win32Emu.Tests.Emulator.TestInfrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,22 +23,14 @@ public class SolExeLoadTest
     [Fact]
     public void SolExe_LoadsSuccessfully_WithWin16ModuleRegistration()
     {
-        // Arrange
-        var solPath = "/home/runner/work/Win32Emu/Win32Emu/EXEs/WinME/sol.exe";
-        if (!File.Exists(solPath))
+        // Arrange - Find sol.exe using multiple possible paths
+        var solPath = FindSolExePath();
+        if (solPath == null)
         {
-            // Fallback to relative path for local development
-            solPath = Path.Combine(Directory.GetCurrentDirectory(), "..", "..", "..", "..", "..", "EXEs", "WinME", "sol.exe");
+            throw new SkipException("sol.exe not found in expected locations (EXEs/WinME/sol.exe). Ensure test data is available.");
         }
         
         _output.WriteLine($"Loading sol.exe from: {solPath}");
-        
-        // Verify file exists
-        if (!File.Exists(solPath))
-        {
-            _output.WriteLine($"sol.exe not found at {solPath}, skipping test");
-            return; // Skip test if file not found (e.g., in CI without test files)
-        }
         
         var solBytes = File.ReadAllBytes(solPath);
         _output.WriteLine($"sol.exe size: {solBytes.Length} bytes");
@@ -46,18 +38,8 @@ public class SolExeLoadTest
         // Verify it's an NE executable
         Assert.True(NeImageLoader.IsNE(solBytes), "sol.exe should be a valid NE (Win16) executable");
         
-        // Create a test logger that captures log output
-        var logMessages = new ConcurrentBag<string>();
-        var loggerFactory = LoggerFactory.Create(builder =>
-        {
-            builder.AddProvider(new SimpleTestLoggerProvider((category, level, message) =>
-            {
-                var logEntry = $"[{level}] [{category}] {message}";
-                logMessages.Add(logEntry);
-                _output.WriteLine(logEntry);
-            }));
-            builder.SetMinimumLevel(LogLevel.Debug);
-        });
+        // Create a test logger that captures log output using shared infrastructure
+        var (loggerFactory, logMessages) = TestLoggerHelper.CreateTestLoggerFactory(_output);
         var logger = loggerFactory.CreateLogger<Win32Emu.Emulator>();
         
         // Act & Assert
@@ -122,46 +104,69 @@ public class SolExeLoadTest
         Assert.True(hasWin16RegLog, "Should have logged 'Registering Win16 thunking modules'");
         Assert.True(hasWin16SuccessLog, "Should have logged 'Win16 thunking modules registered successfully'");
     }
+    
+    /// <summary>
+    /// Finds sol.exe by checking multiple possible paths:
+    /// 1. Repository root relative path (EXEs/WinME/sol.exe)
+    /// 2. Environment variable WIN32EMU_TEST_DATA_DIR
+    /// 3. Current directory navigation up to repository root
+    /// </summary>
+    private string? FindSolExePath()
+    {
+        // Try environment variable first (most flexible for different CI/dev environments)
+        var testDataDir = Environment.GetEnvironmentVariable("WIN32EMU_TEST_DATA_DIR");
+        if (!string.IsNullOrEmpty(testDataDir))
+        {
+            var envPath = Path.Combine(testDataDir, "EXEs", "WinME", "sol.exe");
+            if (File.Exists(envPath))
+            {
+                return envPath;
+            }
+        }
+        
+        // Try to find repository root by walking up from current directory
+        var currentDir = Directory.GetCurrentDirectory();
+        var dir = new DirectoryInfo(currentDir);
+        
+        while (dir != null)
+        {
+            // Check if this looks like the repository root (has EXEs directory)
+            var testPath = Path.Combine(dir.FullName, "EXEs", "WinME", "sol.exe");
+            if (File.Exists(testPath))
+            {
+                return testPath;
+            }
+            
+            dir = dir.Parent;
+        }
+        
+        // Try relative path from test binary location (for dotnet test runs)
+        var relativePaths = new[]
+        {
+            Path.Combine("..", "..", "..", "..", "..", "EXEs", "WinME", "sol.exe"),
+            Path.Combine("..", "..", "..", "..", "..", "..", "EXEs", "WinME", "sol.exe"),
+            Path.Combine("EXEs", "WinME", "sol.exe")
+        };
+        
+        foreach (var relPath in relativePaths)
+        {
+            var fullPath = Path.GetFullPath(Path.Combine(currentDir, relPath));
+            if (File.Exists(fullPath))
+            {
+                return fullPath;
+            }
+        }
+        
+        return null;
+    }
 }
 
 /// <summary>
-/// Simple test logger provider for capturing log output - uses different name to avoid conflicts
+/// Exception type used to skip xUnit tests with a clear message
 /// </summary>
-internal class SimpleTestLoggerProvider : ILoggerProvider
+public class SkipException : Exception
 {
-    private readonly Action<string, LogLevel, string> _logAction;
-    
-    public SimpleTestLoggerProvider(Action<string, LogLevel, string> logAction)
+    public SkipException(string message) : base(message)
     {
-        _logAction = logAction;
-    }
-    
-    public ILogger CreateLogger(string categoryName) => new SimpleTestLogger(categoryName, _logAction);
-    
-    public void Dispose() { }
-}
-
-/// <summary>
-/// Simple test logger for capturing log output - uses different name to avoid conflicts
-/// </summary>
-internal class SimpleTestLogger : ILogger
-{
-    private readonly string _categoryName;
-    private readonly Action<string, LogLevel, string> _logAction;
-    
-    public SimpleTestLogger(string categoryName, Action<string, LogLevel, string> logAction)
-    {
-        _categoryName = categoryName;
-        _logAction = logAction;
-    }
-    
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
-    
-    public bool IsEnabled(LogLevel logLevel) => true;
-    
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        var message = formatter(state, exception);
-        _logAction(_categoryName, logLevel, message);
     }
 }
