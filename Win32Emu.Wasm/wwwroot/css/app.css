@@ -296,13 +296,11 @@ code {
     border-top: 2px solid #3498db;
     box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
     z-index: 9999;
-    max-height: 0;
-    overflow: hidden;
     transition: max-height 0.3s ease-in-out;
 }
 
 .virtual-keyboard.visible {
-    max-height: 350px;
+    /* Expanded state - no max-height needed, header + body shown */
 }
 
 .virtual-keyboard-header {
@@ -335,6 +333,7 @@ code {
     padding: 12px;
     overflow-y: auto;
     max-height: 300px;
+    /* Body is only shown when keyboard is visible (controlled by Razor @if) */
 }
 
 .keyboard-row {
