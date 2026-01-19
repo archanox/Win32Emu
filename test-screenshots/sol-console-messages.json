@@ -1,0 +1,1478 @@
+[
+  {
+    "type": "log",
+    "text": "Win32Emu WASM console initialized. Logs will appear here."
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Wasm[0]\n      Win32Emu WASM starting..."
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Wasm[0]\n      Environment: Production"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Wasm[0]\n      Base Address: http://localhost:8080/Win32Emu/emulator/"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Microsoft.AspNetCore.Routing.Tree.TreeRouter[1]\n      Request successfully matched the route with name '(null)' and template '/'"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Wasm.Pages.Home[0]\n      Loaded executable: sol.exe (171408 bytes)"
+  },
+  {
+    "type": "log",
+    "text": "Initializing emulator canvas with id: emulatorCanvas"
+  },
+  {
+    "type": "log",
+    "text": "Canvas found: 640x480"
+  },
+  {
+    "type": "log",
+    "text": "Emulator canvas initialized successfully"
+  },
+  {
+    "type": "log",
+    "text": "Audio context initialized, sample rate: 44100"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      Loading executable: sol.exe (171408 bytes)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Wasm.VirtualFileSystem.BrowserVirtualFileSystem[0]\n      [BrowserVFS] Initialized browser-based virtual file system"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.VirtualFileSystem.BrowserVirtualFileSystem[0]\n      [BrowserVFS] Added file: \\WASM\\sol.exe (171408 bytes)"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      Added executable to VFS: \\WASM\\sol.exe"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Using pre-loaded executable bytes (171408 bytes)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Host OS: Browser"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Host OS Architecture: Wasm"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Host Process Architecture: Wasm"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Host Framework: .NET 10.0.1"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Host Runtime Identifier: browser-wasm"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Loading executable: C:\\WASM\\sol.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Loading executable: C:\\WASM\\sol.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Loading executable: C:\\WASM\\sol.exe"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Memory] Configured size: 256 MB, Address space: 4096 MB (sparse, pages allocated on-demand)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Detected format: NE"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Loading NE executable from C:\\WASM\\sol.exe"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] NE version: 5.60"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Target OS: 94 (2=Windows)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Program flags: 0x0302"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Application type: 0x000B"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Auto data segment: 4096, Init heap: 4096, Init stack: 148"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Sector alignment shift: 0 (sector size: 1)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Loaded 4 segments"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Found 0 entry points"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Resident names: 2, Non-resident names: 0"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Import modules: 1"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Loader] Loaded segment 1: Address=0x00010000, FileSize=0x800E, MemSize=0x800E, Flags=Data"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Loader] Initialized segment 2: Address=0x00018010, MemSize=0x1C30 (no file data)"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Loader] Loaded segment 3: Address=0x00019C40, FileSize=0x10000, MemSize=0x10000, Flags=0"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Loader] Loaded segment 4: Address=0x00029C40, FileSize=0x10000, MemSize=0x10000, Flags=0"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Loader] Created syscall dispatcher at 0x0E000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Loader] Mapping Win16 module +L to +L.DLL"
+  },
+  {
+    "type": "warning",
+    "text": "warn: Win32Emu.Emulator[0]\n      [Loader] Win16 NE format support is experimental. Some features may not work correctly."
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Image base=0x00010000 EntryPoint=0x00000000 Size=0x29C40"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Image base=0x00010000 EntryPoint=0x00000000 Size=0x29C40"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Image base=0x00010000 EntryPoint=0x00000000 Size=0x29C40"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Imports mapped: 0"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Imports mapped: 0"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Imports mapped: 0"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Subsystem: 3 (2=GUI, 3=CUI)"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Subsystem: 3 (2=GUI, 3=CUI)"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Subsystem: 3 (2=GUI, 3=CUI)"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Stack: Reserve=0x10000 Commit=0x1000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Stack: Reserve=0x10000 Commit=0x1000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Stack: Reserve=0x10000 Commit=0x1000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Heap: Reserve=0x10000 Commit=0x1000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Heap: Reserve=0x10000 Commit=0x1000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Heap: Reserve=0x10000 Commit=0x1000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Sections loaded: 4"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Sections loaded: 4"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Sections loaded: 4"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader]   Section 'SEG1': RVA=0x00000000 Size=0x0000800E Flags=[DATA,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG1': RVA=0x00000000 Size=0x0000800E Flags=[DATA,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader]   Section 'SEG1': RVA=0x00000000 Size=0x0000800E Flags=[DATA,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader]   Section 'SEG2': RVA=0x00008010 Size=0x00001C30 Flags=[DATA,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG2': RVA=0x00008010 Size=0x00001C30 Flags=[DATA,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader]   Section 'SEG2': RVA=0x00008010 Size=0x00001C30 Flags=[DATA,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader]   Section 'SEG3': RVA=0x00009C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG3': RVA=0x00009C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader]   Section 'SEG3': RVA=0x00009C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader]   Section 'SEG4': RVA=0x00019C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG4': RVA=0x00019C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader]   Section 'SEG4': RVA=0x00019C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnvironment] Console allocated - stdin=0x00000001, stdout=0x00000002, stderr=0x00000003"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Created in-memory hive: SYSTEM"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Created in-memory hive: SOFTWARE"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Created in-memory hive: NTUSER.DAT"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Initialized 3 registry hives"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: PATH=C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TEMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: WINDIR=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: SystemRoot=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: ComSpec=C:\\WINDOWS\\system32\\cmd.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: OS=Windows_NT"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Initialized system environment variables"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TEMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Initialized user environment variables"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Registry hive initialized"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Opened key: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment -> handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loading environment variables from key handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Enumerated 8 values for handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: ComSpec=C:\\WINDOWS\\system32\\cmd.exe (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: ComSpec=C:\\WINDOWS\\system32\\cmd.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: OS=Windows_NT (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: OS=Windows_NT"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: PATH=C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: PATH=C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: SystemRoot=C:\\WINDOWS (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: SystemRoot=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TEMP=C:\\TEMP (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TEMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TMP=C:\\TEMP (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: WINDIR=C:\\WINDOWS (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: WINDIR=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Closed key handle: 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Opened key: HKEY_CURRENT_USER\\Environment -> handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loading environment variables from key handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Enumerated 2 values for handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TEMP=C:\\Users\\User\\AppData\\Local\\Temp (type=String) from handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TEMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TMP=C:\\Users\\User\\AppData\\Local\\Temp (type=String) from handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Closed key handle: 0x80000001"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Synced environment variables from registry"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: BUTTON with WndProc=0x0D000000"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: EDIT with WndProc=0x0D000001"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: STATIC with WndProc=0x0D000002"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: LISTBOX with WndProc=0x0D000003"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: COMBOBOX with WndProc=0x0D000004"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: SCROLLBAR with WndProc=0x0D000005"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: MDICLIENT with WndProc=0x0D000006"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: COMBOLBOX with WndProc=0x0D000007"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: DDEMLEVENT with WndProc=0x0D000008"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: MESSAGE with WndProc=0x0D000009"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: #32768 with WndProc=0x0D00000A"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: #32769 with WndProc=0x0D00000B"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: #32770 with WndProc=0x0D00000C"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: #32771 with WndProc=0x0D00000D"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Pre-registered standard control class: #32772 with WndProc=0x0D00000E"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] ANSI code page set to: Utf8 (65001)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] OEM code page set to: Oem437 (437)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Initializing virtual file system with custom instance"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Virtual File System initialized with custom instance"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] SaveHives called but VFS not available, skipping"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Disposed registry hive manager"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Created in-memory hive: SYSTEM"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Created in-memory hive: SOFTWARE"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Created in-memory hive: NTUSER.DAT"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Initialized 3 registry hives"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: PATH=C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TEMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: WINDIR=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: SystemRoot=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: ComSpec=C:\\WINDOWS\\system32\\cmd.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: OS=Windows_NT"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Initialized system environment variables"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TEMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Set default value: TMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [RegistryHive] Initialized user environment variables"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Registry hive initialized"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Opened key: HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment -> handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loading environment variables from key handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Enumerated 8 values for handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: ComSpec=C:\\WINDOWS\\system32\\cmd.exe (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: ComSpec=C:\\WINDOWS\\system32\\cmd.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: OS=Windows_NT (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: OS=Windows_NT"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: PATH=C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: PATH=C:\\WINDOWS\\system32;C:\\WINDOWS;C:\\WINDOWS\\System32\\Wbem"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: SystemRoot=C:\\WINDOWS (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: SystemRoot=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TEMP=C:\\TEMP (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TEMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TMP=C:\\TEMP (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TMP=C:\\TEMP"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: WINDIR=C:\\WINDOWS (type=String) from handle 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: WINDIR=C:\\WINDOWS"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Closed key handle: 0x80000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Opened key: HKEY_CURRENT_USER\\Environment -> handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loading environment variables from key handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Enumerated 2 values for handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TEMP=C:\\Users\\User\\AppData\\Local\\Temp (type=String) from handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TEMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Query value: TMP=C:\\Users\\User\\AppData\\Local\\Temp (type=String) from handle 0x80000001"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] Loaded environment variable: TMP=C:\\Users\\User\\AppData\\Local\\Temp"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [RegistryHive] Closed key handle: 0x80000001"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Synced environment variables from registry"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Virtual file system initialized successfully (custom)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Registered main executable: C:\\WASM\\sol.exe at 0x00010000"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Set current directory to: C:\\WASM"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      MemWrite addr=0x00040010 len=16 data=43 3A 5C 57 41 53 4D 5C 73 6F 6C 2E 65 78 65 00"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] TEB allocated at 0x00040020"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] PEB allocated at 0x00041020"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnvironment] Detected console subsystem, allocating console"
+  },
+  {
+    "type": "warning",
+    "text": "warn: Win32Emu.Emulator[0]\n      [ProcessEnvironment] AllocConsole called but console already exists"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [ProcessEnv] GetEnvironmentVariable: 'WIN32EMU_JIT_CACHE_DIR' not found"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Using JIT cache directory: /.jitcache"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [JitCache] Initialized with cache directory: /.jitcache"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [JitCpu] Metadata cache initialized for block analysis metadata persistence"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [JitCpu] ProcessEnvironment set for transpiled function support"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Unified JitCpu backend enabled (JIT compilation: False, Interpreter mode: True)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Selected CPU Emulator: JitCpu"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Zero-initializing entire stack reserve region (0x00100000 - 0x00110000, 65536 bytes)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Stack initialized: Base=0x00110000 Limit=0x00100000 ESP=0x0010F000 Reserve=0x10000 Commit=0x1000"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Heap base: 0x00040000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Alignment shift: 4"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Found resource type 14 (RT_GROUP_ICON) with 1 resources"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=14, ID=0 (SOL), Offset=0x6520, Length=48"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Found resource type 2 (RT_BITMAP) with 74 resources"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=54 (54), Offset=0x6550, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=55 (55), Offset=0x7320, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=56 (56), Offset=0x80F0, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=57 (57), Offset=0x8EB0, Length=3568"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=58 (58), Offset=0x9CA0, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=59 (59), Offset=0xAA60, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=60 (60), Offset=0xB820, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=61 (61), Offset=0xC5F0, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=62 (62), Offset=0xD3C0, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=63 (63), Offset=0xE180, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=64 (64), Offset=0xEF40, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=65 (65), Offset=0xFD00, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=53 (53), Offset=0x10AC0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=678 (678), Offset=0x10F60, Length=416"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=679 (679), Offset=0x11100, Length=416"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=680 (680), Offset=0x112A0, Length=256"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=681 (681), Offset=0x113A0, Length=160"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=682 (682), Offset=0x11440, Length=160"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=683 (683), Offset=0x114E0, Length=144"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=684 (684), Offset=0x11570, Length=144"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=1 (1), Offset=0x11600, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=2 (2), Offset=0x11AA0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=3 (3), Offset=0x11F40, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=4 (4), Offset=0x123E0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=5 (5), Offset=0x12880, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=6 (6), Offset=0x12D20, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=7 (7), Offset=0x131C0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=8 (8), Offset=0x13660, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=9 (9), Offset=0x13B00, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=10 (10), Offset=0x13FA0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=11 (11), Offset=0x14440, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=12 (12), Offset=0x15210, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=13 (13), Offset=0x15FE0, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=14 (14), Offset=0x16DB0, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=15 (15), Offset=0x17260, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=16 (16), Offset=0x17710, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=17 (17), Offset=0x17BC0, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=18 (18), Offset=0x18070, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=19 (19), Offset=0x18520, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=20 (20), Offset=0x189D0, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=21 (21), Offset=0x18E80, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=22 (22), Offset=0x19330, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=23 (23), Offset=0x197E0, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=24 (24), Offset=0x19C90, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=25 (25), Offset=0x1AA60, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=26 (26), Offset=0x1B830, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=27 (27), Offset=0x1C600, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=28 (28), Offset=0x1CAB0, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=29 (29), Offset=0x1CF60, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=30 (30), Offset=0x1D410, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=31 (31), Offset=0x1D8C0, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=32 (32), Offset=0x1DD70, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=33 (33), Offset=0x1E220, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=34 (34), Offset=0x1E6D0, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=35 (35), Offset=0x1EB80, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=36 (36), Offset=0x1F030, Length=1200"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=37 (37), Offset=0x1F4E0, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=38 (38), Offset=0x202B0, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=39 (39), Offset=0x21080, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=40 (40), Offset=0x21E50, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=41 (41), Offset=0x222F0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=42 (42), Offset=0x22790, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=43 (43), Offset=0x22C30, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=44 (44), Offset=0x230D0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=45 (45), Offset=0x23570, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=46 (46), Offset=0x23A10, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=47 (47), Offset=0x23EB0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=48 (48), Offset=0x24350, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=49 (49), Offset=0x247F0, Length=1184"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=50 (50), Offset=0x24C90, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=51 (51), Offset=0x25A60, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=52 (52), Offset=0x26830, Length=3536"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=68 (68), Offset=0x27600, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=2, ID=67 (67), Offset=0x283C0, Length=3520"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Found resource type 4 (RT_MENU) with 1 resources"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=4, ID=1 (1), Offset=0x29180, Length=144"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Found resource type 5 (RT_DIALOG) with 2 resources"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=5, ID=101 (101), Offset=0x29210, Length=304"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=5, ID=103 (103), Offset=0x29340, Length=384"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Found resource type 6 (RT_STRING) with 7 resources"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=6, ID=7 (7), Offset=0x294C0, Length=160"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=6, ID=13 (13), Offset=0x29560, Length=64"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=6, ID=19 (19), Offset=0x295A0, Length=224"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=6, ID=63 (63), Offset=0x29680, Length=112"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=6, ID=4096 (4096), Offset=0x296F0, Length=64"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=6, ID=3 (3), Offset=0x29730, Length=64"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=6, ID=126 (126), Offset=0x29770, Length=32"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Found resource type 16 (RT_VERSION) with 1 resources"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=16, ID=1 (1), Offset=0x29790, Length=480"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Found resource type 3 (RT_ICON) with 2 resources"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=3, ID=1 (1), Offset=0x29970, Length=752"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [NE Resources] Resource: Type=3, ID=2 (2), Offset=0x29C60, Length=304"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [NE Resources] Parsed 88 resources"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] NE resource reader initialized for Win16 executable"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] VirtualAlloc: allocated at 0x00043000, size=0x00001000, reserve=False, commit=True, topDown=False"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] VirtualAlloc: allocated at 0x00044000, size=0x00001000, reserve=False, commit=True, topDown=False"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] VirtualAlloc: allocated at 0x00045000, size=0x00001000, reserve=False, commit=True, topDown=False"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Registering Win16 thunking modules for NE format executable"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Looking up KERNEL32.DLL module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Looking up USER32.DLL module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Looking up GDI32.DLL module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Looking up WINMM.DLL module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Creating Win16 KERNEL module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Creating Win16 USER module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Creating Win16 GDI module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Creating Win16 KEYBOARD module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Creating Win16 SYSTEM module"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Creating Win16 SOUND module"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Win16 thunking modules registered successfully"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ThreadScheduler] Initialized main thread 1 (handle=0x00001000)"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [ProcessEnv] Main thread initialized with ID=1"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] Main thread initialized"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Loader] Main thread initialized"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Loader] Main thread initialized"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Loader] Fixing up data imports"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Loader] No imports to fix up"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Emulator] No TLS callbacks to execute"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Emulator] Checking for executable-specific workarounds"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Emulator] Image FilePath: C:\\WASM\\sol.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Emulator] Env ExecutablePath: C:\\WASM\\sol.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Emulator] Extracted names: C:\\WASM\\SOL.EXE / C:\\WASM\\SOL.EXE"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Wasm.Services.EmulatorService[0]\n      [WASM] JitCpu runs in interpreter mode - cache loading not needed"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Cache] JitCpu uses interpreter mode in WASM - no cache needed"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      Successfully loaded: sol.exe"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      Entry point: 0x00000000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      Image base: 0x00010000"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      Starting emulation..."
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [EmulationLoop] Starting emulator.RunAsync()..."
+  },
+  {
+    "type": "error",
+    "text": "fail: Win32Emu.Emulator[0]\n      [Emulator] EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. Likely corrupted return address or indirect jump."
+  },
+  {
+    "type": "error",
+    "text": "fail: Win32Emu.Emulator[0]\n      [Emulator] Unhandled exception during emulation\nSystem.InvalidOperationException: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer.\n   at Win32Emu.Emulator.RunNormalAsync()\n   at Win32Emu.Emulator.RunAsync()"
+  },
+  {
+    "type": "error",
+    "text": "fail: Win32Emu.Emulator[0]\n      [JitCpu] Cannot save cache: executable path not set"
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      [Emulator] JIT cache saved successfully"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Exit] Emulation terminated due to unhandled exception: InvalidOperationException"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Exit] Emulation terminated due to unhandled exception: InvalidOperationException"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Exit] Emulation terminated due to unhandled exception: InvalidOperationException"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Exit] Exception message: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer."
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Exit] Exception message: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer."
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Exit] Exception message: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer."
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Exit] Stack trace:"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Exit] Stack trace:"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Exit] Stack trace:"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Exit]   at Win32Emu.Emulator.RunNormalAsync()"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Exit]   at Win32Emu.Emulator.RunNormalAsync()"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Exit]   at Win32Emu.Emulator.RunNormalAsync()"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      [Exit]   at Win32Emu.Emulator.RunAsync()"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): [Exit]   at Win32Emu.Emulator.RunAsync()"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [Exit]   at Win32Emu.Emulator.RunAsync()"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Emulator[0]\n      === Unknown Function Summary ==="
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.WasmEmulatorHost[0]\n      [EmulatorHost] Debug (Debug): === Unknown Function Summary ==="
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      === Unknown Function Summary ==="
+  },
+  {
+    "type": "info",
+    "text": "info: Win32Emu.Emulator[0]\n      No unimplemented functions found!"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [EmulationLoop] Emulation completed successfully"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [EmulationLoop] No child process requested, emulation complete"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [EmulationLoop] Emulation stopped, updating state..."
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      [EmulationLoop] State updated"
+  },
+  {
+    "type": "debug",
+    "text": "dbug: Win32Emu.Wasm.Services.EmulatorService[0]\n      StartAsync completed, emulation task is running"
+  }
+]

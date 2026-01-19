@@ -1,0 +1,376 @@
+No output yet.
+Win32Emu Emulator Starting
+Executable loaded and ready
+Win32Emu WASM Starting
+
+
+No debug messages.
+[06:15:21] [INF] [Home] Loaded executable: sol.exe (171408 bytes)
+[06:15:23] [DBG] [EmulatorService] Loading executable: sol.exe (171408 bytes)
+[06:15:23] [INF] [BrowserVirtualFileSystem] [BrowserVFS] Initialized browser-based virtual file system
+[06:15:24] [DBG] [BrowserVirtualFileSystem] [BrowserVFS] Added file: \WASM\sol.exe (171408 bytes)
+[06:15:24] [DBG] [EmulatorService] Added executable to VFS: \WASM\sol.exe
+[06:15:24] [INF] [Emulator] [Loader] Using pre-loaded executable bytes (171408 bytes)
+[06:15:24] [INF] [Emulator] [Loader] Host OS: Browser
+[06:15:24] [INF] [Emulator] [Loader] Host OS Architecture: Wasm
+[06:15:24] [INF] [Emulator] [Loader] Host Process Architecture: Wasm
+[06:15:24] [INF] [Emulator] [Loader] Host Framework: .NET 10.0.1
+[06:15:24] [INF] [Emulator] [Loader] Host Runtime Identifier: browser-wasm
+[06:15:24] [DBG] [Emulator] [Loader] Loading executable: C:\WASM\sol.exe
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Loading executable: C:\WASM\sol.exe
+[06:15:24] [DBG] [EmulatorService] [Loader] Loading executable: C:\WASM\sol.exe
+[06:15:24] [INF] [Emulator] [Memory] Configured size: 256 MB, Address space: 4096 MB (sparse, pages allocated on-demand)
+[06:15:24] [INF] [Emulator] [Loader] Detected format: NE
+[06:15:24] [INF] [Emulator] [NE Loader] Loading NE executable from C:\WASM\sol.exe
+[06:15:24] [INF] [Emulator] [NE Loader] NE version: 5.60
+[06:15:24] [INF] [Emulator] [NE Loader] Target OS: 94 (2=Windows)
+[06:15:24] [INF] [Emulator] [NE Loader] Program flags: 0x0302
+[06:15:24] [INF] [Emulator] [NE Loader] Application type: 0x000B
+[06:15:24] [INF] [Emulator] [NE Loader] Auto data segment: 4096, Init heap: 4096, Init stack: 148
+[06:15:24] [INF] [Emulator] [NE Loader] Sector alignment shift: 0 (sector size: 1)
+[06:15:24] [INF] [Emulator] [NE Loader] Loaded 4 segments
+[06:15:24] [INF] [Emulator] [NE Loader] Found 0 entry points
+[06:15:24] [INF] [Emulator] [NE Loader] Resident names: 2, Non-resident names: 0
+[06:15:24] [INF] [Emulator] [NE Loader] Import modules: 1
+[06:15:24] [DBG] [Emulator] [NE Loader] Loaded segment 1: Address=0x00010000, FileSize=0x800E, MemSize=0x800E, Flags=Data
+[06:15:24] [DBG] [Emulator] [NE Loader] Initialized segment 2: Address=0x00018010, MemSize=0x1C30 (no file data)
+[06:15:24] [DBG] [Emulator] [NE Loader] Loaded segment 3: Address=0x00019C40, FileSize=0x10000, MemSize=0x10000, Flags=0
+[06:15:24] [DBG] [Emulator] [NE Loader] Loaded segment 4: Address=0x00029C40, FileSize=0x10000, MemSize=0x10000, Flags=0
+[06:15:24] [INF] [Emulator] [NE Loader] Created syscall dispatcher at 0x0E000000
+[06:15:24] [DBG] [Emulator] [NE Loader] Mapping Win16 module +L to +L.DLL
+[06:15:24] [WRN] [Emulator] [Loader] Win16 NE format support is experimental. Some features may not work correctly.
+[06:15:24] [DBG] [Emulator] [Loader] Image base=0x00010000 EntryPoint=0x00000000 Size=0x29C40
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Image base=0x00010000 EntryPoint=0x00000000 Size=0x29C40
+[06:15:24] [DBG] [EmulatorService] [Loader] Image base=0x00010000 EntryPoint=0x00000000 Size=0x29C40
+[06:15:24] [DBG] [Emulator] [Loader] Imports mapped: 0
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Imports mapped: 0
+[06:15:24] [DBG] [EmulatorService] [Loader] Imports mapped: 0
+[06:15:24] [DBG] [Emulator] [Loader] Subsystem: 3 (2=GUI, 3=CUI)
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Subsystem: 3 (2=GUI, 3=CUI)
+[06:15:24] [DBG] [EmulatorService] [Loader] Subsystem: 3 (2=GUI, 3=CUI)
+[06:15:24] [DBG] [Emulator] [Loader] Stack: Reserve=0x10000 Commit=0x1000
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Stack: Reserve=0x10000 Commit=0x1000
+[06:15:24] [DBG] [EmulatorService] [Loader] Stack: Reserve=0x10000 Commit=0x1000
+[06:15:24] [DBG] [Emulator] [Loader] Heap: Reserve=0x10000 Commit=0x1000
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Heap: Reserve=0x10000 Commit=0x1000
+[06:15:24] [DBG] [EmulatorService] [Loader] Heap: Reserve=0x10000 Commit=0x1000
+[06:15:24] [DBG] [Emulator] [Loader] Sections loaded: 4
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Sections loaded: 4
+[06:15:24] [DBG] [EmulatorService] [Loader] Sections loaded: 4
+[06:15:24] [DBG] [Emulator] [Loader]   Section 'SEG1': RVA=0x00000000 Size=0x0000800E Flags=[DATA,READ,WRITE]
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG1': RVA=0x00000000 Size=0x0000800E Flags=[DATA,READ,WRITE]
+[06:15:24] [DBG] [EmulatorService] [Loader]   Section 'SEG1': RVA=0x00000000 Size=0x0000800E Flags=[DATA,READ,WRITE]
+[06:15:24] [DBG] [Emulator] [Loader]   Section 'SEG2': RVA=0x00008010 Size=0x00001C30 Flags=[DATA,READ,WRITE]
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG2': RVA=0x00008010 Size=0x00001C30 Flags=[DATA,READ,WRITE]
+[06:15:24] [DBG] [EmulatorService] [Loader]   Section 'SEG2': RVA=0x00008010 Size=0x00001C30 Flags=[DATA,READ,WRITE]
+[06:15:24] [DBG] [Emulator] [Loader]   Section 'SEG3': RVA=0x00009C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG3': RVA=0x00009C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]
+[06:15:24] [DBG] [EmulatorService] [Loader]   Section 'SEG3': RVA=0x00009C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]
+[06:15:24] [DBG] [Emulator] [Loader]   Section 'SEG4': RVA=0x00019C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader]   Section 'SEG4': RVA=0x00019C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]
+[06:15:24] [DBG] [EmulatorService] [Loader]   Section 'SEG4': RVA=0x00019C40 Size=0x00010000 Flags=[EXEC,READ,WRITE]
+[06:15:24] [INF] [Emulator] [ProcessEnvironment] Console allocated - stdin=0x00000001, stdout=0x00000002, stderr=0x00000003
+[06:15:24] [INF] [Emulator] [RegistryHive] Created in-memory hive: SYSTEM
+[06:15:24] [INF] [Emulator] [RegistryHive] Created in-memory hive: SOFTWARE
+[06:15:24] [INF] [Emulator] [RegistryHive] Created in-memory hive: NTUSER.DAT
+[06:15:24] [INF] [Emulator] [RegistryHive] Initialized 3 registry hives
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TEMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: WINDIR=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: SystemRoot=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: ComSpec=C:\WINDOWS\system32\cmd.exe
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: OS=Windows_NT
+[06:15:24] [INF] [Emulator] [RegistryHive] Initialized system environment variables
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TEMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [INF] [Emulator] [RegistryHive] Initialized user environment variables
+[06:15:24] [INF] [Emulator] [ProcessEnv] Registry hive initialized
+[06:15:24] [DBG] [Emulator] [RegistryHive] Opened key: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment -> handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loading environment variables from key handle 0x80000000
+[06:15:24] [DBG] [Emulator] [RegistryHive] Enumerated 8 values for handle 0x80000000
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: ComSpec=C:\WINDOWS\system32\cmd.exe (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: ComSpec=C:\WINDOWS\system32\cmd.exe
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: OS=Windows_NT (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: OS=Windows_NT
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: SystemRoot=C:\WINDOWS (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: SystemRoot=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TEMP=C:\TEMP (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TEMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TMP=C:\TEMP (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: WINDIR=C:\WINDOWS (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: WINDIR=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Closed key handle: 0x80000000
+[06:15:24] [DBG] [Emulator] [RegistryHive] Opened key: HKEY_CURRENT_USER\Environment -> handle 0x80000001
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loading environment variables from key handle 0x80000001
+[06:15:24] [DBG] [Emulator] [RegistryHive] Enumerated 2 values for handle 0x80000001
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TEMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TEMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [DBG] [Emulator] [RegistryHive] Closed key handle: 0x80000001
+[06:15:24] [INF] [Emulator] [ProcessEnv] Synced environment variables from registry
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: BUTTON with WndProc=0x0D000000
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: EDIT with WndProc=0x0D000001
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: STATIC with WndProc=0x0D000002
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: LISTBOX with WndProc=0x0D000003
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: COMBOBOX with WndProc=0x0D000004
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: SCROLLBAR with WndProc=0x0D000005
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: MDICLIENT with WndProc=0x0D000006
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: COMBOLBOX with WndProc=0x0D000007
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: DDEMLEVENT with WndProc=0x0D000008
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: MESSAGE with WndProc=0x0D000009
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: #32768 with WndProc=0x0D00000A
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: #32769 with WndProc=0x0D00000B
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: #32770 with WndProc=0x0D00000C
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: #32771 with WndProc=0x0D00000D
+[06:15:24] [INF] [Emulator] [ProcessEnv] Pre-registered standard control class: #32772 with WndProc=0x0D00000E
+[06:15:24] [INF] [Emulator] [Loader] ANSI code page set to: Utf8 (65001)
+[06:15:24] [INF] [Emulator] [Loader] OEM code page set to: Oem437 (437)
+[06:15:24] [INF] [Emulator] [Loader] Initializing virtual file system with custom instance
+[06:15:24] [INF] [Emulator] [ProcessEnv] Virtual File System initialized with custom instance
+[06:15:24] [DBG] [Emulator] [RegistryHive] SaveHives called but VFS not available, skipping
+[06:15:24] [INF] [Emulator] [RegistryHive] Disposed registry hive manager
+[06:15:24] [INF] [Emulator] [RegistryHive] Created in-memory hive: SYSTEM
+[06:15:24] [INF] [Emulator] [RegistryHive] Created in-memory hive: SOFTWARE
+[06:15:24] [INF] [Emulator] [RegistryHive] Created in-memory hive: NTUSER.DAT
+[06:15:24] [INF] [Emulator] [RegistryHive] Initialized 3 registry hives
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TEMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: WINDIR=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: SystemRoot=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: ComSpec=C:\WINDOWS\system32\cmd.exe
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: OS=Windows_NT
+[06:15:24] [INF] [Emulator] [RegistryHive] Initialized system environment variables
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TEMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [DBG] [Emulator] [RegistryHive] Set default value: TMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [INF] [Emulator] [RegistryHive] Initialized user environment variables
+[06:15:24] [INF] [Emulator] [ProcessEnv] Registry hive initialized
+[06:15:24] [DBG] [Emulator] [RegistryHive] Opened key: HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\Session Manager\Environment -> handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loading environment variables from key handle 0x80000000
+[06:15:24] [DBG] [Emulator] [RegistryHive] Enumerated 8 values for handle 0x80000000
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: ComSpec=C:\WINDOWS\system32\cmd.exe (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: ComSpec=C:\WINDOWS\system32\cmd.exe
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: OS=Windows_NT (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: OS=Windows_NT
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: PATH=C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: SystemRoot=C:\WINDOWS (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: SystemRoot=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TEMP=C:\TEMP (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TEMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TMP=C:\TEMP (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TMP=C:\TEMP
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: WINDIR=C:\WINDOWS (type=String) from handle 0x80000000
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: WINDIR=C:\WINDOWS
+[06:15:24] [DBG] [Emulator] [RegistryHive] Closed key handle: 0x80000000
+[06:15:24] [DBG] [Emulator] [RegistryHive] Opened key: HKEY_CURRENT_USER\Environment -> handle 0x80000001
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loading environment variables from key handle 0x80000001
+[06:15:24] [DBG] [Emulator] [RegistryHive] Enumerated 2 values for handle 0x80000001
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TEMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TEMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [DBG] [Emulator] [RegistryHive] Query value: TMP=C:\Users\User\AppData\Local\Temp (type=String) from handle 0x80000001
+[06:15:24] [DBG] [Emulator] [ProcessEnv] Loaded environment variable: TMP=C:\Users\User\AppData\Local\Temp
+[06:15:24] [DBG] [Emulator] [RegistryHive] Closed key handle: 0x80000001
+[06:15:24] [INF] [Emulator] [ProcessEnv] Synced environment variables from registry
+[06:15:24] [INF] [Emulator] [Loader] Virtual file system initialized successfully (custom)
+[06:15:24] [INF] [Emulator] [ProcessEnv] Registered main executable: C:\WASM\sol.exe at 0x00010000
+[06:15:24] [INF] [Emulator] [ProcessEnv] Set current directory to: C:\WASM
+[06:15:24] [DBG] [Emulator] MemWrite addr=0x00040010 len=16 data=43 3A 5C 57 41 53 4D 5C 73 6F 6C 2E 65 78 65 00
+[06:15:24] [INF] [Emulator] [ProcessEnv] TEB allocated at 0x00040020
+[06:15:24] [INF] [Emulator] [ProcessEnv] PEB allocated at 0x00041020
+[06:15:24] [INF] [Emulator] [ProcessEnvironment] Detected console subsystem, allocating console
+[06:15:24] [WRN] [Emulator] [ProcessEnvironment] AllocConsole called but console already exists
+[06:15:24] [DBG] [Emulator] [ProcessEnv] GetEnvironmentVariable: 'WIN32EMU_JIT_CACHE_DIR' not found
+[06:15:24] [INF] [Emulator] [Loader] Using JIT cache directory: /.jitcache
+[06:15:24] [INF] [Emulator] [JitCpu] Running in WASM environment - JIT compilation disabled, using interpreter mode
+[06:15:24] [INF] [Emulator] [JitCache] Initialized with cache directory: /.jitcache
+[06:15:24] [INF] [Emulator] [JitCpu] Metadata cache initialized for block analysis metadata persistence
+[06:15:24] [DBG] [Emulator] [JitCpu] ProcessEnvironment set for transpiled function support
+[06:15:24] [INF] [Emulator] [Loader] Unified JitCpu backend enabled (JIT compilation: False, Interpreter mode: True)
+[06:15:24] [INF] [Emulator] [Loader] Selected CPU Emulator: JitCpu
+[06:15:24] [INF] [Emulator] [Loader] Zero-initializing entire stack reserve region (0x00100000 - 0x00110000, 65536 bytes)
+[06:15:24] [INF] [Emulator] [Loader] Stack initialized: Base=0x00110000 Limit=0x00100000 ESP=0x0010F000 Reserve=0x10000 Commit=0x1000
+[06:15:24] [INF] [Emulator] [Loader] Heap base: 0x00040000
+[06:15:24] [DBG] [Emulator] [NE Resources] Alignment shift: 4
+[06:15:24] [DBG] [Emulator] [NE Resources] Found resource type 14 (RT_GROUP_ICON) with 1 resources
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=14, ID=0 (SOL), Offset=0x6520, Length=48
+[06:15:24] [DBG] [Emulator] [NE Resources] Found resource type 2 (RT_BITMAP) with 74 resources
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=54 (54), Offset=0x6550, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=55 (55), Offset=0x7320, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=56 (56), Offset=0x80F0, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=57 (57), Offset=0x8EB0, Length=3568
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=58 (58), Offset=0x9CA0, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=59 (59), Offset=0xAA60, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=60 (60), Offset=0xB820, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=61 (61), Offset=0xC5F0, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=62 (62), Offset=0xD3C0, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=63 (63), Offset=0xE180, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=64 (64), Offset=0xEF40, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=65 (65), Offset=0xFD00, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=53 (53), Offset=0x10AC0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=678 (678), Offset=0x10F60, Length=416
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=679 (679), Offset=0x11100, Length=416
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=680 (680), Offset=0x112A0, Length=256
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=681 (681), Offset=0x113A0, Length=160
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=682 (682), Offset=0x11440, Length=160
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=683 (683), Offset=0x114E0, Length=144
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=684 (684), Offset=0x11570, Length=144
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=1 (1), Offset=0x11600, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=2 (2), Offset=0x11AA0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=3 (3), Offset=0x11F40, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=4 (4), Offset=0x123E0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=5 (5), Offset=0x12880, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=6 (6), Offset=0x12D20, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=7 (7), Offset=0x131C0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=8 (8), Offset=0x13660, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=9 (9), Offset=0x13B00, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=10 (10), Offset=0x13FA0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=11 (11), Offset=0x14440, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=12 (12), Offset=0x15210, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=13 (13), Offset=0x15FE0, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=14 (14), Offset=0x16DB0, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=15 (15), Offset=0x17260, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=16 (16), Offset=0x17710, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=17 (17), Offset=0x17BC0, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=18 (18), Offset=0x18070, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=19 (19), Offset=0x18520, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=20 (20), Offset=0x189D0, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=21 (21), Offset=0x18E80, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=22 (22), Offset=0x19330, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=23 (23), Offset=0x197E0, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=24 (24), Offset=0x19C90, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=25 (25), Offset=0x1AA60, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=26 (26), Offset=0x1B830, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=27 (27), Offset=0x1C600, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=28 (28), Offset=0x1CAB0, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=29 (29), Offset=0x1CF60, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=30 (30), Offset=0x1D410, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=31 (31), Offset=0x1D8C0, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=32 (32), Offset=0x1DD70, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=33 (33), Offset=0x1E220, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=34 (34), Offset=0x1E6D0, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=35 (35), Offset=0x1EB80, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=36 (36), Offset=0x1F030, Length=1200
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=37 (37), Offset=0x1F4E0, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=38 (38), Offset=0x202B0, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=39 (39), Offset=0x21080, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=40 (40), Offset=0x21E50, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=41 (41), Offset=0x222F0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=42 (42), Offset=0x22790, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=43 (43), Offset=0x22C30, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=44 (44), Offset=0x230D0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=45 (45), Offset=0x23570, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=46 (46), Offset=0x23A10, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=47 (47), Offset=0x23EB0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=48 (48), Offset=0x24350, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=49 (49), Offset=0x247F0, Length=1184
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=50 (50), Offset=0x24C90, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=51 (51), Offset=0x25A60, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=52 (52), Offset=0x26830, Length=3536
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=68 (68), Offset=0x27600, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=2, ID=67 (67), Offset=0x283C0, Length=3520
+[06:15:24] [DBG] [Emulator] [NE Resources] Found resource type 4 (RT_MENU) with 1 resources
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=4, ID=1 (1), Offset=0x29180, Length=144
+[06:15:24] [DBG] [Emulator] [NE Resources] Found resource type 5 (RT_DIALOG) with 2 resources
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=5, ID=101 (101), Offset=0x29210, Length=304
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=5, ID=103 (103), Offset=0x29340, Length=384
+[06:15:24] [DBG] [Emulator] [NE Resources] Found resource type 6 (RT_STRING) with 7 resources
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=6, ID=7 (7), Offset=0x294C0, Length=160
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=6, ID=13 (13), Offset=0x29560, Length=64
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=6, ID=19 (19), Offset=0x295A0, Length=224
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=6, ID=63 (63), Offset=0x29680, Length=112
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=6, ID=4096 (4096), Offset=0x296F0, Length=64
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=6, ID=3 (3), Offset=0x29730, Length=64
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=6, ID=126 (126), Offset=0x29770, Length=32
+[06:15:24] [DBG] [Emulator] [NE Resources] Found resource type 16 (RT_VERSION) with 1 resources
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=16, ID=1 (1), Offset=0x29790, Length=480
+[06:15:24] [DBG] [Emulator] [NE Resources] Found resource type 3 (RT_ICON) with 2 resources
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=3, ID=1 (1), Offset=0x29970, Length=752
+[06:15:24] [DBG] [Emulator] [NE Resources] Resource: Type=3, ID=2 (2), Offset=0x29C60, Length=304
+[06:15:24] [INF] [Emulator] [NE Resources] Parsed 88 resources
+[06:15:24] [INF] [Emulator] [Loader] NE resource reader initialized for Win16 executable
+[06:15:24] [INF] [Emulator] [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+[06:15:24] [INF] [Emulator] [ProcessEnv] VirtualAlloc: allocated at 0x00043000, size=0x00001000, reserve=False, commit=True, topDown=False
+[06:15:24] [INF] [Emulator] [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+[06:15:24] [INF] [Emulator] [ProcessEnv] VirtualAlloc: allocated at 0x00044000, size=0x00001000, reserve=False, commit=True, topDown=False
+[06:15:24] [INF] [Emulator] [ProcessEnv] VirtualAlloc(lp=0x00000000, size=0x00000004, alloc=0x00001000, prot=0x00000004)
+[06:15:24] [INF] [Emulator] [ProcessEnv] VirtualAlloc: allocated at 0x00045000, size=0x00001000, reserve=False, commit=True, topDown=False
+[06:15:24] [INF] [Emulator] [Loader] Registering Win16 thunking modules for NE format executable
+[06:15:24] [DBG] [Emulator] [Loader] Looking up KERNEL32.DLL module
+[06:15:24] [DBG] [Emulator] [Loader] Looking up USER32.DLL module
+[06:15:24] [DBG] [Emulator] [Loader] Looking up GDI32.DLL module
+[06:15:24] [DBG] [Emulator] [Loader] Looking up WINMM.DLL module
+[06:15:24] [DBG] [Emulator] [Loader] Creating Win16 KERNEL module
+[06:15:24] [DBG] [Emulator] [Loader] Creating Win16 USER module
+[06:15:24] [DBG] [Emulator] [Loader] Creating Win16 GDI module
+[06:15:24] [DBG] [Emulator] [Loader] Creating Win16 KEYBOARD module
+[06:15:24] [DBG] [Emulator] [Loader] Creating Win16 SYSTEM module
+[06:15:24] [DBG] [Emulator] [Loader] Creating Win16 SOUND module
+[06:15:24] [INF] [Emulator] [Loader] Win16 thunking modules registered successfully
+[06:15:24] [INF] [Emulator] [ThreadScheduler] Initialized main thread 1 (handle=0x00001000)
+[06:15:24] [INF] [Emulator] [ProcessEnv] Main thread initialized with ID=1
+[06:15:24] [DBG] [Emulator] [Loader] Main thread initialized
+[06:15:24] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Loader] Main thread initialized
+[06:15:24] [DBG] [EmulatorService] [Loader] Main thread initialized
+[06:15:24] [INF] [Emulator] [Loader] Fixing up data imports
+[06:15:24] [DBG] [Emulator] [Loader] No imports to fix up
+[06:15:24] [DBG] [Emulator] [Emulator] No TLS callbacks to execute
+[06:15:24] [INF] [Emulator] [Emulator] Checking for executable-specific workarounds
+[06:15:24] [DBG] [Emulator] [Emulator] Image FilePath: C:\WASM\sol.exe
+[06:15:24] [DBG] [Emulator] [Emulator] Env ExecutablePath: C:\WASM\sol.exe
+[06:15:24] [DBG] [Emulator] [Emulator] Extracted names: C:\WASM\SOL.EXE / C:\WASM\SOL.EXE
+[06:15:24] [INF] [EmulatorService] [WASM] JitCpu runs in interpreter mode - cache loading not needed
+[06:15:24] [DBG] [EmulatorService] [Cache] JitCpu uses interpreter mode in WASM - no cache needed
+[06:15:24] [DBG] [EmulatorService] Successfully loaded: sol.exe
+[06:15:24] [DBG] [EmulatorService] Entry point: 0x00000000
+[06:15:24] [DBG] [EmulatorService] Image base: 0x00010000
+[06:15:24] [DBG] [EmulatorService] Starting emulation...
+[06:15:24] [DBG] [EmulatorService] [EmulationLoop] Starting emulator.RunAsync()...
+[06:15:24] [ERR] [Emulator] [Emulator] EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. Likely corrupted return address or indirect jump.
+[06:15:24] [ERR] [Emulator] [Emulator] Unhandled exception during emulation
+System.InvalidOperationException: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer.
+   at Win32Emu.Emulator.RunNormalAsync()
+   at Win32Emu.Emulator.RunAsync()
+[06:15:25] [ERR] [Emulator] [JitCpu] Cannot save cache: executable path not set
+[06:15:25] [INF] [Emulator] [Emulator] JIT cache saved successfully
+[06:15:25] [DBG] [Emulator] [Exit] Emulation terminated due to unhandled exception: InvalidOperationException
+[06:15:25] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Exit] Emulation terminated due to unhandled exception: InvalidOperationException
+[06:15:25] [DBG] [EmulatorService] [Exit] Emulation terminated due to unhandled exception: InvalidOperationException
+[06:15:25] [DBG] [Emulator] [Exit] Exception message: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer.
+[06:15:25] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Exit] Exception message: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer.
+[06:15:25] [DBG] [EmulatorService] [Exit] Exception message: Memory corruption detected: EIP=0x00000002 is in suspicious low memory range. Previous EIP=0x00000000, ESP=0x0010F000, EBP=0x0010F000. This indicates a corrupted return address or bad function pointer.
+[06:15:25] [DBG] [Emulator] [Exit] Stack trace:
+[06:15:25] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Exit] Stack trace:
+[06:15:25] [DBG] [EmulatorService] [Exit] Stack trace:
+[06:15:25] [DBG] [Emulator] [Exit]   at Win32Emu.Emulator.RunNormalAsync()
+[06:15:25] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Exit]   at Win32Emu.Emulator.RunNormalAsync()
+[06:15:25] [DBG] [EmulatorService] [Exit]   at Win32Emu.Emulator.RunNormalAsync()
+[06:15:25] [DBG] [Emulator] [Exit]   at Win32Emu.Emulator.RunAsync()
+[06:15:25] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): [Exit]   at Win32Emu.Emulator.RunAsync()
+[06:15:25] [DBG] [EmulatorService] [Exit]   at Win32Emu.Emulator.RunAsync()
+[06:15:25] [DBG] [Emulator] === Unknown Function Summary ===
+[06:15:25] [DBG] [WasmEmulatorHost] [EmulatorHost] Debug (Debug): === Unknown Function Summary ===
+[06:15:25] [DBG] [EmulatorService] === Unknown Function Summary ===
+[06:15:25] [INF] [Emulator] No unimplemented functions found!
+[06:15:25] [DBG] [EmulatorService] [EmulationLoop] Emulation completed successfully
+[06:15:25] [DBG] [EmulatorService] [EmulationLoop] No child process requested, emulation complete
+[06:15:25] [DBG] [EmulatorService] [EmulationLoop] Emulation stopped, updating state...
+[06:15:25] [DBG] [EmulatorService] [EmulationLoop] State updated
+[06:15:25] [DBG] [EmulatorService] StartAsync completed, emulation task is running
+[06:15:25] StartAsync completed, emulation task is running
+
+
+[06:15:24.431] [JitCpu] Metadata cache initialized for block analysis metadata persistence
+
+
