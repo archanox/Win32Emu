@@ -1443,15 +1443,14 @@
 					const resizeHandler = () => fitAddon.fit();
 					window.addEventListener('resize', resizeHandler);
 					
-					// Store resize handler for cleanup
-					terminal._resizeHandler = resizeHandler;
 				}
 				
 				// Store terminal instance
 				window.xtermTerminals[terminalId] = {
 					terminal: terminal,
 					fitAddon: fitAddon,
-					container: container
+					container: container,
+					resizeHandler: fitAddon ? resizeHandler : null
 				};
 				
 				console.log(`Created xterm.js terminal: ${terminalId} (${cols}x${rows})`);
@@ -1519,8 +1518,8 @@
 			
 			try {
 				// Remove resize handler if it exists
-				if (termData.terminal._resizeHandler) {
-					window.removeEventListener('resize', termData.terminal._resizeHandler);
+				if (termData.resizeHandler) {
+					window.removeEventListener('resize', termData.resizeHandler);
 				}
 				
 				// Dispose terminal
