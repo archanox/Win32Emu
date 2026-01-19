@@ -752,6 +752,8 @@ public class NeImageLoaderTests
 		// Assert - Should load successfully without crashing or logging garbage module names
 		Assert.NotNull(image);
 		Assert.Equal(0x00010000u, image.BaseAddress);
+		// Verify that the import address map is empty since all module names were invalid
+		Assert.Empty(image.ImportAddressMap);
 	}
 
 	/// <summary>
@@ -885,6 +887,8 @@ public class NeImageLoaderTests
 		// Assert - Should load successfully without accepting garbage module names
 		Assert.NotNull(image);
 		Assert.Equal(0x00010000u, image.BaseAddress);
+		// Verify that the import address map is empty since all module names contained invalid characters
+		Assert.Empty(image.ImportAddressMap);
 	}
 
 	/// <summary>
