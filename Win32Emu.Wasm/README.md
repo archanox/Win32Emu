@@ -7,9 +7,10 @@ A Blazor WebAssembly frontend for the Win32Emu emulator, providing an interactiv
 This project provides a proof-of-concept web interface for Win32Emu with the following features:
 
 - **Interactive Display**: HTML5 Canvas for rendering DirectDraw output
-- **Audio Output**: Web Audio API integration (placeholder)
+- **Audio Output**: Web Audio API integration
+- **Terminal Output**: xterm.js-based terminal emulator for console output with full ANSI/VT support
 - **Dual Output Panels**: 
-  - Standard Output panel for application console output
+  - Standard Output panel with xterm.js terminal emulator for application console output
   - Debug Output panel for emulator diagnostics
 - **File Upload**: Upload Windows PE executables directly in the browser
 - **Status Monitoring**: Real-time display of instructions executed, FPS, and audio status
@@ -60,6 +61,31 @@ To enable full web-based emulation, the following work is needed:
    - Case-insensitive file access (Windows compatibility)
    - File/folder upload support via HTML5 File API
    - ✅ IndexedDB persistence for saving/loading VFS states
+
+## Terminal Emulator
+
+The WASM frontend uses **xterm.js** for terminal emulation, providing a proper terminal experience for console output:
+
+### Features
+- **Full ANSI/VT escape sequence support** - Colors, formatting, cursor control
+- **Scrollback buffer** - Up to 10,000 lines of history
+- **Custom theme** - Matches Win32Emu's dark color scheme
+- **Responsive sizing** - Auto-fits to container with FitAddon
+- **Unicode support** - Including emoji and complex scripts
+
+### Integration
+The `TerminalComponent` Razor component wraps xterm.js and provides:
+- Async writing to terminal via `WriteAsync(string text)`
+- Clear terminal via `ClearAsync()`
+- Resize via `ResizeAsync(int cols, int rows)`
+
+### Future Enhancement
+The project includes the [Hex1b](https://hex1b.dev) NuGet package for potential server-side terminal emulation scenarios. While Hex1b is primarily designed for TUI applications with a server backend, it may be useful for future enhancements like:
+- Running shell processes in the emulator (if PTY support is added)
+- Advanced terminal automation and testing
+- Terminal session recording
+
+For the current WASM-only implementation, xterm.js provides all necessary terminal emulation features directly in the browser.
 
 ## Building
 
