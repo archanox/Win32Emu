@@ -858,6 +858,125 @@ public class NeImageLoaderTests
 		return data;
 	}
 
+	[Fact]
+	public void LoadFromBytes_WithModuleNamesContainingSpaces_ReturnsEmptyImportList()
+	{
+		// Arrange
+		var vm = new VirtualMemory(256 * 1024 * 1024, NullLogger.Instance); // 256MB
+		var loader = new NeImageLoader(vm, NullLogger.Instance);
+
+		// Create an NE file where module names contain spaces (like Chip's Challenge game text)
+		var neData = CreateNEFileWithSpacesInModuleNames();
+
+		// Act - Should load successfully but reject module names with spaces
+		var image = loader.LoadFromBytes(neData, "<test>");
+
+		// Assert - Should load successfully without accepting garbage module names
+		Assert.NotNull(image);
+		Assert.Equal(0x00010000u, image.BaseAddress);
+	}
+
+	/// <summary>
+	/// Creates an NE file where module names contain spaces and other invalid characters.
+	/// This tests that the stricter validation rejects module names that don't match
+	/// the Win16 naming convention.
+	/// </summary>
+	private static byte[] CreateNEFileWithSpacesInModuleNames()
+	{
+		var data = new byte[2048];
+		
+		// DOS MZ header
+		data[0] = 0x4D; // 'M'
+		data[1] = 0x5A; // 'Z'
+		data[0x3C] = 0x80;
+		
+		// NE header at offset 0x80
+		var neOffset = 0x80;
+		data[neOffset + 0] = 0x4E;  // 'N'
+		data[neOffset + 1] = 0x45;  // 'E'
+		data[neOffset + 2] = 5;
+		data[neOffset + 3] = 10;
+		
+		WriteUInt16(data, neOffset + 4, 0x0100);
+		WriteUInt16(data, neOffset + 6, 0);
+		WriteUInt32(data, neOffset + 8, 0);
+		WriteUInt16(data, neOffset + 12, 0x0300);
+		WriteUInt16(data, neOffset + 14, 2);
+		WriteUInt16(data, neOffset + 0x16, 1);
+		WriteUInt16(data, neOffset + 0x18, 0);
+		WriteUInt16(data, neOffset + 0x1E, 1);
+		
+		// Module reference count - 3 modules
+		WriteUInt16(data, neOffset + 0x20, 3);
+		
+		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
+		WriteUInt16(data, neOffset + 0x2A, 0x60); // Module reference table
+		WriteUInt16(data, neOffset + 0x2C, 0x70); // Imported names table
+		WriteUInt32(data, neOffset + 44, 0);
+		WriteUInt16(data, neOffset + 0x32, 0);
+		WriteUInt16(data, neOffset + 0x34, 4);
+		data[neOffset + 0x38] = 2;
+		WriteUInt16(data, neOffset + 0x40, 0x0300);
+		
+		// Segment table
+		var segmentOffset = neOffset + 0x40;
+		WriteUInt16(data, segmentOffset + 0, 0x20);
+		WriteUInt16(data, segmentOffset + 2, 0x100);
+		WriteUInt16(data, segmentOffset + 4, 0x0000);
+		WriteUInt16(data, segmentOffset + 6, 0x100);
+		
+		// Resource table (empty)
+		WriteUInt16(data, neOffset + 0x48, 0);
+		
+		// Resident name table
+		data[neOffset + 0x50] = 4;
+		data[neOffset + 0x51] = (byte)'T';
+		data[neOffset + 0x52] = (byte)'E';
+		data[neOffset + 0x53] = (byte)'S';
+		data[neOffset + 0x54] = (byte)'T';
+		WriteUInt16(data, neOffset + 0x55, 0);
+		data[neOffset + 0x57] = 0;
+		
+		// Module reference table at neOffset + 0x60
+		WriteUInt16(data, neOffset + 0x60, 0);  // Offset to "ON THE ICE" (invalid)
+		WriteUInt16(data, neOffset + 0x62, 12); // Offset to "CHIP GETS" (invalid)
+		WriteUInt16(data, neOffset + 0x64, 23); // Offset to "MISERABLE." (invalid - has punctuation)
+		
+		// Imported names table at neOffset + 0x70
+		// These module names all have spaces or invalid characters
+		
+		// "ON THE ICE" at offset 0
+		data[neOffset + 0x70] = 10; // Length
+		var text1 = "ON THE ICE";
+		for (int i = 0; i < text1.Length; i++)
+		{
+			data[neOffset + 0x71 + i] = (byte)text1[i];
+		}
+		
+		// "CHIP GETS" at offset 12
+		data[neOffset + 0x70 + 12] = 9; // Length
+		var text2 = "CHIP GETS";
+		for (int i = 0; i < text2.Length; i++)
+		{
+			data[neOffset + 0x71 + 12 + i] = (byte)text2[i];
+		}
+		
+		// "MISERABLE." at offset 23
+		data[neOffset + 0x70 + 23] = 10; // Length
+		var text3 = "MISERABLE.";
+		for (int i = 0; i < text3.Length; i++)
+		{
+			data[neOffset + 0x71 + 23 + i] = (byte)text3[i];
+		}
+		
+		// Put dummy code
+		data[0x200] = 0xC3;
+		
+		return data;
+	}
+
 	private static void WriteUInt16(byte[] data, int offset, ushort value)
 	{
 		data[offset] = (byte)(value & 0xFF);
