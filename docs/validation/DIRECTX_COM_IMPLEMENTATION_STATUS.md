@@ -324,7 +324,11 @@ The virtual keyboard component provides a full on-screen keyboard for mobile and
 - **JavaScript integration**: Calls `window.tapVirtualKey(vkCode)` which sends keydown/keyup to WasmInputBackend
 - **Same code path**: Virtual keyboard keys go through the exact same DirectInput pipeline as physical keyboard
 - **UI integration**: Embedded in `Pages/Home.razor` and styled with CSS (`wwwroot/css/app.css`)
-- **Toggle visibility**: Can be shown/hidden with a button press
+- **Toggle visibility**: 
+  - **Always visible header bar** at the bottom of the screen showing "Virtual Keyboard" with a ⌨️ button
+  - Click the ⌨️ button to expand the full keyboard (button changes to ▼ when expanded)
+  - Click again to collapse (only header remains visible)
+  - Positioned at `bottom: 0` with `z-index: 9999` to stay on top
 
 ### WASM Input Backend
 **File**: `Win32Emu.Wasm/Backend/WasmInputBackend.cs`
