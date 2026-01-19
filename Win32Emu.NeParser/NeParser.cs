@@ -530,8 +530,9 @@ namespace Win32Emu.NeParser
 			return alternativeModules;
 		}
 		
-		// If both failed, return the standard interpretation results (may be empty or partial)
-		return standardModules;
+		// If both interpretations failed validation, return an empty list rather than garbage
+		// This prevents logging of nonsense module names and potential crashes
+		return new List<string>();
 	}
 	
 	/// <summary>
