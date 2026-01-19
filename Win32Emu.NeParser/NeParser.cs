@@ -611,15 +611,29 @@ namespace Win32Emu.NeParser
 		if (modules.Count < expectedCount / 2)
 			return false;
 		
-		// Check if module names look like valid Win16 module names
+		// Check if ALL module names look like valid Win16 module names
 		// Common Win16 modules: KERNEL, USER, GDI, KEYBOARD, SYSTEM, SOUND, etc.
-		// Valid names should be short (usually < 12 chars) and alphanumeric
-		var validCount = modules
-			.Where(module => module.Length <= 12 && module.All(c => char.IsLetterOrDigit(c) || c == '_'))
-			.Count();
+		// Valid names should be short (usually <= 12 chars) and alphanumeric (no spaces, special chars)
+		// Win16 module names are typically uppercase but we check case-insensitively
+		foreach (var module in modules)
+		{
+			// Empty module name is invalid
+			if (string.IsNullOrWhiteSpace(module))
+				return false;
+			
+			// Module names should be reasonably short (8.3 DOS naming convention)
+			// Allow up to 12 characters to accommodate some longer names
+			if (module.Length > 12)
+				return false;
+			
+			// Module names should only contain alphanumeric characters and underscores
+			// No spaces, punctuation, or special characters
+			if (!module.All(c => char.IsLetterOrDigit(c) || c == '_'))
+				return false;
+		}
 		
-		// If at least 50% of modules look valid, consider the list valid
-		return validCount >= modules.Count / 2;
+		// All module names passed validation
+		return true;
 	}
 	
 	/// <summary>
