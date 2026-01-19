@@ -842,7 +842,8 @@ public class NeImageLoaderTests
 		// This simulates Chip's Challenge having game strings in this area
 		var gameText = "BUT ON THE ICE, CHIP GETS CHAPPED AND FEELS MISERABLE. MAYBE THE KIDS WILL STOP CALLING HIM COMPUTER CHIP.";
 		var gameTextOffset = neOffset + 0x200;
-		for (int i = 0; i < Math.Min(gameText.Length, data.Length - gameTextOffset - 1); i++)
+		// Account for the length byte (1) + text characters, need -2 for proper bounds
+		for (int i = 0; i < Math.Min(gameText.Length, data.Length - gameTextOffset - 2); i++)
 		{
 			// Write as pseudo-pascal string (first byte = length, rest = text)
 			if (i == 0)
@@ -946,29 +947,33 @@ public class NeImageLoaderTests
 		
 		// Imported names table at neOffset + 0x70
 		// These module names all have spaces or invalid characters
+		var importNamesTableStart = neOffset + 0x70;
 		
 		// "ON THE ICE" at offset 0
-		data[neOffset + 0x70] = 10; // Length
+		var text1Offset = importNamesTableStart + 0;
+		data[text1Offset] = 10; // Length
 		var text1 = "ON THE ICE";
 		for (int i = 0; i < text1.Length; i++)
 		{
-			data[neOffset + 0x71 + i] = (byte)text1[i];
+			data[text1Offset + 1 + i] = (byte)text1[i];
 		}
 		
 		// "CHIP GETS" at offset 12
-		data[neOffset + 0x70 + 12] = 9; // Length
+		var text2Offset = importNamesTableStart + 12;
+		data[text2Offset] = 9; // Length
 		var text2 = "CHIP GETS";
 		for (int i = 0; i < text2.Length; i++)
 		{
-			data[neOffset + 0x71 + 12 + i] = (byte)text2[i];
+			data[text2Offset + 1 + i] = (byte)text2[i];
 		}
 		
 		// "MISERABLE." at offset 23
-		data[neOffset + 0x70 + 23] = 10; // Length
+		var text3Offset = importNamesTableStart + 23;
+		data[text3Offset] = 10; // Length
 		var text3 = "MISERABLE.";
 		for (int i = 0; i < text3.Length; i++)
 		{
-			data[neOffset + 0x71 + 23 + i] = (byte)text3[i];
+			data[text3Offset + 1 + i] = (byte)text3[i];
 		}
 		
 		// Put dummy code
