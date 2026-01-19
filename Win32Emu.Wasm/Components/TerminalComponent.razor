@@ -1,5 +1,7 @@
 @using Microsoft.JSInterop
+@using Microsoft.Extensions.Logging
 @inject IJSRuntime JS
+@inject ILogger<TerminalComponent> Logger
 @implements IAsyncDisposable
 
 <div id="@TerminalId" class="terminal-container" style="@ContainerStyle"></div>
@@ -58,7 +60,7 @@
 			}
 			catch (Exception ex)
 			{
-				Console.Error.WriteLine($"Failed to initialize terminal component: {ex.Message}");
+				Logger.LogError(ex, "Failed to initialize terminal component");
 			}
 		}
 	}
@@ -79,7 +81,7 @@
 		}
 		catch (Exception ex)
 		{
-			Console.Error.WriteLine($"Error writing to terminal: {ex.Message}");
+			Logger.LogError(ex, "Error writing to terminal");
 		}
 	}
 
@@ -99,7 +101,7 @@
 		}
 		catch (Exception ex)
 		{
-			Console.Error.WriteLine($"Error clearing terminal: {ex.Message}");
+			Logger.LogError(ex, "Error clearing terminal");
 		}
 	}
 
@@ -119,7 +121,7 @@
 		}
 		catch (Exception ex)
 		{
-			Console.Error.WriteLine($"Error resizing terminal: {ex.Message}");
+			Logger.LogError(ex, "Error resizing terminal");
 		}
 	}
 
@@ -134,7 +136,7 @@
 			}
 			catch (Exception ex)
 			{
-				Console.Error.WriteLine($"Error disposing terminal: {ex.Message}");
+				Logger.LogError(ex, "Error disposing terminal");
 			}
 		}
 	}
