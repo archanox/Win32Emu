@@ -842,14 +842,24 @@ public class NeImageLoaderTests
 		// This simulates Chip's Challenge having game strings in this area
 		var gameText = "BUT ON THE ICE, CHIP GETS CHAPPED AND FEELS MISERABLE. MAYBE THE KIDS WILL STOP CALLING HIM COMPUTER CHIP.";
 		var gameTextOffset = neOffset + 0x200;
-		// Account for the length byte (1) + text characters, need -2 for proper bounds
-		for (int i = 0; i < Math.Min(gameText.Length, data.Length - gameTextOffset - 2); i++)
+		
+		// Pascal string format: length byte (1 byte) + text characters
+		// We need space for: length byte at gameTextOffset, and text starting at gameTextOffset + 1
+		// Maximum string length that can be represented in a Pascal string is 255 chars
+		// For testing purposes, we limit to 50 to simulate truncated/partial strings
+		const int MaxPascalStringLength = 50;
+		
+		// Calculate how many characters we can safely write
+		// -1 for the length byte itself, -1 for the last character position = -2 total
+		var maxCharsToWrite = Math.Min(gameText.Length, data.Length - gameTextOffset - 2);
+		var actualLength = Math.Min(maxCharsToWrite, MaxPascalStringLength);
+		
+		// Write length byte
+		data[gameTextOffset] = (byte)actualLength;
+		
+		// Write text characters
+		for (int i = 0; i < actualLength; i++)
 		{
-			// Write as pseudo-pascal string (first byte = length, rest = text)
-			if (i == 0)
-			{
-				data[gameTextOffset] = (byte)Math.Min(gameText.Length, 50);
-			}
 			data[gameTextOffset + 1 + i] = (byte)gameText[i];
 		}
 		
