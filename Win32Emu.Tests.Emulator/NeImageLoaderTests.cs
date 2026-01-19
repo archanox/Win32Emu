@@ -1009,4 +1009,156 @@ public class NeImageLoaderTests
 		data[offset + 2] = (byte)((value >> 16) & 0xFF);
 		data[offset + 3] = (byte)((value >> 24) & 0xFF);
 	}
+
+	[Fact]
+	public void NeParser_ParsesWinmineImportsCorrectly()
+	{
+		// Arrange - use the real winmine.exe from the EXEs folder
+		// Navigate from the test assembly location to find the EXEs folder
+		var assemblyPath = typeof(NeImageLoaderTests).Assembly.Location;
+		var assemblyDir = Path.GetDirectoryName(assemblyPath)!;
+		// Go up to the repo root: bin/Debug/net10.0 -> Win32Emu.Tests.Emulator -> repo root
+		var repoRoot = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "..", ".."));
+		var winminePath = Path.Combine(repoRoot, "EXEs", "WinME", "winmine.exe");
+		
+		// Skip if file doesn't exist (CI might not have test files)
+		if (!File.Exists(winminePath))
+		{
+			return;
+		}
+
+		// Act
+		var neExe = Win32Emu.NeParser.NeParser.Parse(winminePath);
+
+		// Assert - winmine.exe should import from KERNEL, USER, GDI, SOUND, SHELL
+		Assert.NotEmpty(neExe.ImportModules);
+		Assert.Contains(neExe.ImportModules, m => m.Equals("KERNEL", StringComparison.OrdinalIgnoreCase));
+		Assert.Contains(neExe.ImportModules, m => m.Equals("USER", StringComparison.OrdinalIgnoreCase));
+		Assert.Contains(neExe.ImportModules, m => m.Equals("GDI", StringComparison.OrdinalIgnoreCase));
+		Assert.Contains(neExe.ImportModules, m => m.Equals("SOUND", StringComparison.OrdinalIgnoreCase));
+		Assert.Contains(neExe.ImportModules, m => m.Equals("SHELL", StringComparison.OrdinalIgnoreCase));
+		
+		// Verify we got the correct count (5 modules)
+		Assert.Equal(5, neExe.ImportModules.Count);
+	}
+
+	[Fact]
+	public void NeParser_ParsesModuleNamesDirectlyFromModuleRefTableLocation()
+	{
+		// Arrange - Create an NE file where module names are stored directly at
+		// the Module Reference Table offset (like winmine.exe)
+		var neData = CreateNEFileWithDirectModuleNames();
+
+		// Act
+		var neExe = Win32Emu.NeParser.NeParser.Parse(neData);
+
+		// Assert - should parse KERNEL, USER, GDI correctly
+		Assert.NotEmpty(neExe.ImportModules);
+		Assert.Contains(neExe.ImportModules, m => m.Equals("KERNEL", StringComparison.OrdinalIgnoreCase));
+		Assert.Contains(neExe.ImportModules, m => m.Equals("USER", StringComparison.OrdinalIgnoreCase));
+		Assert.Contains(neExe.ImportModules, m => m.Equals("GDI", StringComparison.OrdinalIgnoreCase));
+	}
+
+	/// <summary>
+	/// Creates an NE file where module names are stored directly at the Module Reference
+	/// Table offset as Pascal strings (like winmine.exe), rather than as offsets into
+	/// a separate Imported Names Table.
+	/// </summary>
+	private static byte[] CreateNEFileWithDirectModuleNames()
+	{
+		var data = new byte[2048];
+		
+		// DOS MZ header
+		data[0] = 0x4D; // 'M'
+		data[1] = 0x5A; // 'Z'
+		data[0x3C] = 0x80;
+		
+		// NE header at offset 0x80
+		var neOffset = 0x80;
+		data[neOffset + 0] = 0x4E;  // 'N'
+		data[neOffset + 1] = 0x45;  // 'E'
+		data[neOffset + 2] = 5;
+		data[neOffset + 3] = 10;
+		
+		WriteUInt16(data, neOffset + 4, 0x0100);
+		WriteUInt16(data, neOffset + 6, 0);
+		WriteUInt32(data, neOffset + 8, 0);
+		WriteUInt16(data, neOffset + 12, 0x0300);
+		WriteUInt16(data, neOffset + 14, 2);
+		WriteUInt16(data, neOffset + 0x16, 1);
+		WriteUInt16(data, neOffset + 0x18, 0);
+		WriteUInt16(data, neOffset + 0x1E, 1);
+		
+		// Module reference count (may not match actual count in this format)
+		WriteUInt16(data, neOffset + 0x20, 10);
+		
+		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
+		// Module ref table points to where module names are stored directly
+		WriteUInt16(data, neOffset + 0x2A, 0x70); // Module reference table
+		// Imported names table points elsewhere (won't be used)
+		WriteUInt16(data, neOffset + 0x2C, 0xF0); // Imported names table
+		WriteUInt32(data, neOffset + 44, 0);
+		WriteUInt16(data, neOffset + 0x32, 0);
+		WriteUInt16(data, neOffset + 0x34, 4);
+		data[neOffset + 0x38] = 2;
+		WriteUInt16(data, neOffset + 0x40, 0x0300);
+		
+		// Segment table
+		var segmentOffset = neOffset + 0x40;
+		WriteUInt16(data, segmentOffset + 0, 0x20);
+		WriteUInt16(data, segmentOffset + 2, 0x100);
+		WriteUInt16(data, segmentOffset + 4, 0x0000);
+		WriteUInt16(data, segmentOffset + 6, 0x100);
+		
+		// Resource table (empty)
+		WriteUInt16(data, neOffset + 0x48, 0);
+		
+		// Resident name table
+		data[neOffset + 0x50] = 4;
+		data[neOffset + 0x51] = (byte)'T';
+		data[neOffset + 0x52] = (byte)'E';
+		data[neOffset + 0x53] = (byte)'S';
+		data[neOffset + 0x54] = (byte)'T';
+		WriteUInt16(data, neOffset + 0x55, 0);
+		data[neOffset + 0x57] = 0;
+		
+		// Module names stored directly at "module ref table" offset (0x70)
+		// Format: Pascal strings (length byte + string data)
+		var modNamesOffset = neOffset + 0x70;
+		
+		// Empty first entry (like winmine.exe)
+		data[modNamesOffset] = 0;
+		modNamesOffset++;
+		
+		// "KERNEL"
+		data[modNamesOffset] = 6;
+		data[modNamesOffset + 1] = (byte)'K';
+		data[modNamesOffset + 2] = (byte)'E';
+		data[modNamesOffset + 3] = (byte)'R';
+		data[modNamesOffset + 4] = (byte)'N';
+		data[modNamesOffset + 5] = (byte)'E';
+		data[modNamesOffset + 6] = (byte)'L';
+		modNamesOffset += 7;
+		
+		// "USER"
+		data[modNamesOffset] = 4;
+		data[modNamesOffset + 1] = (byte)'U';
+		data[modNamesOffset + 2] = (byte)'S';
+		data[modNamesOffset + 3] = (byte)'E';
+		data[modNamesOffset + 4] = (byte)'R';
+		modNamesOffset += 5;
+		
+		// "GDI"
+		data[modNamesOffset] = 3;
+		data[modNamesOffset + 1] = (byte)'G';
+		data[modNamesOffset + 2] = (byte)'D';
+		data[modNamesOffset + 3] = (byte)'I';
+		
+		// Put dummy code
+		data[0x200] = 0xC3;
+		
+		return data;
+	}
 }
