@@ -866,7 +866,7 @@
 
 		_isRunning = true;
 		AddDebugOutput("Starting emulation...");
-		AddStdOutput("Win32Emu Emulator Starting\n");
+		await AddStdOutput("Win32Emu Emulator Starting\n");
 		
 		try
 		{
@@ -936,7 +936,7 @@
 			}
 			
 			AddDebugOutput("Executable loaded successfully");
-			AddStdOutput("Executable loaded and ready\n");
+			await AddStdOutput("Executable loaded and ready\n");
 			
 			// Start the emulator
 			var startSuccess = await EmulatorService.StartAsync();
@@ -990,19 +990,19 @@
 	{
 		await InvokeAsync(async () =>
 		{
-			_stdOutput += message;
-			
-			// Also write to terminal if it's initialized
-			if (_stdoutTerminal != null)
+			try
 			{
-				try
+				_stdOutput += message;
+				
+				// Also write to terminal if it's initialized
+				if (_stdoutTerminal != null)
 				{
 					await _stdoutTerminal.WriteAsync(message);
 				}
-				catch (Exception ex)
-				{
-					Logger.LogError(ex, "Error writing to terminal");
-				}
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error writing to terminal in OnEmulatorStdOutput");
 			}
 			
 			StateHasChanged();
@@ -1046,10 +1046,10 @@
 		_instructionsExecuted = 0;
 		_fps = 0;
 		AddDebugOutput("Emulation stopped");
-		AddStdOutput("Emulator stopped\n");
+		await AddStdOutput("Emulator stopped\n");
 	}
 
-	private async void ClearStdOut()
+	private async Task ClearStdOut()
 	{
 		_stdOutput = string.Empty;
 		
@@ -1113,7 +1113,7 @@
 		}
 	}
 
-	private async void AddStdOutput(string message)
+	private async Task AddStdOutput(string message)
 	{
 		_stdOutput += message;
 		

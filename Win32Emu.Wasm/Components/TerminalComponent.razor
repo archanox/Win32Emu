@@ -1,6 +1,6 @@
 @using Microsoft.JSInterop
 @inject IJSRuntime JS
-@implements IDisposable
+@implements IAsyncDisposable
 
 <div id="@TerminalId" class="terminal-container" style="@ContainerStyle"></div>
 
@@ -123,19 +123,18 @@
 		}
 	}
 
-	public void Dispose()
+	public async ValueTask DisposeAsync()
 	{
 		if (_initialized)
 		{
 			try
 			{
-				// Note: We can't use async in Dispose, so we use InvokeVoidAsync without await
-				// The terminal cleanup will happen in the browser
-				_ = JS.InvokeVoidAsync("destroyXtermTerminal", TerminalId);
+				await JS.InvokeVoidAsync("destroyXtermTerminal", TerminalId);
+				_initialized = false;
 			}
-			catch
+			catch (Exception ex)
 			{
-				// Ignore errors during dispose
+				Console.Error.WriteLine($"Error disposing terminal: {ex.Message}");
 			}
 		}
 	}
