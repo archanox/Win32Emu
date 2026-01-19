@@ -870,21 +870,63 @@ public sealed class Emulator : IDisposable
         {
             _logger.LogInformation("[Loader] Registering Win16 thunking modules for NE format executable");
             
-            // Get the Win32 modules we need to wrap
-            var kernel32 = _dispatcher.TryGetModule("KERNEL32.DLL", out var k32Module) ? k32Module! : throw new InvalidOperationException("KERNEL32.DLL not found");
-            var user32 = _dispatcher.TryGetModule("USER32.DLL", out var u32Module) ? u32Module! : throw new InvalidOperationException("USER32.DLL not found");
-            var gdi32 = _dispatcher.TryGetModule("GDI32.DLL", out var g32Module) ? g32Module! : throw new InvalidOperationException("GDI32.DLL not found");
-            var winmm = _dispatcher.TryGetModule("WINMM.DLL", out var wmmModule) ? wmmModule! : throw new InvalidOperationException("WINMM.DLL not found");
-            
-            // Register Win16 thunking modules that wrap Win32 modules
-            _dispatcher.RegisterModule(new Win32.Win16.Win16KernelModule(kernel32, _logger));
-            _dispatcher.RegisterModule(new Win32.Win16.Win16UserModule(user32, _logger));
-            _dispatcher.RegisterModule(new Win32.Win16.Win16GdiModule(gdi32, _logger));
-            _dispatcher.RegisterModule(new Win32.Win16.Win16KeyboardModule(user32, _logger));
-            _dispatcher.RegisterModule(new Win32.Win16.Win16SystemModule(kernel32, _logger));
-            _dispatcher.RegisterModule(new Win32.Win16.Win16SoundModule(winmm, _logger));
-            
-            _logger.LogInformation("[Loader] Win16 thunking modules registered successfully");
+            try
+            {
+                // Get the Win32 modules we need to wrap
+                _logger.LogDebug("[Loader] Looking up KERNEL32.DLL module");
+                if (!_dispatcher.TryGetModule("KERNEL32.DLL", out var k32Module) || k32Module == null)
+                {
+                    throw new InvalidOperationException("KERNEL32.DLL not found in dispatcher. This is a critical Win32 module required for Win16 thunking.");
+                }
+                var kernel32 = k32Module;
+                
+                _logger.LogDebug("[Loader] Looking up USER32.DLL module");
+                if (!_dispatcher.TryGetModule("USER32.DLL", out var u32Module) || u32Module == null)
+                {
+                    throw new InvalidOperationException("USER32.DLL not found in dispatcher. This is a critical Win32 module required for Win16 thunking.");
+                }
+                var user32 = u32Module;
+                
+                _logger.LogDebug("[Loader] Looking up GDI32.DLL module");
+                if (!_dispatcher.TryGetModule("GDI32.DLL", out var g32Module) || g32Module == null)
+                {
+                    throw new InvalidOperationException("GDI32.DLL not found in dispatcher. This is a critical Win32 module required for Win16 thunking.");
+                }
+                var gdi32 = g32Module;
+                
+                _logger.LogDebug("[Loader] Looking up WINMM.DLL module");
+                if (!_dispatcher.TryGetModule("WINMM.DLL", out var wmmModule) || wmmModule == null)
+                {
+                    throw new InvalidOperationException("WINMM.DLL not found in dispatcher. This is a critical Win32 module required for Win16 thunking.");
+                }
+                var winmm = wmmModule;
+                
+                // Register Win16 thunking modules that wrap Win32 modules
+                _logger.LogDebug("[Loader] Creating Win16 KERNEL module");
+                _dispatcher.RegisterModule(new Win32.Win16.Win16KernelModule(kernel32, _logger));
+                
+                _logger.LogDebug("[Loader] Creating Win16 USER module");
+                _dispatcher.RegisterModule(new Win32.Win16.Win16UserModule(user32, _logger));
+                
+                _logger.LogDebug("[Loader] Creating Win16 GDI module");
+                _dispatcher.RegisterModule(new Win32.Win16.Win16GdiModule(gdi32, _logger));
+                
+                _logger.LogDebug("[Loader] Creating Win16 KEYBOARD module");
+                _dispatcher.RegisterModule(new Win32.Win16.Win16KeyboardModule(user32, _logger));
+                
+                _logger.LogDebug("[Loader] Creating Win16 SYSTEM module");
+                _dispatcher.RegisterModule(new Win32.Win16.Win16SystemModule(kernel32, _logger));
+                
+                _logger.LogDebug("[Loader] Creating Win16 SOUND module");
+                _dispatcher.RegisterModule(new Win32.Win16.Win16SoundModule(winmm, _logger));
+                
+                _logger.LogInformation("[Loader] Win16 thunking modules registered successfully");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Loader] Failed to register Win16 thunking modules: {Message}", ex.Message);
+                throw;
+            }
         }
 
         // Initialize the main thread in the thread scheduler
