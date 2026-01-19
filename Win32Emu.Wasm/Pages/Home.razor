@@ -395,22 +395,24 @@
 	</div>
 
 	<div class="row">
-		<!-- Standard Output -->
+		<!-- Standard Output (Terminal Emulator) -->
 		<div class="col-md-6">
 			<div class="card">
 				<div class="card-header">
-					<strong>Standard Output</strong>
+					<strong>Standard Output (Terminal)</strong>
 					<div class="btn-group float-end" role="group">
-						<button class="btn btn-sm btn-outline-secondary" @onclick="CopyStdOut" title="Copy to Clipboard">
-							<i class="bi bi-clipboard"></i>
-						</button>
 						<button class="btn btn-sm btn-outline-secondary" @onclick="ClearStdOut">
 							Clear
 						</button>
 					</div>
 				</div>
 				<div class="card-body p-0">
-					<pre class="log-panel mb-0" style="height: 200px; overflow-y: auto; margin: 0; padding: 10px; background-color: #f8f9fa;">@_stdOutput</pre>
+					<TerminalComponent @ref="_stdoutTerminal" 
+									   TerminalId="stdout-terminal"
+									   Cols="100" 
+									   Rows="12"
+									   EnableFit="true"
+									   ContainerStyle="height: 200px; background-color: #1e1e1e;" />
 				</div>
 			</div>
 		</div>
@@ -632,6 +634,9 @@
 	private DateTime? _lastAutoSaveTime = null;
 	private CancellationTokenSource? _autoSaveCts = null;
 	private Task? _autoSaveTask = null;
+	
+	// Terminal component reference
+	private TerminalComponent? _stdoutTerminal;
 	
 	/// <summary>
 	/// Called when the component is initialized. Subscribe to the debug log service.
@@ -983,9 +988,23 @@
 	
 	private async void OnEmulatorStdOutput(object? sender, string message)
 	{
-		await InvokeAsync(() =>
+		await InvokeAsync(async () =>
 		{
 			_stdOutput += message;
+			
+			// Also write to terminal if it's initialized
+			if (_stdoutTerminal != null)
+			{
+				try
+				{
+					await _stdoutTerminal.WriteAsync(message);
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError(ex, "Error writing to terminal");
+				}
+			}
+			
 			StateHasChanged();
 		});
 	}
@@ -1030,9 +1049,22 @@
 		AddStdOutput("Emulator stopped\n");
 	}
 
-	private void ClearStdOut()
+	private async void ClearStdOut()
 	{
 		_stdOutput = string.Empty;
+		
+		// Also clear the terminal if it's initialized
+		if (_stdoutTerminal != null)
+		{
+			try
+			{
+				await _stdoutTerminal.ClearAsync();
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error clearing terminal");
+			}
+		}
 	}
 
 	private async Task CopyStdOut()
@@ -1081,9 +1113,23 @@
 		}
 	}
 
-	private void AddStdOutput(string message)
+	private async void AddStdOutput(string message)
 	{
 		_stdOutput += message;
+		
+		// Also write to terminal if it's initialized
+		if (_stdoutTerminal != null)
+		{
+			try
+			{
+				await _stdoutTerminal.WriteAsync(message);
+			}
+			catch (Exception ex)
+			{
+				Logger.LogError(ex, "Error writing to terminal in AddStdOutput");
+			}
+		}
+		
 		StateHasChanged();
 	}
 

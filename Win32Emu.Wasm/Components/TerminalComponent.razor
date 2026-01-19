@@ -1,0 +1,142 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div id="@TerminalId" class="terminal-container" style="@ContainerStyle"></div>
+
+@code {
+	/// <summary>
+	/// Unique identifier for this terminal instance.
+	/// </summary>
+	[Parameter]
+	public string TerminalId { get; set; } = $"terminal-{Guid.NewGuid():N}";
+
+	/// <summary>
+	/// Number of columns in the terminal.
+	/// </summary>
+	[Parameter]
+	public int Cols { get; set; } = 80;
+
+	/// <summary>
+	/// Number of rows in the terminal.
+	/// </summary>
+	[Parameter]
+	public int Rows { get; set; } = 24;
+
+	/// <summary>
+	/// Custom CSS style for the container.
+	/// </summary>
+	[Parameter]
+	public string? ContainerStyle { get; set; }
+
+	/// <summary>
+	/// Whether to enable fit addon (auto-resize terminal to fill container).
+	/// </summary>
+	[Parameter]
+	public bool EnableFit { get; set; } = true;
+
+	/// <summary>
+	/// Event callback when the terminal is ready.
+	/// </summary>
+	[Parameter]
+	public EventCallback OnTerminalReady { get; set; }
+
+	private bool _initialized;
+
+	protected override async Task OnAfterRenderAsync(bool firstRender)
+	{
+		if (firstRender && !_initialized)
+		{
+			try
+			{
+				// Initialize xterm.js terminal in the browser
+				await JS.InvokeVoidAsync("createXtermTerminal", TerminalId, Cols, Rows, EnableFit);
+				_initialized = true;
+				
+				// Notify parent component that terminal is ready
+				await OnTerminalReady.InvokeAsync();
+			}
+			catch (Exception ex)
+			{
+				Console.Error.WriteLine($"Failed to initialize terminal component: {ex.Message}");
+			}
+		}
+	}
+
+	/// <summary>
+	/// Write text to the terminal.
+	/// </summary>
+	public async Task WriteAsync(string text)
+	{
+		if (!_initialized)
+		{
+			return;
+		}
+
+		try
+		{
+			await JS.InvokeVoidAsync("writeToXtermTerminal", TerminalId, text);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"Error writing to terminal: {ex.Message}");
+		}
+	}
+
+	/// <summary>
+	/// Clear the terminal.
+	/// </summary>
+	public async Task ClearAsync()
+	{
+		if (!_initialized)
+		{
+			return;
+		}
+
+		try
+		{
+			await JS.InvokeVoidAsync("clearXtermTerminal", TerminalId);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"Error clearing terminal: {ex.Message}");
+		}
+	}
+
+	/// <summary>
+	/// Resize the terminal.
+	/// </summary>
+	public async Task ResizeAsync(int cols, int rows)
+	{
+		if (!_initialized)
+		{
+			return;
+		}
+
+		try
+		{
+			await JS.InvokeVoidAsync("resizeXtermTerminal", TerminalId, cols, rows);
+		}
+		catch (Exception ex)
+		{
+			Console.Error.WriteLine($"Error resizing terminal: {ex.Message}");
+		}
+	}
+
+	public void Dispose()
+	{
+		if (_initialized)
+		{
+			try
+			{
+				// Note: We can't use async in Dispose, so we use InvokeVoidAsync without await
+				// The terminal cleanup will happen in the browser
+				_ = JS.InvokeVoidAsync("destroyXtermTerminal", TerminalId);
+			}
+			catch
+			{
+				// Ignore errors during dispose
+			}
+		}
+	}
+}
