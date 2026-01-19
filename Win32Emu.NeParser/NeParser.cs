@@ -530,7 +530,28 @@ namespace Win32Emu.NeParser
 			return alternativeModules;
 		}
 		
-		// If both interpretations failed validation, return an empty list rather than garbage
+		// Third fallback: Some NE files (like Windows Minesweeper) have the Module Reference Table
+		// offset pointing directly to the Imported Names Table, and the actual module reference
+		// offsets stored at the Resident Name Table offset. In this case, we use the Resident Name
+		// Table as the source of offsets and the Module Reference Table as the base for name lookups.
+		var residentNameTableOffset = header.BaseOffset + header.ResidentNameTableOffset;
+		var thirdModules = TryParseModuleNames(bytes, header, residentNameTableOffset, moduleTableOffset, moduleCount);
+		
+		if (IsValidModuleList(thirdModules, moduleCount))
+		{
+			return thirdModules;
+		}
+		
+		// Fourth fallback: Try reading module names directly from the Module Reference Table
+		// location as Pascal strings (some NE files store names there directly without offsets)
+		var directModules = TryParseModuleNamesDirect(bytes, moduleTableOffset, moduleCount);
+		
+		if (IsValidModuleList(directModules, moduleCount))
+		{
+			return directModules;
+		}
+		
+		// If all interpretations failed validation, return an empty list rather than garbage
 		// This prevents logging of nonsense module names and potential crashes
 		return new List<string>();
 	}
@@ -598,6 +619,68 @@ namespace Win32Emu.NeParser
 	}
 	
 	/// <summary>
+	/// Attempts to parse module names directly from a location as Pascal strings.
+	/// This is a fallback for NE files where the module names are stored directly
+	/// at the Module Reference Table offset (without using offsets into a separate table).
+	/// </summary>
+	private static List<string> TryParseModuleNamesDirect(byte[] bytes, int namesOffset, ushort moduleCount)
+	{
+		var modules = new List<string>();
+		var offset = namesOffset;
+		
+		// Try to read up to moduleCount module names as consecutive Pascal strings
+		// The first entry may be empty (length 0), which we skip
+		var maxModules = Math.Min((int)moduleCount, 50); // Reasonable limit
+		
+		for (var i = 0; i < maxModules && offset < bytes.Length; i++)
+		{
+			var nameLength = bytes[offset];
+			
+			// Skip empty entries
+			if (nameLength == 0)
+			{
+				offset++;
+				continue;
+			}
+			
+			// Stop if name length is unreasonable
+			if (nameLength > MAX_MODULE_NAME_LENGTH)
+				break;
+			
+			if (offset + nameLength + 1 > bytes.Length)
+				break;
+			
+			// Quick validation: check for non-printable characters
+			bool containsInvalidChar = false;
+			for (var j = 1; j <= nameLength; j++)
+			{
+				var ch = bytes[offset + j];
+				if (ch == 0 || ch < 0x20 || ch > 0x7E)
+				{
+					containsInvalidChar = true;
+					break;
+				}
+			}
+			
+			if (containsInvalidChar)
+				break;
+			
+			// Read the module name
+			var moduleName = Encoding.ASCII.GetString(bytes, offset + 1, nameLength);
+			
+			// Skip if the name is all whitespace
+			if (!string.IsNullOrWhiteSpace(moduleName))
+			{
+				modules.Add(moduleName);
+			}
+			
+			offset += 1 + nameLength;
+		}
+		
+		return modules;
+	}
+	
+	/// <summary>
 	/// Validates that a list of module names looks reasonable for a Win16 NE file.
 	/// </summary>
 	private static bool IsValidModuleList(List<string> modules, ushort expectedCount)
@@ -606,10 +689,10 @@ namespace Win32Emu.NeParser
 		if (modules.Count == 0)
 			return false;
 		
-		// If we got significantly fewer modules than expected, it might be invalid
-		// Allow up to 50% missing due to null entries or parsing issues
-		if (modules.Count < expectedCount / 2)
-			return false;
+		// We need at least 1 valid module for this to be considered valid
+		// Note: The expectedCount in the header may be incorrect for some NE files,
+		// so we don't enforce a minimum percentage. Instead, we validate that all
+		// found modules have valid names (no garbage).
 		
 		// Check if ALL module names look like valid Win16 module names
 		// Common Win16 modules: KERNEL, USER, GDI, KEYBOARD, SYSTEM, SOUND, etc.
