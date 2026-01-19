@@ -67,8 +67,13 @@ All requested DirectX COM functions are **fully implemented and integrated end-t
   - Mouse X/Y movement: Calculates relative deltas from backend position (lines 771-796)
   - Mouse wheel: Tracks Z-axis (scroll wheel) changes (lines 799-810)
 - **Event buffering**: Maintains per-device event queue with timestamps (line 720)
-- **Supported backends**: SDL3 input, GLFW input, cross-platform input systems
-- **End-to-end flow**: Physical keyboard/mouse → SDL3/GLFW → InputBackend → DirectInput events → game
+- **Supported backends**: SDL3 input, GLFW input, **WASM (WasmInputBackend)**, cross-platform input systems
+- **WASM virtual keyboard**: Full on-screen keyboard component (`VirtualKeyboard.razor`) that:
+  - Provides complete keyboard UI for mobile/touch devices (letters, numbers, function keys, arrows, modifiers)
+  - Calls `tapVirtualKey` JavaScript function which invokes `OnKeyDown`/`OnKeyUp` on WasmInputBackend
+  - Keys are sent to DirectInput via same path as physical keyboard
+  - Component is integrated in WASM UI (`Pages/Home.razor`)
+- **End-to-end flow**: Physical keyboard/mouse OR virtual keyboard → SDL3/GLFW/WASM → InputBackend → DirectInput events → game
 
 ---
 
@@ -251,9 +256,22 @@ All DirectX COM functions are **fully wired up** to the emulator's pluggable bac
 **Supported backends**:
 - SDL3 input (default, cross-platform)
 - GLFW input
+- **WASM input (WasmInputBackend)** with full virtual keyboard support:
+  - JavaScript interop via `initializeInput()` function (index.html:966-1088)
+  - Physical keyboard: Canvas keydown/keyup events → `OnKeyDown`/`OnKeyUp` → WasmInputBackend → DirectInput
+  - Touch/mouse: Canvas mouse/touch events → `OnMouseMove`/`OnMouseDown`/`OnMouseUp` → WasmInputBackend → DirectInput
+  - **Virtual keyboard**: `VirtualKeyboard.razor` component provides full on-screen keyboard:
+    - Complete keyboard layout (letters, numbers, function keys F1-F4, arrows, modifiers, ESC, Enter, Space)
+    - Calls `tapVirtualKey(vkCode)` JavaScript function (index.html:1110-1128)
+    - Sends Win32 virtual key codes (VK_A, VK_ENTER, etc.) to WasmInputBackend
+    - Same code path as physical keyboard events
+    - Integrated in WASM UI (`Pages/Home.razor:74`)
 - Other input systems via pluggable architecture
 
-**Data flow**: Physical keyboard/mouse → SDL3/GLFW → InputBackend.PollDevice → DirectInput event queue → game
+**Data flow**:
+- **Desktop**: Physical keyboard/mouse → SDL3/GLFW → InputBackend.PollDevice → DirectInput event queue → game
+- **WASM**: Physical keyboard/touch → Canvas events → WasmInputBackend → DirectInput event queue → game
+- **WASM Mobile**: Virtual keyboard buttons → tapVirtualKey → WasmInputBackend.OnKeyDown/Up → DirectInput event queue → game
 
 ### Rendering Backend (`ddrawObj.RenderingBackend`)
 **Used by**: DirectDraw (DDrawModule)
@@ -287,7 +305,64 @@ All backends work on:
 - **Windows**: All backends (SDL3, GLFW, Vulkan, Software)
 - **Linux**: All backends (SDL3, GLFW, Vulkan, Software)  
 - **macOS**: SDL3, GLFW, Vulkan (MoltenVK), Metal, Software
-- **WASM/Browser**: SDL3 with proper event loop yielding
+- **WASM/Browser**: Full support with WasmInputBackend, WasmAudioBackend, WasmRenderingBackend
+  - **Virtual keyboard for mobile**: Complete on-screen keyboard (`VirtualKeyboard.razor`) for touch devices
+  - Proper event loop yielding for browser compatibility
+  - JavaScript interop for input, audio, and rendering
+  - Touch events mapped to mouse input for compatibility
+
+## WASM Frontend Integration Details
+
+The WASM build provides **complete end-to-end integration** with browser-based frontends:
+
+### Virtual Keyboard Implementation
+**File**: `Win32Emu.Wasm/Components/VirtualKeyboard.razor`
+
+The virtual keyboard component provides a full on-screen keyboard for mobile and touch devices:
+- **Complete keyboard layout**: Letters (A-Z), numbers (0-9), function keys (F1-F4), arrows (←↑↓→), modifiers (Shift, Ctrl, Alt), special keys (ESC, Enter, Space)
+- **Win32 VK codes**: Uses proper Windows virtual key codes (0x41 for 'A', 0x0D for Enter, 0x20 for Space, etc.)
+- **JavaScript integration**: Calls `window.tapVirtualKey(vkCode)` which sends keydown/keyup to WasmInputBackend
+- **Same code path**: Virtual keyboard keys go through the exact same DirectInput pipeline as physical keyboard
+- **UI integration**: Embedded in `Pages/Home.razor` and styled with CSS (`wwwroot/css/app.css`)
+- **Toggle visibility**: Can be shown/hidden with a button press
+
+### WASM Input Backend
+**File**: `Win32Emu.Wasm/Backend/WasmInputBackend.cs`
+
+**JavaScript Interop Functions** (`wwwroot/index.html`):
+- `initializeInput(canvasId, dotNetRef)`: Sets up canvas keyboard/mouse/touch event listeners (lines 966-1088)
+- `tapVirtualKey(vkCode)`: Sends virtual keyboard key press (lines 1110-1128)
+- All events call back to C# via `dotNetRef.invokeMethodAsync('OnKeyDown', vkCode)` etc.
+
+**C# Methods** (invoked from JavaScript via `[JSInvokable]`):
+- `OnKeyDown(int keyCode)`: Updates `_keyboardState.KeyStates` dictionary (line 146)
+- `OnKeyUp(int keyCode)`: Updates key state (line 161)
+- `OnMouseMove(int x, int y)`: Updates mouse position (line 176)
+- `OnMouseDown(int button, int x, int y)`: Updates mouse button state (line 192)
+- `OnMouseUp(int button, int x, int y)`: Updates mouse button state (line 211)
+
+**DirectInput Integration**:
+- `PollDevice()` returns shared `_keyboardState` or `_mouseState` instances (line 125)
+- DInputModule reads these states and generates DIDEVICEOBJECTDATA events
+- Events flow to game through standard DirectInput GetDeviceData path
+
+### End-to-End Flow Example (Virtual Keyboard)
+1. User taps "A" button on virtual keyboard (`VirtualKeyboard.razor`)
+2. Razor component calls `TapKey(VK.A)` where `VK.A = 0x41` (line 172)
+3. Calls `JS.InvokeVoidAsync("tapVirtualKey", 0x41)` (line 176)
+4. JavaScript `tapVirtualKey` function executes (index.html:1110)
+5. Calls `inputBackendRef.invokeMethodAsync('OnKeyDown', 0x41)` (line 1116)
+6. C# `WasmInputBackend.OnKeyDown(0x41)` executes (WasmInputBackend.cs:146)
+7. Sets `_keyboardState.KeyStates[0x41] = true` (line 149)
+8. After 100ms, calls `OnKeyUp(0x41)` to release key (line 1122)
+9. Game calls DirectInput `GetDeviceData()`
+10. DInputModule polls `WasmInputBackend.PollDevice()` (DInputModule.cs:717)
+11. Gets keyboard state with key 0x41 pressed
+12. Generates DIDEVICEOBJECTDATA event for key press (DInputModule.cs:735)
+13. Returns event to game
+14. Game receives DirectInput event and processes key press
+
+**Result**: Virtual keyboard button tap → DirectInput event → Game receives keyboard input ✅
 
 ## Conclusion
 
