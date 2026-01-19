@@ -685,11 +685,10 @@ namespace Win32Emu.NeParser
 	/// </summary>
 	private static bool IsValidModuleList(List<string> modules, ushort expectedCount)
 	{
-		// If we got no modules, it's likely invalid
+		// If we got no modules, it's likely invalid - we need at least one valid module
 		if (modules.Count == 0)
 			return false;
 		
-		// We need at least 1 valid module for this to be considered valid
 		// Note: The expectedCount in the header may be incorrect for some NE files,
 		// so we don't enforce a minimum percentage. Instead, we validate that all
 		// found modules have valid names (no garbage).
