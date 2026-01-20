@@ -516,6 +516,7 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 				"KEYBOARD" => "USER32.DLL",
 				"SOUND" => "WINMM.DLL",
 				"SYSTEM" => "KERNEL32.DLL",
+				"SHELL" => "SHELL32.DLL",
 				_ => normalizedModule + ".DLL"
 			};
 			

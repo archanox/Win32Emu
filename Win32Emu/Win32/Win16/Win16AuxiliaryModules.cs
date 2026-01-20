@@ -155,3 +155,78 @@ internal class Win16SoundModule : Win16ThunkingLayer, IWin32ModuleAsync
 		}
 	}
 }
+
+/// <summary>
+/// Win16 SHELL module thunking layer - maps to SHELL32.DLL.
+/// Provides 16-bit to 32-bit thunking for shell-related functions.
+/// </summary>
+internal class Win16ShellModule : Win16ThunkingLayer, IWin32ModuleAsync
+{
+	public Win16ShellModule(IWin32ModuleUnsafe shell32Module, ILogger logger)
+		: base(shell32Module, logger)
+	{
+	}
+
+	public string Name => "SHELL";
+
+	public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+	{
+		return TryInvokeWin16(export, cpu, memory, out returnValue);
+	}
+
+	public async Task<(bool success, uint returnValue)> TryInvokeAsync(string export, ICpu cpu, VirtualMemory memory, CancellationToken cancellationToken = default)
+	{
+		var success = TryInvokeUnsafe(export, cpu, memory, out var returnValue);
+		return await Task.FromResult((success, returnValue));
+	}
+
+	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
+	{
+		returnValue = 0;
+		var exportUpper = export.ToUpperInvariant();
+
+		switch (exportUpper)
+		{
+			// Shell functions - forward to SHELL32
+			case "SHELLABOUT":
+			case "SHELLABOUTW":
+			case "SHELLEXECUTE":
+			case "SHELLEXECUTEA":
+			case "SHELLEXECUTEW":
+			case "SHELLEXECUTEEX":
+			case "SHELLEXECUTEEXA":
+			case "SHELLEXECUTEEXW":
+			case "DRAGACCEPTFILES":
+			case "DRAGFINISH":
+			case "DRAGQUERYFILE":
+			case "DRAGQUERYFILEA":
+			case "DRAGQUERYFILEW":
+			case "DRAGQUERYPOINT":
+			case "EXTRACTICON":
+			case "EXTRACTICONA":
+			case "EXTRACTICONW":
+			case "SHBROWSEFORFOLDER":
+			case "SHBROWSEFORFOLDERA":
+			case "SHBROWSEFORFOLDERW":
+			case "SHCHANGENOTIFY":
+			case "SHFILEOPERATION":
+			case "SHFILEOPERATIONA":
+			case "SHFILEOPERATIONW":
+			case "SHGETFILEINFO":
+			case "SHGETFILEINFOA":
+			case "SHGETFILEINFOW":
+			case "SHGETMALLOC":
+			case "SHGETPATHFROMIDLIST":
+			case "SHGETPATHFROMIDLISTA":
+			case "SHGETPATHFROMIDLISTW":
+			case "SHGETSPECIALFOLDERLOCATION":
+			case "SHGETDESKTOPFOLDER":
+				LogWin16Call(export, "forwarding to SHELL32");
+				return Win32Module.TryInvokeUnsafe(export, cpu, memory, out returnValue);
+
+			default:
+				Logger.LogWarning("[Win16 Thunk] Unknown Win16 SHELL function: {Export}", export);
+				return false;
+		}
+	}
+}

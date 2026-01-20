@@ -901,6 +901,13 @@ public sealed class Emulator : IDisposable
                 }
                 var winmm = wmmModule;
                 
+                _logger.LogDebug("[Loader] Looking up SHELL32.DLL module");
+                if (!_dispatcher.TryGetModule("SHELL32.DLL", out var shell32Module) || shell32Module == null)
+                {
+                    throw new InvalidOperationException("SHELL32.DLL not found in dispatcher. This is a critical Win32 module required for Win16 thunking.");
+                }
+                var shell32 = shell32Module;
+                
                 // Register Win16 thunking modules that wrap Win32 modules
                 _logger.LogDebug("[Loader] Creating Win16 KERNEL module");
                 _dispatcher.RegisterModule(new Win32.Win16.Win16KernelModule(kernel32, _logger));
@@ -919,6 +926,9 @@ public sealed class Emulator : IDisposable
                 
                 _logger.LogDebug("[Loader] Creating Win16 SOUND module");
                 _dispatcher.RegisterModule(new Win32.Win16.Win16SoundModule(winmm, _logger));
+                
+                _logger.LogDebug("[Loader] Creating Win16 SHELL module");
+                _dispatcher.RegisterModule(new Win32.Win16.Win16ShellModule(shell32, _logger));
                 
                 _logger.LogInformation("[Loader] Win16 thunking modules registered successfully");
                 
