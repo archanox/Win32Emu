@@ -187,42 +187,47 @@ internal class Win16ShellModule : Win16ThunkingLayer, IWin32ModuleAsync
 
 		switch (exportUpper)
 		{
-			// Shell functions - forward to SHELL32
+			// Shell functions - forward to SHELL32 (only ANSI 'A' variants are supported)
+			// Win16 SHELL functions typically use ANSI strings, so we map them to the 'A' variants
 			case "SHELLABOUT":
-			case "SHELLABOUTW":
+			case "SHELLABOUTA":
 			case "SHELLEXECUTE":
 			case "SHELLEXECUTEA":
-			case "SHELLEXECUTEW":
 			case "SHELLEXECUTEEX":
 			case "SHELLEXECUTEEXA":
-			case "SHELLEXECUTEEXW":
-			case "DRAGACCEPTFILES":
 			case "DRAGFINISH":
 			case "DRAGQUERYFILE":
 			case "DRAGQUERYFILEA":
-			case "DRAGQUERYFILEW":
-			case "DRAGQUERYPOINT":
 			case "EXTRACTICON":
 			case "EXTRACTICONA":
-			case "EXTRACTICONW":
 			case "SHBROWSEFORFOLDER":
 			case "SHBROWSEFORFOLDERA":
-			case "SHBROWSEFORFOLDERW":
 			case "SHCHANGENOTIFY":
 			case "SHFILEOPERATION":
 			case "SHFILEOPERATIONA":
-			case "SHFILEOPERATIONW":
 			case "SHGETFILEINFO":
 			case "SHGETFILEINFOA":
-			case "SHGETFILEINFOW":
 			case "SHGETMALLOC":
 			case "SHGETPATHFROMIDLIST":
 			case "SHGETPATHFROMIDLISTA":
-			case "SHGETPATHFROMIDLISTW":
 			case "SHGETSPECIALFOLDERLOCATION":
 			case "SHGETDESKTOPFOLDER":
-				LogWin16Call(export, "forwarding to SHELL32");
-				return Win32Module.TryInvokeUnsafe(export, cpu, memory, out returnValue);
+				// Map generic names to ANSI variants for compatibility
+				var mappedExport = exportUpper switch
+				{
+					"SHELLABOUT" => "SHELLABOUTA",
+					"SHELLEXECUTE" => "SHELLEXECUTEA",
+					"SHELLEXECUTEEX" => "SHELLEXECUTEEXA",
+					"DRAGQUERYFILE" => "DRAGQUERYFILEA",
+					"EXTRACTICON" => "EXTRACTICONA",
+					"SHBROWSEFORFOLDER" => "SHBROWSEFORFOLDERA",
+					"SHFILEOPERATION" => "SHFILEOPERATIONA",
+					"SHGETFILEINFO" => "SHGETFILEINFOA",
+					"SHGETPATHFROMIDLIST" => "SHGETPATHFROMIDLISTA",
+					_ => exportUpper
+				};
+				LogWin16Call(export, $"forwarding to SHELL32 as {mappedExport}");
+				return Win32Module.TryInvokeUnsafe(mappedExport, cpu, memory, out returnValue);
 
 			default:
 				Logger.LogWarning("[Win16 Thunk] Unknown Win16 SHELL function: {Export}", export);
