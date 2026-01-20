@@ -193,72 +193,70 @@ namespace Win32Emu.NeParser
 		
 		return new NeHeader
 		{
-			// 0x00-0x01: Signature
+			// 0x00-0x01: Signature "NE"
 			Signature = BitConverter.ToUInt16(bytes, neOffset + 0x00),
-			// 0x02: Major linker version
+			// 0x02: Linker major version
 			MajorLinkerVersion = bytes[neOffset + 0x02],
-			// 0x03: Minor linker version
+			// 0x03: Linker minor version (revision)
 			MinorLinkerVersion = bytes[neOffset + 0x03],
-			// 0x04-0x05: Entry table offset
+			// 0x04-0x05: Entry table offset (relative to NE header)
 			EntryTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x04),
-			// 0x06-0x07: Entry table length
+			// 0x06-0x07: Entry table length in bytes
 			EntryTableLength = BitConverter.ToUInt16(bytes, neOffset + 0x06),
-			// 0x08-0x0B: CRC checksum
+			// 0x08-0x0B: File load CRC checksum
 			CrcChecksum = BitConverter.ToUInt32(bytes, neOffset + 0x08),
-			// 0x0C-0x0D: Program flags
+			// 0x0C-0x0D: Module flag word (program flags)
 			ProgramFlags = BitConverter.ToUInt16(bytes, neOffset + 0x0C),
-			// 0x0E-0x0F: Application type flags
-			ApplicationType = BitConverter.ToUInt16(bytes, neOffset + 0x0E),
-			// 0x10-0x11: Auto data segment (DGROUP)
-			AutoDataSegment = BitConverter.ToUInt16(bytes, neOffset + 0x10),
-			// 0x12-0x13: Initial heap size
-			InitHeapSize = BitConverter.ToUInt16(bytes, neOffset + 0x12),
-			// 0x14-0x15: Initial stack size
-			InitStackSize = BitConverter.ToUInt16(bytes, neOffset + 0x14),
-			// 0x16-0x17: Entry point segment (CS)
+			// 0x0E-0x0F: Automatic data segment number (DGROUP, 0 if none)
+			AutoDataSegment = BitConverter.ToUInt16(bytes, neOffset + 0x0E),
+			// 0x10-0x11: Initial local heap size to add to auto data segment
+			InitHeapSize = BitConverter.ToUInt16(bytes, neOffset + 0x10),
+			// 0x12-0x13: Initial stack size to add to auto data segment
+			InitStackSize = BitConverter.ToUInt16(bytes, neOffset + 0x12),
+			// 0x14-0x15: Entry point offset (IP register value)
+			EntryPointOffset = BitConverter.ToUInt16(bytes, neOffset + 0x14),
+			// 0x16-0x17: Entry point segment number (CS register, index into segment table)
 			EntryPointSegment = BitConverter.ToUInt16(bytes, neOffset + 0x16),
-			// 0x18-0x19: Entry point offset (IP)
-			EntryPointOffset = BitConverter.ToUInt16(bytes, neOffset + 0x18),
-			// 0x1A-0x1B: Initial stack segment (SS)
+			// 0x18-0x19: Initial stack pointer (SP register value)
+			InitStackPointer = BitConverter.ToUInt16(bytes, neOffset + 0x18),
+			// 0x1A-0x1B: Initial stack segment number (SS register, index into segment table)
 			InitStackSegment = BitConverter.ToUInt16(bytes, neOffset + 0x1A),
-			// 0x1C-0x1D: Initial stack pointer (SP)
-			InitStackPointer = BitConverter.ToUInt16(bytes, neOffset + 0x1C),
-			// 0x1E-0x1F: Segment count
-			SegmentCount = BitConverter.ToUInt16(bytes, neOffset + 0x1E),
-			// 0x20-0x21: Module reference count
-			ModuleReferenceCount = BitConverter.ToUInt16(bytes, neOffset + 0x20),
-			// 0x22-0x23: Non-resident name table size
-			NonResidentNameTableSize = BitConverter.ToUInt16(bytes, neOffset + 0x22),
-			// 0x24-0x25: Segment table offset
-			SegmentTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x24),
-			// 0x26-0x27: Resource table offset
-			ResourceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x26),
-			// 0x28-0x29: Resident name table offset
-			ResidentNameTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x28),
-			// 0x2A-0x2B: Module reference table offset
-			ModuleReferenceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x2A),
-			// 0x2C-0x2D: Imported names table offset
-			ImportedNamesTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x2C),
-			// 0x2E-0x31: Non-resident name table offset (absolute file offset)
-			NonResidentNameTableOffset = BitConverter.ToUInt32(bytes, neOffset + 0x2E),
-			// 0x32-0x33: Movable entry point count
-			MovableEntryCount = BitConverter.ToUInt16(bytes, neOffset + 0x32),
-			// 0x34-0x35: Sector alignment shift
-			SectorAlignmentShift = BitConverter.ToUInt16(bytes, neOffset + 0x34),
-			// 0x36-0x37: Resource segment count
-			ResourceSegmentCount = BitConverter.ToUInt16(bytes, neOffset + 0x36),
-			// 0x38: Target OS
-			TargetOS = bytes[neOffset + 0x38],
-			// 0x39: Other flags (OS/2)
-			OtherFlags = bytes[neOffset + 0x39],
-			// 0x3A-0x3B: Return thunks offset (gang load)
-			ReturnThunksOffset = BitConverter.ToUInt16(bytes, neOffset + 0x3A),
-			// 0x3C-0x3D: Segment reference thunks offset
-			SegmentReferenceThunksOffset = BitConverter.ToUInt16(bytes, neOffset + 0x3C),
-			// 0x3E-0x3F: Minimum code swap size
-			SwapCodeSize = BitConverter.ToUInt16(bytes, neOffset + 0x3E),
-			// 0x40-0x41: Expected Windows version
-			ExpectedWindowsVersion = BitConverter.ToUInt16(bytes, neOffset + 0x40),
+			// 0x1C-0x1D: Number of entries in segment table
+			SegmentCount = BitConverter.ToUInt16(bytes, neOffset + 0x1C),
+			// 0x1E-0x1F: Number of entries in module reference table
+			ModuleReferenceCount = BitConverter.ToUInt16(bytes, neOffset + 0x1E),
+			// 0x20-0x21: Size of non-resident names table in bytes
+			NonResidentNameTableSize = BitConverter.ToUInt16(bytes, neOffset + 0x20),
+			// 0x22-0x23: Offset of segment table (relative to NE header)
+			SegmentTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x22),
+			// 0x24-0x25: Offset of resource table (relative to NE header)
+			ResourceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x24),
+			// 0x26-0x27: Offset of resident names table (relative to NE header)
+			ResidentNameTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x26),
+			// 0x28-0x29: Offset of module reference table (relative to NE header)
+			ModuleReferenceTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x28),
+			// 0x2A-0x2B: Offset of imported names table (relative to NE header)
+			ImportedNamesTableOffset = BitConverter.ToUInt16(bytes, neOffset + 0x2A),
+			// 0x2C-0x2F: Offset of non-resident names table (absolute file offset)
+			NonResidentNameTableOffset = BitConverter.ToUInt32(bytes, neOffset + 0x2C),
+			// 0x30-0x31: Number of movable entry points in entry table
+			MovableEntryCount = BitConverter.ToUInt16(bytes, neOffset + 0x30),
+			// 0x32-0x33: Sector alignment shift count (0 = 9 = 512 bytes)
+			SectorAlignmentShift = BitConverter.ToUInt16(bytes, neOffset + 0x32),
+			// 0x34-0x35: Number of resource table entries (resource segments)
+			ResourceSegmentCount = BitConverter.ToUInt16(bytes, neOffset + 0x34),
+			// 0x36: Target operating system (0=unknown, 1=OS/2, 2=Windows, 3=DOS4, 4=Win386, 5=BOSS)
+			TargetOS = bytes[neOffset + 0x36],
+			// 0x37: Additional OS/2 executable flags
+			OtherFlags = bytes[neOffset + 0x37],
+			// 0x38-0x39: Offset to return thunks or start of gang load area
+			ReturnThunksOffset = BitConverter.ToUInt16(bytes, neOffset + 0x38),
+			// 0x3A-0x3B: Offset to segment reference thunks or gang load area length
+			SegmentReferenceThunksOffset = BitConverter.ToUInt16(bytes, neOffset + 0x3A),
+			// 0x3C-0x3D: Minimum code swap area size
+			SwapCodeSize = BitConverter.ToUInt16(bytes, neOffset + 0x3C),
+			// 0x3E-0x3F: Expected Windows version (minor version in low byte, major in high)
+			ExpectedWindowsVersion = BitConverter.ToUInt16(bytes, neOffset + 0x3E),
 			BaseOffset = neOffset
 		};
 	}

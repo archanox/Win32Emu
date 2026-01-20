@@ -329,30 +329,56 @@ public class NeImageLoaderTests
 		data[neOffset + 2] = 5;
 		data[neOffset + 3] = 10;
 		
-		WriteUInt16(data, neOffset + 4, 0x0100);
-		WriteUInt16(data, neOffset + 6, 0);
-		WriteUInt32(data, neOffset + 8, 0);
-		WriteUInt16(data, neOffset + 12, 0x0300);
-		WriteUInt16(data, neOffset + 14, 2);
+		// 0x04-0x07: Entry table
+		WriteUInt16(data, neOffset + 0x04, 0x0100);
+		WriteUInt16(data, neOffset + 0x06, 0);
+		// 0x08-0x0B: CRC
+		WriteUInt32(data, neOffset + 0x08, 0);
+		// 0x0C-0x0D: Program flags
+		WriteUInt16(data, neOffset + 0x0C, 0x0302);
+		// 0x0E-0x0F: Auto data segment
+		WriteUInt16(data, neOffset + 0x0E, 1);
+		// 0x10-0x13: Heap and stack sizes
+		WriteUInt16(data, neOffset + 0x10, 0);
+		WriteUInt16(data, neOffset + 0x12, 0);
+		// 0x14-0x17: Entry point (IP, CS)
+		WriteUInt16(data, neOffset + 0x14, 0);
 		WriteUInt16(data, neOffset + 0x16, 1);
+		// 0x18-0x1B: Stack (SP, SS)
 		WriteUInt16(data, neOffset + 0x18, 0);
-		WriteUInt16(data, neOffset + 0x1E, 1);
+		WriteUInt16(data, neOffset + 0x1A, 1);
+		// 0x1C-0x1D: Segment count
+		WriteUInt16(data, neOffset + 0x1C, 1);
+		// 0x1E-0x1F: Module reference count
+		WriteUInt16(data, neOffset + 0x1E, 2); // 2 modules
+		// 0x20-0x21: Non-resident name table size
+		WriteUInt16(data, neOffset + 0x20, 0);
+		// 0x22-0x2B: Table offsets
+		WriteUInt16(data, neOffset + 0x22, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x24, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x26, 0x50); // Resident name table
+		WriteUInt16(data, neOffset + 0x28, 0x60); // Module reference table
+		WriteUInt16(data, neOffset + 0x2A, 0x70); // Imported names table
+		// 0x2C-0x2F: Non-resident name table offset
+		WriteUInt32(data, neOffset + 0x2C, 0);
+		// 0x30-0x31: Movable entry count
+		WriteUInt16(data, neOffset + 0x30, 0);
+		// 0x32-0x33: Sector alignment shift
+		WriteUInt16(data, neOffset + 0x32, 4);
+		// 0x34-0x35: Resource segment count
+		WriteUInt16(data, neOffset + 0x34, 0);
+		// 0x36: Target OS
+		data[neOffset + 0x36] = 2;
+		// 0x37: Other flags
+		data[neOffset + 0x37] = 0;
+		// 0x38-0x3D: Thunks and swap
+		WriteUInt16(data, neOffset + 0x38, 0);
+		WriteUInt16(data, neOffset + 0x3A, 0);
+		WriteUInt16(data, neOffset + 0x3C, 0);
+		// 0x3E-0x3F: Expected Windows version
+		WriteUInt16(data, neOffset + 0x3E, 0x0300);
 		
-		// Module reference count
-		WriteUInt16(data, neOffset + 0x20, 2); // 2 modules
-		
-		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
-		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
-		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
-		WriteUInt16(data, neOffset + 0x2A, 0x60); // Module reference table
-		WriteUInt16(data, neOffset + 0x2C, 0x70); // Imported names table
-		WriteUInt32(data, neOffset + 44, 0);
-		WriteUInt16(data, neOffset + 0x32, 0);
-		WriteUInt16(data, neOffset + 0x34, 4);
-		data[neOffset + 0x38] = 2;
-		WriteUInt16(data, neOffset + 0x40, 0x0300);
-		
-		// Segment table
+		// Segment table at neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
 		WriteUInt16(data, segmentOffset + 0, 0x20);
 		WriteUInt16(data, segmentOffset + 2, 0x100);
@@ -424,55 +450,91 @@ public class NeImageLoaderTests
 		data[neOffset + 2] = 5;     // Linker major version
 		data[neOffset + 3] = 10;    // Linker minor version
 		
-		// Entry table offset (after NE header)
-		WriteUInt16(data, neOffset + 4, 0x0100);
-		// Entry table length
-		WriteUInt16(data, neOffset + 6, 0);
+		// 0x04-0x05: Entry table offset (after NE header)
+		WriteUInt16(data, neOffset + 0x04, 0x0100);
+		// 0x06-0x07: Entry table length
+		WriteUInt16(data, neOffset + 0x06, 0);
 		
-		// CRC checksum
-		WriteUInt32(data, neOffset + 8, 0);
+		// 0x08-0x0B: CRC checksum
+		WriteUInt32(data, neOffset + 0x08, 0);
 		
-		// Program flags
-		WriteUInt16(data, neOffset + 12, 0x0300); // Protected mode, single data
-		// Application type
-		WriteUInt16(data, neOffset + 14, 2); // Windows application
+		// 0x0C-0x0D: Program flags (module flag word)
+		WriteUInt16(data, neOffset + 0x0C, 0x0302); // App type 3 (uses Windows API), DGROUP type 2 (multiple)
 		
-		// Entry point (segment:offset)
-		WriteUInt16(data, neOffset + 0x16, 1); // Segment 1 (CS)
-		WriteUInt16(data, neOffset + 0x18, 0); // Offset 0 (IP)
+		// 0x0E-0x0F: Auto data segment
+		WriteUInt16(data, neOffset + 0x0E, 1); // DGROUP is segment 1
 		
-		// Segment count
-		WriteUInt16(data, neOffset + 0x1E, 1); // One segment
+		// 0x10-0x11: Initial heap size
+		WriteUInt16(data, neOffset + 0x10, 0);
 		
-		// Segment table offset (relative to NE header)
-		WriteUInt16(data, neOffset + 0x24, 0x40); // Offset 0x40 from NE header
+		// 0x12-0x13: Initial stack size
+		WriteUInt16(data, neOffset + 0x12, 0);
 		
-		// Resource table offset
-		WriteUInt16(data, neOffset + 0x26, 0x48); // After segment table
+		// 0x14-0x15: Entry point offset (IP)
+		WriteUInt16(data, neOffset + 0x14, 0);
 		
-		// Resident name table offset
-		WriteUInt16(data, neOffset + 0x28, 0x50); // After resource table
+		// 0x16-0x17: Entry point segment (CS)
+		WriteUInt16(data, neOffset + 0x16, 1); // Segment 1
 		
-		// Module reference table offset
-		WriteUInt16(data, neOffset + 0x2A, 0x60); // After resident name table
+		// 0x18-0x19: Initial stack pointer (SP)
+		WriteUInt16(data, neOffset + 0x18, 0);
 		
-		// Imported names table offset
-		WriteUInt16(data, neOffset + 0x2C, 0x70); // After module reference table
+		// 0x1A-0x1B: Initial stack segment (SS)
+		WriteUInt16(data, neOffset + 0x1A, 1);
 		
-		// Non-resident name table offset (file offset, not relative)
-		WriteUInt32(data, neOffset + 44, 0); // No non-resident names
+		// 0x1C-0x1D: Segment count
+		WriteUInt16(data, neOffset + 0x1C, 1); // One segment
 		
-		// Movable entry count
-		WriteUInt16(data, neOffset + 0x32, 0);
+		// 0x1E-0x1F: Module reference count
+		WriteUInt16(data, neOffset + 0x1E, 0);
 		
-		// Sector alignment shift
-		WriteUInt16(data, neOffset + 0x34, 4); // 16-byte sectors
+		// 0x20-0x21: Non-resident name table size
+		WriteUInt16(data, neOffset + 0x20, 0);
 		
-		// Target OS
-		data[neOffset + 0x38] = 2; // Windows
+		// 0x22-0x23: Segment table offset (relative to NE header)
+		WriteUInt16(data, neOffset + 0x22, 0x40);
 		
-		// Expected Windows version
-		WriteUInt16(data, neOffset + 0x40, 0x0300); // Windows 3.0
+		// 0x24-0x25: Resource table offset
+		WriteUInt16(data, neOffset + 0x24, 0x48);
+		
+		// 0x26-0x27: Resident name table offset
+		WriteUInt16(data, neOffset + 0x26, 0x50);
+		
+		// 0x28-0x29: Module reference table offset
+		WriteUInt16(data, neOffset + 0x28, 0x60);
+		
+		// 0x2A-0x2B: Imported names table offset
+		WriteUInt16(data, neOffset + 0x2A, 0x70);
+		
+		// 0x2C-0x2F: Non-resident name table offset (file offset)
+		WriteUInt32(data, neOffset + 0x2C, 0);
+		
+		// 0x30-0x31: Movable entry count
+		WriteUInt16(data, neOffset + 0x30, 0);
+		
+		// 0x32-0x33: Sector alignment shift
+		WriteUInt16(data, neOffset + 0x32, 4); // 16-byte sectors
+		
+		// 0x34-0x35: Resource segment count
+		WriteUInt16(data, neOffset + 0x34, 0);
+		
+		// 0x36: Target OS (Windows)
+		data[neOffset + 0x36] = 2;
+		
+		// 0x37: Other flags
+		data[neOffset + 0x37] = 0;
+		
+		// 0x38-0x39: Return thunks offset
+		WriteUInt16(data, neOffset + 0x38, 0);
+		
+		// 0x3A-0x3B: Segment reference thunks offset
+		WriteUInt16(data, neOffset + 0x3A, 0);
+		
+		// 0x3C-0x3D: Swap code size
+		WriteUInt16(data, neOffset + 0x3C, 0);
+		
+		// 0x3E-0x3F: Expected Windows version
+		WriteUInt16(data, neOffset + 0x3E, 0x0300); // Windows 3.0
 		
 		// Segment table at offset neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
@@ -483,7 +545,6 @@ public class NeImageLoaderTests
 		WriteUInt16(data, segmentOffset + 6, 0x100); // Min allocation = 256 bytes
 		
 		// Resource table (empty) at offset neOffset + 0x48
-		// Just alignment size (2 bytes) set to 0
 		WriteUInt16(data, neOffset + 0x48, 0);
 		
 		// Resident name table at offset neOffset + 0x50
@@ -546,30 +607,56 @@ public class NeImageLoaderTests
 		data[neOffset + 2] = 5;
 		data[neOffset + 3] = 10;
 		
-		WriteUInt16(data, neOffset + 4, 0x0100);
-		WriteUInt16(data, neOffset + 6, 0);
-		WriteUInt32(data, neOffset + 8, 0);
-		WriteUInt16(data, neOffset + 12, 0x0300);
-		WriteUInt16(data, neOffset + 14, 2);
+		// 0x04-0x07: Entry table
+		WriteUInt16(data, neOffset + 0x04, 0x0100);
+		WriteUInt16(data, neOffset + 0x06, 0);
+		// 0x08-0x0B: CRC
+		WriteUInt32(data, neOffset + 0x08, 0);
+		// 0x0C-0x0D: Program flags
+		WriteUInt16(data, neOffset + 0x0C, 0x0302);
+		// 0x0E-0x0F: Auto data segment
+		WriteUInt16(data, neOffset + 0x0E, 1);
+		// 0x10-0x13: Heap and stack sizes
+		WriteUInt16(data, neOffset + 0x10, 0);
+		WriteUInt16(data, neOffset + 0x12, 0);
+		// 0x14-0x17: Entry point (IP, CS)
+		WriteUInt16(data, neOffset + 0x14, 0);
 		WriteUInt16(data, neOffset + 0x16, 1);
+		// 0x18-0x1B: Stack (SP, SS)
 		WriteUInt16(data, neOffset + 0x18, 0);
-		WriteUInt16(data, neOffset + 0x1E, 1);
+		WriteUInt16(data, neOffset + 0x1A, 1);
+		// 0x1C-0x1D: Segment count
+		WriteUInt16(data, neOffset + 0x1C, 1);
+		// 0x1E-0x1F: Module reference count: 2 modules (this is the key!)
+		WriteUInt16(data, neOffset + 0x1E, 2);
+		// 0x20-0x21: Non-resident name table size
+		WriteUInt16(data, neOffset + 0x20, 0);
+		// 0x22-0x2B: Table offsets
+		WriteUInt16(data, neOffset + 0x22, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x24, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x26, 0x50); // Resident name table
+		WriteUInt16(data, neOffset + 0x28, 0x60); // Module reference table
+		WriteUInt16(data, neOffset + 0x2A, 0xA0); // Imported names table (note: large gap!)
+		// 0x2C-0x2F: Non-resident name table offset
+		WriteUInt32(data, neOffset + 0x2C, 0);
+		// 0x30-0x31: Movable entry count
+		WriteUInt16(data, neOffset + 0x30, 0);
+		// 0x32-0x33: Sector alignment shift
+		WriteUInt16(data, neOffset + 0x32, 4);
+		// 0x34-0x35: Resource segment count
+		WriteUInt16(data, neOffset + 0x34, 0);
+		// 0x36: Target OS
+		data[neOffset + 0x36] = 2;
+		// 0x37: Other flags
+		data[neOffset + 0x37] = 0;
+		// 0x38-0x3D: Thunks and swap
+		WriteUInt16(data, neOffset + 0x38, 0);
+		WriteUInt16(data, neOffset + 0x3A, 0);
+		WriteUInt16(data, neOffset + 0x3C, 0);
+		// 0x3E-0x3F: Expected Windows version
+		WriteUInt16(data, neOffset + 0x3E, 0x0300);
 		
-		// Module reference count: 2 modules (this is the key!)
-		WriteUInt16(data, neOffset + 0x20, 2);
-		
-		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
-		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
-		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
-		WriteUInt16(data, neOffset + 0x2A, 0x60); // Module reference table
-		WriteUInt16(data, neOffset + 0x2C, 0xA0); // Imported names table (note: large gap!)
-		WriteUInt32(data, neOffset + 44, 0);
-		WriteUInt16(data, neOffset + 0x32, 0);
-		WriteUInt16(data, neOffset + 0x34, 4);
-		data[neOffset + 0x38] = 2;
-		WriteUInt16(data, neOffset + 0x40, 0x0300);
-		
-		// Segment table
+		// Segment table at neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
 		WriteUInt16(data, segmentOffset + 0, 0x20);
 		WriteUInt16(data, segmentOffset + 2, 0x100);
@@ -661,43 +748,72 @@ public class NeImageLoaderTests
 		var neOffset = 0x80;
 		data[neOffset + 0] = 0x4E;  // 'N'
 		data[neOffset + 1] = 0x45;  // 'E'
-		data[neOffset + 2] = 5;
-		data[neOffset + 3] = 10;
+		data[neOffset + 2] = 5;     // Linker version
+		data[neOffset + 3] = 10;    // Linker revision
 		
-		WriteUInt16(data, neOffset + 4, 0x0100);
-		WriteUInt16(data, neOffset + 6, 0);
-		WriteUInt32(data, neOffset + 8, 0);
-		WriteUInt16(data, neOffset + 12, 0x0300);
-		WriteUInt16(data, neOffset + 14, 2);
+		// 0x04-0x07: Entry table
+		WriteUInt16(data, neOffset + 0x04, 0x0100);
+		WriteUInt16(data, neOffset + 0x06, 0);
+		// 0x08-0x0B: CRC
+		WriteUInt32(data, neOffset + 0x08, 0);
+		// 0x0C-0x0D: Program flags
+		WriteUInt16(data, neOffset + 0x0C, 0x0302);
+		// 0x0E-0x0F: Auto data segment
+		WriteUInt16(data, neOffset + 0x0E, 1);
+		// 0x10-0x11: Heap size
+		WriteUInt16(data, neOffset + 0x10, 0);
+		// 0x12-0x13: Stack size
+		WriteUInt16(data, neOffset + 0x12, 0);
+		// 0x14-0x15: Entry point IP
+		WriteUInt16(data, neOffset + 0x14, 0);
+		// 0x16-0x17: Entry point CS
 		WriteUInt16(data, neOffset + 0x16, 1);
+		// 0x18-0x19: Stack pointer SP
 		WriteUInt16(data, neOffset + 0x18, 0);
-		WriteUInt16(data, neOffset + 0x1E, 1);
+		// 0x1A-0x1B: Stack segment SS
+		WriteUInt16(data, neOffset + 0x1A, 1);
+		// 0x1C-0x1D: Segment count
+		WriteUInt16(data, neOffset + 0x1C, 1);
+		// 0x1E-0x1F: Module reference count
+		WriteUInt16(data, neOffset + 0x1E, 2); // 2 modules
+		// 0x20-0x21: Non-resident name table size
+		WriteUInt16(data, neOffset + 0x20, 0);
+		// 0x22-0x2B: Table offsets
+		WriteUInt16(data, neOffset + 0x22, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x24, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x26, 0x50); // Resident name table
+		WriteUInt16(data, neOffset + 0x28, 0x60); // Module reference table at neOffset + 0x60
+		WriteUInt16(data, neOffset + 0x2A, 0x70); // Imported names table at neOffset + 0x70
+		// 0x2C-0x2F: Non-resident name table offset
+		WriteUInt32(data, neOffset + 0x2C, 0);
+		// 0x30-0x31: Movable entry count
+		WriteUInt16(data, neOffset + 0x30, 0);
+		// 0x32-0x33: Sector alignment shift
+		WriteUInt16(data, neOffset + 0x32, 4);
+		// 0x34-0x35: Resource segment count
+		WriteUInt16(data, neOffset + 0x34, 0);
+		// 0x36: Target OS
+		data[neOffset + 0x36] = 2;
+		// 0x37: Other flags
+		data[neOffset + 0x37] = 0;
+		// 0x38-0x3D: Reserved/thunks
+		WriteUInt16(data, neOffset + 0x38, 0);
+		WriteUInt16(data, neOffset + 0x3A, 0);
+		WriteUInt16(data, neOffset + 0x3C, 0);
+		// 0x3E-0x3F: Expected Windows version
+		WriteUInt16(data, neOffset + 0x3E, 0x0300);
 		
-		// Module reference count
-		WriteUInt16(data, neOffset + 0x20, 2); // 2 modules
-		
-		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
-		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
-		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
-		WriteUInt16(data, neOffset + 0x2A, 0x60); // Module reference table at neOffset + 0x60
-		WriteUInt16(data, neOffset + 0x2C, 0x70); // Imported names table at neOffset + 0x70
-		WriteUInt32(data, neOffset + 44, 0);
-		WriteUInt16(data, neOffset + 0x32, 0);
-		WriteUInt16(data, neOffset + 0x34, 4);
-		data[neOffset + 0x38] = 2;
-		WriteUInt16(data, neOffset + 0x40, 0x0300);
-		
-		// Segment table
+		// Segment table at offset neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
 		WriteUInt16(data, segmentOffset + 0, 0x20);
 		WriteUInt16(data, segmentOffset + 2, 0x100);
 		WriteUInt16(data, segmentOffset + 4, 0x0000);
 		WriteUInt16(data, segmentOffset + 6, 0x100);
 		
-		// Resource table (empty)
+		// Resource table (empty) at offset neOffset + 0x48
 		WriteUInt16(data, neOffset + 0x48, 0);
 		
-		// Resident name table
+		// Resident name table at offset neOffset + 0x50
 		data[neOffset + 0x50] = 4;
 		data[neOffset + 0x51] = (byte)'T';
 		data[neOffset + 0x52] = (byte)'E';
@@ -774,43 +890,72 @@ public class NeImageLoaderTests
 		var neOffset = 0x80;
 		data[neOffset + 0] = 0x4E;  // 'N'
 		data[neOffset + 1] = 0x45;  // 'E'
-		data[neOffset + 2] = 5;
-		data[neOffset + 3] = 10;
+		data[neOffset + 2] = 5;     // Linker version
+		data[neOffset + 3] = 10;    // Linker revision
 		
-		WriteUInt16(data, neOffset + 4, 0x0100);
-		WriteUInt16(data, neOffset + 6, 0);
-		WriteUInt32(data, neOffset + 8, 0);
-		WriteUInt16(data, neOffset + 12, 0x0300);
-		WriteUInt16(data, neOffset + 14, 2);
+		// 0x04-0x07: Entry table
+		WriteUInt16(data, neOffset + 0x04, 0x0100);
+		WriteUInt16(data, neOffset + 0x06, 0);
+		// 0x08-0x0B: CRC
+		WriteUInt32(data, neOffset + 0x08, 0);
+		// 0x0C-0x0D: Program flags
+		WriteUInt16(data, neOffset + 0x0C, 0x0302);
+		// 0x0E-0x0F: Auto data segment
+		WriteUInt16(data, neOffset + 0x0E, 1);
+		// 0x10-0x11: Heap size
+		WriteUInt16(data, neOffset + 0x10, 0);
+		// 0x12-0x13: Stack size
+		WriteUInt16(data, neOffset + 0x12, 0);
+		// 0x14-0x15: Entry point IP
+		WriteUInt16(data, neOffset + 0x14, 0);
+		// 0x16-0x17: Entry point CS
 		WriteUInt16(data, neOffset + 0x16, 1);
+		// 0x18-0x19: Stack pointer SP
 		WriteUInt16(data, neOffset + 0x18, 0);
-		WriteUInt16(data, neOffset + 0x1E, 1);
+		// 0x1A-0x1B: Stack segment SS
+		WriteUInt16(data, neOffset + 0x1A, 1);
+		// 0x1C-0x1D: Segment count
+		WriteUInt16(data, neOffset + 0x1C, 1);
+		// 0x1E-0x1F: Module reference count - 7 modules like Chip's Challenge
+		WriteUInt16(data, neOffset + 0x1E, 7);
+		// 0x20-0x21: Non-resident name table size
+		WriteUInt16(data, neOffset + 0x20, 0);
+		// 0x22-0x2B: Table offsets
+		WriteUInt16(data, neOffset + 0x22, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x24, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x26, 0x50); // Resident name table
+		WriteUInt16(data, neOffset + 0x28, 0x60); // Module reference table
+		WriteUInt16(data, neOffset + 0x2A, 0x70); // Imported names table
+		// 0x2C-0x2F: Non-resident name table offset
+		WriteUInt32(data, neOffset + 0x2C, 0);
+		// 0x30-0x31: Movable entry count
+		WriteUInt16(data, neOffset + 0x30, 0);
+		// 0x32-0x33: Sector alignment shift
+		WriteUInt16(data, neOffset + 0x32, 4);
+		// 0x34-0x35: Resource segment count
+		WriteUInt16(data, neOffset + 0x34, 0);
+		// 0x36: Target OS
+		data[neOffset + 0x36] = 2;
+		// 0x37: Other flags
+		data[neOffset + 0x37] = 0;
+		// 0x38-0x3D: Reserved/thunks
+		WriteUInt16(data, neOffset + 0x38, 0);
+		WriteUInt16(data, neOffset + 0x3A, 0);
+		WriteUInt16(data, neOffset + 0x3C, 0);
+		// 0x3E-0x3F: Expected Windows version
+		WriteUInt16(data, neOffset + 0x3E, 0x0300);
 		
-		// Module reference count - 7 modules like Chip's Challenge
-		WriteUInt16(data, neOffset + 0x20, 7);
-		
-		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
-		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
-		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
-		WriteUInt16(data, neOffset + 0x2A, 0x60); // Module reference table
-		WriteUInt16(data, neOffset + 0x2C, 0x70); // Imported names table
-		WriteUInt32(data, neOffset + 44, 0);
-		WriteUInt16(data, neOffset + 0x32, 0);
-		WriteUInt16(data, neOffset + 0x34, 4);
-		data[neOffset + 0x38] = 2;
-		WriteUInt16(data, neOffset + 0x40, 0x0300);
-		
-		// Segment table
+		// Segment table at offset neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
 		WriteUInt16(data, segmentOffset + 0, 0x20);
 		WriteUInt16(data, segmentOffset + 2, 0x100);
 		WriteUInt16(data, segmentOffset + 4, 0x0000);
 		WriteUInt16(data, segmentOffset + 6, 0x100);
 		
-		// Resource table (empty)
+		// Resource table (empty) at offset neOffset + 0x48
 		WriteUInt16(data, neOffset + 0x48, 0);
 		
-		// Resident name table
+		// Resident name table at offset neOffset + 0x50
 		data[neOffset + 0x50] = 4;
 		data[neOffset + 0x51] = (byte)'T';
 		data[neOffset + 0x52] = (byte)'E';
@@ -909,43 +1054,72 @@ public class NeImageLoaderTests
 		var neOffset = 0x80;
 		data[neOffset + 0] = 0x4E;  // 'N'
 		data[neOffset + 1] = 0x45;  // 'E'
-		data[neOffset + 2] = 5;
-		data[neOffset + 3] = 10;
+		data[neOffset + 2] = 5;     // Linker version
+		data[neOffset + 3] = 10;    // Linker revision
 		
-		WriteUInt16(data, neOffset + 4, 0x0100);
-		WriteUInt16(data, neOffset + 6, 0);
-		WriteUInt32(data, neOffset + 8, 0);
-		WriteUInt16(data, neOffset + 12, 0x0300);
-		WriteUInt16(data, neOffset + 14, 2);
+		// 0x04-0x07: Entry table
+		WriteUInt16(data, neOffset + 0x04, 0x0100);
+		WriteUInt16(data, neOffset + 0x06, 0);
+		// 0x08-0x0B: CRC
+		WriteUInt32(data, neOffset + 0x08, 0);
+		// 0x0C-0x0D: Program flags
+		WriteUInt16(data, neOffset + 0x0C, 0x0302);
+		// 0x0E-0x0F: Auto data segment
+		WriteUInt16(data, neOffset + 0x0E, 1);
+		// 0x10-0x11: Heap size
+		WriteUInt16(data, neOffset + 0x10, 0);
+		// 0x12-0x13: Stack size
+		WriteUInt16(data, neOffset + 0x12, 0);
+		// 0x14-0x15: Entry point IP
+		WriteUInt16(data, neOffset + 0x14, 0);
+		// 0x16-0x17: Entry point CS
 		WriteUInt16(data, neOffset + 0x16, 1);
+		// 0x18-0x19: Stack pointer SP
 		WriteUInt16(data, neOffset + 0x18, 0);
-		WriteUInt16(data, neOffset + 0x1E, 1);
+		// 0x1A-0x1B: Stack segment SS
+		WriteUInt16(data, neOffset + 0x1A, 1);
+		// 0x1C-0x1D: Segment count
+		WriteUInt16(data, neOffset + 0x1C, 1);
+		// 0x1E-0x1F: Module reference count - 3 modules
+		WriteUInt16(data, neOffset + 0x1E, 3);
+		// 0x20-0x21: Non-resident name table size
+		WriteUInt16(data, neOffset + 0x20, 0);
+		// 0x22-0x2B: Table offsets
+		WriteUInt16(data, neOffset + 0x22, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x24, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x26, 0x50); // Resident name table
+		WriteUInt16(data, neOffset + 0x28, 0x60); // Module reference table
+		WriteUInt16(data, neOffset + 0x2A, 0x70); // Imported names table
+		// 0x2C-0x2F: Non-resident name table offset
+		WriteUInt32(data, neOffset + 0x2C, 0);
+		// 0x30-0x31: Movable entry count
+		WriteUInt16(data, neOffset + 0x30, 0);
+		// 0x32-0x33: Sector alignment shift
+		WriteUInt16(data, neOffset + 0x32, 4);
+		// 0x34-0x35: Resource segment count
+		WriteUInt16(data, neOffset + 0x34, 0);
+		// 0x36: Target OS
+		data[neOffset + 0x36] = 2;
+		// 0x37: Other flags
+		data[neOffset + 0x37] = 0;
+		// 0x38-0x3D: Reserved/thunks
+		WriteUInt16(data, neOffset + 0x38, 0);
+		WriteUInt16(data, neOffset + 0x3A, 0);
+		WriteUInt16(data, neOffset + 0x3C, 0);
+		// 0x3E-0x3F: Expected Windows version
+		WriteUInt16(data, neOffset + 0x3E, 0x0300);
 		
-		// Module reference count - 3 modules
-		WriteUInt16(data, neOffset + 0x20, 3);
-		
-		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
-		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
-		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
-		WriteUInt16(data, neOffset + 0x2A, 0x60); // Module reference table
-		WriteUInt16(data, neOffset + 0x2C, 0x70); // Imported names table
-		WriteUInt32(data, neOffset + 44, 0);
-		WriteUInt16(data, neOffset + 0x32, 0);
-		WriteUInt16(data, neOffset + 0x34, 4);
-		data[neOffset + 0x38] = 2;
-		WriteUInt16(data, neOffset + 0x40, 0x0300);
-		
-		// Segment table
+		// Segment table at offset neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
 		WriteUInt16(data, segmentOffset + 0, 0x20);
 		WriteUInt16(data, segmentOffset + 2, 0x100);
 		WriteUInt16(data, segmentOffset + 4, 0x0000);
 		WriteUInt16(data, segmentOffset + 6, 0x100);
 		
-		// Resource table (empty)
+		// Resource table (empty) at offset neOffset + 0x48
 		WriteUInt16(data, neOffset + 0x48, 0);
 		
-		// Resident name table
+		// Resident name table at offset neOffset + 0x50
 		data[neOffset + 0x50] = 4;
 		data[neOffset + 0x51] = (byte)'T';
 		data[neOffset + 0x52] = (byte)'E';
@@ -1077,45 +1251,74 @@ public class NeImageLoaderTests
 		var neOffset = 0x80;
 		data[neOffset + 0] = 0x4E;  // 'N'
 		data[neOffset + 1] = 0x45;  // 'E'
-		data[neOffset + 2] = 5;
-		data[neOffset + 3] = 10;
+		data[neOffset + 2] = 5;     // Linker version
+		data[neOffset + 3] = 10;    // Linker revision
 		
-		WriteUInt16(data, neOffset + 4, 0x0100);
-		WriteUInt16(data, neOffset + 6, 0);
-		WriteUInt32(data, neOffset + 8, 0);
-		WriteUInt16(data, neOffset + 12, 0x0300);
-		WriteUInt16(data, neOffset + 14, 2);
+		// 0x04-0x07: Entry table
+		WriteUInt16(data, neOffset + 0x04, 0x0100);
+		WriteUInt16(data, neOffset + 0x06, 0);
+		// 0x08-0x0B: CRC
+		WriteUInt32(data, neOffset + 0x08, 0);
+		// 0x0C-0x0D: Program flags
+		WriteUInt16(data, neOffset + 0x0C, 0x0302);
+		// 0x0E-0x0F: Auto data segment
+		WriteUInt16(data, neOffset + 0x0E, 1);
+		// 0x10-0x11: Heap size
+		WriteUInt16(data, neOffset + 0x10, 0);
+		// 0x12-0x13: Stack size
+		WriteUInt16(data, neOffset + 0x12, 0);
+		// 0x14-0x15: Entry point IP
+		WriteUInt16(data, neOffset + 0x14, 0);
+		// 0x16-0x17: Entry point CS
 		WriteUInt16(data, neOffset + 0x16, 1);
+		// 0x18-0x19: Stack pointer SP
 		WriteUInt16(data, neOffset + 0x18, 0);
-		WriteUInt16(data, neOffset + 0x1E, 1);
-		
-		// Module reference count (may not match actual count in this format)
-		WriteUInt16(data, neOffset + 0x20, 10);
-		
-		WriteUInt16(data, neOffset + 0x24, 0x40); // Segment table
-		WriteUInt16(data, neOffset + 0x26, 0x48); // Resource table
-		WriteUInt16(data, neOffset + 0x28, 0x50); // Resident name table
+		// 0x1A-0x1B: Stack segment SS
+		WriteUInt16(data, neOffset + 0x1A, 1);
+		// 0x1C-0x1D: Segment count
+		WriteUInt16(data, neOffset + 0x1C, 1);
+		// 0x1E-0x1F: Module reference count (may not match actual count in this format)
+		WriteUInt16(data, neOffset + 0x1E, 10);
+		// 0x20-0x21: Non-resident name table size
+		WriteUInt16(data, neOffset + 0x20, 0);
+		// 0x22-0x2B: Table offsets
+		WriteUInt16(data, neOffset + 0x22, 0x40); // Segment table
+		WriteUInt16(data, neOffset + 0x24, 0x48); // Resource table
+		WriteUInt16(data, neOffset + 0x26, 0x50); // Resident name table
 		// Module ref table points to where module names are stored directly
-		WriteUInt16(data, neOffset + 0x2A, 0x70); // Module reference table
+		WriteUInt16(data, neOffset + 0x28, 0x70); // Module reference table
 		// Imported names table points elsewhere (won't be used)
-		WriteUInt16(data, neOffset + 0x2C, 0xF0); // Imported names table
-		WriteUInt32(data, neOffset + 44, 0);
-		WriteUInt16(data, neOffset + 0x32, 0);
-		WriteUInt16(data, neOffset + 0x34, 4);
-		data[neOffset + 0x38] = 2;
-		WriteUInt16(data, neOffset + 0x40, 0x0300);
+		WriteUInt16(data, neOffset + 0x2A, 0xF0); // Imported names table
+		// 0x2C-0x2F: Non-resident name table offset
+		WriteUInt32(data, neOffset + 0x2C, 0);
+		// 0x30-0x31: Movable entry count
+		WriteUInt16(data, neOffset + 0x30, 0);
+		// 0x32-0x33: Sector alignment shift
+		WriteUInt16(data, neOffset + 0x32, 4);
+		// 0x34-0x35: Resource segment count
+		WriteUInt16(data, neOffset + 0x34, 0);
+		// 0x36: Target OS
+		data[neOffset + 0x36] = 2;
+		// 0x37: Other flags
+		data[neOffset + 0x37] = 0;
+		// 0x38-0x3D: Reserved/thunks
+		WriteUInt16(data, neOffset + 0x38, 0);
+		WriteUInt16(data, neOffset + 0x3A, 0);
+		WriteUInt16(data, neOffset + 0x3C, 0);
+		// 0x3E-0x3F: Expected Windows version
+		WriteUInt16(data, neOffset + 0x3E, 0x0300);
 		
-		// Segment table
+		// Segment table at offset neOffset + 0x40
 		var segmentOffset = neOffset + 0x40;
 		WriteUInt16(data, segmentOffset + 0, 0x20);
 		WriteUInt16(data, segmentOffset + 2, 0x100);
 		WriteUInt16(data, segmentOffset + 4, 0x0000);
 		WriteUInt16(data, segmentOffset + 6, 0x100);
 		
-		// Resource table (empty)
+		// Resource table (empty) at offset neOffset + 0x48
 		WriteUInt16(data, neOffset + 0x48, 0);
 		
-		// Resident name table
+		// Resident name table at offset neOffset + 0x50
 		data[neOffset + 0x50] = 4;
 		data[neOffset + 0x51] = (byte)'T';
 		data[neOffset + 0x52] = (byte)'E';
