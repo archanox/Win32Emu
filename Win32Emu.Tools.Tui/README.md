@@ -4,18 +4,27 @@ A terminal-based interface for Win32Emu, optimized for 80-column terminals and m
 
 ## Features
 
-### ✅ Implemented Features (v0.3.0)
+### ✅ Implemented Features (v0.4.0)
 
 - **Interactive Menu Navigation**: Arrow key navigation with visual selection using Hex1b List widgets
-  - Main menu with 4 options: Game Library, Settings, Help, Exit
+  - Main menu with 5 options: Game Library, Add Game, Settings, Help, Exit
   - Full keyboard navigation (↑/↓ arrows, Enter to select)
   - Visual feedback for selected items
   
+- **Add Game Form**: Interactive form for adding new games
+  - Display fields: Title, Executable Path, Developer, Publisher, Genre, Release Year, Description
+  - List-based navigation through fields
+  - Save and Cancel options
+  - Automatic ID and date generation on save
+  - Form validation (requires title and executable path)
+  - Direct access from Main Menu or Game Library
+  
 - **Game Browser UI**: Interactive list of games with launch capability
   - Display all games with title and release year
+  - "[Add New Game]" option at the bottom of the list
   - Navigate with arrow keys
   - Press Enter to view game details
-  - Empty state message when no games exist
+  - Empty state with "Add New Game" prompt when no games exist
   
 - **Game Details View**: Comprehensive game information display
   - Full metadata: title, developer, publisher, genre, year
@@ -24,19 +33,21 @@ A terminal-based interface for Win32Emu, optimized for 80-column terminals and m
   - Game description
   - Navigation: ESC to go back
   
-- **Settings Screen**: Configuration management interface
-  - Backend selection list (SDL, GLFW, Vulkan, Metal, Software)
-  - Display current configuration values
-  - Debug mode status
-  - Interactive debugger status  
-  - GDB server status with port
-  - File logging status
-  - Navigation: Select backend from list, ESC to go back
+- **Settings Screen**: Interactive configuration management
+  - Toggle switches for all boolean settings (press Enter to toggle)
+  - Backend selection (cycles through SDL, GLFW, Vulkan, Metal, Software)
+  - Debug Mode (ON/OFF toggle)
+  - Interactive Debugger (ON/OFF toggle)
+  - GDB Server (ON/OFF toggle)
+  - GDB Server Port (cycles through common ports: 1234, 2345, 3456, 4567, 5678)
+  - File Logging (ON/OFF toggle)
+  - Real-time value updates on toggle
 
 - **Help Screen**: Keyboard shortcuts reference
   - Complete list of navigation controls
   - Context-specific help for each screen
   - Quick reference for all features
+  - Updated with Add Game and Settings toggle instructions
 
 - **Backend Services**: Complete CRUD operations with JSON persistence
   - Add, remove, and update games with full metadata
@@ -61,12 +72,13 @@ A terminal-based interface for Win32Emu, optimized for 80-column terminals and m
   - Immediate view switching on selection
   - State-driven UI updates
   - Responsive navigation
+  - Live settings value updates
 
 ### 🚧 Future Enhancements
 
-- **Add Game Form**: Multi-field input form for adding new games
-- **Toggle Switches**: Interactive settings controls (planned for v0.4.0)
+- **Text Input Fields**: Actual text entry for Add Game form (currently display-only)
 - **Game Launch**: Direct game launching from TUI (requires EmulatorLauncher integration)
+- **Game Removal**: Delete games from library
 - **Search/Filter**: Find games quickly in large libraries
 - **Themes**: Customizable color schemes
 
@@ -92,7 +104,7 @@ Or after building:
 
 ### Navigation
 - **↑/↓**: Navigate lists
-- **Enter**: Select/Activate item
+- **Enter**: Select/Activate/Toggle item
 - **ESC**: Go back to previous screen
 - **Ctrl+C**: Exit application
 
@@ -100,21 +112,34 @@ Or after building:
 - Use arrow keys to navigate between options
 - Press Enter to select:
   - Game Library
+  - Add Game
   - Settings  
   - Help
   - Exit
 
 ### Game Library
-- **↑/↓**: Browse games
-- **Enter**: View game details
+- **↑/↓**: Browse games and options
+- **Enter**: View game details or select [Add New Game]
 - **ESC**: Return to main menu
+
+### Add Game
+- **↑/↓**: Navigate form fields
+- **Enter**: Edit field (display-only currently), or Save/Cancel
+- **ESC**: Cancel and return to main menu
+- **Note**: Text input functionality coming soon. Currently displays field structure.
 
 ### Game Details
 - **ESC**: Return to game library
 
 ### Settings
-- **↑/↓**: Navigate backend options
-- **Enter**: Select backend
+- **↑/↓**: Navigate settings
+- **Enter**: Toggle ON/OFF or cycle through values
+  - Backend: Cycles through SDL → GLFW → Vulkan → Metal → Software
+  - Debug Mode: Toggle ON/OFF
+  - Interactive Debugger: Toggle ON/OFF
+  - GDB Server: Toggle ON/OFF
+  - GDB Server Port: Cycles through 1234 → 2345 → 3456 → 4567 → 5678
+  - File Logging: Toggle ON/OFF
 - **ESC**: Return to main menu
 
 ## Architecture
@@ -171,20 +196,25 @@ Built with [Hex1b](https://hex1b.dev/) - a modern terminal UI framework for .NET
 - Configuration management system
 - EmulatorLauncher argument building
 - Interactive menu navigation with List widgets
-- Multi-view navigation (Main Menu, Game Library, Details, Settings, Help)
+- Multi-view navigation (Main Menu, Game Library, Add Game, Details, Settings, Help)
 - Game browser with selectable list
+- "[Add New Game]" option in game library
 - Game details display
-- Settings screen with backend selection
+- Add Game form with Save/Cancel functionality
+- Settings screen with interactive toggles
+- Toggle switches for all boolean settings
+- Backend cycling (SDL/GLFW/Vulkan/Metal/Software)
+- Port cycling for GDB server
 - Help screen with keyboard shortcuts
 - State-driven UI updates
 - 80-column terminal optimization
 
 ### In Progress 🚧
-- Add Game form with TextBox inputs
-- Toggle switches for boolean settings
-- Game launch functionality
+- Text input fields for Add Game form (currently display-only)
+- Game removal functionality
 
 ### Planned 📋
+- Game launch functionality
 - Search and filter functionality
 - Advanced configuration options
 - Theme customization
@@ -192,5 +222,5 @@ Built with [Hex1b](https://hex1b.dev/) - a modern terminal UI framework for .NET
 
 ## Current Version
 
-**v0.3.0** - Interactive UI complete with full navigation, game browsing, and settings management
+**v0.4.0** - Add Game form and interactive Settings toggles complete
 

@@ -32,7 +32,7 @@ internal class Program
 					// Main Menu
 					if (_state.CurrentView == ViewMode.MainMenu)
 					{
-						var menuItems = new[] { "📚 Game Library", "⚙️  Settings", "❓ Help", "🚪 Exit" };
+						var menuItems = new[] { "📚 Game Library", "➕ Add Game", "⚙️  Settings", "❓ Help", "🚪 Exit" };
 						return ctx.VStack(main => [
 							main.Border(
 								main.VStack(header => [
@@ -54,19 +54,83 @@ internal class Program
 										.OnItemActivated(e => {
 											_state.CurrentView = e.ActivatedIndex switch {
 												0 => ViewMode.GameLibrary,
-												1 => ViewMode.Settings,
-												2 => ViewMode.Help,
-												3 => ViewMode.MainMenu,
+												1 => ViewMode.AddGame,
+												2 => ViewMode.Settings,
+												3 => ViewMode.Help,
+												4 => ViewMode.MainMenu,
 												_ => ViewMode.MainMenu
 											};
-											if (e.ActivatedIndex == 3) Environment.Exit(0);
+											if (e.ActivatedIndex == 4) Environment.Exit(0);
+											if (e.ActivatedIndex == 1) _state.ResetNewGameEntry();
 										})
-										.FixedHeight(10),
+										.FixedHeight(11),
 									menu.Text("")
 								]),
 								title: "Main Menu"
 							).Fill(),
 							main.InfoBar(["↑↓", "Navigate", "Enter", "Select", "Ctrl+C", "Exit"])
+						]);
+					}
+					// Add Game
+					else if (_state.CurrentView == ViewMode.AddGame)
+					{
+						var fields = new[] {
+							$"Title: {_state.NewGameEntry.Title}",
+							$"Executable Path: {_state.NewGameEntry.ExecutablePath}",
+							$"Developer: {_state.NewGameEntry.Developer ?? "(optional)"}",
+							$"Publisher: {_state.NewGameEntry.Publisher ?? "(optional)"}",
+							$"Genre: {_state.NewGameEntry.Genre ?? "(optional)"}",
+							$"Release Year: {_state.NewGameEntry.ReleaseYear?.ToString() ?? "(optional)"}",
+							$"Description: {_state.NewGameEntry.Description ?? "(optional)"}",
+							"[Save Game]",
+							"[Cancel]"
+						};
+
+						return ctx.VStack(main => [
+							main.Border(
+								main.VStack(header => [
+									header.Text(""),
+									header.Text("  ╔════════════════════════════════════════════════════╗"),
+									header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
+									header.Text("  ╚════════════════════════════════════════════════════╝"),
+									header.Text("")
+								]),
+								title: "Welcome"
+							).FixedHeight(7),
+							main.Border(
+								main.VStack(content => [
+									content.Text(""),
+									content.Text("  Add New Game"),
+									content.Text("  Select a field to edit, then type and press Enter:"),
+									content.Text(""),
+									content.List(fields)
+										.OnItemActivated(e => {
+											if (e.ActivatedIndex == 7) // Save
+											{
+												if (!string.IsNullOrWhiteSpace(_state.NewGameEntry.Title) && 
+												    !string.IsNullOrWhiteSpace(_state.NewGameEntry.ExecutablePath))
+												{
+													_state.GameLibrary.AddGame(_state.NewGameEntry);
+													_state.ResetNewGameEntry();
+													_state.CurrentView = ViewMode.GameLibrary;
+												}
+											}
+											else if (e.ActivatedIndex == 8) // Cancel
+											{
+												_state.ResetNewGameEntry();
+												_state.CurrentView = ViewMode.MainMenu;
+											}
+											else
+											{
+												_state.AddGameFieldIndex = e.ActivatedIndex;
+											}
+										})
+										.FixedHeight(12),
+									content.Text("")
+								]),
+								title: "Add Game"
+							).Fill(),
+							main.InfoBar(["↑↓", "Navigate", "Enter", "Edit/Select", "ESC", "Cancel"])
 						]);
 					}
 					// Game Library
@@ -75,6 +139,7 @@ internal class Program
 						var games = _state.GameLibrary.Games;
 						if (games.Count == 0)
 						{
+							var emptyMenuItems = new[] { "[Add New Game]", "[Back to Main Menu]" };
 							return ctx.VStack(main => [
 								main.Border(
 									main.VStack(header => [
@@ -91,18 +156,33 @@ internal class Program
 										content.Text(""),
 										content.Text("  No games in library yet."),
 										content.Text(""),
-										content.Text("  Press ESC to return to main menu."),
+										content.Text("  Add your first game to get started!"),
+										content.Text(""),
+										content.List(emptyMenuItems)
+											.OnItemActivated(e => {
+												if (e.ActivatedIndex == 0)
+												{
+													_state.ResetNewGameEntry();
+													_state.CurrentView = ViewMode.AddGame;
+												}
+												else
+												{
+													_state.CurrentView = ViewMode.MainMenu;
+												}
+											})
+											.FixedHeight(4),
 										content.Text("")
 									]),
 									title: "Game Library"
 								).Fill(),
-								main.InfoBar(["ESC", "Back"])
+								main.InfoBar(["↑↓", "Navigate", "Enter", "Select", "ESC", "Back"])
 							]);
 						}
 						
-						var gameDisplayNames = games.Select(g => 
+						// Create a list with games + "Add New Game" option
+						var allItems = games.Select(g => 
 							$"{g.Title} ({g.ReleaseYear?.ToString() ?? "Unknown"})"
-						).ToArray();
+						).Append("[Add New Game]").ToArray();
 						
 						return ctx.VStack(main => [
 							main.Border(
@@ -120,17 +200,25 @@ internal class Program
 									content.Text(""),
 									content.Text($"  Total games: {games.Count}"),
 									content.Text(""),
-									content.List(gameDisplayNames)
+									content.List(allItems)
 										.OnItemActivated(e => {
-											_state.SelectedGame = games[e.ActivatedIndex];
-											_state.CurrentView = ViewMode.GameDetails;
+											if (e.ActivatedIndex == games.Count) // "Add New Game" option
+											{
+												_state.ResetNewGameEntry();
+												_state.CurrentView = ViewMode.AddGame;
+											}
+											else
+											{
+												_state.SelectedGame = games[e.ActivatedIndex];
+												_state.CurrentView = ViewMode.GameDetails;
+											}
 										})
-										.FixedHeight(12),
+										.FixedHeight(13),
 									content.Text("")
 								]),
 								title: "Game Library"
 							).Fill(),
-							main.InfoBar(["↑↓", "Navigate", "Enter", "Details", "ESC", "Back"])
+							main.InfoBar(["↑↓", "Navigate", "Enter", "Select", "ESC", "Back"])
 						]);
 					}
 					// Game Details
@@ -182,6 +270,15 @@ internal class Program
 						var config = _state.Configuration;
 						var backends = Enum.GetNames(typeof(Win32Emu.Rendering.BackendType));
 						
+						var settingsItems = new[] {
+							$"Backend: {config.DefaultBackend}",
+							$"Debug Mode: {(config.EnableDebugMode ? "ON" : "OFF")}",
+							$"Interactive Debugger: {(config.EnableInteractiveDebugger ? "ON" : "OFF")}",
+							$"GDB Server: {(config.EnableGdbServer ? "ON" : "OFF")}",
+							$"GDB Server Port: {config.GdbServerPort}",
+							$"File Logging: {(config.EnableFileLogging ? "ON" : "OFF")}"
+						};
+						
 						return ctx.VStack(main => [
 							main.Border(
 								main.VStack(header => [
@@ -196,25 +293,45 @@ internal class Program
 							main.Border(
 								main.VStack(content => [
 									content.Text(""),
-									content.Text("  Backend Settings:"),
+									content.Text("  Settings - Press Enter to toggle or change"),
 									content.Text(""),
-									content.Text($"  Current Backend: {config.DefaultBackend}"),
-									content.List(backends)
+									content.List(settingsItems)
 										.OnItemActivated(e => {
-											var backend = Enum.Parse<Win32Emu.Rendering.BackendType>(backends[e.ActivatedIndex]);
-											config.DefaultBackend = backend;
+											switch (e.ActivatedIndex)
+											{
+												case 0: // Backend - cycle through options
+													var currentBackendIndex = Array.IndexOf(backends, config.DefaultBackend.ToString());
+													var nextBackendIndex = (currentBackendIndex + 1) % backends.Length;
+													config.DefaultBackend = Enum.Parse<Win32Emu.Rendering.BackendType>(backends[nextBackendIndex]);
+													break;
+												case 1: // Debug Mode
+													config.EnableDebugMode = !config.EnableDebugMode;
+													break;
+												case 2: // Interactive Debugger
+													config.EnableInteractiveDebugger = !config.EnableInteractiveDebugger;
+													break;
+												case 3: // GDB Server
+													config.EnableGdbServer = !config.EnableGdbServer;
+													break;
+												case 4: // GDB Server Port - cycle through common ports
+													var ports = new[] { 1234, 2345, 3456, 4567, 5678 };
+													var currentPortIndex = Array.IndexOf(ports, config.GdbServerPort);
+													if (currentPortIndex == -1) currentPortIndex = 0;
+													config.GdbServerPort = ports[(currentPortIndex + 1) % ports.Length];
+													break;
+												case 5: // File Logging
+													config.EnableFileLogging = !config.EnableFileLogging;
+													break;
+											}
 										})
-										.FixedHeight(8),
+										.FixedHeight(10),
 									content.Text(""),
-									content.Text($"  Debug Mode: {(config.EnableDebugMode ? "ON" : "OFF")}"),
-									content.Text($"  Interactive Debugger: {(config.EnableInteractiveDebugger ? "ON" : "OFF")}"),
-									content.Text($"  GDB Server: {(config.EnableGdbServer ? "ON" : "OFF")} (Port: {config.GdbServerPort})"),
-									content.Text($"  File Logging: {(config.EnableFileLogging ? "ON" : "OFF")}"),
+									content.Text("  Use ↑↓ to navigate, Enter to toggle/change values"),
 									content.Text("")
 								]),
 								title: "Settings"
 							).Fill(),
-							main.InfoBar(["↑↓", "Navigate", "Enter", "Select", "ESC", "Back"])
+							main.InfoBar(["↑↓", "Navigate", "Enter", "Toggle", "ESC", "Back"])
 						]);
 					}
 					// Help
@@ -238,16 +355,22 @@ internal class Program
 									content.Text(""),
 									content.Text("  Navigation:"),
 									content.Text("    ↑/↓         Navigate lists"),
-									content.Text("    Enter       Select item"),
+									content.Text("    Enter       Select/Edit/Toggle"),
 									content.Text("    ESC         Go back"),
 									content.Text(""),
 									content.Text("  Main Menu:"),
-									content.Text("    Use arrow keys to navigate"),
-									content.Text("    Press Enter to select"),
+									content.Text("    Navigate and select: Library, Add Game, Settings, Help"),
 									content.Text(""),
 									content.Text("  Game Library:"),
-									content.Text("    Browse your game collection"),
-									content.Text("    Press Enter for game details"),
+									content.Text("    Select a game to view details"),
+									content.Text("    Select [Add New Game] to add games"),
+									content.Text(""),
+									content.Text("  Add Game:"),
+									content.Text("    Note: Fields are display-only (text input coming soon)"),
+									content.Text("    Select [Save Game] when done or [Cancel] to abort"),
+									content.Text(""),
+									content.Text("  Settings:"),
+									content.Text("    Press Enter to toggle ON/OFF or cycle values"),
 									content.Text(""),
 									content.Text("  General:"),
 									content.Text("    Ctrl+C      Exit application"),
