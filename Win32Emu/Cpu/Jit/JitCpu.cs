@@ -704,14 +704,9 @@ public class JitCpu : IAsyncCpu
 			else if (insn.Op0Kind == OpKind.FarBranch32)
 			{
 				// Far call: segment:offset32
-				// For Win16 NE executables in flat memory model, convert segment:offset to linear address
 				var selector = insn.FarBranchSelector;
 				var offset = insn.FarBranch32;
-				
-				// In Win16 NE loader, segments are mapped to linear addresses
-				// The selector value is typically the paragraph address (segment << 4)
-				// For now, treat the selector as a base address and add the offset
-				callTarget = ((uint)selector << 4) + offset;
+				callTarget = ConvertFarPointerToLinear(selector, offset);
 				
 				_logger.LogDebug("[JitCpu] Far call to segment:offset 0x{Selector:X4}:0x{Offset:X8} -> linear 0x{Target:X8}", 
 					selector, offset, callTarget);
@@ -721,9 +716,7 @@ public class JitCpu : IAsyncCpu
 				// Far call: segment:offset16
 				var selector = insn.FarBranchSelector;
 				var offset = insn.FarBranch16;
-				
-				// Convert to linear address (segment << 4) + offset for real mode
-				callTarget = ((uint)selector << 4) + offset;
+				callTarget = ConvertFarPointerToLinear(selector, offset);
 				
 				_logger.LogDebug("[JitCpu] Far call to segment:offset 0x{Selector:X4}:0x{Offset:X4} -> linear 0x{Target:X8}", 
 					selector, offset, callTarget);
@@ -3024,6 +3017,28 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Helper methods for operand access
+	
+	/// <summary>
+	/// Converts a far pointer (segment:offset) to a linear address.
+	/// For Win16 NE executables running in flat memory model, the NE loader maps segments
+	/// to linear addresses. The selector typically represents a paragraph address (base address / 16).
+	/// This method uses real-mode addressing formula: linear_address = (selector << 4) + offset.
+	/// 
+	/// Note: In true protected mode, selectors are indices into descriptor tables (GDT/LDT)
+	/// and would require looking up segment descriptors. However, Win16 NE executables
+	/// loaded by the emulator have their segments already mapped to flat linear addresses,
+	/// so the real-mode formula is appropriate for this context.
+	/// </summary>
+	/// <param name="selector">The segment selector (16-bit)</param>
+	/// <param name="offset">The offset within the segment</param>
+	/// <returns>Linear address in flat memory space</returns>
+	private static uint ConvertFarPointerToLinear(ushort selector, uint offset)
+	{
+		// Real-mode addressing: linear = (segment << 4) + offset
+		// This works for Win16 NE executables where segments are pre-mapped to linear addresses
+		return ((uint)selector << 4) + offset;
+	}
+	
 	private uint GetOperandValue(Instruction insn, int operandIndex)
 	{
 		var opKind = operandIndex switch
