@@ -141,6 +141,31 @@ public class Win16ThunkingTests
 	}
 
 	[Fact]
+	public void Win16ShellModule_ShellAbout_ForwardsToShell32()
+	{
+		// Arrange
+		var vm = new VirtualMemory(32 * 1024 * 1024);
+		var cpu = new JitCpu(vm);
+		var env = new ProcessEnvironment(vm, heapBase: 0x01000000);
+		var shell32 = new Shell32Module(env, 0x10000000, null, NullLogger.Instance);
+		var win16Shell = new Win16ShellModule(shell32, NullLogger.Instance);
+
+		// Set up stack with parameters for ShellAbout
+		var esp = 0x00100000u;
+		cpu.SetRegister("ESP", esp);
+		vm.Write32(esp, 0); // hwnd
+		vm.Write32(esp + 4, 0); // app name
+		vm.Write32(esp + 8, 0); // other stuff
+		vm.Write32(esp + 12, 0); // icon
+
+		// Act
+		var result = win16Shell.TryInvokeUnsafe("SHELLABOUT", cpu, vm, out var returnValue);
+
+		// Assert
+		Assert.True(result, "Win16 SHELL.SHELLABOUT should be handled");
+	}
+
+	[Fact]
 	public void Win16KernelModule_UnknownFunction_ReturnsFalse()
 	{
 		// Arrange
@@ -168,6 +193,7 @@ public class Win16ThunkingTests
 		var user32 = new User32Module(env, 0x10000000, null, NullLogger.Instance);
 		var gdi32 = new Gdi32Module(env, 0x10000000, null, NullLogger.Instance);
 		var winmm = new WinMmModule(env, 0x10000000, null, NullLogger.Instance);
+		var shell32 = new Shell32Module(env, 0x10000000, null, NullLogger.Instance);
 
 		// Act
 		var win16Kernel = new Win16KernelModule(kernel32, NullLogger.Instance);
@@ -176,6 +202,7 @@ public class Win16ThunkingTests
 		var win16Keyboard = new Win16KeyboardModule(user32, NullLogger.Instance);
 		var win16System = new Win16SystemModule(kernel32, NullLogger.Instance);
 		var win16Sound = new Win16SoundModule(winmm, NullLogger.Instance);
+		var win16Shell = new Win16ShellModule(shell32, NullLogger.Instance);
 
 		// Assert
 		Assert.Equal("KERNEL", win16Kernel.Name);
@@ -184,5 +211,6 @@ public class Win16ThunkingTests
 		Assert.Equal("KEYBOARD", win16Keyboard.Name);
 		Assert.Equal("SYSTEM", win16System.Name);
 		Assert.Equal("SOUND", win16Sound.Name);
+		Assert.Equal("SHELL", win16Shell.Name);
 	}
 }

@@ -188,13 +188,13 @@ internal class Win16ShellModule : Win16ThunkingLayer, IWin32ModuleAsync
 	{
 		functionName = ordinal switch
 		{
-			"1" => "RegOpenKey",
-			"2" => "RegCreateKey",
-			"3" => "RegCloseKey",
-			"4" => "RegDeleteKey",
-			"5" => "RegSetValue",
-			"6" => "RegQueryValue",
-			"7" => "RegEnumKey",
+			"1" => "RegOpenKeyStr",
+			"2" => "RegCreateKeyStr",
+			"3" => "RegCloseKeyStr",
+			"4" => "RegDeleteKeyStr",
+			"5" => "RegSetValueStr",
+			"6" => "RegQueryValueStr",
+			"7" => "RegEnumKeyStr",
 			"8" => "WinHelp",
 			"9" => "DoEnvironmentSubst",
 			"10" => "FindExecutable",
@@ -230,9 +230,11 @@ internal class Win16ShellModule : Win16ThunkingLayer, IWin32ModuleAsync
 			case "SHELLEXECUTEA":
 			case "SHELLEXECUTEEX":
 			case "SHELLEXECUTEEXA":
+			case "DRAGACCEPTFILES":
 			case "DRAGFINISH":
 			case "DRAGQUERYFILE":
 			case "DRAGQUERYFILEA":
+			case "DRAGQUERYPOINT":
 			case "EXTRACTICON":
 			case "EXTRACTICONA":
 			case "SHBROWSEFORFOLDER":
