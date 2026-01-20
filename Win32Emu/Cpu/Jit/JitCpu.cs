@@ -691,6 +691,7 @@ public class JitCpu : IAsyncCpu
 		}
 		
 		var isCall = insn.Mnemonic == Mnemonic.Call;
+		var isFarCall = false; // Track if this is a far call (requires pushing CS + EIP)
 		var isSyscall = false;
 		var isDosInterrupt = false;
 		uint callTarget = 0;
@@ -704,6 +705,7 @@ public class JitCpu : IAsyncCpu
 			else if (insn.Op0Kind == OpKind.FarBranch32)
 			{
 				// Far call: segment:offset32
+				isFarCall = true;
 				var selector = insn.FarBranchSelector;
 				var offset = insn.FarBranch32;
 				callTarget = ConvertFarPointerToLinear(selector, offset);
@@ -714,6 +716,7 @@ public class JitCpu : IAsyncCpu
 			else if (insn.Op0Kind == OpKind.FarBranch16)
 			{
 				// Far call: segment:offset16
+				isFarCall = true;
 				var selector = insn.FarBranchSelector;
 				var offset = insn.FarBranch16;
 				callTarget = ConvertFarPointerToLinear(selector, offset);
@@ -789,8 +792,22 @@ public class JitCpu : IAsyncCpu
 				_eip = oldEip + (uint)insn.Length;
 				break;
 			case Mnemonic.Call:
-				_esp -= 4;
-				mem.Write32(_esp, _eip);
+				// Far calls push both CS and EIP, near calls push only EIP
+				if (isFarCall)
+				{
+					// Far call: push CS, then push EIP
+					_esp -= 4;
+					mem.Write32(_esp, _cs); // Push current CS (code segment)
+					_esp -= 4;
+					mem.Write32(_esp, _eip); // Push return address (EIP)
+				}
+				else
+				{
+					// Near call: push only EIP
+					_esp -= 4;
+					mem.Write32(_esp, _eip);
+				}
+				
 				if (insn.Op0Kind == OpKind.NearBranch32 || insn.Op0Kind == OpKind.FarBranch32 || 
 				    insn.Op0Kind == OpKind.FarBranch16 || insn.Op0Kind == OpKind.Register || 
 				    insn.Op0Kind == OpKind.Memory)
