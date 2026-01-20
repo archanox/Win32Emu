@@ -82,4 +82,36 @@ internal abstract class Win16ThunkingLayer
 	{
 		Logger.LogDebug("[Win16 Thunk] {Export}{Details}", export, string.IsNullOrEmpty(details) ? "" : $" - {details}");
 	}
+
+	/// <summary>
+	/// Try to resolve an ordinal export to a function name.
+	/// Subclasses should override this to provide module-specific ordinal mappings.
+	/// </summary>
+	/// <param name="ordinal">The ordinal number as a string</param>
+	/// <param name="functionName">The resolved function name, if found</param>
+	/// <returns>True if the ordinal was resolved, false otherwise</returns>
+	protected virtual bool TryResolveOrdinal(string ordinal, out string functionName)
+	{
+		functionName = ordinal;
+		return false;
+	}
+
+	/// <summary>
+	/// Normalize the export name for lookup.
+	/// If the export is an ordinal, try to resolve it to a function name.
+	/// </summary>
+	protected string NormalizeExport(string export)
+	{
+		// Check if the export is an ordinal (numeric string)
+		if (uint.TryParse(export, out _))
+		{
+			if (TryResolveOrdinal(export, out var functionName))
+			{
+				Logger.LogDebug("[Win16 Thunk] Resolved ordinal {Ordinal} to {FunctionName}", export, functionName);
+				return functionName.ToUpperInvariant();
+			}
+			Logger.LogDebug("[Win16 Thunk] Unknown ordinal: {Ordinal}", export);
+		}
+		return export.ToUpperInvariant();
+	}
 }

@@ -37,7 +37,7 @@ internal class Win16GdiModule : Win16ThunkingLayer, IWin32ModuleAsync
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		var exportUpper = export.ToUpperInvariant();
+		var exportUpper = NormalizeExport(export);
 
 		// For most Win16 GDI functions, we can forward directly to the Win32 equivalent
 		// Handle parameters are typically compatible (16-bit handles work as 32-bit)

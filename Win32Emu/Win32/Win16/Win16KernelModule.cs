@@ -36,7 +36,7 @@ internal class Win16KernelModule : Win16ThunkingLayer, IWin32ModuleAsync
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		var exportUpper = export.ToUpperInvariant();
+		var exportUpper = NormalizeExport(export);
 
 		// For most Win16 KERNEL functions, we can forward directly to the Win32 equivalent
 		// as parameter sizes are often compatible or handled by the Win32 implementation
