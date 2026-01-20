@@ -15,11 +15,12 @@ public class AppState
 	// Current view state
 	public ViewMode CurrentView { get; set; } = ViewMode.MainMenu;
 	public int SelectedGameIndex { get; set; } = 0;
-	public int SelectedMenuIndex { get; set; } = 0;
-	
-	// Debug state
-	public bool IsInDebugMode { get; set; } = false;
-	public string? CurrentExecutablePath { get; set; }
+	public string NewGameTitle { get; set; } = string.Empty;
+	public string NewGamePath { get; set; } = string.Empty;
+	public string NewGameDeveloper { get; set; } = string.Empty;
+	public string NewGamePublisher { get; set; } = string.Empty;
+	public string NewGameGenre { get; set; } = string.Empty;
+	public string NewGameYear { get; set; } = string.Empty;
 
 	public AppState(GameLibraryService gameLibrary, ConfigurationService configuration, ILogger logger)
 	{
@@ -36,9 +37,8 @@ public enum ViewMode
 {
 	MainMenu,
 	GameLibrary,
-	GameDetails,
-	Settings,
 	AddGame,
+	Settings,
 	Help,
 	Debugger
 }

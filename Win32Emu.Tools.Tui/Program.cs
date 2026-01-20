@@ -1,19 +1,28 @@
+using Hex1b;
+using Hex1b.Widgets;
 using Microsoft.Extensions.Logging;
-using Spectre.Console;
 using Win32Emu.Tools.Tui.Models;
+using Win32Emu.Tools.Tui.Screens;
 using Win32Emu.Tools.Tui.Services;
-using Win32Emu.Tools.Tui.UI;
 
 namespace Win32Emu.Tools.Tui;
 
 /// <summary>
-/// TUI application entry point using Spectre.Console framework
+/// TUI application entry point using Hex1b framework
 /// Provides terminal-based interface for Win32Emu with 80-column mode support
 /// </summary>
 internal class Program
 {
 	private static async Task<int> Main(string[] args)
 	{
+		// Create cancellation token for clean shutdown
+		using var cts = new CancellationTokenSource();
+		Console.CancelKeyPress += (_, e) =>
+		{
+			e.Cancel = true;
+			cts.Cancel();
+		};
+
 		// Create logger factory
 		using var loggerFactory = LoggerFactory.Create(builder =>
 		{
@@ -35,16 +44,20 @@ internal class Program
 			// Create app state
 			var appState = new AppState(gameLibrary, configService, logger);
 
-			// Create and run the main UI
-			var mainMenu = new MainMenuScreen(appState);
-			await mainMenu.RunAsync();
+			// Create and run the Hex1b app
+			using var app = new Hex1bApp(async ctx =>
+			{
+				return await Task.FromResult(ScreenBuilder.BuildScreen(ctx, appState, cts));
+			});
+			
+			logger.LogInformation("Starting Win32Emu TUI - Press Ctrl+C to exit");
+			await app.RunAsync(cts.Token);
 			
 			return 0;
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Fatal error in TUI application");
-			AnsiConsole.MarkupLine("[red]Error: {0}[/]", ex.Message);
 			return 1;
 		}
 	}
