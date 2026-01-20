@@ -21,24 +21,6 @@ A Windows executable emulator for running classic Windows games and applications
 
 ## Components
 
-### Win32Emu.Tools.Tui
-Terminal User Interface (TUI) for Win32Emu, built with Spectre.Console. Perfect for SSH access from mobile devices.
-
-**Features:**
-- Game library management
-- Interactive debugger integration  
-- Settings configuration
-- 80-column mode for mobile SSH
-- Keyboard-driven navigation
-
-**Usage:**
-```bash
-# Run the TUI
-dotnet run --project Win32Emu.Tools.Tui
-```
-
-See [Win32Emu.Tools.Tui/README.md](Win32Emu.Tools.Tui/README.md) and [Win32Emu.Tools.Tui/USAGE_GUIDE.md](Win32Emu.Tools.Tui/USAGE_GUIDE.md) for more details.
-
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
 

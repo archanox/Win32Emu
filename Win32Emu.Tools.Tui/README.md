@@ -7,7 +7,7 @@ Terminal User Interface (TUI) for Win32Emu, built with [Hex1b](https://hex1b.dev
 - **80-Column Mode**: Optimized for SSH access from mobile devices
 - **Game Library Management**: Browse, add, and organize your Windows game collection
 - **Interactive Debugger Integration**: Launch games with built-in step-through debugging
-- **Keyboard-Driven Navigation**: Efficient terminal-based interface
+- **Keyboard-Driven Navigation**: Efficient terminal-based interface using Hex1b
 - **Configuration Management**: Configure emulator settings (backends, debug modes, etc.)
 - **Play Statistics**: Track play count and last played date for each game
 
@@ -34,11 +34,11 @@ Or after building:
 
 ### Navigation
 
-- **↑/↓ Arrows**: Navigate menus and lists
+- **Arrow Keys**: Navigate menus and lists
 - **Enter**: Select item or confirm action
 - **ESC**: Go back to previous screen
 - **Q**: Quit application (from main menu)
-- **Tab**: Next field (when adding games)
+- **Tab**: Move between form fields
 
 ### Main Menu Options
 
@@ -61,7 +61,6 @@ Each game entry includes:
 - Developer, Publisher, Genre (optional)
 - Release year (optional)
 - Play statistics (play count, last played)
-- Custom emulator settings per game
 
 ## Settings
 
@@ -82,15 +81,12 @@ Launch games in debug mode to:
 - View call stack
 - Pause and resume execution
 
-See the [Interactive Debugger Guide](../../docs/guides/INTERACTIVE_DEBUGGER_GUIDE.md) for detailed commands.
-
 ## 80-Column Mode
 
 The TUI is designed to fit within 80 columns, making it perfect for:
 - SSH access from mobile devices
 - Small terminal windows
 - Traditional terminal constraints
-- Screen readers and accessibility tools
 
 All text is automatically truncated or wrapped to fit the 80-column width.
 
@@ -98,35 +94,11 @@ All text is automatically truncated or wrapped to fit the 80-column width.
 
 - .NET 10.0 or later
 - Terminal with ANSI escape sequence support
-- For best experience: Color terminal with 80+ columns and 24+ rows
+- Hex1b 0.20.0
 
-## Examples
+## Technology
 
-### Adding a Game
-
-1. Select "Add Game" from main menu
-2. Enter game title (required)
-3. Enter executable path (required)
-4. Optionally enter developer, publisher, genre, and release year
-5. Press Enter to save
-
-### Launching a Game
-
-1. Select "Game Library" from main menu
-2. Use ↑/↓ to select a game
-3. Press Enter to view details
-4. Press Enter again to launch
-
-### Using the Debugger
-
-1. Select "Interactive Debugger" from main menu
-2. Enter the executable path
-3. Press Enter to launch
-4. Use debugger commands (type 'help' for list)
-
-## Architecture
-
-The TUI is built using:
+Built with:
 - **Hex1b**: Modern declarative TUI framework for .NET
 - **EmulatorLauncher**: Public API for running the emulator
 - **MVVM Pattern**: Separation of UI and business logic
