@@ -1,8 +1,5 @@
 using Hex1b;
-using Hex1b.Widgets;
 using Microsoft.Extensions.Logging;
-using Win32Emu.Tools.Tui.Models;
-using Win32Emu.Tools.Tui.Screens;
 using Win32Emu.Tools.Tui.Services;
 
 namespace Win32Emu.Tools.Tui;
@@ -15,14 +12,6 @@ internal class Program
 {
 	private static async Task<int> Main(string[] args)
 	{
-		// Create cancellation token for clean shutdown
-		using var cts = new CancellationTokenSource();
-		Console.CancelKeyPress += (_, e) =>
-		{
-			e.Cancel = true;
-			cts.Cancel();
-		};
-
 		// Create logger factory
 		using var loggerFactory = LoggerFactory.Create(builder =>
 		{
@@ -44,14 +33,15 @@ internal class Program
 			// Create app state
 			var appState = new AppState(gameLibrary, configService, logger);
 
-			// Create and run the Hex1b app
-			using var app = new Hex1bApp(async ctx =>
-			{
-				return await Task.FromResult(ScreenBuilder.BuildScreen(ctx, appState, cts));
-			});
-			
 			logger.LogInformation("Starting Win32Emu TUI - Press Ctrl+C to exit");
-			await app.RunAsync(cts.Token);
+			
+			// Create and run the Hex1b terminal with app
+			await using var terminal = Hex1bTerminal.CreateBuilder()
+				.WithHex1bApp((app, options) => ctx => ScreenBuilder.BuildScreen(ctx, appState))
+				.WithMouse()
+				.Build();
+
+			await terminal.RunAsync();
 			
 			return 0;
 		}
