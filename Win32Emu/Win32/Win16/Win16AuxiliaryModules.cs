@@ -31,7 +31,7 @@ internal class Win16KeyboardModule : Win16ThunkingLayer, IWin32ModuleAsync
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		var exportUpper = export.ToUpperInvariant();
+		var exportUpper = NormalizeExport(export);
 
 		switch (exportUpper)
 		{
@@ -82,7 +82,7 @@ internal class Win16SystemModule : Win16ThunkingLayer, IWin32ModuleAsync
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		var exportUpper = export.ToUpperInvariant();
+		var exportUpper = NormalizeExport(export);
 
 		switch (exportUpper)
 		{
@@ -132,7 +132,7 @@ internal class Win16SoundModule : Win16ThunkingLayer, IWin32ModuleAsync
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		var exportUpper = export.ToUpperInvariant();
+		var exportUpper = NormalizeExport(export);
 
 		switch (exportUpper)
 		{
@@ -180,10 +180,45 @@ internal class Win16ShellModule : Win16ThunkingLayer, IWin32ModuleAsync
 		return await Task.FromResult((success, returnValue));
 	}
 
+	/// <summary>
+	/// Resolve Win16 SHELL ordinals to function names.
+	/// Based on Windows 3.1 SHELL.DLL export ordinals.
+	/// </summary>
+	protected override bool TryResolveOrdinal(string ordinal, out string functionName)
+	{
+		functionName = ordinal switch
+		{
+			"1" => "RegOpenKey",
+			"2" => "RegCreateKey",
+			"3" => "RegCloseKey",
+			"4" => "RegDeleteKey",
+			"5" => "RegSetValue",
+			"6" => "RegQueryValue",
+			"7" => "RegEnumKey",
+			"8" => "WinHelp",
+			"9" => "DoEnvironmentSubst",
+			"10" => "FindExecutable",
+			"11" => "ShellAbout",
+			"12" => "ShellExecute",
+			"13" => "ExtractIcon",
+			"14" => "DragAcceptFiles",
+			"15" => "DragQueryFile",
+			"16" => "DragFinish",
+			"17" => "DragQueryPoint",
+			"18" => "ExtractAssociatedIcon",
+			"19" => "ShellHookProc",
+			"20" => "ShellExecuteEx",
+			"21" => "InternalExtractIconList",
+			"22" => "AboutDlgProc",
+			_ => ordinal
+		};
+		return functionName != ordinal;
+	}
+
 	public override bool TryInvokeWin16(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 	{
 		returnValue = 0;
-		var exportUpper = export.ToUpperInvariant();
+		var exportUpper = NormalizeExport(export);
 
 		switch (exportUpper)
 		{
@@ -228,6 +263,26 @@ internal class Win16ShellModule : Win16ThunkingLayer, IWin32ModuleAsync
 				};
 				LogWin16Call(export, $"forwarding to SHELL32 as {mappedExport}");
 				return Win32Module.TryInvokeUnsafe(mappedExport, cpu, memory, out returnValue);
+			
+			// Win16-specific functions that don't have Win32 equivalents
+			case "ABOUTDLGPROC":
+			case "REGOPENKEYSTR":
+			case "REGCREATEKEYSTR":
+			case "REGCLOSEKEYSTR":
+			case "REGDELETEKEYSTR":
+			case "REGSETVALUESTR":
+			case "REGQUERYVALUESTR":
+			case "REGENUMKEYSTR":
+			case "DOENVIRONMENTSUBST":
+			case "FINDEXECUTABLE":
+			case "EXTRACTASSOCIATEDICON":
+			case "SHELLHOOKPROC":
+			case "INTERNALEXTRACTICONLIST":
+			case "WINHELP":
+				// These are Win16-specific functions that may need special handling
+				// For now, log as unimplemented
+				Logger.LogWarning("[Win16 Thunk] Unimplemented Win16 SHELL function: {Export}", export);
+				return false;
 
 			default:
 				Logger.LogWarning("[Win16 Thunk] Unknown Win16 SHELL function: {Export}", export);
