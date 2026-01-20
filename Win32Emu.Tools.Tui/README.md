@@ -4,7 +4,7 @@ A terminal-based interface for Win32Emu, optimized for 80-column terminals and m
 
 ## Features
 
-### ✅ Backend Services Implemented
+### ✅ Backend Services Implemented (v0.2.0)
 
 - **Game Library Service**: Complete CRUD operations with JSON persistence
   - Add, remove, and update games with full metadata
@@ -30,18 +30,22 @@ A terminal-based interface for Win32Emu, optimized for 80-column terminals and m
   - Clean, bordered layout with info bars
   - Cross-platform support (Windows, Linux, macOS)
 
-### 🔨 In Development
+### 🚧 Next Phase: Interactive UI
 
-- **Interactive Menu Navigation**: Arrow key navigation with visual selection
+The following features are planned for future development:
+
+- **Interactive Menu Navigation**: Arrow key navigation with visual selection (using Hex1b List widgets)
 - **Game Browser UI**: Interactive list of games with launch capability
-- **Add Game Form**: Input fields for adding new games
-- **Settings Screen**: Toggle switches for configuration options
-- **Keyboard Shortcuts**: Quick actions for power users
-- **Real-time Updates**: Dynamic screen refreshing
+- **Add Game Form**: Multi-field input form for adding new games
+- **Settings Screen**: Toggle switches and dropdown menus for configuration
+- **Keyboard Shortcuts**: Quick actions for power users (A for Add, L for Launch, D for Delete, etc.)
+- **Real-time Updates**: Dynamic screen refreshing based on state changes
+
+**Technical Note**: Interactive features require careful integration with Hex1b 0.47.0's widget API. The current implementation provides a solid foundation with fully functional backend services that are ready to be connected to interactive UI components.
 
 ### Current Status
 
-**v0.2.0** - This version provides a **static display** showing the architecture and backend services. The service layer (GameLibraryService, ConfigurationService) is fully implemented and ready to be wired to interactive UI components. Interactive navigation is planned for the next update.
+**v0.2.0** - This version provides a **static information display** showcasing the backend service architecture. The service layer (GameLibraryService, ConfigurationService) is fully implemented, tested, and ready for UI integration. The next development phase will focus on adding interactive navigation using Hex1b's List, TextBox, Button, and ToggleSwitch widgets.
 
 ## Installation
 
@@ -93,14 +97,37 @@ Or after building:
 
 - .NET 10.0 or later
 - Terminal with Unicode support
-- Interactive TTY (for navigation features)
+- Interactive TTY (for future navigation features)
 - Minimum 80 columns width recommended
 
 ## Technology
 
 Built with [Hex1b](https://hex1b.dev/) - a modern terminal UI framework for .NET.
 
+## Development Roadmap
+
+### Completed ✅
+- Backend service architecture
+- JSON persistence for game library
+- Configuration management system
+- EmulatorLauncher argument building
+- Static information display
+- 80-column terminal optimization
+
+### In Progress 🚧
+- Interactive widget integration
+- State-driven UI updates
+- Keyboard event handling
+- Form input validation
+
+### Planned 📋
+- Game launch from TUI
+- Search and filter functionality
+- Advanced configuration options
+- Theme customization
+- Multi-language support
+
 ## Current Version
 
-**v0.2.0** - Interactive features implemented, navigation coming soon
+**v0.2.0** - Backend services complete, interactive UI layer in development
 
