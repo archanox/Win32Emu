@@ -701,6 +701,33 @@ public class JitCpu : IAsyncCpu
 			{
 				callTarget = (uint)insn.NearBranch32;
 			}
+			else if (insn.Op0Kind == OpKind.FarBranch32)
+			{
+				// Far call: segment:offset32
+				// For Win16 NE executables in flat memory model, convert segment:offset to linear address
+				var selector = insn.FarBranchSelector;
+				var offset = insn.FarBranch32;
+				
+				// In Win16 NE loader, segments are mapped to linear addresses
+				// The selector value is typically the paragraph address (segment << 4)
+				// For now, treat the selector as a base address and add the offset
+				callTarget = ((uint)selector << 4) + offset;
+				
+				_logger.LogDebug("[JitCpu] Far call to segment:offset 0x{Selector:X4}:0x{Offset:X8} -> linear 0x{Target:X8}", 
+					selector, offset, callTarget);
+			}
+			else if (insn.Op0Kind == OpKind.FarBranch16)
+			{
+				// Far call: segment:offset16
+				var selector = insn.FarBranchSelector;
+				var offset = insn.FarBranch16;
+				
+				// Convert to linear address (segment << 4) + offset for real mode
+				callTarget = ((uint)selector << 4) + offset;
+				
+				_logger.LogDebug("[JitCpu] Far call to segment:offset 0x{Selector:X4}:0x{Offset:X4} -> linear 0x{Target:X8}", 
+					selector, offset, callTarget);
+			}
 			else if (insn.Op0Kind == OpKind.Register)
 			{
 				callTarget = GetRegisterValue(insn, 0);
@@ -771,7 +798,9 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Call:
 				_esp -= 4;
 				mem.Write32(_esp, _eip);
-				if (insn.Op0Kind == OpKind.NearBranch32 || insn.Op0Kind == OpKind.Register || insn.Op0Kind == OpKind.Memory)
+				if (insn.Op0Kind == OpKind.NearBranch32 || insn.Op0Kind == OpKind.FarBranch32 || 
+				    insn.Op0Kind == OpKind.FarBranch16 || insn.Op0Kind == OpKind.Register || 
+				    insn.Op0Kind == OpKind.Memory)
 				{
 					_eip = callTarget;
 				}

@@ -1405,17 +1405,22 @@ public sealed class Emulator : IDisposable
                         continue;
                     }
                     
+                    // Get file size by seeking to end
+                    var currentPos = handle.Position;
+                    var fileSize = handle.Seek(0, SeekOrigin.End);
+                    handle.Seek(currentPos, SeekOrigin.Begin); // Restore position
+                    
                     // Validate file size before reading (NE DLLs should be < 10MB typically)
                     const long MAX_DLL_SIZE = 10 * 1024 * 1024; // 10MB
-                    if (handle.Length > MAX_DLL_SIZE)
+                    if (fileSize > MAX_DLL_SIZE)
                     {
                         _logger.LogError("[Loader] DLL file too large: {Path} ({Size} bytes, max {Max} bytes)", 
-                            dllPath, handle.Length, MAX_DLL_SIZE);
+                            dllPath, fileSize, MAX_DLL_SIZE);
                         continue;
                     }
                     
                     // Read entire file into memory (safe after size validation)
-                    var dllBytes = new byte[handle.Length];
+                    var dllBytes = new byte[fileSize];
                     var bytesRead = handle.Read(dllBytes, 0, dllBytes.Length);
                     if (bytesRead != dllBytes.Length)
                     {
