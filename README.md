@@ -21,6 +21,23 @@ A Windows executable emulator for running classic Windows games and applications
 
 ## Components
 
+### Win32Emu.Tools.Tui
+Terminal User Interface (TUI) for Win32Emu, optimized for SSH access and mobile terminals.
+
+**Features:**
+- 80-column optimized layout for mobile SSH clients
+- Game library management
+- Interactive debugger integration
+- Configuration management
+- Works in terminal environments
+
+**Usage:**
+```bash
+dotnet run --project Win32Emu.Tools.Tui
+```
+
+See [Win32Emu.Tools.Tui/README.md](Win32Emu.Tools.Tui/README.md) for more details.
+
 ### Win32Emu.Gui
 Cross-platform desktop GUI for managing your game library and emulator settings. Built with Avalonia UI.
 
