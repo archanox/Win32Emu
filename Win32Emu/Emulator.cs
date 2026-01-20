@@ -1375,7 +1375,10 @@ public sealed class Emulator : IDisposable
                 }
                 
                 // Try to find the DLL file in the VFS
-                var dllFileName = normalizedName.EndsWith(".DLL") ? normalizedName : normalizedName + ".DLL";
+                // Ensure the module name has .DLL extension for consistency
+                var dllFileName = normalizedName.EndsWith(".DLL", StringComparison.OrdinalIgnoreCase) 
+                    ? normalizedName 
+                    : normalizedName + ".DLL";
                 var dllPath = Path.Combine(executableDir, dllFileName);
                 
                 // Normalize path for VFS (use Windows-style backslashes)
@@ -1402,7 +1405,16 @@ public sealed class Emulator : IDisposable
                         continue;
                     }
                     
-                    // Read entire file into memory
+                    // Validate file size before reading (NE DLLs should be < 10MB typically)
+                    const long MAX_DLL_SIZE = 10 * 1024 * 1024; // 10MB
+                    if (handle.Length > MAX_DLL_SIZE)
+                    {
+                        _logger.LogError("[Loader] DLL file too large: {Path} ({Size} bytes, max {Max} bytes)", 
+                            dllPath, handle.Length, MAX_DLL_SIZE);
+                        continue;
+                    }
+                    
+                    // Read entire file into memory (safe after size validation)
                     var dllBytes = new byte[handle.Length];
                     var bytesRead = handle.Read(dllBytes, 0, dllBytes.Length);
                     if (bytesRead != dllBytes.Length)
@@ -1426,9 +1438,17 @@ public sealed class Emulator : IDisposable
                     _logger.LogInformation("[Loader] Loaded NE DLL: {Module} at base 0x{Base:X8}, exports: {Exports}",
                         moduleName, dllImage.BaseAddress, dllImage.ExportsByName.Count);
                     
-                    // Register the loaded DLL with the environment so its exports can be resolved
+                    // Register the loaded DLL with both the original module name and the .DLL version
+                    // This ensures lookups work regardless of which format is used
                     _env.RegisterLoadedImage(dllFileName, dllImage);
                     _dispatcher.RegisterDynamicallyLoadedDll(dllFileName);
+                    
+                    // Also register with original module name if different (for compatibility)
+                    if (!string.Equals(moduleName, dllFileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        _env.RegisterLoadedImage(moduleName, dllImage);
+                        _dispatcher.RegisterDynamicallyLoadedDll(moduleName);
+                    }
                     
                     // Log exported functions for debugging
                     if (dllImage.ExportsByName.Count > 0)
