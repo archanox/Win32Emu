@@ -112,11 +112,28 @@ protected override bool TryResolveOrdinal(string ordinal, out string functionNam
 {
     functionName = ordinal switch
     {
+        "1" => "RegOpenKeyStr",
+        "2" => "RegCreateKeyStr",
+        "3" => "RegCloseKeyStr",
+        "4" => "RegDeleteKeyStr",
+        "5" => "RegSetValueStr",
+        "6" => "RegQueryValueStr",
+        "7" => "RegEnumKeyStr",
+        "8" => "WinHelp",
+        "9" => "DoEnvironmentSubst",
+        "10" => "FindExecutable",
         "11" => "ShellAbout",
         "12" => "ShellExecute",
         "13" => "ExtractIcon",
+        "14" => "DragAcceptFiles",
+        "15" => "DragQueryFile",
+        "16" => "DragFinish",
+        "17" => "DragQueryPoint",
+        "18" => "ExtractAssociatedIcon",
+        "19" => "ShellHookProc",
+        "20" => "ShellExecuteEx",
+        "21" => "InternalExtractIconList",
         "22" => "AboutDlgProc",  // The ordinal that winmine.exe imports
-        // ... 18 more ordinal mappings
         _ => ordinal
     };
     return functionName != ordinal;
