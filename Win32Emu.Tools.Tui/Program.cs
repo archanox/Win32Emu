@@ -7,7 +7,69 @@ namespace Win32Emu.Tools.Tui;
 
 internal class Program
 {
+	// UI Layout Constants
+	private const int HEADER_HEIGHT = 7;
+	private const int HEADER_HEIGHT_EXTENDED = 8;
+	private const int MAIN_MENU_HEIGHT = 11;
+	private const int ADD_GAME_FORM_HEIGHT = 12;
+	private const int GAME_LIBRARY_EMPTY_HEIGHT = 4;
+	private const int GAME_LIBRARY_LIST_HEIGHT = 13;
+	private const int SETTINGS_LIST_HEIGHT = 10;
+	
+	// Menu Item Indices
+	private const int MENU_GAME_LIBRARY = 0;
+	private const int MENU_ADD_GAME = 1;
+	private const int MENU_SETTINGS = 2;
+	private const int MENU_HELP = 3;
+	private const int MENU_EXIT = 4;
+	
+	// Add Game Form Indices
+	private const int FORM_FIELD_TITLE = 0;
+	private const int FORM_FIELD_PATH = 1;
+	private const int FORM_FIELD_DEVELOPER = 2;
+	private const int FORM_FIELD_PUBLISHER = 3;
+	private const int FORM_FIELD_GENRE = 4;
+	private const int FORM_FIELD_YEAR = 5;
+	private const int FORM_FIELD_DESCRIPTION = 6;
+	private const int FORM_BUTTON_SAVE = 7;
+	private const int FORM_BUTTON_CANCEL = 8;
+	
+	// Settings Menu Indices
+	private const int SETTING_BACKEND = 0;
+	private const int SETTING_DEBUG_MODE = 1;
+	private const int SETTING_INTERACTIVE_DEBUGGER = 2;
+	private const int SETTING_GDB_SERVER = 3;
+	private const int SETTING_GDB_PORT = 4;
+	private const int SETTING_FILE_LOGGING = 5;
+	
+	// Configuration Values
+	private static readonly Win32Emu.Rendering.BackendType[] AllowedBackends = [
+		Win32Emu.Rendering.BackendType.SDL,
+		Win32Emu.Rendering.BackendType.GLFW,
+		Win32Emu.Rendering.BackendType.Vulkan,
+		Win32Emu.Rendering.BackendType.Metal,
+		Win32Emu.Rendering.BackendType.Software
+	];
+	
+	private static readonly int[] GdbServerPorts = [1234, 2345, 3456, 4567, 5678];
+	
 	private static AppState? _state;
+	private static string? _errorMessage;
+
+	private static Hex1b.IWidget CreateHeaderBorder(Hex1b.IHex1bContext ctx, string title, bool extended = false)
+	{
+		return ctx.Border(
+			ctx.VStack(header => [
+				header.Text(""),
+				header.Text("  ╔════════════════════════════════════════════════════╗"),
+				header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
+				extended ? header.Text("  ║   Windows 32-bit PE Emulator                      ║") : null!,
+				header.Text("  ╚════════════════════════════════════════════════════╝"),
+				header.Text("")
+			].Where(w => w != null!)),
+			title: title
+		).FixedHeight(extended ? HEADER_HEIGHT_EXTENDED : HEADER_HEIGHT);
+	}
 
 	private static async Task<int> Main(string[] args)
 	{
@@ -34,17 +96,7 @@ internal class Program
 					{
 						var menuItems = new[] { "📚 Game Library", "➕ Add Game", "⚙️  Settings", "❓ Help", "🚪 Exit" };
 						return ctx.VStack(main => [
-							main.Border(
-								main.VStack(header => [
-									header.Text(""),
-									header.Text("  ╔════════════════════════════════════════════════════╗"),
-									header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-									header.Text("  ║   Windows 32-bit PE Emulator                      ║"),
-									header.Text("  ╚════════════════════════════════════════════════════╝"),
-									header.Text("")
-								]),
-								title: "Welcome"
-							).FixedHeight(8),
+							CreateHeaderBorder(ctx, "Welcome", extended: true),
 							main.Border(
 								main.VStack(menu => [
 									menu.Text(""),
@@ -53,17 +105,17 @@ internal class Program
 									menu.List(menuItems)
 										.OnItemActivated(e => {
 											_state.CurrentView = e.ActivatedIndex switch {
-												0 => ViewMode.GameLibrary,
-												1 => ViewMode.AddGame,
-												2 => ViewMode.Settings,
-												3 => ViewMode.Help,
-												4 => ViewMode.MainMenu,
+												MENU_GAME_LIBRARY => ViewMode.GameLibrary,
+												MENU_ADD_GAME => ViewMode.AddGame,
+												MENU_SETTINGS => ViewMode.Settings,
+												MENU_HELP => ViewMode.Help,
+												MENU_EXIT => ViewMode.MainMenu,
 												_ => ViewMode.MainMenu
 											};
-											if (e.ActivatedIndex == 4) Environment.Exit(0);
-											if (e.ActivatedIndex == 1) _state.ResetNewGameEntry();
+											if (e.ActivatedIndex == MENU_EXIT) Environment.Exit(0);
+											if (e.ActivatedIndex == MENU_ADD_GAME) _state.ResetNewGameEntry();
 										})
-										.FixedHeight(11),
+										.FixedHeight(MAIN_MENU_HEIGHT),
 									menu.Text("")
 								]),
 								title: "Main Menu"
@@ -87,35 +139,34 @@ internal class Program
 						};
 
 						return ctx.VStack(main => [
-							main.Border(
-								main.VStack(header => [
-									header.Text(""),
-									header.Text("  ╔════════════════════════════════════════════════════╗"),
-									header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-									header.Text("  ╚════════════════════════════════════════════════════╝"),
-									header.Text("")
-								]),
-								title: "Welcome"
-							).FixedHeight(7),
+							CreateHeaderBorder(ctx, "Welcome"),
 							main.Border(
 								main.VStack(content => [
 									content.Text(""),
 									content.Text("  Add New Game"),
 									content.Text("  Select a field to edit, then type and press Enter:"),
 									content.Text(""),
+									_errorMessage != null ? content.Text($"  ⚠️  {_errorMessage}") : null!,
+									_errorMessage != null ? content.Text("") : null!,
 									content.List(fields)
 										.OnItemActivated(e => {
-											if (e.ActivatedIndex == 7) // Save
+											_errorMessage = null; // Clear error on new action
+											if (e.ActivatedIndex == FORM_BUTTON_SAVE)
 											{
 												if (!string.IsNullOrWhiteSpace(_state.NewGameEntry.Title) && 
 												    !string.IsNullOrWhiteSpace(_state.NewGameEntry.ExecutablePath))
 												{
 													_state.GameLibrary.AddGame(_state.NewGameEntry);
+													_state.GameLibrary.SaveLibraryAsync().GetAwaiter().GetResult();
 													_state.ResetNewGameEntry();
 													_state.CurrentView = ViewMode.GameLibrary;
 												}
+												else
+												{
+													_errorMessage = "Title and Executable Path are required";
+												}
 											}
-											else if (e.ActivatedIndex == 8) // Cancel
+											else if (e.ActivatedIndex == FORM_BUTTON_CANCEL)
 											{
 												_state.ResetNewGameEntry();
 												_state.CurrentView = ViewMode.MainMenu;
@@ -125,9 +176,17 @@ internal class Program
 												_state.AddGameFieldIndex = e.ActivatedIndex;
 											}
 										})
-										.FixedHeight(12),
+										.OnKey(e => {
+											if (e.Key == Hex1b.Key.Escape)
+											{
+												_errorMessage = null;
+												_state.ResetNewGameEntry();
+												_state.CurrentView = ViewMode.MainMenu;
+											}
+										})
+										.FixedHeight(ADD_GAME_FORM_HEIGHT),
 									content.Text("")
-								]),
+								].Where(w => w != null!)),
 								title: "Add Game"
 							).Fill(),
 							main.InfoBar(["↑↓", "Navigate", "Enter", "Edit/Select", "ESC", "Cancel"])
@@ -141,16 +200,7 @@ internal class Program
 						{
 							var emptyMenuItems = new[] { "[Add New Game]", "[Back to Main Menu]" };
 							return ctx.VStack(main => [
-								main.Border(
-									main.VStack(header => [
-										header.Text(""),
-										header.Text("  ╔════════════════════════════════════════════════════╗"),
-										header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-										header.Text("  ╚════════════════════════════════════════════════════╝"),
-										header.Text("")
-									]),
-									title: "Welcome"
-								).FixedHeight(7),
+								CreateHeaderBorder(ctx, "Welcome"),
 								main.Border(
 									main.VStack(content => [
 										content.Text(""),
@@ -170,7 +220,13 @@ internal class Program
 													_state.CurrentView = ViewMode.MainMenu;
 												}
 											})
-											.FixedHeight(4),
+											.OnKey(e => {
+												if (e.Key == Hex1b.Key.Escape)
+												{
+													_state.CurrentView = ViewMode.MainMenu;
+												}
+											})
+											.FixedHeight(GAME_LIBRARY_EMPTY_HEIGHT),
 										content.Text("")
 									]),
 									title: "Game Library"
@@ -185,16 +241,7 @@ internal class Program
 						).Append("[Add New Game]").ToArray();
 						
 						return ctx.VStack(main => [
-							main.Border(
-								main.VStack(header => [
-									header.Text(""),
-									header.Text("  ╔════════════════════════════════════════════════════╗"),
-									header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-									header.Text("  ╚════════════════════════════════════════════════════╝"),
-									header.Text("")
-								]),
-								title: "Welcome"
-							).FixedHeight(7),
+							CreateHeaderBorder(ctx, "Welcome"),
 							main.Border(
 								main.VStack(content => [
 									content.Text(""),
@@ -213,7 +260,13 @@ internal class Program
 												_state.CurrentView = ViewMode.GameDetails;
 											}
 										})
-										.FixedHeight(13),
+										.OnKey(e => {
+											if (e.Key == Hex1b.Key.Escape)
+											{
+												_state.CurrentView = ViewMode.MainMenu;
+											}
+										})
+										.FixedHeight(GAME_LIBRARY_LIST_HEIGHT),
 									content.Text("")
 								]),
 								title: "Game Library"
@@ -232,16 +285,7 @@ internal class Program
 						}
 						
 						return ctx.VStack(main => [
-							main.Border(
-								main.VStack(header => [
-									header.Text(""),
-									header.Text("  ╔════════════════════════════════════════════════════╗"),
-									header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-									header.Text("  ╚════════════════════════════════════════════════════╝"),
-									header.Text("")
-								]),
-								title: "Welcome"
-							).FixedHeight(7),
+							CreateHeaderBorder(ctx, "Welcome"),
 							main.Border(
 								main.VStack(content => [
 									content.Text(""),
@@ -258,7 +302,13 @@ internal class Program
 									content.Text(""),
 									content.Text($"  {game.Description ?? "No description."}"),
 									content.Text("")
-								]),
+								])
+								.OnKey(e => {
+									if (e.Key == Hex1b.Key.Escape)
+									{
+										_state.CurrentView = ViewMode.GameLibrary;
+									}
+								}),
 								title: $"Game: {game.Title}"
 							).Fill(),
 							main.InfoBar(["ESC", "Back"])
@@ -268,7 +318,6 @@ internal class Program
 					else if (_state.CurrentView == ViewMode.Settings)
 					{
 						var config = _state.Configuration;
-						var backends = Enum.GetNames(typeof(Win32Emu.Rendering.BackendType));
 						
 						var settingsItems = new[] {
 							$"Backend: {config.DefaultBackend}",
@@ -280,16 +329,7 @@ internal class Program
 						};
 						
 						return ctx.VStack(main => [
-							main.Border(
-								main.VStack(header => [
-									header.Text(""),
-									header.Text("  ╔════════════════════════════════════════════════════╗"),
-									header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-									header.Text("  ╚════════════════════════════════════════════════════╝"),
-									header.Text("")
-								]),
-								title: "Welcome"
-							).FixedHeight(7),
+							CreateHeaderBorder(ctx, "Welcome"),
 							main.Border(
 								main.VStack(content => [
 									content.Text(""),
@@ -299,32 +339,41 @@ internal class Program
 										.OnItemActivated(e => {
 											switch (e.ActivatedIndex)
 											{
-												case 0: // Backend - cycle through options
-													var currentBackendIndex = Array.IndexOf(backends, config.DefaultBackend.ToString());
-													var nextBackendIndex = (currentBackendIndex + 1) % backends.Length;
-													config.DefaultBackend = Enum.Parse<Win32Emu.Rendering.BackendType>(backends[nextBackendIndex]);
+												case SETTING_BACKEND:
+													var currentBackendIndex = Array.IndexOf(AllowedBackends, config.DefaultBackend);
+													if (currentBackendIndex == -1)
+													{
+														currentBackendIndex = 0;
+													}
+													var nextBackendIndex = (currentBackendIndex + 1) % AllowedBackends.Length;
+													config.DefaultBackend = AllowedBackends[nextBackendIndex];
 													break;
-												case 1: // Debug Mode
+												case SETTING_DEBUG_MODE:
 													config.EnableDebugMode = !config.EnableDebugMode;
 													break;
-												case 2: // Interactive Debugger
+												case SETTING_INTERACTIVE_DEBUGGER:
 													config.EnableInteractiveDebugger = !config.EnableInteractiveDebugger;
 													break;
-												case 3: // GDB Server
+												case SETTING_GDB_SERVER:
 													config.EnableGdbServer = !config.EnableGdbServer;
 													break;
-												case 4: // GDB Server Port - cycle through common ports
-													var ports = new[] { 1234, 2345, 3456, 4567, 5678 };
-													var currentPortIndex = Array.IndexOf(ports, config.GdbServerPort);
+												case SETTING_GDB_PORT:
+													var currentPortIndex = Array.IndexOf(GdbServerPorts, config.GdbServerPort);
 													if (currentPortIndex == -1) currentPortIndex = 0;
-													config.GdbServerPort = ports[(currentPortIndex + 1) % ports.Length];
+													config.GdbServerPort = GdbServerPorts[(currentPortIndex + 1) % GdbServerPorts.Length];
 													break;
-												case 5: // File Logging
+												case SETTING_FILE_LOGGING:
 													config.EnableFileLogging = !config.EnableFileLogging;
 													break;
 											}
 										})
-										.FixedHeight(10),
+										.OnKey(e => {
+											if (e.Key == Hex1b.Key.Escape)
+											{
+												_state.CurrentView = ViewMode.MainMenu;
+											}
+										})
+										.FixedHeight(SETTINGS_LIST_HEIGHT),
 									content.Text(""),
 									content.Text("  Use ↑↓ to navigate, Enter to toggle/change values"),
 									content.Text("")
@@ -338,16 +387,7 @@ internal class Program
 					else if (_state.CurrentView == ViewMode.Help)
 					{
 						return ctx.VStack(main => [
-							main.Border(
-								main.VStack(header => [
-									header.Text(""),
-									header.Text("  ╔════════════════════════════════════════════════════╗"),
-									header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-									header.Text("  ╚════════════════════════════════════════════════════╝"),
-									header.Text("")
-								]),
-								title: "Welcome"
-							).FixedHeight(7),
+							CreateHeaderBorder(ctx, "Welcome"),
 							main.Border(
 								main.VStack(content => [
 									content.Text(""),
@@ -375,7 +415,13 @@ internal class Program
 									content.Text("  General:"),
 									content.Text("    Ctrl+C      Exit application"),
 									content.Text("")
-								]),
+								])
+								.OnKey(e => {
+									if (e.Key == Hex1b.Key.Escape)
+									{
+										_state.CurrentView = ViewMode.MainMenu;
+									}
+								}),
 								title: "Help"
 							).Fill(),
 							main.InfoBar(["ESC", "Back"])
