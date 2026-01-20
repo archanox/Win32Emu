@@ -76,7 +76,56 @@ internal class Win16ShellModule : Win16ThunkingLayer, IWin32ModuleAsync
 }
 ```
 
-### 3. Registered Win16ShellModule (Emulator.cs)
+### 3. Added Win16 Ordinal-to-Name Mapping (Win16ThunkingLayer.cs)
+
+**File**: `Win32Emu/Win32/Win16/Win16ThunkingLayer.cs`
+
+Added support for resolving Win16 ordinal imports to function names, improving the Unknown Function Summary:
+
+```csharp
+protected virtual bool TryResolveOrdinal(string ordinal, out string functionName)
+{
+    functionName = ordinal;
+    return false;
+}
+
+protected string NormalizeExport(string export)
+{
+    // Check if the export is an ordinal (numeric string)
+    if (uint.TryParse(export, out _))
+    {
+        if (TryResolveOrdinal(export, out var functionName))
+        {
+            Logger.LogDebug("[Win16 Thunk] Resolved ordinal {Ordinal} to {FunctionName}", export, functionName);
+            return functionName.ToUpperInvariant();
+        }
+        Logger.LogDebug("[Win16 Thunk] Unknown ordinal: {Ordinal}", export);
+    }
+    return export.ToUpperInvariant();
+}
+```
+
+**Win16ShellModule Ordinal Mappings** (based on Windows 3.1 SHELL.DLL):
+
+```csharp
+protected override bool TryResolveOrdinal(string ordinal, out string functionName)
+{
+    functionName = ordinal switch
+    {
+        "11" => "ShellAbout",
+        "12" => "ShellExecute",
+        "13" => "ExtractIcon",
+        "22" => "AboutDlgProc",  // The ordinal that winmine.exe imports
+        // ... 18 more ordinal mappings
+        _ => ordinal
+    };
+    return functionName != ordinal;
+}
+```
+
+This ensures that unknown functions from NE executables appear with readable names in the Unknown Function Summary (e.g., "SHELL!AboutDlgProc" instead of "SHELL!22").
+
+### 4. Registered Win16ShellModule (Emulator.cs)
 
 **File**: `Win32Emu/Emulator.cs`
 
@@ -121,6 +170,10 @@ With this fix applied, winmine.exe should:
 3. Proceed to execute the entry point at 0x0001228C
 4. Run successfully in the emulator
 
+Additionally, the Unknown Function Summary will now show:
+- Readable function names instead of ordinals (e.g., "SHELL!AboutDlgProc" instead of "SHELL!22")
+- Better diagnostics for understanding which Win16 functions are called but not yet implemented
+
 ## Technical Details
 
 ### Win16 to Win32 Thunking Architecture
@@ -157,9 +210,15 @@ Win16 modules are registered in the following order:
 ## Files Changed
 
 1. `Win32Emu/Loader/NeImageLoader.cs` - Added SHELL module mapping
-2. `Win32Emu/Win32/Win16/Win16AuxiliaryModules.cs` - Created Win16ShellModule class
-3. `Win32Emu/Emulator.cs` - Added SHELL32.DLL lookup and Win16ShellModule registration
+2. `Win32Emu/Win32/Win16/Win16ThunkingLayer.cs` - Added NormalizeExport and TryResolveOrdinal methods for ordinal-to-name resolution
+3. `Win32Emu/Win32/Win16/Win16AuxiliaryModules.cs` - Created Win16ShellModule class with ordinal mappings, updated SOUND, SYSTEM, KEYBOARD modules
+4. `Win32Emu/Win32/Win16/Win16UserModule.cs` - Updated to use NormalizeExport for ordinal resolution
+5. `Win32Emu/Win32/Win16/Win16KernelModule.cs` - Updated to use NormalizeExport for ordinal resolution
+6. `Win32Emu/Win32/Win16/Win16GdiModule.cs` - Updated to use NormalizeExport for ordinal resolution
+7. `Win32Emu/Emulator.cs` - Added SHELL32.DLL lookup and Win16ShellModule registration
 
 ## Related Issues
 
-This fix addresses the crash reported in the issue where winmine.exe failed to load due to missing SHELL module support in the Win16 thunking layer.
+This fix addresses:
+1. The crash reported in the issue where winmine.exe failed to load due to missing SHELL module support in the Win16 thunking layer
+2. The issue where NE executables were not populating the Unknown Function Summary with readable function names (ordinals like "22" instead of "AboutDlgProc")
