@@ -1298,6 +1298,18 @@ public class ProcessEnvironment
 	}
 
 	/// <summary>
+	/// Registers a loaded image (DLL or EXE) in the process environment.
+	/// This allows the image's exports to be resolved by GetProcAddress and other mechanisms.
+	/// </summary>
+	public void RegisterLoadedImage(string moduleName, LoadedImage image)
+	{
+		var normalizedName = moduleName.ToUpperInvariant();
+		_loadedModules[normalizedName] = image.BaseAddress;
+		_loadedImages[normalizedName] = image;
+		_logger.LogInformation("[ProcessEnv] Registered loaded image: {ModuleName} at 0x{BaseAddress:X8}", moduleName, image.BaseAddress);
+	}
+
+	/// <summary>
 	/// Get the current main executable's LoadedImage (may have been updated with synthetic exports).
 	/// </summary>
 	public LoadedImage? GetMainExecutable()

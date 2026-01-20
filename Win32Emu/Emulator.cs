@@ -921,6 +921,10 @@ public sealed class Emulator : IDisposable
                 _dispatcher.RegisterModule(new Win32.Win16.Win16SoundModule(winmm, _logger));
                 
                 _logger.LogInformation("[Loader] Win16 thunking modules registered successfully");
+                
+                // Load imported NE DLLs from the VFS
+                // This must be done after VFS initialization and after Win16 thunking modules are registered
+                LoadImportedNeDlls();
             }
             catch (Exception ex)
             {
@@ -1319,6 +1323,148 @@ public sealed class Emulator : IDisposable
                     BASICDD_EPILOGUE_PATCH_ADDRESS, originalByte, BASICDD_ORIGINAL_STACK_ADJUSTMENT);
             }
         }
+    }
+    
+    /// <summary>
+    /// Loads imported NE DLLs for Win16 executables.
+    /// This method checks the VFS for DLL files referenced in the executable's import table
+    /// and loads them to resolve function calls.
+    /// </summary>
+    private void LoadImportedNeDlls()
+    {
+        if (_executableBytes == null || _env == null || _vm == null || _dispatcher == null)
+        {
+            _logger.LogWarning("[Loader] Cannot load imported NE DLLs - missing required components");
+            return;
+        }
+        
+        if (_env.VirtualFileSystem == null)
+        {
+            _logger.LogWarning("[Loader] Cannot load imported NE DLLs - VFS not initialized");
+            return;
+        }
+        
+        try
+        {
+            // Parse the NE executable to get import module list
+            var neExe = NeParser.NeParser.Parse(_executableBytes);
+            var importModules = neExe.ImportModules;
+            
+            if (importModules.Count == 0)
+            {
+                _logger.LogDebug("[Loader] No import modules found in NE executable");
+                return;
+            }
+            
+            _logger.LogInformation("[Loader] Found {Count} import modules in NE executable", importModules.Count);
+            
+            // Get the directory of the current executable
+            var executablePath = _env.ExecutablePath;
+            var executableDir = Path.GetDirectoryName(executablePath) ?? string.Empty;
+            
+            // Process each import module
+            foreach (var moduleName in importModules)
+            {
+                var normalizedName = moduleName.ToUpperInvariant();
+                
+                // Skip standard Win16 modules that are already handled by thunking layers
+                if (IsStandardWin16Module(normalizedName))
+                {
+                    _logger.LogDebug("[Loader] Skipping standard Win16 module: {Module}", moduleName);
+                    continue;
+                }
+                
+                // Try to find the DLL file in the VFS
+                var dllFileName = normalizedName.EndsWith(".DLL") ? normalizedName : normalizedName + ".DLL";
+                var dllPath = Path.Combine(executableDir, dllFileName);
+                
+                // Normalize path for VFS (use Windows-style backslashes)
+                dllPath = dllPath.Replace('/', '\\');
+                
+                _logger.LogDebug("[Loader] Checking VFS for imported DLL: {Path}", dllPath);
+                
+                if (!_env.VirtualFileSystem.FileExists(dllPath))
+                {
+                    _logger.LogWarning("[Loader] Imported DLL not found in VFS: {Path}", dllPath);
+                    _logger.LogWarning("[Loader] Functions from {Module} will return default values (0)", moduleName);
+                    continue;
+                }
+                
+                _logger.LogInformation("[Loader] Loading imported NE DLL: {Module} from {Path}", moduleName, dllPath);
+                
+                try
+                {
+                    // Read the DLL file from VFS
+                    using var handle = _env.VirtualFileSystem.OpenFile(dllPath, VirtualFileSystem.VfsFileMode.Open, VirtualFileSystem.VfsFileAccess.Read);
+                    if (handle == null)
+                    {
+                        _logger.LogError("[Loader] Failed to open DLL file: {Path}", dllPath);
+                        continue;
+                    }
+                    
+                    // Read entire file into memory
+                    var dllBytes = new byte[handle.Length];
+                    var bytesRead = handle.Read(dllBytes, 0, dllBytes.Length);
+                    if (bytesRead != dllBytes.Length)
+                    {
+                        _logger.LogError("[Loader] Failed to read complete DLL file: {Path} (read {Read}/{Total} bytes)", 
+                            dllPath, bytesRead, dllBytes.Length);
+                        continue;
+                    }
+                    
+                    // Verify it's an NE file
+                    if (!NeImageLoader.IsNE(dllBytes))
+                    {
+                        _logger.LogError("[Loader] File is not a valid NE executable: {Path}", dllPath);
+                        continue;
+                    }
+                    
+                    // Load the NE DLL
+                    var neLoader = new NeImageLoader(_vm, _logger);
+                    var dllImage = neLoader.LoadFromBytes(dllBytes, dllPath);
+                    
+                    _logger.LogInformation("[Loader] Loaded NE DLL: {Module} at base 0x{Base:X8}, exports: {Exports}",
+                        moduleName, dllImage.BaseAddress, dllImage.ExportsByName.Count);
+                    
+                    // Register the loaded DLL with the environment so its exports can be resolved
+                    _env.RegisterLoadedImage(dllFileName, dllImage);
+                    _dispatcher.RegisterDynamicallyLoadedDll(dllFileName);
+                    
+                    // Log exported functions for debugging
+                    if (dllImage.ExportsByName.Count > 0)
+                    {
+                        _logger.LogDebug("[Loader] {Module} exports: {Exports}", 
+                            moduleName, string.Join(", ", dllImage.ExportsByName.Keys));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "[Loader] Failed to load NE DLL {Module} from {Path}: {Message}", 
+                        moduleName, dllPath, ex.Message);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "[Loader] Failed to load imported NE DLLs: {Message}", ex.Message);
+        }
+    }
+    
+    /// <summary>
+    /// Checks if a module name is a standard Win16 module that's handled by thunking layers.
+    /// </summary>
+    private static bool IsStandardWin16Module(string normalizedName)
+    {
+        return normalizedName switch
+        {
+            "KERNEL" => true,
+            "USER" => true,
+            "GDI" => true,
+            "KEYBOARD" => true,
+            "SOUND" => true,
+            "SYSTEM" => true,
+            _ => false
+        };
     }
     
     /// <summary>
