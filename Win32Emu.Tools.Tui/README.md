@@ -4,40 +4,44 @@ A terminal-based interface for Win32Emu, optimized for 80-column terminals and m
 
 ## Features
 
-### ✅ Implemented
+### ✅ Backend Services Implemented
 
-- **Game Library Management**: Browse, add, and manage games with metadata
-  - JSON-based persistent storage
+- **Game Library Service**: Complete CRUD operations with JSON persistence
+  - Add, remove, and update games with full metadata
   - Play statistics tracking (count, last played timestamp)
   - Game metadata: title, developer, publisher, genre, year, description
+  - Storage at `%APPDATA%\Win32Emu\game-library.json` (Windows) or `~/.config/Win32Emu/game-library.json` (Unix)
   
-- **Settings Configuration UI**: Complete emulator configuration
+- **Configuration Service**: Emulator settings management
   - Backend selection (SDL, GLFW, Vulkan, Metal, Software)
   - Debug mode toggles
   - Interactive debugger enable/disable
   - GDB server configuration with port setting
   - File logging control
+  - Builds argument arrays for EmulatorLauncher
 
-- **Game Launching**: Launch games directly from TUI
-  - Integration with EmulatorLauncher API
-  - Automatic stats tracking
-  - Configuration injection (backend, debug modes, etc.)
+- **EmulatorLauncher Integration**: Ready for game launching
+  - Configuration injection prepared
+  - Automatic stats tracking logic implemented
+  - Launch argument building complete
 
-- **80-Column Optimized**: Perfect for mobile SSH clients
-  - All screens fit within 80 columns
+- **80-Column Display**: Optimized for mobile SSH clients
+  - Current static display fits within 80 columns
   - Clean, bordered layout with info bars
-  - Automatic text truncation
+  - Cross-platform support (Windows, Linux, macOS)
 
-- **Cross-Platform**: Works on Windows, Linux, and macOS
-  - Lightweight, terminal-based
-  - No GUI dependencies
-
-### 🔨 Coming Soon
+### 🔨 In Development
 
 - **Interactive Menu Navigation**: Arrow key navigation with visual selection
-- **Input Forms**: Edit game metadata directly in TUI
-- **Real-time Updates**: Dynamic screen refreshing
+- **Game Browser UI**: Interactive list of games with launch capability
+- **Add Game Form**: Input fields for adding new games
+- **Settings Screen**: Toggle switches for configuration options
 - **Keyboard Shortcuts**: Quick actions for power users
+- **Real-time Updates**: Dynamic screen refreshing
+
+### Current Status
+
+**v0.2.0** - This version provides a **static display** showing the architecture and backend services. The service layer (GameLibraryService, ConfigurationService) is fully implemented and ready to be wired to interactive UI components. Interactive navigation is planned for the next update.
 
 ## Installation
 
