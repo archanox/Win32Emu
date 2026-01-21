@@ -2701,14 +2701,13 @@ namespace Win32Emu.Win32.Modules
 					// Detect potential infinite loops
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
-						var currentEip = eip;
 						if (!eipChangedSinceCheck)
 						{
 							stuckCounter++;
 							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
 							{
 								_logger.LogWarning("[User32] {Context}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
-									contextName, currentEip, stuckCounter);
+									contextName, eip, stuckCounter);
 								timedOut = true;
 								break;
 							}
@@ -2897,14 +2896,13 @@ namespace Win32Emu.Win32.Modules
 					// Detect potential infinite loops
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
-						var currentEip = eip;
 						if (!eipChangedSinceCheck)
 						{
 							stuckCounter++;
 							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
 							{
 								_logger.LogWarning("[User32] {Context}: Detected infinite loop at EIP=0x{Eip:X8} after {Count} checks, aborting",
-									contextName, currentEip, stuckCounter);
+									contextName, eip, stuckCounter);
 								timedOut = true;
 								break;
 							}
