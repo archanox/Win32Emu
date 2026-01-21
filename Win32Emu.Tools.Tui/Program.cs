@@ -3,6 +3,7 @@ using Hex1b.Input;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Tools.Tui.Models;
 using Win32Emu.Tools.Tui.Services;
+using WidgetArray = Hex1b.Widgets.Hex1bWidget[];
 
 namespace Win32Emu.Tools.Tui;
 
@@ -60,14 +61,17 @@ internal class Program
 	private static Hex1b.Widgets.BorderWidget CreateHeaderBorder(Hex1b.RootContext ctx, string title, bool extended = false)
 	{
 		return ctx.Border(
-			ctx.VStack(header => new Hex1b.Widgets.Hex1bWidget[] {
-				header.Text(""),
-				header.Text("  ╔════════════════════════════════════════════════════╗"),
-				header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
-				extended ? header.Text("  ║   Windows 32-bit PE Emulator                      ║") : null!,
-				header.Text("  ╚════════════════════════════════════════════════════╝"),
-				header.Text("")
-			}.Where(w => w != null!).ToArray()),
+			ctx.VStack(header => {
+				WidgetArray widgets = [
+					header.Text(""),
+					header.Text("  ╔════════════════════════════════════════════════════╗"),
+					header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
+					extended ? header.Text("  ║   Windows 32-bit PE Emulator                      ║") : null!,
+					header.Text("  ╚════════════════════════════════════════════════════╝"),
+					header.Text("")
+				];
+				return widgets.Where(w => w != null!).ToArray();
+			}),
 			title: title
 		).FixedHeight(extended ? HEADER_HEIGHT_EXTENDED : HEADER_HEIGHT);
 	}
@@ -142,51 +146,54 @@ internal class Program
 						return ctx.VStack(main => [
 							CreateHeaderBorder(ctx, "Welcome"),
 							main.Border(
-								main.VStack(content => new Hex1b.Widgets.Hex1bWidget[] {
-									content.Text(""),
-									content.Text("  Add New Game"),
-									content.Text("  Select a field to edit, then type and press Enter:"),
-									content.Text(""),
-									_errorMessage != null ? content.Text($"  ⚠️  {_errorMessage}") : null!,
-									_errorMessage != null ? content.Text("") : null!,
-									content.List(fields)
-										.OnItemActivated(e => {
-											_errorMessage = null; // Clear error on new action
-											if (e.ActivatedIndex == FORM_BUTTON_SAVE)
-											{
-												if (!string.IsNullOrWhiteSpace(_state.NewGameEntry.Title) && 
-												    !string.IsNullOrWhiteSpace(_state.NewGameEntry.ExecutablePath))
+								main.VStack(content => {
+									WidgetArray widgets = [
+										content.Text(""),
+										content.Text("  Add New Game"),
+										content.Text("  Select a field to edit, then type and press Enter:"),
+										content.Text(""),
+										_errorMessage != null ? content.Text($"  ⚠️  {_errorMessage}") : null!,
+										_errorMessage != null ? content.Text("") : null!,
+										content.List(fields)
+											.OnItemActivated(e => {
+												_errorMessage = null; // Clear error on new action
+												if (e.ActivatedIndex == FORM_BUTTON_SAVE)
 												{
-													_state.GameLibrary.AddGame(_state.NewGameEntry);
-													_state.GameLibrary.SaveLibraryAsync().GetAwaiter().GetResult();
+													if (!string.IsNullOrWhiteSpace(_state.NewGameEntry.Title) && 
+													    !string.IsNullOrWhiteSpace(_state.NewGameEntry.ExecutablePath))
+													{
+														_state.GameLibrary.AddGame(_state.NewGameEntry);
+														_state.GameLibrary.SaveLibraryAsync().GetAwaiter().GetResult();
+														_state.ResetNewGameEntry();
+														_state.CurrentView = ViewMode.GameLibrary;
+													}
+													else
+													{
+														_errorMessage = "Title and Executable Path are required";
+													}
+												}
+												else if (e.ActivatedIndex == FORM_BUTTON_CANCEL)
+												{
 													_state.ResetNewGameEntry();
-													_state.CurrentView = ViewMode.GameLibrary;
+													_state.CurrentView = ViewMode.MainMenu;
 												}
 												else
 												{
-													_errorMessage = "Title and Executable Path are required";
+													_state.AddGameFieldIndex = e.ActivatedIndex;
 												}
-											}
-											else if (e.ActivatedIndex == FORM_BUTTON_CANCEL)
-											{
-												_state.ResetNewGameEntry();
-												_state.CurrentView = ViewMode.MainMenu;
-											}
-											else
-											{
-												_state.AddGameFieldIndex = e.ActivatedIndex;
-											}
-										})
-										.WithInputBindings(bindings => {
-											bindings.Key(Hex1bKey.Escape).Action(() => {
-												_errorMessage = null;
-												_state.ResetNewGameEntry();
-												_state.CurrentView = ViewMode.MainMenu;
-											});
-										})
-										.FixedHeight(ADD_GAME_FORM_HEIGHT),
-									content.Text("")
-								}.Where(w => w != null!).ToArray()),
+											})
+											.WithInputBindings(bindings => {
+												bindings.Key(Hex1bKey.Escape).Action(() => {
+													_errorMessage = null;
+													_state.ResetNewGameEntry();
+													_state.CurrentView = ViewMode.MainMenu;
+												});
+											})
+											.FixedHeight(ADD_GAME_FORM_HEIGHT),
+										content.Text("")
+									];
+									return widgets.Where(w => w != null!).ToArray();
+								}),
 								title: "Add Game"
 							).Fill(),
 							main.InfoBar(["↑↓", "Navigate", "Enter", "Edit/Select", "ESC", "Cancel"])
@@ -279,7 +286,7 @@ internal class Program
 						if (game == null)
 						{
 							_state.CurrentView = ViewMode.GameLibrary;
-							return (Hex1b.Widgets.Hex1bWidget)ctx.Text("Redirecting...");
+							return ctx.Text("Redirecting...");
 						}
 						
 						return ctx.VStack(main => [
@@ -426,7 +433,7 @@ internal class Program
 					{
 						// Default to Main Menu
 						_state.CurrentView = ViewMode.MainMenu;
-						return (Hex1b.Widgets.Hex1bWidget)ctx.Text("Loading...");
+						return ctx.Text("Loading...");
 					}
 				})
 				.WithMouse()
