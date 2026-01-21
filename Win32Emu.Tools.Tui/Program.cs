@@ -1,4 +1,5 @@
 using Hex1b;
+using Hex1b.Input;
 using Microsoft.Extensions.Logging;
 using Win32Emu.Tools.Tui.Models;
 using Win32Emu.Tools.Tui.Services;
@@ -56,17 +57,17 @@ internal class Program
 	private static AppState? _state;
 	private static string? _errorMessage;
 
-	private static Hex1b.IWidget CreateHeaderBorder(Hex1b.IHex1bContext ctx, string title, bool extended = false)
+	private static Hex1b.Widgets.BorderWidget CreateHeaderBorder(Hex1b.RootContext ctx, string title, bool extended = false)
 	{
 		return ctx.Border(
-			ctx.VStack(header => [
+			ctx.VStack(header => new Hex1b.Widgets.Hex1bWidget[] {
 				header.Text(""),
 				header.Text("  ╔════════════════════════════════════════════════════╗"),
 				header.Text("  ║   Win32Emu - Terminal User Interface              ║"),
 				extended ? header.Text("  ║   Windows 32-bit PE Emulator                      ║") : null!,
 				header.Text("  ╚════════════════════════════════════════════════════╝"),
 				header.Text("")
-			].Where(w => w != null!)),
+			}.Where(w => w != null!).ToArray()),
 			title: title
 		).FixedHeight(extended ? HEADER_HEIGHT_EXTENDED : HEADER_HEIGHT);
 	}
@@ -141,7 +142,7 @@ internal class Program
 						return ctx.VStack(main => [
 							CreateHeaderBorder(ctx, "Welcome"),
 							main.Border(
-								main.VStack(content => [
+								main.VStack(content => new Hex1b.Widgets.Hex1bWidget[] {
 									content.Text(""),
 									content.Text("  Add New Game"),
 									content.Text("  Select a field to edit, then type and press Enter:"),
@@ -176,17 +177,16 @@ internal class Program
 												_state.AddGameFieldIndex = e.ActivatedIndex;
 											}
 										})
-										.OnKey(e => {
-											if (e.Key == Hex1b.Key.Escape)
-											{
+										.WithInputBindings(bindings => {
+											bindings.Key(Hex1bKey.Escape).Action(() => {
 												_errorMessage = null;
 												_state.ResetNewGameEntry();
 												_state.CurrentView = ViewMode.MainMenu;
-											}
+											});
 										})
 										.FixedHeight(ADD_GAME_FORM_HEIGHT),
 									content.Text("")
-								].Where(w => w != null!)),
+								}.Where(w => w != null!).ToArray()),
 								title: "Add Game"
 							).Fill(),
 							main.InfoBar(["↑↓", "Navigate", "Enter", "Edit/Select", "ESC", "Cancel"])
@@ -220,11 +220,10 @@ internal class Program
 													_state.CurrentView = ViewMode.MainMenu;
 												}
 											})
-											.OnKey(e => {
-												if (e.Key == Hex1b.Key.Escape)
-												{
+											.WithInputBindings(bindings => {
+												bindings.Key(Hex1bKey.Escape).Action(() => {
 													_state.CurrentView = ViewMode.MainMenu;
-												}
+												});
 											})
 											.FixedHeight(GAME_LIBRARY_EMPTY_HEIGHT),
 										content.Text("")
@@ -260,11 +259,10 @@ internal class Program
 												_state.CurrentView = ViewMode.GameDetails;
 											}
 										})
-										.OnKey(e => {
-											if (e.Key == Hex1b.Key.Escape)
-											{
+										.WithInputBindings(bindings => {
+											bindings.Key(Hex1bKey.Escape).Action(() => {
 												_state.CurrentView = ViewMode.MainMenu;
-											}
+											});
 										})
 										.FixedHeight(GAME_LIBRARY_LIST_HEIGHT),
 									content.Text("")
@@ -281,7 +279,7 @@ internal class Program
 						if (game == null)
 						{
 							_state.CurrentView = ViewMode.GameLibrary;
-							return ctx.Text("Redirecting...");
+							return (Hex1b.Widgets.Hex1bWidget)ctx.Text("Redirecting...");
 						}
 						
 						return ctx.VStack(main => [
@@ -303,11 +301,10 @@ internal class Program
 									content.Text($"  {game.Description ?? "No description."}"),
 									content.Text("")
 								])
-								.OnKey(e => {
-									if (e.Key == Hex1b.Key.Escape)
-									{
+								.WithInputBindings(bindings => {
+									bindings.Key(Hex1bKey.Escape).Action(() => {
 										_state.CurrentView = ViewMode.GameLibrary;
-									}
+									});
 								}),
 								title: $"Game: {game.Title}"
 							).Fill(),
@@ -367,11 +364,10 @@ internal class Program
 													break;
 											}
 										})
-										.OnKey(e => {
-											if (e.Key == Hex1b.Key.Escape)
-											{
+										.WithInputBindings(bindings => {
+											bindings.Key(Hex1bKey.Escape).Action(() => {
 												_state.CurrentView = ViewMode.MainMenu;
-											}
+											});
 										})
 										.FixedHeight(SETTINGS_LIST_HEIGHT),
 									content.Text(""),
@@ -416,11 +412,10 @@ internal class Program
 									content.Text("    Ctrl+C      Exit application"),
 									content.Text("")
 								])
-								.OnKey(e => {
-									if (e.Key == Hex1b.Key.Escape)
-									{
+								.WithInputBindings(bindings => {
+									bindings.Key(Hex1bKey.Escape).Action(() => {
 										_state.CurrentView = ViewMode.MainMenu;
-									}
+									});
 								}),
 								title: "Help"
 							).Fill(),
@@ -431,7 +426,7 @@ internal class Program
 					{
 						// Default to Main Menu
 						_state.CurrentView = ViewMode.MainMenu;
-						return ctx.Text("Loading...");
+						return (Hex1b.Widgets.Hex1bWidget)ctx.Text("Loading...");
 					}
 				})
 				.WithMouse()
