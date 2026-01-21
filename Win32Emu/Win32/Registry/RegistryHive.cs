@@ -153,7 +153,13 @@ public class RegistryHive : IDisposable
 			if (key.GetValue(valueName) == null)
 			{
 				key.SetValue(valueName, value);
-				_logger.LogDebug("[RegistryHive] Set default value: {ValueName}={Value}", valueName, value);
+				// Safely convert value to string for logging to prevent WASM crashes
+				var valueString = value ?? "(null)";
+				if (valueString.Length > MaxLogValueLength)
+				{
+					valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
+				}
+				_logger.LogDebug("[RegistryHive] Set default value: {ValueName}={Value}", valueName, valueString);
 			}
 		}
 		catch (Exception ex)
@@ -335,8 +341,14 @@ public class RegistryHive : IDisposable
 		try
 		{
 			keyHandle.Key.SetValue(valueName, value, type);
+			// Safely convert value to string for logging to prevent WASM crashes
+			var valueString = value?.ToString() ?? "(null)";
+			if (valueString.Length > MaxLogValueLength)
+			{
+				valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
+			}
 			_logger.LogDebug("[RegistryHive] Set value: {ValueName}={Value} (type={Type}) in handle 0x{Handle:X8}", 
-				valueName, value, type, handle);
+				valueName, valueString, type, handle);
 			return true;
 		}
 		catch (Exception ex)
