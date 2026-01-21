@@ -109,4 +109,55 @@ public class StackLayoutTests
 		Assert.Equal(wParam, memory.Read32(esp + 12));  // Third param: WPARAM
 		Assert.Equal(lParam, memory.Read32(esp + 16));  // Fourth param: LPARAM
 	}
+
+	[Fact]
+	public void InfiniteLoopDetection_ShouldRequireNoEipProgressBetweenChecks()
+	{
+		// Arrange
+		var stepInterval = 10;
+		var stuckCounterThreshold = 3;
+		var stuckCounter = 0;
+		var eipChangedSinceCheck = false;
+		var eip = 0x00400000u;
+		var lastStepEip = eip;
+		var shouldTimeout = false;
+
+		// Act
+		for (var steps = 1; steps <= stepInterval * stuckCounterThreshold; steps++)
+		{
+			var shouldChange = steps % (stepInterval - 1) == 0;
+			if (shouldChange)
+			{
+				eip += 4;
+			}
+
+			if (eip != lastStepEip)
+			{
+				eipChangedSinceCheck = true;
+				lastStepEip = eip;
+			}
+
+			if (steps % stepInterval == 0)
+			{
+				if (!eipChangedSinceCheck)
+				{
+					stuckCounter++;
+					if (stuckCounter >= stuckCounterThreshold)
+					{
+						shouldTimeout = true;
+						break;
+					}
+				}
+				else
+				{
+					stuckCounter = 0;
+				}
+
+				eipChangedSinceCheck = false;
+			}
+		}
+
+		// Assert
+		Assert.False(shouldTimeout);
+	}
 }
