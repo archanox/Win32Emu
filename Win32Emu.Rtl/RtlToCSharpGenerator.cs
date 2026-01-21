@@ -198,13 +198,36 @@ public class RtlToCSharpGenerator
     private string GenerateCall(RtlCall call)
     {
         var target = ExpressionToString(call.Target);
-        var args = string.Join(", ", call.Arguments.Select(ExpressionToString));
         
-        if (call.ReturnValue != null)
-        {
-            return $"{ExpressionToString(call.ReturnValue)} = await CallFunction({target}, new object[] {{ {args} }});";
-        }
-        return $"await CallFunction({target}, new object[] {{ {args} }});";
+        // CALL instruction semantics:
+        // 1. Push return address onto stack: ESP -= 4; [ESP] = nextEIP
+        // 2. Set EIP to call target
+        // 3. Return from compiled block to let main emulator handle the call
+        // 
+        // The JIT block cannot execute the call inline because we need to
+        // return control to the emulator loop which handles syscalls, COM calls, etc.
+        
+        var sb = new StringBuilder();
+        sb.AppendLine($"{{ // CALL instruction @0x{call.Offset:X}");
+        sb.AppendLine("                // Save all registers before call");
+        sb.AppendLine("                cpu.SetRegister(\"EAX\", EAX);");
+        sb.AppendLine("                cpu.SetRegister(\"EBX\", EBX);");
+        sb.AppendLine("                cpu.SetRegister(\"ECX\", ECX);");
+        sb.AppendLine("                cpu.SetRegister(\"EDX\", EDX);");
+        sb.AppendLine("                cpu.SetRegister(\"ESI\", ESI);");
+        sb.AppendLine("                cpu.SetRegister(\"EDI\", EDI);");
+        sb.AppendLine("                cpu.SetRegister(\"EBP\", EBP);");
+        sb.AppendLine($"                uint callTarget = {target};");
+        sb.AppendLine($"                uint returnAddr = 0x{call.ReturnAddress:X8}u;");
+        sb.AppendLine("                // Push return address");
+        sb.AppendLine("                ESP -= 4;");
+        sb.AppendLine("                mem.Write32(ESP, returnAddr);");
+        sb.AppendLine("                cpu.SetRegister(\"ESP\", ESP);");
+        sb.AppendLine("                // Set EIP to call target");
+        sb.AppendLine("                cpu.SetEip(callTarget);");
+        sb.AppendLine("                return await Task.FromResult(new CpuStepResult(IsCall: true, CallTarget: callTarget));");
+        sb.Append("            }");
+        return sb.ToString();
     }
     
     private string GenerateReturn(RtlReturn ret)

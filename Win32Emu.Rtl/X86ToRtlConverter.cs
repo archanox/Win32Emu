@@ -168,7 +168,8 @@ public class X86ToRtlConverter
                 {
                     Offset = (int)insn.IP,
                     Target = GetOperandExpression(insn, 0, block),
-                    ReturnValue = new RtlRegister { Name = "EAX" } // Stdcall return
+                    ReturnValue = new RtlRegister { Name = "EAX" }, // Stdcall return
+                    ReturnAddress = (uint)insn.NextIP // Address of instruction after the CALL
                 });
                 break;
                 
@@ -236,14 +237,161 @@ public class X86ToRtlConverter
         return results;
     }
     
-    private RtlAssignment ConvertMov(Instruction insn, RtlCodeBlock block)
+    private RtlInstruction ConvertMov(Instruction insn, RtlCodeBlock block)
     {
+        var destKind = insn.GetOpKind(0);
+        var srcKind = insn.GetOpKind(1);
+        
+        // MOV to memory: use RtlStore
+        if (destKind == OpKind.Memory)
+        {
+            return new RtlStore
+            {
+                Offset = (int)insn.IP,
+                Address = GetMemoryAddressExpression(insn),
+                Value = GetOperandExpression(insn, 1, block),
+                Size = GetOperandSize(insn, 0)
+            };
+        }
+        
+        // MOV from memory: use RtlLoad
+        if (srcKind == OpKind.Memory)
+        {
+            return new RtlLoad
+            {
+                Offset = (int)insn.IP,
+                Destination = GetOperandExpression(insn, 0, block),
+                Address = GetMemoryAddressExpression(insn),
+                Size = GetOperandSize(insn, 1)
+            };
+        }
+        
+        // Register to register or immediate to register: use RtlAssignment
         return new RtlAssignment
         {
             Offset = (int)insn.IP,
             Destination = GetOperandExpression(insn, 0, block),
             Source = GetOperandExpression(insn, 1, block)
         };
+    }
+    
+    /// <summary>
+    /// Gets the memory address expression for the first memory operand in an instruction.
+    /// </summary>
+    private RtlExpression GetMemoryAddressExpression(Instruction insn)
+    {
+        var baseReg = insn.MemoryBase;
+        var indexReg = insn.MemoryIndex;
+        var scale = insn.MemoryIndexScale;
+        var disp = (uint)insn.MemoryDisplacement64;
+        
+        RtlExpression addr;
+        
+        // Start with base register or displacement
+        if (baseReg != Register.None)
+        {
+            addr = new RtlRegister { Name = baseReg.ToString().ToUpper() };
+            
+            // Add index register if present (with scale)
+            if (indexReg != Register.None)
+            {
+                RtlExpression indexExpr = new RtlRegister { Name = indexReg.ToString().ToUpper() };
+                if (scale > 1)
+                {
+                    indexExpr = new RtlBinaryExpression
+                    {
+                        Left = indexExpr,
+                        Operator = "*",
+                        Right = new RtlConstant { Value = (uint)scale }
+                    };
+                }
+                addr = new RtlBinaryExpression
+                {
+                    Left = addr,
+                    Operator = "+",
+                    Right = indexExpr
+                };
+            }
+            
+            // Add displacement if present
+            if (disp != 0)
+            {
+                addr = new RtlBinaryExpression
+                {
+                    Left = addr,
+                    Operator = "+",
+                    Right = new RtlConstant { Value = disp }
+                };
+            }
+        }
+        else if (indexReg != Register.None)
+        {
+            // Index-only addressing (rare)
+            addr = new RtlRegister { Name = indexReg.ToString().ToUpper() };
+            if (scale > 1)
+            {
+                addr = new RtlBinaryExpression
+                {
+                    Left = addr,
+                    Operator = "*",
+                    Right = new RtlConstant { Value = (uint)scale }
+                };
+            }
+            if (disp != 0)
+            {
+                addr = new RtlBinaryExpression
+                {
+                    Left = addr,
+                    Operator = "+",
+                    Right = new RtlConstant { Value = disp }
+                };
+            }
+        }
+        else
+        {
+            // Direct memory addressing (displacement only)
+            addr = new RtlConstant { Value = disp };
+        }
+        
+        return addr;
+    }
+    
+    /// <summary>
+    /// Gets the size of an operand in bytes.
+    /// </summary>
+    private int GetOperandSize(Instruction insn, int opIndex)
+    {
+        var kind = insn.GetOpKind(opIndex);
+        
+        switch (kind)
+        {
+            case OpKind.Register:
+                var reg = insn.GetOpRegister(opIndex);
+                // Check register size based on name
+                if (reg >= Register.EAX && reg <= Register.EDI) return 4;
+                if (reg >= Register.AX && reg <= Register.DI) return 2;
+                if (reg >= Register.AL && reg <= Register.BH) return 1;
+                return 4; // Default to 32-bit
+                
+            case OpKind.Memory:
+                // Use instruction's memory size hint
+                return insn.MemorySize switch
+                {
+                    MemorySize.UInt8 or MemorySize.Int8 => 1,
+                    MemorySize.UInt16 or MemorySize.Int16 => 2,
+                    MemorySize.UInt32 or MemorySize.Int32 or MemorySize.Float32 => 4,
+                    MemorySize.UInt64 or MemorySize.Int64 or MemorySize.Float64 => 8,
+                    _ => 4 // Default to 32-bit
+                };
+                
+            case OpKind.Immediate8:
+                return 1;
+            case OpKind.Immediate16:
+                return 2;
+            case OpKind.Immediate32:
+            default:
+                return 4;
+        }
     }
     
     private RtlBinaryOp ConvertBinaryOp(Instruction insn, RtlCodeBlock block, string op)
