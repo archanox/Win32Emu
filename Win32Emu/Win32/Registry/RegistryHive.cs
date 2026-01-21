@@ -836,7 +836,7 @@ public class RegistryHive : IDisposable
 		var valueString = value?.ToString() ?? "(null)";
 		if (valueString.Length > MaxLogValueLength)
 		{
-			valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
+			valueString = valueString.Substring(0, MaxLogValueLength) + "... (truncated)";
 		}
 		return valueString;
 	}
