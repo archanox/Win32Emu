@@ -299,8 +299,16 @@ public class RegistryHive : IDisposable
 			// Determine the type
 			type = keyHandle.Key.GetValueType(valueName);
 			
+			// Safely convert value to string for logging to prevent WASM crashes
+			var valueString = value?.ToString() ?? "(null)";
+			// Limit length to prevent issues with very long values on WASM
+			if (valueString.Length > 500)
+			{
+				valueString = valueString.Substring(0, 500) + "... (truncated)";
+			}
+			
 			_logger.LogDebug("[RegistryHive] Query value: {ValueName}={Value} (type={Type}) from handle 0x{Handle:X8}", 
-				valueName, value, type, handle);
+				valueName, valueString, type, handle);
 			return true;
 		}
 		catch (Exception ex)
