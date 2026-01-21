@@ -69,7 +69,7 @@ public class RtlToCSharpGenerator
             sb.AppendLine($"            // Block at offset 0x{bb.StartOffset:X}");
             foreach (var insn in bb.Instructions)
             {
-                GenerateInstruction(sb, insn);
+                GenerateInstruction(sb, insn, rtlBlock);
             }
             sb.AppendLine();
         }
@@ -85,6 +85,10 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            cpu.SetRegister(\"EBP\", EBP);");
         sb.AppendLine("            cpu.SetRegister(\"ESP\", ESP);");
         sb.AppendLine();
+        // Set EIP to the address following this block (critical for execution to continue)
+        sb.AppendLine($"            // Advance EIP to next instruction after this block");
+        sb.AppendLine($"            cpu.SetEip(0x{rtlBlock.EndAddress:X8}u);");
+        sb.AppendLine();
         sb.AppendLine("            return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));");
         sb.AppendLine("        }");
         sb.AppendLine("    }");
@@ -93,14 +97,14 @@ public class RtlToCSharpGenerator
         return sb.ToString();
     }
     
-    private void GenerateInstruction(StringBuilder sb, RtlInstruction insn)
+    private void GenerateInstruction(StringBuilder sb, RtlInstruction insn, RtlCodeBlock rtlBlock)
     {
         var code = insn switch
         {
             RtlAssignment assign => $"{ExpressionToString(assign.Destination)} = {ExpressionToString(assign.Source)};",
             RtlBinaryOp binOp => $"{ExpressionToString(binOp.Destination)} = {ExpressionToString(binOp.Left)} {binOp.Operator} {ExpressionToString(binOp.Right)};",
-            RtlBranch branch => $"if ({ExpressionToString(branch.Condition)}) goto Label_{branch.TargetOffset:X};",
-            RtlGoto goto_ => $"goto Label_{goto_.TargetOffset:X};",
+            RtlBranch branch => GenerateBranch(branch, rtlBlock),
+            RtlGoto goto_ => GenerateGoto(goto_, rtlBlock),
             RtlCall call => GenerateCall(call),
             RtlReturn ret => GenerateReturn(ret),
             RtlLoad load => $"{ExpressionToString(load.Destination)} = mem.Read{load.Size * 8}({ExpressionToString(load.Address)});",
@@ -119,6 +123,75 @@ public class RtlToCSharpGenerator
         else
         {
             sb.AppendLine($"            {code} // @0x{insn.Offset:X}");
+        }
+    }
+    
+    /// <summary>
+    /// Checks if an address is within the current RTL block
+    /// </summary>
+    private bool IsAddressInBlock(uint address, RtlCodeBlock rtlBlock)
+    {
+        return address >= rtlBlock.StartAddress && address < rtlBlock.EndAddress;
+    }
+    
+    /// <summary>
+    /// Generate code for a conditional branch instruction.
+    /// If the target is outside the block, sets EIP and returns.
+    /// </summary>
+    private string GenerateBranch(RtlBranch branch, RtlCodeBlock rtlBlock)
+    {
+        var targetAddr = (uint)branch.TargetOffset;
+        if (IsAddressInBlock(targetAddr, rtlBlock))
+        {
+            // Target is within block - use goto
+            return $"if ({ExpressionToString(branch.Condition)}) goto Label_{branch.TargetOffset:X};";
+        }
+        else
+        {
+            // Target is outside block - set EIP and return
+            // Generate multi-line code that saves state and returns
+            return $@"if ({ExpressionToString(branch.Condition)}) {{ // @0x{branch.Offset:X}
+                cpu.SetRegister(""EAX"", EAX);
+                cpu.SetRegister(""EBX"", EBX);
+                cpu.SetRegister(""ECX"", ECX);
+                cpu.SetRegister(""EDX"", EDX);
+                cpu.SetRegister(""ESI"", ESI);
+                cpu.SetRegister(""EDI"", EDI);
+                cpu.SetRegister(""EBP"", EBP);
+                cpu.SetRegister(""ESP"", ESP);
+                cpu.SetEip(0x{branch.TargetOffset:X8}u);
+                return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));
+            }}";
+        }
+    }
+    
+    /// <summary>
+    /// Generate code for an unconditional goto instruction.
+    /// If the target is outside the block, sets EIP and returns.
+    /// </summary>
+    private string GenerateGoto(RtlGoto goto_, RtlCodeBlock rtlBlock)
+    {
+        var targetAddr = (uint)goto_.TargetOffset;
+        if (IsAddressInBlock(targetAddr, rtlBlock))
+        {
+            // Target is within block - use goto
+            return $"goto Label_{goto_.TargetOffset:X};";
+        }
+        else
+        {
+            // Target is outside block - set EIP and return
+            return $@"{{ // @0x{goto_.Offset:X}
+                cpu.SetRegister(""EAX"", EAX);
+                cpu.SetRegister(""EBX"", EBX);
+                cpu.SetRegister(""ECX"", ECX);
+                cpu.SetRegister(""EDX"", EDX);
+                cpu.SetRegister(""ESI"", ESI);
+                cpu.SetRegister(""EDI"", EDI);
+                cpu.SetRegister(""EBP"", EBP);
+                cpu.SetRegister(""ESP"", ESP);
+                cpu.SetEip(0x{goto_.TargetOffset:X8}u);
+                return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));
+            }}";
         }
     }
     
