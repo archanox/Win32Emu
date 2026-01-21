@@ -236,27 +236,33 @@ public class X86ToRtlConverter
             
             // INC - Increment by 1
             case Mnemonic.Inc:
+            {
+                var operand = GetOperandExpression(insn, 0, block);
                 results.Add(new RtlBinaryOp
                 {
                     Offset = (int)insn.IP,
-                    Destination = GetOperandExpression(insn, 0, block),
-                    Left = GetOperandExpression(insn, 0, block),
+                    Destination = operand,
+                    Left = operand,
                     Operator = "+",
                     Right = new RtlConstant { Value = 1 }
                 });
                 break;
+            }
                 
             // DEC - Decrement by 1
             case Mnemonic.Dec:
+            {
+                var operand = GetOperandExpression(insn, 0, block);
                 results.Add(new RtlBinaryOp
                 {
                     Offset = (int)insn.IP,
-                    Destination = GetOperandExpression(insn, 0, block),
-                    Left = GetOperandExpression(insn, 0, block),
+                    Destination = operand,
+                    Left = operand,
                     Operator = "-",
                     Right = new RtlConstant { Value = 1 }
                 });
                 break;
+            }
                 
             // ADC - Add with Carry (simplified: ignores carry flag)
             case Mnemonic.Adc:
