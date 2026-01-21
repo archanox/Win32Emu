@@ -317,13 +317,21 @@ public class X86ToRtlConverter
             case Mnemonic.Not:
                 {
                     var operand = GetOperandExpression(insn, 0, block);
+                    var size = GetOperandSize(insn, 0);
+                    // Use appropriate mask based on operand size
+                    uint mask = size switch
+                    {
+                        1 => 0xFF,
+                        2 => 0xFFFF,
+                        _ => 0xFFFFFFFF
+                    };
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = operand,
                         Left = operand,
                         Operator = "^",
-                        Right = new RtlConstant { Value = 0xFFFFFFFF }
+                        Right = new RtlConstant { Value = mask }
                     });
                 }
                 break;
@@ -335,19 +343,16 @@ public class X86ToRtlConverter
                 
             // SETO - Set byte on overflow
             // Sets destination byte to 1 if overflow flag is set, 0 otherwise
+            // Note: Full overflow flag tracking requires proper flag modeling.
+            // This simplified version always sets to 0 since we don't track OF.
             case Mnemonic.Seto:
                 results.Add(new RtlAssignment
                 {
                     Offset = (int)insn.IP,
                     Destination = GetOperandExpression(insn, 0, block),
-                    Source = new RtlBinaryExpression
-                    {
-                        // Check if overflow flag is set (simplified: always 0 for now)
-                        // Full overflow flag tracking would require proper flag modeling
-                        Left = new RtlConstant { Value = 0 },
-                        Operator = "!=",
-                        Right = new RtlConstant { Value = 0 }
-                    }
+                    // Simplified: always 0 since we don't have proper overflow flag tracking
+                    // A full implementation would check the OF flag from previous operations
+                    Source = new RtlConstant { Value = 0 }
                 });
                 break;
                 
@@ -389,6 +394,7 @@ public class X86ToRtlConverter
                 
             // ROL - Rotate Left
             // Rotates bits left by count, wrapping around
+            // ROL formula: (val << count) | (val >> (bits - count))
             case Mnemonic.Rol:
                 {
                     var dest = GetOperandExpression(insn, 0, block);
@@ -396,27 +402,48 @@ public class X86ToRtlConverter
                     var size = GetOperandSize(insn, 0);
                     var bits = (uint)(size * 8);
                     
-                    // ROL simplified: (val << count) | (val >> (bits - count))
-                    // For JIT purposes, we approximate this with a shift operation
-                    // Full implementation would need proper bit rotation
-                    var temp = block.NewTemporary();
+                    var tempLeft = block.NewTemporary();
+                    var tempRight = block.NewTemporary();
+                    var tempCount = block.NewTemporary();
                     
-                    // temp = dest << count
+                    // tempCount = bits - count (for the right shift)
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
-                        Destination = temp,
+                        Destination = tempCount,
+                        Left = new RtlConstant { Value = bits },
+                        Operator = "-",
+                        Right = count
+                    });
+                    
+                    // tempLeft = dest << count
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempLeft,
                         Left = dest,
                         Operator = "<<",
                         Right = count
                     });
                     
-                    // dest = temp (simplified - full ROL would include OR with right-shifted bits)
-                    results.Add(new RtlAssignment
+                    // tempRight = dest >> (bits - count)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempRight,
+                        Left = dest,
+                        Operator = ">>",
+                        Right = tempCount
+                    });
+                    
+                    // dest = tempLeft | tempRight
+                    results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = dest,
-                        Source = temp
+                        Left = tempLeft,
+                        Operator = "|",
+                        Right = tempRight
                     });
                 }
                 break;
@@ -684,23 +711,36 @@ public class X86ToRtlConverter
         };
     }
     
+    /// <summary>
+    /// Gets the comparison operator for a conditional jump instruction.
+    /// Note: The current simplified flag model compares the FLAGS pseudo-register
+    /// against 0. This works for simple cases after CMP/TEST but doesn't fully
+    /// model unsigned comparisons or sign/overflow flags.
+    /// </summary>
     private string GetConditionOperator(Mnemonic mnemonic)
     {
+        // Note: Unsigned comparisons (JA/JAE/JB/JBE) are approximated using signed operators.
+        // Full implementation would require tracking CF and ZF separately.
+        // Sign flag checks (JS/JNS) are approximated using < 0 / >= 0 comparisons
+        // which is correct when FLAGS holds the result of a subtraction (CMP).
         return mnemonic switch
         {
-            Mnemonic.Je => "==",
-            Mnemonic.Jne => "!=",
-            Mnemonic.Jl => "<",
-            Mnemonic.Jle => "<=",
-            Mnemonic.Jg => ">",
-            Mnemonic.Jge => ">=",
-            Mnemonic.Ja => ">",   // unsigned greater than (simplified)
-            Mnemonic.Jae => ">=", // unsigned greater than or equal
-            Mnemonic.Jb => "<",   // unsigned less than
-            Mnemonic.Jbe => "<=", // unsigned less than or equal
-            Mnemonic.Jo => "!=",  // overflow (simplified to non-zero check)
-            Mnemonic.Jno => "==", // not overflow
-            Mnemonic.Js => "<",   // sign flag (negative)
+            Mnemonic.Je => "==",   // ZF=1
+            Mnemonic.Jne => "!=",  // ZF=0
+            Mnemonic.Jl => "<",    // SF!=OF (signed less than)
+            Mnemonic.Jle => "<=",  // ZF=1 or SF!=OF
+            Mnemonic.Jg => ">",    // ZF=0 and SF=OF (signed greater)
+            Mnemonic.Jge => ">=",  // SF=OF (signed greater or equal)
+            // Unsigned comparisons - simplified using signed operators
+            // Works correctly for many common patterns but not all
+            Mnemonic.Ja => ">",    // CF=0 and ZF=0 (unsigned above)
+            Mnemonic.Jae => ">=",  // CF=0 (unsigned above or equal)
+            Mnemonic.Jb => "<",    // CF=1 (unsigned below)
+            Mnemonic.Jbe => "<=",  // CF=1 or ZF=1 (unsigned below or equal)
+            // Overflow/sign flag checks - simplified
+            Mnemonic.Jo => "!=",   // OF=1 (approximated as non-zero check)
+            Mnemonic.Jno => "==",  // OF=0
+            Mnemonic.Js => "<",    // SF=1 (negative - FLAGS < 0)
             Mnemonic.Jns => ">=", // not sign (positive or zero)
             _ => "=="
         };
