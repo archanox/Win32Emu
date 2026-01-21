@@ -2662,13 +2662,20 @@ namespace Win32Emu.Win32.Modules
 			var timedOut = false;
 			var failed = false;
 			var lastCheckEip = cpu.GetEip();
+			var lastStepEip = lastCheckEip;
 			var stuckCounter = 0;
+			var eipChangedSinceCheck = false;
 
 			try
 			{
 				while (true)
 				{
 					var eip = cpu.GetEip();
+					if (eip != lastStepEip)
+					{
+						eipChangedSinceCheck = true;
+						lastStepEip = eip;
+					}
 
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
@@ -2695,8 +2702,8 @@ namespace Win32Emu.Win32.Modules
 					// Detect potential infinite loops
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
-						var currentEip = cpu.GetEip();
-						if (currentEip == lastCheckEip)
+						var currentEip = eip;
+						if (!eipChangedSinceCheck)
 						{
 							stuckCounter++;
 							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
@@ -2710,8 +2717,9 @@ namespace Win32Emu.Win32.Modules
 						else
 						{
 							stuckCounter = 0;
-							lastCheckEip = currentEip;
 						}
+						lastCheckEip = currentEip;
+						eipChangedSinceCheck = false;
 					}
 
 			// Execute one instruction
@@ -2832,7 +2840,9 @@ namespace Win32Emu.Win32.Modules
 			var cancelled = false;
 			var failed = false;
 			var lastCheckEip = cpu.GetEip();
+			var lastStepEip = lastCheckEip;
 			var stuckCounter = 0;
+			var eipChangedSinceCheck = false;
 
 			try
 			{
@@ -2859,6 +2869,11 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					var eip = cpu.GetEip();
+					if (eip != lastStepEip)
+					{
+						eipChangedSinceCheck = true;
+						lastStepEip = eip;
+					}
 
 					// Check if we've returned to our marker address
 					if (eip == RETURN_ADDRESS)
@@ -2885,8 +2900,8 @@ namespace Win32Emu.Win32.Modules
 					// Detect potential infinite loops
 					if (steps > 0 && steps % INFINITE_LOOP_CHECK_INTERVAL == 0)
 					{
-						var currentEip = cpu.GetEip();
-						if (currentEip == lastCheckEip)
+						var currentEip = eip;
+						if (!eipChangedSinceCheck)
 						{
 							stuckCounter++;
 							if (stuckCounter >= STUCK_COUNTER_THRESHOLD)
@@ -2900,9 +2915,10 @@ namespace Win32Emu.Win32.Modules
 						else
 						{
 							stuckCounter = 0;
-							lastCheckEip = currentEip;
 						}
-				}
+						lastCheckEip = currentEip;
+						eipChangedSinceCheck = false;
+					}
 
 			// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
 			var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
