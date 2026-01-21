@@ -26,6 +26,9 @@ public class RegistryHive : IDisposable
 	public const uint HKEY_PERFORMANCE_DATA = 0x80000004;
 	public const uint HKEY_CURRENT_CONFIG = 0x80000005;
 	public const uint HKEY_DYN_DATA = 0x80000006;
+	
+	// Maximum length for logged registry values (to prevent WASM crashes with very long values)
+	private const int MaxLogValueLength = 500;
 
 	private bool _disposed;
 
@@ -302,9 +305,9 @@ public class RegistryHive : IDisposable
 			// Safely convert value to string for logging to prevent WASM crashes
 			var valueString = value?.ToString() ?? "(null)";
 			// Limit length to prevent issues with very long values on WASM
-			if (valueString.Length > 500)
+			if (valueString.Length > MaxLogValueLength)
 			{
-				valueString = valueString.Substring(0, 500) + "... (truncated)";
+				valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
 			}
 			
 			_logger.LogDebug("[RegistryHive] Query value: {ValueName}={Value} (type={Type}) from handle 0x{Handle:X8}", 
