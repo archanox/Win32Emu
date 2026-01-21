@@ -135,6 +135,22 @@ public class RtlToCSharpGenerator
     }
     
     /// <summary>
+    /// Generates code to save all CPU registers.
+    /// Used when exiting the JIT block early (branches, gotos, calls).
+    /// </summary>
+    private static string GenerateRegisterSave()
+    {
+        return @"cpu.SetRegister(""EAX"", EAX);
+                cpu.SetRegister(""EBX"", EBX);
+                cpu.SetRegister(""ECX"", ECX);
+                cpu.SetRegister(""EDX"", EDX);
+                cpu.SetRegister(""ESI"", ESI);
+                cpu.SetRegister(""EDI"", EDI);
+                cpu.SetRegister(""EBP"", EBP);
+                cpu.SetRegister(""ESP"", ESP);";
+    }
+    
+    /// <summary>
     /// Generate code for a conditional branch instruction.
     /// If the target is outside the block, sets EIP and returns.
     /// </summary>
@@ -149,16 +165,8 @@ public class RtlToCSharpGenerator
         else
         {
             // Target is outside block - set EIP and return
-            // Generate multi-line code that saves state and returns
             return $@"if ({ExpressionToString(branch.Condition)}) {{ // @0x{branch.Offset:X}
-                cpu.SetRegister(""EAX"", EAX);
-                cpu.SetRegister(""EBX"", EBX);
-                cpu.SetRegister(""ECX"", ECX);
-                cpu.SetRegister(""EDX"", EDX);
-                cpu.SetRegister(""ESI"", ESI);
-                cpu.SetRegister(""EDI"", EDI);
-                cpu.SetRegister(""EBP"", EBP);
-                cpu.SetRegister(""ESP"", ESP);
+                {GenerateRegisterSave()}
                 cpu.SetEip(0x{branch.TargetOffset:X8}u);
                 return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));
             }}";
@@ -181,14 +189,7 @@ public class RtlToCSharpGenerator
         {
             // Target is outside block - set EIP and return
             return $@"{{ // @0x{goto_.Offset:X}
-                cpu.SetRegister(""EAX"", EAX);
-                cpu.SetRegister(""EBX"", EBX);
-                cpu.SetRegister(""ECX"", ECX);
-                cpu.SetRegister(""EDX"", EDX);
-                cpu.SetRegister(""ESI"", ESI);
-                cpu.SetRegister(""EDI"", EDI);
-                cpu.SetRegister(""EBP"", EBP);
-                cpu.SetRegister(""ESP"", ESP);
+                {GenerateRegisterSave()}
                 cpu.SetEip(0x{goto_.TargetOffset:X8}u);
                 return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));
             }}";
@@ -210,13 +211,7 @@ public class RtlToCSharpGenerator
         var sb = new StringBuilder();
         sb.AppendLine($"{{ // CALL instruction @0x{call.Offset:X}");
         sb.AppendLine("                // Save all registers before call");
-        sb.AppendLine("                cpu.SetRegister(\"EAX\", EAX);");
-        sb.AppendLine("                cpu.SetRegister(\"EBX\", EBX);");
-        sb.AppendLine("                cpu.SetRegister(\"ECX\", ECX);");
-        sb.AppendLine("                cpu.SetRegister(\"EDX\", EDX);");
-        sb.AppendLine("                cpu.SetRegister(\"ESI\", ESI);");
-        sb.AppendLine("                cpu.SetRegister(\"EDI\", EDI);");
-        sb.AppendLine("                cpu.SetRegister(\"EBP\", EBP);");
+        sb.AppendLine($"                {GenerateRegisterSave()}");
         sb.AppendLine($"                uint callTarget = {target};");
         sb.AppendLine($"                uint returnAddr = 0x{call.ReturnAddress:X8}u;");
         sb.AppendLine("                // Push return address");

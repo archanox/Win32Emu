@@ -277,6 +277,13 @@ public class X86ToRtlConverter
     
     /// <summary>
     /// Gets the memory address expression for the first memory operand in an instruction.
+    /// Supports x86 memory addressing modes:
+    /// - Direct: [disp] - displacement only (e.g., MOV EAX, [0x12345678])
+    /// - Base: [base] - base register only (e.g., MOV EAX, [EBX])
+    /// - Base+Disp: [base+disp] - base plus displacement (e.g., MOV EAX, [EBX+4])
+    /// - Base+Index: [base+index] - base plus index (e.g., MOV EAX, [EBX+ECX])
+    /// - Base+Index*Scale: [base+index*scale] - SIB addressing (e.g., MOV EAX, [EBX+ECX*4])
+    /// - Base+Index*Scale+Disp: [base+index*scale+disp] - full SIB (e.g., MOV EAX, [EBX+ECX*4+8])
     /// </summary>
     private RtlExpression GetMemoryAddressExpression(Instruction insn)
     {
