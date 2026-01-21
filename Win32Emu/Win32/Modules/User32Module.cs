@@ -2661,8 +2661,7 @@ namespace Win32Emu.Win32.Modules
 			var steps = 0;
 			var timedOut = false;
 			var failed = false;
-			var lastCheckEip = cpu.GetEip();
-			var lastStepEip = lastCheckEip;
+			var lastStepEip = cpu.GetEip();
 			var stuckCounter = 0;
 			var eipChangedSinceCheck = false;
 
@@ -2718,7 +2717,6 @@ namespace Win32Emu.Win32.Modules
 						{
 							stuckCounter = 0;
 						}
-						lastCheckEip = currentEip;
 						eipChangedSinceCheck = false;
 					}
 
@@ -2839,8 +2837,7 @@ namespace Win32Emu.Win32.Modules
 			var timedOut = false;
 			var cancelled = false;
 			var failed = false;
-			var lastCheckEip = cpu.GetEip();
-			var lastStepEip = lastCheckEip;
+			var lastStepEip = cpu.GetEip();
 			var stuckCounter = 0;
 			var eipChangedSinceCheck = false;
 
@@ -2916,7 +2913,6 @@ namespace Win32Emu.Win32.Modules
 						{
 							stuckCounter = 0;
 						}
-						lastCheckEip = currentEip;
 						eipChangedSinceCheck = false;
 					}
 
