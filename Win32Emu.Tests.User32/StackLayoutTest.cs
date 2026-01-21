@@ -115,6 +115,7 @@ public class StackLayoutTests
 	{
 		// Arrange
 		var stepInterval = 10;
+		var eipChangeFrequency = stepInterval - 1;
 		var stuckCounterThreshold = 3;
 		var stuckCounter = 0;
 		var eipChangedSinceCheck = false;
@@ -125,7 +126,7 @@ public class StackLayoutTests
 		// Act
 		for (var steps = 1; steps <= stepInterval * stuckCounterThreshold; steps++)
 		{
-			var shouldChange = steps % (stepInterval - 1) == 0;
+			var shouldChange = steps % eipChangeFrequency == 0;
 			if (shouldChange)
 			{
 				eip += 4;
