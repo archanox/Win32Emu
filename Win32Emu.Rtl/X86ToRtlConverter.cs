@@ -34,10 +34,16 @@ public class X86ToRtlConverter
             StartOffset = (int)startAddress
         };
         
+        // Track the end address (address after the last instruction)
+        uint endAddress = startAddress;
+        
         foreach (var insn in instructions)
         {
             var rtlInstructions = ConvertInstruction(insn, codeBlock);
             basicBlock.Instructions.AddRange(rtlInstructions);
+            
+            // Update end address to be after this instruction
+            endAddress = (uint)insn.NextIP;
             
             // Split into new basic block on control flow changes
             if (IsControlFlow(insn))
@@ -55,6 +61,9 @@ public class X86ToRtlConverter
         {
             codeBlock.BasicBlocks.Add(basicBlock);
         }
+        
+        // Set the end address (address of instruction following this block)
+        codeBlock.EndAddress = endAddress;
         
         return codeBlock;
     }

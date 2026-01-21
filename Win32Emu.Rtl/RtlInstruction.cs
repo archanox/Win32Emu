@@ -218,6 +218,11 @@ public class RtlBasicBlock
 public class RtlCodeBlock
 {
     public uint StartAddress { get; set; }
+    /// <summary>
+    /// The address of the instruction following the last instruction in this block.
+    /// Used to set EIP after block execution completes.
+    /// </summary>
+    public uint EndAddress { get; set; }
     public List<RtlBasicBlock> BasicBlocks { get; set; } = new();
     public Dictionary<string, RtlRegister> LiveRegisters { get; set; } = new();
     public int NextTemporaryId { get; set; } = 0;
