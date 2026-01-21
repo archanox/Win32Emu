@@ -153,13 +153,8 @@ public class RegistryHive : IDisposable
 			if (key.GetValue(valueName) == null)
 			{
 				key.SetValue(valueName, value);
-				// Safely convert value to string for logging to prevent WASM crashes
-				var valueString = value ?? "(null)";
-				if (valueString.Length > MaxLogValueLength)
-				{
-					valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
-				}
-				_logger.LogDebug("[RegistryHive] Set default value: {ValueName}={Value}", valueName, valueString);
+				_logger.LogDebug("[RegistryHive] Set default value: {ValueName}={Value}", 
+					valueName, SafeValueStringForLogging(value));
 			}
 		}
 		catch (Exception ex)
@@ -308,16 +303,8 @@ public class RegistryHive : IDisposable
 			// Determine the type
 			type = keyHandle.Key.GetValueType(valueName);
 			
-			// Safely convert value to string for logging to prevent WASM crashes
-			var valueString = value?.ToString() ?? "(null)";
-			// Limit length to prevent issues with very long values on WASM
-			if (valueString.Length > MaxLogValueLength)
-			{
-				valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
-			}
-			
 			_logger.LogDebug("[RegistryHive] Query value: {ValueName}={Value} (type={Type}) from handle 0x{Handle:X8}", 
-				valueName, valueString, type, handle);
+				valueName, SafeValueStringForLogging(value), type, handle);
 			return true;
 		}
 		catch (Exception ex)
@@ -341,14 +328,8 @@ public class RegistryHive : IDisposable
 		try
 		{
 			keyHandle.Key.SetValue(valueName, value, type);
-			// Safely convert value to string for logging to prevent WASM crashes
-			var valueString = value?.ToString() ?? "(null)";
-			if (valueString.Length > MaxLogValueLength)
-			{
-				valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
-			}
 			_logger.LogDebug("[RegistryHive] Set value: {ValueName}={Value} (type={Type}) in handle 0x{Handle:X8}", 
-				valueName, valueString, type, handle);
+				valueName, SafeValueStringForLogging(value), type, handle);
 			return true;
 		}
 		catch (Exception ex)
@@ -844,6 +825,20 @@ public class RegistryHive : IDisposable
 		{
 			_disposed = true;
 		}
+	}
+
+	/// <summary>
+	/// Safely converts a registry value to a string for logging to prevent WASM crashes.
+	/// Truncates values longer than MaxLogValueLength.
+	/// </summary>
+	private static string SafeValueStringForLogging(object? value)
+	{
+		var valueString = value?.ToString() ?? "(null)";
+		if (valueString.Length > MaxLogValueLength)
+		{
+			valueString = string.Concat(valueString.AsSpan(0, MaxLogValueLength), "... (truncated)");
+		}
+		return valueString;
 	}
 
 	private class RegistryKeyHandle
