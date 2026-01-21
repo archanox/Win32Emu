@@ -19,6 +19,10 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 	// Base address for NE executables (64KB to avoid NULL pointer conflicts)
 	private const uint NE_BASE_ADDRESS = 0x00010000;
 	
+	// Import stub base for NE executables (must be in real-mode addressable range < 1MB)
+	// Using 0x000C0000 (768KB) - traditional upper memory area
+	private const uint NE_IMPORT_STUB_BASE = 0x000C0000;
+	
 	// Full segment size for NE executables (64KB)
 	private const uint FULL_SEGMENT_SIZE = 0x10000;
 	
@@ -357,8 +361,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					var ordinal = reloc.TargetOffset;
 					
 					// Create a synthetic import address for this function
-					// Using a range in the import area (0x0F000000+)
-					targetValue = MemoryRegions.ImportHookBase + 
+					// For NE executables, use low memory address (< 1MB) for real-mode compatibility
+					targetValue = NE_IMPORT_STUB_BASE + 
 						(uint)((reloc.TargetSegment - 1) * 0x10000 + ordinal * 4);
 					
 					logger?.LogDebug("[NE Loader] Import by ordinal: {Module}!{Ordinal} -> 0x{Addr:X8}",
@@ -375,7 +379,8 @@ public class NeImageLoader(VirtualMemory vm, ILogger? logger = null)
 					var funcName = ReadPascalString(bytes, nameOffset);
 					
 					// Create a synthetic import address
-					targetValue = MemoryRegions.ImportHookBase + 
+					// For NE executables, use low memory address (< 1MB) for real-mode compatibility
+					targetValue = NE_IMPORT_STUB_BASE + 
 						(uint)((reloc.TargetSegment - 1) * 0x10000 + reloc.TargetOffset);
 					
 					logger?.LogDebug("[NE Loader] Import by name: {Module}!{Name} -> 0x{Addr:X8}",

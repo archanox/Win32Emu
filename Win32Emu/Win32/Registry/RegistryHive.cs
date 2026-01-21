@@ -26,9 +26,6 @@ public class RegistryHive : IDisposable
 	public const uint HKEY_PERFORMANCE_DATA = 0x80000004;
 	public const uint HKEY_CURRENT_CONFIG = 0x80000005;
 	public const uint HKEY_DYN_DATA = 0x80000006;
-	
-	// Maximum length for logged registry values (to prevent WASM crashes with very long values)
-	private const int MaxLogValueLength = 500;
 
 	private bool _disposed;
 
@@ -153,8 +150,7 @@ public class RegistryHive : IDisposable
 			if (key.GetValue(valueName) == null)
 			{
 				key.SetValue(valueName, value);
-				_logger.LogDebug("[RegistryHive] Set default value: {ValueName}={Value}", 
-					valueName, SafeValueStringForLogging(value));
+				_logger.LogDebug("[RegistryHive] Set default value: {ValueName}={Value}", valueName, value);
 			}
 		}
 		catch (Exception ex)
@@ -304,7 +300,7 @@ public class RegistryHive : IDisposable
 			type = keyHandle.Key.GetValueType(valueName);
 			
 			_logger.LogDebug("[RegistryHive] Query value: {ValueName}={Value} (type={Type}) from handle 0x{Handle:X8}", 
-				valueName, SafeValueStringForLogging(value), type, handle);
+				valueName, value, type, handle);
 			return true;
 		}
 		catch (Exception ex)
@@ -329,7 +325,7 @@ public class RegistryHive : IDisposable
 		{
 			keyHandle.Key.SetValue(valueName, value, type);
 			_logger.LogDebug("[RegistryHive] Set value: {ValueName}={Value} (type={Type}) in handle 0x{Handle:X8}", 
-				valueName, SafeValueStringForLogging(value), type, handle);
+				valueName, value, type, handle);
 			return true;
 		}
 		catch (Exception ex)
@@ -825,20 +821,6 @@ public class RegistryHive : IDisposable
 		{
 			_disposed = true;
 		}
-	}
-
-	/// <summary>
-	/// Safely converts a registry value to a string for logging to prevent WASM crashes.
-	/// Truncates values longer than MaxLogValueLength.
-	/// </summary>
-	private static string SafeValueStringForLogging(object? value)
-	{
-		var valueString = value?.ToString() ?? "(null)";
-		if (valueString.Length > MaxLogValueLength)
-		{
-			valueString = valueString.Substring(0, MaxLogValueLength) + "... (truncated)";
-		}
-		return valueString;
 	}
 
 	private class RegistryKeyHandle
