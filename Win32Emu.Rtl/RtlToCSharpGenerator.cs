@@ -157,20 +157,13 @@ public class RtlToCSharpGenerator
     private string GenerateBranch(RtlBranch branch, RtlCodeBlock rtlBlock)
     {
         var targetAddr = (uint)branch.TargetOffset;
-        if (IsAddressInBlock(targetAddr, rtlBlock))
-        {
-            // Target is within block - use goto
-            return $"if ({ExpressionToString(branch.Condition)}) goto Label_{branch.TargetOffset:X};";
-        }
-        else
-        {
-            // Target is outside block - set EIP and return
-            return $@"if ({ExpressionToString(branch.Condition)}) {{ // @0x{branch.Offset:X}
+        return IsAddressInBlock(targetAddr, rtlBlock)
+            ? $"if ({ExpressionToString(branch.Condition)}) goto Label_{branch.TargetOffset:X};"
+            : $@"if ({ExpressionToString(branch.Condition)}) {{ // @0x{branch.Offset:X}
                 {GenerateRegisterSave()}
                 cpu.SetEip(0x{branch.TargetOffset:X8}u);
                 return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));
             }}";
-        }
     }
     
     /// <summary>
@@ -180,20 +173,13 @@ public class RtlToCSharpGenerator
     private string GenerateGoto(RtlGoto goto_, RtlCodeBlock rtlBlock)
     {
         var targetAddr = (uint)goto_.TargetOffset;
-        if (IsAddressInBlock(targetAddr, rtlBlock))
-        {
-            // Target is within block - use goto
-            return $"goto Label_{goto_.TargetOffset:X};";
-        }
-        else
-        {
-            // Target is outside block - set EIP and return
-            return $@"{{ // @0x{goto_.Offset:X}
+        return IsAddressInBlock(targetAddr, rtlBlock)
+            ? $"goto Label_{goto_.TargetOffset:X};"
+            : $@"{{ // @0x{goto_.Offset:X}
                 {GenerateRegisterSave()}
                 cpu.SetEip(0x{goto_.TargetOffset:X8}u);
                 return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));
             }}";
-        }
     }
     
     private string GenerateCall(RtlCall call)
