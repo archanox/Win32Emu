@@ -65,6 +65,10 @@ public class RtlCall : RtlInstruction
     public RtlExpression? ReturnValue { get; set; }
     public RtlExpression Target { get; set; } = null!;
     public List<RtlExpression> Arguments { get; set; } = new();
+    /// <summary>
+    /// The address to return to after the call completes (instruction following the CALL)
+    /// </summary>
+    public uint ReturnAddress { get; set; }
     
     public override string ToReadableString() 
     {
