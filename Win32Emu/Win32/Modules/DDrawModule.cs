@@ -551,8 +551,51 @@ namespace Win32Emu.Win32.Modules
 			var riid = args.UInt32(1);
 			var ppvObject = args.UInt32(2);
 
-			_logger.LogInformation("[DDraw COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid=0x{Riid:X8}, ppvObject=0x{PpvObject:X8})", thisPtr, riid, ppvObject);
+			// Read the GUID from riid pointer
+			// GUID structure: 4 bytes + 2 bytes + 2 bytes + 8 bytes = 16 bytes
+			var guid1 = _env.MemRead32(riid);
+			var guid2 = _env.MemRead16(riid + 4);
+			var guid3 = _env.MemRead16(riid + 6);
+			// Read the last 8 bytes
+			var guid4_0 = _env.MemRead8(riid + 8);
+			var guid4_1 = _env.MemRead8(riid + 9);
+			var guid4_2 = _env.MemRead8(riid + 10);
+			var guid4_3 = _env.MemRead8(riid + 11);
+			var guid4_4 = _env.MemRead8(riid + 12);
+			var guid4_5 = _env.MemRead8(riid + 13);
+			var guid4_6 = _env.MemRead8(riid + 14);
+			var guid4_7 = _env.MemRead8(riid + 15);
 
+			_logger.LogInformation("[DDraw COM] IUnknown::QueryInterface(this=0x{ThisPtr:X8}, riid={Guid1:X8}-{Guid2:X4}-{Guid3:X4}-{Guid4_0:X2}{Guid4_1:X2}-{Guid4_2:X2}{Guid4_3:X2}{Guid4_4:X2}{Guid4_5:X2}{Guid4_6:X2}{Guid4_7:X2}, ppvObject=0x{PpvObject:X8})",
+				thisPtr, guid1, guid2, guid3, guid4_0, guid4_1, guid4_2, guid4_3, guid4_4, guid4_5, guid4_6, guid4_7, ppvObject);
+
+			// IID_IUnknown = {00000000-0000-0000-C000-000000000046}
+			var isIUnknown = guid1 == 0x00000000 && guid2 == 0x0000 && guid3 == 0x0000 &&
+			                 guid4_0 == 0xC0 && guid4_1 == 0x00 && guid4_2 == 0x00 && guid4_3 == 0x00 &&
+			                 guid4_4 == 0x00 && guid4_5 == 0x00 && guid4_6 == 0x00 && guid4_7 == 0x46;
+
+			// IID_IDirectDrawSurface = {6C14DB81-A733-11CE-A521-0020AF0BE560}
+			var isIDirectDrawSurface = guid1 == 0x6C14DB81 && guid2 == 0xA733 && guid3 == 0x11CE &&
+			                           guid4_0 == 0xA5 && guid4_1 == 0x21 && guid4_2 == 0x00 && guid4_3 == 0x20 &&
+			                           guid4_4 == 0xAF && guid4_5 == 0x0B && guid4_6 == 0xE5 && guid4_7 == 0x60;
+
+			// IID_IDirectDraw = {6C14DB80-A733-11CE-A521-0020AF0BE560}
+			var isIDirectDraw = guid1 == 0x6C14DB80 && guid2 == 0xA733 && guid3 == 0x11CE &&
+			                    guid4_0 == 0xA5 && guid4_1 == 0x21 && guid4_2 == 0x00 && guid4_3 == 0x20 &&
+			                    guid4_4 == 0xAF && guid4_5 == 0x0B && guid4_6 == 0xE5 && guid4_7 == 0x60;
+
+			if (isIUnknown || isIDirectDrawSurface || isIDirectDraw)
+			{
+				// Return the same object pointer - this is valid for COM
+				if (ppvObject != 0)
+				{
+					_env.MemWrite32(ppvObject, thisPtr);
+				}
+				_logger.LogInformation("[DDraw COM] QueryInterface succeeded, returning same object 0x{ThisPtr:X8}", thisPtr);
+				return (uint)DDResult.DD_OK;
+			}
+
+			_logger.LogWarning("[DDraw COM] QueryInterface returning E_NOINTERFACE for unknown IID");
 			// E_NOINTERFACE = 0x80004002
 			return (uint)DDResult.E_NOINTERFACE;
 		}
