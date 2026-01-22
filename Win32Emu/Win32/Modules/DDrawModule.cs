@@ -572,6 +572,8 @@ namespace Win32Emu.Win32.Modules
 
 			// Check against well-known interface IDs
 			// DirectDraw supports upgrading interfaces (IDirectDraw -> IDirectDraw2 -> IDirectDraw4 -> IDirectDraw7)
+			// While each version adds new methods to the vtable, this emulator returns the same object pointer
+			// for all versions because our vtable implements a compatible superset of all interface methods.
 			if (requestedIid.Equals(IID_IUnknown) || 
 				requestedIid.Equals(IID_IDirectDraw) || 
 				requestedIid.Equals(IID_IDirectDraw2) ||
