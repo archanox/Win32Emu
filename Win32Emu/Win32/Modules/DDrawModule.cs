@@ -547,6 +547,9 @@ namespace Win32Emu.Win32.Modules
 		// Well-known interface IDs for COM QueryInterface
 		private static readonly Guid IID_IUnknown = new("00000000-0000-0000-C000-000000000046");
 		private static readonly Guid IID_IDirectDraw = new("6C14DB80-A733-11CE-A521-0020AF0BE560");
+		private static readonly Guid IID_IDirectDraw2 = new("B3A6F3E0-2B43-11CF-A2DE-00AA00B93356");
+		private static readonly Guid IID_IDirectDraw4 = new("9C59509A-39BD-11D1-8C4A-00C04FD930C5");
+		private static readonly Guid IID_IDirectDraw7 = new("15E65EC0-3B9C-11D2-B92F-00609797EA5B");
 		private static readonly Guid IID_IDirectDrawSurface = new("6C14DB81-A733-11CE-A521-0020AF0BE560");
 
 		private uint ComQueryInterface(ICpu cpu, VirtualMemory memory)
@@ -568,7 +571,13 @@ namespace Win32Emu.Win32.Modules
 				thisPtr, requestedIid, ppvObject);
 
 			// Check against well-known interface IDs
-			if (requestedIid.Equals(IID_IUnknown) || requestedIid.Equals(IID_IDirectDraw) || requestedIid.Equals(IID_IDirectDrawSurface))
+			// DirectDraw supports upgrading interfaces (IDirectDraw -> IDirectDraw2 -> IDirectDraw4 -> IDirectDraw7)
+			if (requestedIid.Equals(IID_IUnknown) || 
+				requestedIid.Equals(IID_IDirectDraw) || 
+				requestedIid.Equals(IID_IDirectDraw2) ||
+				requestedIid.Equals(IID_IDirectDraw4) ||
+				requestedIid.Equals(IID_IDirectDraw7) ||
+				requestedIid.Equals(IID_IDirectDrawSurface))
 			{
 				// Per COM spec: always write to ppvObject on success
 				_env.MemWrite32(ppvObject, thisPtr);
