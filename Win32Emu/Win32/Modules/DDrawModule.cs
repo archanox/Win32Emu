@@ -1739,10 +1739,27 @@ namespace Win32Emu.Win32.Modules
 				caps |= (uint)DDSCaps.DDSCAPS_COMPLEX;
 			}
 
-			// Flipping capability
+			// Flipping capability for primary surfaces with backbuffers
 			if (surface.IsPrimary && surface.AttachedSurfaces.Count > 0)
 			{
 				caps |= (uint)DDSCaps.DDSCAPS_FLIP;
+			}
+
+			// Backbuffer surfaces also need FLIP capability if they're part of a flip chain
+			// Check if this surface is attached to a flippable primary surface
+			if (!surface.IsPrimary)
+			{
+				var parentPrimary = _surfaces.Values.FirstOrDefault(s =>
+					s.IsPrimary && s.AttachedSurfaces.Contains(surface.Handle));
+
+				if (parentPrimary != null)
+				{
+					// This is a backbuffer attached to a primary surface
+					caps |= (uint)DDSCaps.DDSCAPS_BACKBUFFER;
+					caps |= (uint)DDSCaps.DDSCAPS_FLIP;
+					// Remove OFFSCREENPLAIN since it's actually a backbuffer
+					caps &= ~(uint)DDSCaps.DDSCAPS_OFFSCREENPLAIN;
+				}
 			}
 
 			_env.MemWrite32(lpDDSCaps, caps);
