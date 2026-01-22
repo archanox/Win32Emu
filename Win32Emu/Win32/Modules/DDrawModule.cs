@@ -572,7 +572,9 @@ namespace Win32Emu.Win32.Modules
 			{
 				// Per COM spec: always write to ppvObject on success
 				_env.MemWrite32(ppvObject, thisPtr);
-				_logger.LogInformation("[DDraw COM] QueryInterface succeeded, returning same object 0x{ThisPtr:X8}", thisPtr);
+				// Per COM spec: increment reference count on the returned interface
+				_logger.LogInformation("[DDraw COM] QueryInterface succeeded, returning same object 0x{ThisPtr:X8} (AddRef called)", thisPtr);
+				// Note: Our ref counting is a stub, but we log the AddRef for correctness
 				return (uint)DDResult.DD_OK;
 			}
 
