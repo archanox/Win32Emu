@@ -1374,10 +1374,16 @@ internal class Kernel32Module : IWin32ModuleUnsafe
 	[DllModuleExport(478, entryPoint: 0x00011752, Version = "5.1.2600.6532")]
 	private uint GetVersion()
 	{
+		// GetVersion return format for Windows 95 (emulated target):
+		// - Low byte: Major version (4 for Windows 95)
+		// - Next byte: Minor version (0 for Windows 95)
+		// - High word: Build number (950 for Windows 95)
+		// For Windows 9x, the high bit is NOT set (set for NT)
 		const ushort build = 950;
 		const byte major = 4;
 		const byte minor = 0;
-		return (major << 8 | minor) << 16 | build;
+		// Correct formula: (build << 16) | (minor << 8) | major
+		return ((uint)build << 16) | ((uint)minor << 8) | major;
 	}
 
 	[DllModuleExport(85)]
