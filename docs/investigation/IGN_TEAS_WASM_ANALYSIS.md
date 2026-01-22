@@ -98,13 +98,13 @@ This IS:
 ## Recommendations
 
 ### Immediate (Users)
-- **Try WASM frontend** with improved performance (100x faster yield interval)
+- **Try WASM frontend** with improved performance (100x fewer yields)
 - **Fallback to native builds** for ign_teas if WASM is too slow (Windows, Linux, macOS)
 - **Use headless mode** for automated testing
 
 ### Short-Term (Developers)
-1. ✅ **Improved yield interval** from 10 to 1000 instructions (100x performance boost)
-2. ✅ **Improved callback yield interval** from 10 to 100 instructions
+1. ✅ **Increased yield interval** from 10 to 1000 instructions (100x fewer yields, significant performance improvement)
+2. ✅ **Increased callback yield interval** from 10 to 100 instructions
 3. Add arithmetic operation tests comparing WASM vs native
 4. Test bit shift operations: `(value + 0xffff) >> 0x10`
 5. Add overflow detection and logging
