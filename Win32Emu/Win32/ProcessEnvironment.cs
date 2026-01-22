@@ -2591,16 +2591,34 @@ public class ProcessEnvironment
 	{
 		_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
 		
-		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
-		// so applications can retrieve them via GetMessageA/PeekMessageA
-		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
-		bool isCreationMessage = message == WindowMessages.WM_CREATE || message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
+		// WM_CREATE must be SENT (synchronously dispatched), not posted
+		// The window procedure must handle WM_CREATE before CreateWindow returns
+		// This is critical for applications that call SetTimer or do initialization in WM_CREATE
+		// WM_SIZE and WM_MOVE are posted to the queue for the message loop to process
+		bool isPostOnlyMessage = message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
 		
-		if (isCreationMessage)
+		if (isPostOnlyMessage)
 		{
-			_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Posting creation message 0x{Message:X4} to queue", message);
+			_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Posting size/move message 0x{Message:X4} to queue", message);
 			PostMessage(hwnd, message, wParam, lParam);
 			return;
+		}
+		
+		// WM_CREATE must be sent synchronously - use the delegate if available
+		if (message == WindowMessages.WM_CREATE && _sendMessageAsyncDelegate != null)
+		{
+			try
+			{
+				_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Sending WM_CREATE synchronously to HWND=0x{Hwnd:X8}", hwnd);
+				var result = await _sendMessageAsyncDelegate(hwnd, message, wParam, lParam).ConfigureAwait(false);
+				_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: WM_CREATE handler returned 0x{Result:X8}", result);
+				return;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[ProcessEnv] SendMessageToWindowAsync: Error sending WM_CREATE");
+				// Fall through to post if send fails
+			}
 		}
 		
 		// On WASM, we need to post messages and pump them to ensure proper async processing

@@ -2327,7 +2327,8 @@ namespace Win32Emu.Win32.Modules
 			var scheduler = _env.ThreadScheduler;
 			// Only use thread suspension if we have a real emulator host that can handle thread switching
 			// In test environments without a host, fall back to timeout behavior
-			if (scheduler != null && _env.Host != null)
+			// On WASM, blocking operations are not supported, so use async message waiting instead
+			if (scheduler != null && _env.Host != null && !OperatingSystem.IsBrowser())
 			{
 				var currentThreadId = _env.GetCurrentThreadId();
 				var messageQueueToken = _env.GetMessageQueueWaitToken();
