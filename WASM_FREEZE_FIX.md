@@ -53,10 +53,12 @@ await Task.Delay(0);  // For native (minimal overhead)
 ### Fix 2: Improved Main Loop Yielding (Emulator.cs)
 ```csharp
 // Before: WASM_YIELD_INTERVAL = 100
-// After:  WASM_YIELD_INTERVAL = 10
+// After (step 1):  WASM_YIELD_INTERVAL = 10
+// After (step 2):  WASM_YIELD_INTERVAL = 1000 (for ign_teas performance)
 ```
-- **Benefit**: 10x more frequent yielding to browser event loop
-- **Impact**: UI remains responsive even during tight loops
+- **Benefit**: 100x better performance for compute-heavy workloads like ign_teas
+- **Impact**: Texture loading loops complete faster while browser remains responsive
+- **Note**: Emergency time-based yield (100ms) ensures responsiveness regardless of yield interval
 
 ### Fix 3: Emergency Yield with Timeout Tracking (Emulator.cs)
 ```csharp
@@ -88,10 +90,11 @@ if (PlatformHelpers.IsWasm)
 ### Fix 5: Improved Callback Responsiveness (DDrawModule.cs)
 ```csharp
 // Before: YIELD_INTERVAL = 10,000 with Task.Yield()
-// After:  YIELD_INTERVAL = 10 with Task.Delay(1)
+// After (step 1):  YIELD_INTERVAL = 10 with Task.Delay(1)
+// After (step 2):  YIELD_INTERVAL = 100 with Task.Delay(1) (for ign_teas performance)
 ```
-- **Benefit**: 1000x more frequent yielding + actually returns control to browser
-- **Impact**: Enumerate operations no longer freeze browser
+- **Benefit**: 10x better performance while still keeping browser responsive
+- **Impact**: DirectDraw operations complete faster
 
 ### Fix 6: Callback Timeout Protection (DDrawModule.cs)
 ```csharp

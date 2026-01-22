@@ -29,8 +29,9 @@ namespace Win32Emu.Win32.Modules
 		private const int DEFAULT_WINDOWED_BPP = 32;
 
 		// Callback execution constants for WASM responsiveness
-		// Lower yield interval ensures browser remains responsive during callback execution
-		private const int CALLBACK_YIELD_INTERVAL = 10;
+		// Increased from 10 to 100 for better performance while maintaining responsiveness
+		// The callback timeout ensures browser freezes are limited even with higher interval
+		private const int CALLBACK_YIELD_INTERVAL = 100;
 		
 		// Callback timeout prevents indefinite browser freezing
 		// Most callbacks should complete in <100ms; this is a safety net for pathological cases

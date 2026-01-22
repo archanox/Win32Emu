@@ -70,10 +70,13 @@ public sealed class Emulator : IDisposable
     
     // WASM yield interval - yield to browser event loop every N iterations
     // This prevents the browser from freezing when emulating tight loops.
-    // Set to 10 for maximum responsiveness on WASM - yields every ~0.01-0.1ms on modern hardware.
-    // Lower values improve UI responsiveness but reduce emulation throughput slightly.
-    // Reduced from 100 to 10 to prevent browser tab freezing during DirectDraw initialization.
-    private const ulong WASM_YIELD_INTERVAL = 10;
+    // Increased from 10 to 1000 for better performance on compute-heavy workloads like ign_teas.
+    // The emergency time-based yield (EMERGENCY_YIELD_THRESHOLD_MS) ensures browser responsiveness
+    // even with this higher interval. Each yield involves JavaScript timer overhead (~4ms minimum),
+    // so reducing yield frequency significantly improves emulation throughput.
+    // For compute-heavy games like ign_teas, this allows ~1000 instructions between yields
+    // instead of only 10, greatly improving texture loading performance.
+    private const ulong WASM_YIELD_INTERVAL = 1000;
     
     // Emergency yield threshold - force yield if more than this many milliseconds pass without yielding
     // This is a safety net to prevent browser freezes in pathological cases
