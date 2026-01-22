@@ -2619,8 +2619,10 @@ public class ProcessEnvironment
 				catch (Exception ex)
 				{
 					_logger.LogError(ex, "[ProcessEnv] SendMessageToWindowAsync: Error sending WM_CREATE, falling back to posting");
-					// Fall through to post if send fails - this may cause timing issues for apps that
+					// Fall back to posting if send fails - this may cause timing issues for apps that
 					// rely on synchronous WM_CREATE handling, but is better than failing completely
+					PostMessage(hwnd, message, wParam, lParam);
+					return;
 				}
 			}
 			else

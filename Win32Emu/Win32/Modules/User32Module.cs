@@ -2349,9 +2349,10 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				// No thread scheduler available - use async message waiting
-				// This path is used on WASM where blocking operations are not supported
-				_logger.LogTrace("[User32] GetMessageA: No thread scheduler, using async message wait");
+				// Use async message waiting with timeout
+				// This path is used on WASM (where blocking operations are not supported),
+				// when scheduler is null, or when host is null
+				_logger.LogTrace("[User32] GetMessageA: Using async message wait (WASM/no scheduler/no host)");
 				
 				// Use the async version with timeout which properly yields to browser event loop
 				queuedMsg = await _env.GetMessageAsync(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100).ConfigureAwait(false);
