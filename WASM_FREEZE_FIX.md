@@ -56,7 +56,7 @@ await Task.Delay(0);  // For native (minimal overhead)
 // After (step 1):  WASM_YIELD_INTERVAL = 10
 // After (step 2):  WASM_YIELD_INTERVAL = 1000 (for ign_teas performance)
 ```
-- **Benefit**: 100x better performance for compute-heavy workloads like ign_teas
+- **Benefit**: 100x fewer yields, significantly improving performance for compute-heavy workloads like ign_teas
 - **Impact**: Texture loading loops complete faster while browser remains responsive
 - **Note**: Emergency time-based yield (100ms) ensures responsiveness regardless of yield interval
 
