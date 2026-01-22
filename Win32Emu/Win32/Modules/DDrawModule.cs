@@ -3796,11 +3796,14 @@ namespace Win32Emu.Win32.Modules
 				// This ensures GetMessageA doesn't block forever when there are no user interactions
 				// This is especially important for applications that use Lock/Unlock directly on the
 				// primary surface (like simple_ddraw.c) instead of using Flip() with backbuffers
-				var firstWindow = _env.GetAllWindowHandles().FirstOrDefault();
-				if (firstWindow != 0)
+				// Use the window handle associated with this DirectDraw object if available
+				var targetWindow = ddrawObj.WindowHandle != IntPtr.Zero 
+					? (uint)ddrawObj.WindowHandle.ToInt32() 
+					: _env.GetAllWindowHandles().FirstOrDefault();
+				if (targetWindow != 0)
 				{
-					_env.PostMessage(firstWindow, (uint)Messaging.WM.PAINT, 0, 0);
-					_logger.LogTrace("[DDraw] Posted WM_PAINT to window 0x{Hwnd:X8} after primary surface unlock", firstWindow);
+					_env.PostMessage(targetWindow, (uint)Messaging.WM.PAINT, 0, 0);
+					_logger.LogTrace("[DDraw] Posted WM_PAINT to window 0x{Hwnd:X8} after primary surface unlock", targetWindow);
 				}
 			}
 

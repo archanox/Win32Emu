@@ -2605,19 +2605,28 @@ public class ProcessEnvironment
 		}
 		
 		// WM_CREATE must be sent synchronously - use the delegate if available
-		if (message == WindowMessages.WM_CREATE && _sendMessageAsyncDelegate != null)
+		if (message == WindowMessages.WM_CREATE)
 		{
-			try
+			if (_sendMessageAsyncDelegate != null)
 			{
-				_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Sending WM_CREATE synchronously to HWND=0x{Hwnd:X8}", hwnd);
-				var result = await _sendMessageAsyncDelegate(hwnd, message, wParam, lParam).ConfigureAwait(false);
-				_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: WM_CREATE handler returned 0x{Result:X8}", result);
-				return;
+				try
+				{
+					_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: Sending WM_CREATE synchronously to HWND=0x{Hwnd:X8}", hwnd);
+					var result = await _sendMessageAsyncDelegate(hwnd, message, wParam, lParam).ConfigureAwait(false);
+					_logger.LogDebug("[ProcessEnv] SendMessageToWindowAsync: WM_CREATE handler returned 0x{Result:X8}", result);
+					return;
+				}
+				catch (Exception ex)
+				{
+					_logger.LogError(ex, "[ProcessEnv] SendMessageToWindowAsync: Error sending WM_CREATE, falling back to posting");
+					// Fall through to post if send fails - this may cause timing issues for apps that
+					// rely on synchronous WM_CREATE handling, but is better than failing completely
+				}
 			}
-			catch (Exception ex)
+			else
 			{
-				_logger.LogError(ex, "[ProcessEnv] SendMessageToWindowAsync: Error sending WM_CREATE");
-				// Fall through to post if send fails
+				_logger.LogWarning("[ProcessEnv] SendMessageToWindowAsync: WM_CREATE cannot be sent synchronously - delegate not set. " +
+					"This may cause issues with applications that rely on initialization in WM_CREATE handler.");
 			}
 		}
 		
