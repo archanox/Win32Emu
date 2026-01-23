@@ -44,6 +44,12 @@ Edit your `appsettings.json` or GUI settings:
 }
 ```
 
+The MCP server will start when you launch Win32Emu.Gui, before any emulation session begins. This allows AI assistants to:
+- Connect immediately when the application starts
+- Start emulation sessions using MCP tools
+- Monitor the entire lifecycle from application startup to shutdown
+- Debug issues that occur during emulation startup
+
 ### Method 2: UI Settings
 
 1. Open Win32Emu.Gui
@@ -51,6 +57,7 @@ Edit your `appsettings.json` or GUI settings:
 3. Check **Enable MCP Server**
 4. Check **Auto-start MCP server** (optional)
 5. Click **Save**
+6. Restart the application for changes to take effect
 
 ### Method 3: Command Line
 
@@ -59,6 +66,8 @@ Start the emulator with MCP enabled:
 ```bash
 Win32Emu.Gui.exe game.exe --mcp-server
 ```
+
+**Note**: The `--mcp-server` CLI flag is parsed but server startup is controlled by configuration settings. Set `EnableMcpServer` or `AutoStartMcpServer` to `true` in your configuration.
 
 ## Available MCP Tools
 
@@ -220,6 +229,23 @@ Disassemble instructions at a specified address.
 **Example AI Query**: "Disassemble 10 instructions at 0x00401000"
 
 ## Usage Examples
+
+### MCP Server Lifecycle
+
+The MCP server lifecycle is designed to give AI assistants full control over the debugging experience:
+
+1. **Application Startup**: When you launch Win32Emu.Gui with MCP enabled, the server starts immediately
+2. **AI Connection**: AI assistants can connect before any emulation begins
+3. **Pre-Emulation**: AI can inspect configuration, start emulation sessions, or wait for user to start a game
+4. **During Emulation**: Full access to all debugging tools while emulation is running
+5. **Post-Emulation**: AI can analyze results after emulation stops
+6. **Application Shutdown**: Server shuts down gracefully when the application exits
+
+This design allows AI to:
+- Monitor the complete application lifecycle
+- Start and control emulation sessions programmatically
+- Catch issues that occur during startup
+- Provide proactive assistance throughout the debugging workflow
 
 ### Example 1: Debugging an Infinite Loop
 
