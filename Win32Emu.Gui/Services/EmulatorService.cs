@@ -14,7 +14,6 @@ public class EmulatorService
     private readonly ILogger _logger;
     private readonly VirtualDiskService _virtualDiskService;
     private Emulator? _currentEmulator;
-    private McpServerHost? _mcpServerHost;
 
     public EmulatorService(EmulatorConfiguration configuration, IEmulatorHost? host = null, ILogger? logger = null)
     {
@@ -39,9 +38,6 @@ public class EmulatorService
             _currentEmulator.Stop();
             _logger.LogInformation("Emulator stop requested");
         }
-        
-        // Stop MCP server if running
-        StopMcpServer();
     }
 
     /// <summary>
@@ -133,12 +129,6 @@ public class EmulatorService
                     ansiCodePage: _configuration.DefaultAnsiCodePage,
                     oemCodePage: _configuration.DefaultOemCodePage);
                 
-                // Start MCP server if enabled in configuration
-                if (_configuration.EnableMcpServer || _configuration.AutoStartMcpServer)
-                {
-                    StartMcpServer();
-                }
-                
                 // Run the emulator
                 _currentEmulator.Run();
                 
@@ -180,87 +170,7 @@ public class EmulatorService
                 // Dispose the emulator to properly cleanup resources including VFS
                 _currentEmulator?.Dispose();
                 _currentEmulator = null;
-                
-                // Stop MCP server when emulator is disposed
-                StopMcpServer();
             }
         });
-    }
-
-    /// <summary>
-    /// Start the MCP debugging server
-    /// </summary>
-    private void StartMcpServer()
-    {
-        if (_mcpServerHost != null)
-        {
-            _logger.LogWarning("[MCP] Server is already running");
-            return;
-        }
-
-        try
-        {
-            _logger.LogInformation("[MCP] Starting server for AI-assisted debugging...");
-            _mcpServerHost = new McpServerHost(this, _logger);
-            
-            // Start the server asynchronously
-            Task.Run(async () =>
-            {
-                try
-                {
-                    await _mcpServerHost.StartAsync();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "[MCP] Failed to start server");
-                }
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "[MCP] Failed to initialize server");
-            _mcpServerHost = null;
-        }
-    }
-
-    /// <summary>
-    /// Stop the MCP debugging server
-    /// </summary>
-    private void StopMcpServer()
-    {
-        if (_mcpServerHost != null)
-        {
-            try
-            {
-                _logger.LogInformation("[MCP] Stopping server...");
-                
-                // Stop the server asynchronously
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        await _mcpServerHost.StopAsync();
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "[MCP] Error stopping server");
-                    }
-                    finally
-                    {
-                        _mcpServerHost?.Dispose();
-                        _mcpServerHost = null;
-                    }
-                }).Wait(TimeSpan.FromSeconds(5)); // Wait up to 5 seconds for graceful shutdown
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "[MCP] Error during server shutdown");
-            }
-            finally
-            {
-                _mcpServerHost?.Dispose();
-                _mcpServerHost = null;
-            }
-        }
     }
 }
