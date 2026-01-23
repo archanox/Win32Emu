@@ -224,10 +224,23 @@ public class McpDebugTools
 
 		try
 		{
-			// Parse pattern
-			var patternBytes = pattern.Split(' ')
-				.Select(s => Convert.ToByte(s.Trim(), 16))
-				.ToArray();
+			// Parse pattern - filter out empty tokens and validate hex format
+			var tokens = pattern.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+			var patternBytes = new List<byte>();
+			
+			foreach (var token in tokens)
+			{
+				if (!byte.TryParse(token, System.Globalization.NumberStyles.HexNumber, null, out var b))
+				{
+					return $"Error: Invalid hex byte '{token}' in pattern. Expected hex bytes like '4D 5A'.";
+				}
+				patternBytes.Add(b);
+			}
+			
+			if (patternBytes.Count == 0)
+			{
+				return "Error: Empty pattern provided";
+			}
 
 			uint startAddr = 0;
 			if (startAddress != null && !TryParseAddress(startAddress, out startAddr))
@@ -235,7 +248,7 @@ public class McpDebugTools
 				return $"Invalid start address format: {startAddress}";
 			}
 
-			var results = emulator.SearchMemory(patternBytes, startAddr, maxResults);
+			var results = emulator.SearchMemory(patternBytes.ToArray(), startAddr, maxResults);
 			return System.Text.Json.JsonSerializer.Serialize(results, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
 		}
 		catch (Exception ex)

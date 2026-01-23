@@ -33,6 +33,7 @@ public static class EmulatorLauncher
 		var gdbServerMode = args.Contains("--gdb-server");
 		var gdbServerPort = 1234; // Default port
 		var force32BitStackOps = !args.Contains("--no-force-32bit-stack-ops"); // Default to true for Win32 compatibility
+		var mcpServerMode = args.Contains("--mcp-server"); // MCP server for AI-assisted debugging
 		var forceInterpreterMode = args.Contains("--interpreter"); // Force interpreter mode, disable JIT compilation
 		
 		// Check for custom GDB server port

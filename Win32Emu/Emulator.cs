@@ -4474,11 +4474,8 @@ public sealed class Emulator : IDisposable
         var modules = new List<object> { new { Name = modulesPath, BaseAddress = _image.BaseAddress } };
         
         // Add loaded DLL modules from dispatcher
-        if (_dispatcher != null)
-        {
-            // Get module names from dispatcher (this would need to be exposed)
-            modules.Add(new { Message = "DLL enumeration not yet fully implemented" });
-        }
+        // Get module names from dispatcher (this would need to be exposed)
+        modules.Add(new { Message = "DLL enumeration not yet fully implemented" });
 
         return modules;
     }
@@ -4494,7 +4491,15 @@ public sealed class Emulator : IDisposable
         }
 
         var results = new List<uint>();
-        var memSize = (ulong)_vm.Size;
+        // Limit search to configured memory size instead of full 4GB address space
+        // This prevents scanning the entire 32-bit address space which would stall the emulator
+        var memSize = _vm.ConfiguredSize;
+        
+        // Safety check: if configured size is unreasonably large, cap at 1GB
+        if (memSize > 1024 * 1024 * 1024)
+        {
+            memSize = 1024 * 1024 * 1024;
+        }
         
         for (var addr = (ulong)startAddress; addr < memSize - (ulong)pattern.Length && results.Count < maxResults; addr++)
         {
