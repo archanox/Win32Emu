@@ -4388,7 +4388,7 @@ public sealed class Emulator : IDisposable
         var bytes = new byte[length];
         for (var i = 0; i < length; i++)
         {
-            bytes[i] = _vm.ReadByte(address + (uint)i);
+            bytes[i] = _vm.Read8(address + (uint)i);
         }
         return bytes;
     }
@@ -4470,7 +4470,8 @@ public sealed class Emulator : IDisposable
             return new { Error = "Emulator not initialized" };
         }
 
-        var modules = new List<object> { new { Name = _image.Name, BaseAddress = _image.BaseAddress } };
+        var modulesPath = System.IO.Path.GetFileName(_image.FilePath);
+        var modules = new List<object> { new { Name = modulesPath, BaseAddress = _image.BaseAddress } };
         
         // Add loaded DLL modules from dispatcher
         if (_dispatcher != null)
@@ -4493,14 +4494,14 @@ public sealed class Emulator : IDisposable
         }
 
         var results = new List<uint>();
-        var memSize = _vm.Size;
+        var memSize = (ulong)_vm.Size;
         
-        for (uint addr = startAddress; addr < memSize - pattern.Length && results.Count < maxResults; addr++)
+        for (var addr = (ulong)startAddress; addr < memSize - (ulong)pattern.Length && results.Count < maxResults; addr++)
         {
             var match = true;
             for (var i = 0; i < pattern.Length; i++)
             {
-                if (_vm.ReadByte(addr + (uint)i) != pattern[i])
+                if (_vm.Read8(addr + (uint)i) != pattern[i])
                 {
                     match = false;
                     break;
@@ -4509,7 +4510,7 @@ public sealed class Emulator : IDisposable
             
             if (match)
             {
-                results.Add(addr);
+                results.Add((uint)addr);
             }
         }
 
@@ -4541,7 +4542,7 @@ public sealed class Emulator : IDisposable
         }
 
         var instructions = new List<object>();
-        var currentAddr = address;
+        var currentAddr = (ulong)address;
 
         for (var i = 0; i < count; i++)
         {
@@ -4549,7 +4550,7 @@ public sealed class Emulator : IDisposable
             var bytes = new byte[15];
             for (var j = 0; j < 15; j++)
             {
-                bytes[j] = _vm.ReadByte(currentAddr + (uint)j);
+                bytes[j] = _vm.Read8(currentAddr + (uint)j);
             }
 
             var hex = BitConverter.ToString(bytes, 0, Math.Min(8, bytes.Length)).Replace("-", " ");
