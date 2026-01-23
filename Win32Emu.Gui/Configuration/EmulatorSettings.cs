@@ -57,6 +57,17 @@ public class EmulatorSettings
     public bool UseOtlpExporter { get; set; } = false;
     public string OtlpEndpoint { get; set; } = "http://localhost:4317";
     
+    // MCP (Model Context Protocol) Debugging Settings
+    /// <summary>
+    /// Enable MCP server for AI-assisted debugging
+    /// </summary>
+    public bool EnableMcpServer { get; set; } = false;
+    
+    /// <summary>
+    /// Automatically start MCP server when emulator is launched
+    /// </summary>
+    public bool AutoStartMcpServer { get; set; } = false;
+    
     // Virtual Disk Settings
     /// <summary>
     /// Enable virtual disk by default for all games (can be overridden per-game)

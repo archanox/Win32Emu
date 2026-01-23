@@ -67,6 +67,10 @@ Win32Emu.Gui --nogui <path-to-pe> [options]
 - `--interactive-debug`: Enable interactive step-through debugger (GDB-like)
 - `--gdb-server [port]`: Start GDB server for remote debugging with Ghidra/IDA (default port: 1234)
   - Supports remote file I/O when VFS is initialized (access game files from debugger)
+- `--mcp-server`: Enable MCP (Model Context Protocol) server for AI-assisted debugging
+  - Allows AI assistants like GitHub Copilot to inspect and control the emulator
+  - Provides tools for memory inspection, execution control, and analysis
+  - See [docs/guides/MCP_DEBUGGING_GUIDE.md](docs/guides/MCP_DEBUGGING_GUIDE.md) for detailed usage
 - `--backend <SDL|GLFW|Vulkan|Metal|Software>`: Select rendering backend (default: SDL)
 - `--log-file [path]`: Enable logging to file (auto-generates MD5-based filename if path not provided)
   - Filename format: `<executable>_<md5hash>_<timestamp>.log`
