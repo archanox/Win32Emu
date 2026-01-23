@@ -37,6 +37,7 @@ public sealed class Emulator : IDisposable
     private readonly HashSet<uint> _patchedImportStubs = new();
     private Exception? _lastException;
     private byte[]? _executableBytes; // Store executable bytes for resource reading when loaded from VHD
+    private ExecutionHistoryTracker? _executionHistory;
     
     // Actual memory layout from PE headers
     private uint _stackBase;
@@ -508,6 +509,9 @@ public sealed class Emulator : IDisposable
         // Convert MB to bytes for VirtualMemory constructor
         var memorySizeBytes = (ulong)reservedMemoryMb * 1024 * 1024;
         _vm = new VirtualMemory(memorySizeBytes, _logger);
+        
+        // Initialize execution history tracker for debugging
+        _executionHistory = new ExecutionHistoryTracker(maxSize: 1000);
         
         var configuredSizeMB = _vm.ConfiguredSize / (1024 * 1024);
         var addressSpaceSizeMB = _vm.Size / (1024 * 1024);
@@ -4430,13 +4434,27 @@ public sealed class Emulator : IDisposable
     /// </summary>
     public object GetExecutionHistory(int count)
     {
-        if (_cpu == null)
+        if (_cpu == null || _executionHistory == null)
         {
             return new { Error = "Emulator not initialized" };
         }
 
-        // This would need execution history tracking to be implemented
-        return new { Message = "Execution history not yet implemented", Count = count };
+        var history = _executionHistory.GetRecentHistory(count);
+        var records = history.Select(h => new
+        {
+            InstructionNumber = h.InstructionNumber,
+            Address = $"0x{h.Eip:X8}",
+            Bytes = BitConverter.ToString(h.InstructionBytes).Replace("-", " "),
+            Disassembly = h.Disassembly ?? "N/A",
+            Timestamp = h.Timestamp.ToString("HH:mm:ss.fff")
+        }).ToList();
+
+        return new
+        {
+            Count = records.Count,
+            TotalInstructions = _executionHistory.TotalInstructions,
+            History = records
+        };
     }
 
     /// <summary>
@@ -4451,12 +4469,73 @@ public sealed class Emulator : IDisposable
 
         var esp = _cpu.GetRegister("ESP");
         var ebp = _cpu.GetRegister("EBP");
+        var eip = _cpu.GetRegister("EIP");
         
+        var frames = new List<object>();
+        var currentEbp = ebp;
+        var depth = 0;
+        const int maxDepth = 50; // Prevent infinite loops in corrupted stacks
+
+        try
+        {
+            // Add current frame
+            frames.Add(new
+            {
+                Depth = depth,
+                EIP = $"0x{eip:X8}",
+                EBP = $"0x{currentEbp:X8}",
+                ESP = $"0x{esp:X8}",
+                Type = "Current"
+            });
+
+            // Walk the stack using EBP chain
+            while (depth < maxDepth && currentEbp != 0 && currentEbp < _vm.ConfiguredSize - 8)
+            {
+                // Read saved EBP and return address from stack frame
+                uint savedEbp = _vm.Read32(currentEbp);
+                uint returnAddress = _vm.Read32(currentEbp + 4);
+
+                // Sanity checks
+                if (returnAddress == 0 || returnAddress >= _vm.ConfiguredSize)
+                {
+                    break;
+                }
+
+                if (savedEbp == currentEbp) // Detect cycles
+                {
+                    break;
+                }
+
+                depth++;
+                frames.Add(new
+                {
+                    Depth = depth,
+                    EIP = $"0x{returnAddress:X8}",
+                    EBP = $"0x{savedEbp:X8}",
+                    ESP = $"0x{currentEbp + 8:X8}",
+                    Type = "Caller"
+                });
+
+                currentEbp = savedEbp;
+            }
+        }
+        catch (Exception ex)
+        {
+            frames.Add(new
+            {
+                Depth = depth + 1,
+                Error = $"Stack walk terminated: {ex.Message}",
+                Type = "Error"
+            });
+        }
+
         return new
         {
-            ESP = esp,
-            EBP = ebp,
-            Message = "Call stack reconstruction not yet fully implemented"
+            FrameCount = frames.Count,
+            CurrentESP = $"0x{esp:X8}",
+            CurrentEBP = $"0x{ebp:X8}",
+            CurrentEIP = $"0x{eip:X8}",
+            Frames = frames
         };
     }
 
@@ -4532,8 +4611,36 @@ public sealed class Emulator : IDisposable
             return new { Error = "Emulator not initialized" };
         }
 
-        // This would need API tracing to be implemented and exposed
-        return new { Message = "API tracing not yet implemented", Count = count };
+        var apiCallTracer = _env.ApiCallTracer;
+        if (apiCallTracer == null)
+        {
+            return new
+            {
+                Message = "API tracing is not enabled. Enable it by calling Environment.EnableApiTracing() or using --trace-api flag.",
+                Count = 0,
+                Calls = Array.Empty<object>()
+            };
+        }
+
+        var recentCalls = apiCallTracer.GetRecentCalls(count);
+        var calls = recentCalls.Select(call => new
+        {
+            CallNumber = call.CallNumber,
+            Timestamp = $"{call.Timestamp.TotalSeconds:F6}s",
+            Module = call.ModuleName,
+            Function = call.FunctionName,
+            Parameters = call.Parameters,
+            ReturnValue = call.ReturnValue,
+            EIP = $"0x{call.Eip:X8}",
+            Duration = call.DurationMicroseconds.HasValue ? $"{call.DurationMicroseconds.Value}μs" : "N/A"
+        }).ToList();
+
+        return new
+        {
+            Count = calls.Count,
+            TotalCalls = apiCallTracer.GetRecentCalls(int.MaxValue).Count,
+            Calls = calls
+        };
     }
 
     /// <summary>
@@ -4546,31 +4653,76 @@ public sealed class Emulator : IDisposable
             return new { Error = "Emulator not initialized" };
         }
 
-        var instructions = new List<object>();
-        var currentAddr = (ulong)address;
-
-        for (var i = 0; i < count; i++)
+        try
         {
-            // Read up to 15 bytes (max x86 instruction length)
-            var bytes = new byte[15];
-            for (var j = 0; j < 15; j++)
+            var instructions = new List<object>();
+            var currentAddr = (ulong)address;
+            var maxBytes = Math.Min(count * 15, 4096); // Read up to 4KB max
+            
+            // Read bytes for disassembly
+            var bytes = new byte[maxBytes];
+            for (var i = 0; i < maxBytes && currentAddr + (uint)i < _vm.ConfiguredSize; i++)
             {
-                bytes[j] = _vm.Read8(currentAddr + (uint)j);
+                bytes[i] = _vm.Read8(currentAddr + (uint)i);
             }
 
-            var hex = BitConverter.ToString(bytes, 0, Math.Min(8, bytes.Length)).Replace("-", " ");
-            instructions.Add(new
+            // Use Iced disassembler
+            var decoder = Iced.Intel.Decoder.Create(32, bytes);
+            decoder.IP = currentAddr;
+
+            var formatter = new Iced.Intel.NasmFormatter();
+            var output = new Iced.Intel.StringOutput();
+
+            var disassembledCount = 0;
+            while (disassembledCount < count && decoder.IP < currentAddr + (ulong)maxBytes)
             {
-                Address = currentAddr,
-                Bytes = hex,
-                Message = "Full disassembly not yet implemented"
-            });
+                decoder.Decode(out var instruction);
+                
+                if (instruction.Code == Iced.Intel.Code.INVALID)
+                {
+                    break;
+                }
 
-            // Assume average instruction length of 3 bytes for now
-            currentAddr += 3;
+                formatter.Format(instruction, output);
+                var disassembly = output.ToStringAndReset();
+
+                var instrBytes = bytes.Skip((int)(instruction.IP - currentAddr))
+                    .Take(instruction.Length)
+                    .ToArray();
+
+                instructions.Add(new
+                {
+                    Address = $"0x{instruction.IP:X8}",
+                    Bytes = BitConverter.ToString(instrBytes).Replace("-", " "),
+                    Length = instruction.Length,
+                    Mnemonic = instruction.Mnemonic.ToString(),
+                    Disassembly = disassembly,
+                    IsValid = true
+                });
+
+                disassembledCount++;
+
+                if (decoder.IP >= currentAddr + (ulong)maxBytes)
+                {
+                    break;
+                }
+            }
+
+            return new
+            {
+                StartAddress = $"0x{address:X8}",
+                Count = instructions.Count,
+                Instructions = instructions
+            };
         }
-
-        return new { Instructions = instructions };
+        catch (Exception ex)
+        {
+            return new
+            {
+                Error = $"Disassembly failed: {ex.Message}",
+                Address = $"0x{address:X8}"
+            };
+        }
     }
 
     #endregion
