@@ -22,7 +22,7 @@ public class McpDebugTools
 		_logger = logger;
 	}
 
-	[McpServerTool(Description = "Get current emulator CPU state including all registers and flags")]
+	[McpServerTool]
 	public string GetEmulatorState()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -44,10 +44,10 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Read memory at specified address")]
+	[McpServerTool]
 	public string ReadMemory(
-		[Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address,
-		[Description("Number of bytes to read")] int length = 16)
+		[System.ComponentModel.Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address,
+		[System.ComponentModel.Description("Number of bytes to read")] int length = 16)
 	{
 		var emulator = _emulatorService.CurrentEmulator;
 		if (emulator == null)
@@ -77,9 +77,9 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Set a breakpoint at specified address")]
+	[McpServerTool]
 	public string SetBreakpoint(
-		[Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address)
+		[System.ComponentModel.Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address)
 	{
 		var emulator = _emulatorService.CurrentEmulator;
 		if (emulator == null)
@@ -104,7 +104,7 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Resume emulator execution until next breakpoint")]
+	[McpServerTool]
 	public string ContinueExecution()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -125,7 +125,7 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Execute a single instruction and break")]
+	[McpServerTool]
 	public string StepInstruction()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -146,9 +146,9 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Get execution history showing last N executed instructions")]
+	[McpServerTool]
 	public string GetExecutionHistory(
-		[Description("Number of instructions to retrieve")] int count = 10)
+		[System.ComponentModel.Description("Number of instructions to retrieve")] int count = 10)
 	{
 		var emulator = _emulatorService.CurrentEmulator;
 		if (emulator == null)
@@ -168,7 +168,7 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Get current call stack")]
+	[McpServerTool]
 	public string GetCallStack()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -189,7 +189,7 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Get list of loaded DLL modules")]
+	[McpServerTool]
 	public string GetLoadedModules()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -210,11 +210,11 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Search for a byte pattern in memory")]
+	[McpServerTool]
 	public string SearchMemory(
-		[Description("Hex byte pattern to search for (e.g., '4D 5A' for PE header)")] string pattern,
-		[Description("Starting address in hexadecimal")] string? startAddress = null,
-		[Description("Maximum number of results to return")] int maxResults = 10)
+		[System.ComponentModel.Description("Hex byte pattern to search for (e.g., '4D 5A' for PE header)")] string pattern,
+		[System.ComponentModel.Description("Starting address in hexadecimal")] string? startAddress = null,
+		[System.ComponentModel.Description("Maximum number of results to return")] int maxResults = 10)
 	{
 		var emulator = _emulatorService.CurrentEmulator;
 		if (emulator == null)
@@ -245,9 +245,9 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Get recent Win32 API calls with parameters and return values")]
+	[McpServerTool]
 	public string GetWin32ApiTrace(
-		[Description("Number of recent API calls to retrieve")] int count = 20)
+		[System.ComponentModel.Description("Number of recent API calls to retrieve")] int count = 20)
 	{
 		var emulator = _emulatorService.CurrentEmulator;
 		if (emulator == null)
@@ -267,10 +267,10 @@ public class McpDebugTools
 		}
 	}
 
-	[McpServerTool(Description = "Disassemble instructions at specified address")]
+	[McpServerTool]
 	public string DisassembleAt(
-		[Description("Memory address in hexadecimal")] string address,
-		[Description("Number of instructions to disassemble")] int count = 10)
+		[System.ComponentModel.Description("Memory address in hexadecimal")] string address,
+		[System.ComponentModel.Description("Number of instructions to disassemble")] int count = 10)
 	{
 		var emulator = _emulatorService.CurrentEmulator;
 		if (emulator == null)
