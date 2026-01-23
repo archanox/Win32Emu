@@ -52,6 +52,17 @@ public class EmulatorConfiguration
 	public bool UseOtlpExporter { get; set; }
 	public string OtlpEndpoint { get; set; } = "http://localhost:4317";
 	
+	// MCP (Model Context Protocol) Debugging Settings
+	/// <summary>
+	/// Enable MCP server for AI-assisted debugging
+	/// </summary>
+	public bool EnableMcpServer { get; set; } = false;
+	
+	/// <summary>
+	/// Automatically start MCP server when emulator is launched
+	/// </summary>
+	public bool AutoStartMcpServer { get; set; } = false;
+	
 	// File Logging Settings
 	public bool EnableFileLogging { get; set; }
 	public string? LogFileDirectory { get; set; }

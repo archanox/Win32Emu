@@ -137,6 +137,8 @@ public class ConfigurationService
             UseConsoleExporter = _settings.UseConsoleExporter,
             UseOtlpExporter = _settings.UseOtlpExporter,
             OtlpEndpoint = _settings.OtlpEndpoint,
+            EnableMcpServer = _settings.EnableMcpServer,
+            AutoStartMcpServer = _settings.AutoStartMcpServer,
             UseVirtualDiskByDefault = _settings.UseVirtualDiskByDefault,
             DefaultVirtualDiskSizeMb = _settings.DefaultVirtualDiskSizeMb,
             VirtualDiskFormat = _settings.VirtualDiskFormat,
