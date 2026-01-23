@@ -4331,6 +4331,244 @@ public sealed class Emulator : IDisposable
         }
     }
 
+    #region MCP Debugging API
+    
+    /// <summary>
+    /// Get current emulator debug state for MCP tools
+    /// </summary>
+    public object GetDebugState()
+    {
+        if (_cpu == null || _env == null)
+        {
+            return new { Error = "Emulator not initialized" };
+        }
+
+        return new
+        {
+            Registers = new
+            {
+                EAX = _cpu.GetRegister("EAX"),
+                EBX = _cpu.GetRegister("EBX"),
+                ECX = _cpu.GetRegister("ECX"),
+                EDX = _cpu.GetRegister("EDX"),
+                ESI = _cpu.GetRegister("ESI"),
+                EDI = _cpu.GetRegister("EDI"),
+                EBP = _cpu.GetRegister("EBP"),
+                ESP = _cpu.GetRegister("ESP"),
+                EIP = _cpu.GetRegister("EIP"),
+                EFLAGS = _cpu.GetRegister("EFLAGS")
+            },
+            Memory = new
+            {
+                Size = _vm?.Size ?? 0,
+                StackBase = _stackBase,
+                StackLimit = _stackLimit,
+                HeapBase = _heapBase
+            },
+            State = new
+            {
+                IsRunning = !_stopRequested,
+                IsPaused = IsPaused,
+                DebugMode = _debugMode,
+                InteractiveDebugMode = _interactiveDebugMode
+            }
+        };
+    }
+
+    /// <summary>
+    /// Read memory at specified address for MCP tools
+    /// </summary>
+    public byte[] ReadMemory(uint address, int length)
+    {
+        if (_vm == null)
+        {
+            throw new InvalidOperationException("Emulator not initialized");
+        }
+
+        var bytes = new byte[length];
+        for (var i = 0; i < length; i++)
+        {
+            bytes[i] = _vm.ReadByte(address + (uint)i);
+        }
+        return bytes;
+    }
+
+    /// <summary>
+    /// Set a breakpoint at specified address for MCP tools
+    /// </summary>
+    public void SetBreakpoint(uint address)
+    {
+        if (_cpu == null)
+        {
+            throw new InvalidOperationException("Emulator not initialized");
+        }
+
+        // This would need to be implemented in the CPU backend
+        // For now, just log it
+        _logger.LogInformation("[MCP] Breakpoint set at 0x{Address:X8}", address);
+    }
+
+    /// <summary>
+    /// Continue execution (same as Resume) for MCP tools
+    /// </summary>
+    public void Continue()
+    {
+        Resume();
+    }
+
+    /// <summary>
+    /// Execute a single instruction for MCP tools
+    /// </summary>
+    public void Step()
+    {
+        // This would need to be implemented in the CPU backend
+        _logger.LogInformation("[MCP] Step requested");
+    }
+
+    /// <summary>
+    /// Get execution history for MCP tools
+    /// </summary>
+    public object GetExecutionHistory(int count)
+    {
+        if (_cpu == null)
+        {
+            return new { Error = "Emulator not initialized" };
+        }
+
+        // This would need execution history tracking to be implemented
+        return new { Message = "Execution history not yet implemented", Count = count };
+    }
+
+    /// <summary>
+    /// Get call stack for MCP tools
+    /// </summary>
+    public object GetCallStack()
+    {
+        if (_cpu == null || _vm == null)
+        {
+            return new { Error = "Emulator not initialized" };
+        }
+
+        var esp = _cpu.GetRegister("ESP");
+        var ebp = _cpu.GetRegister("EBP");
+        
+        return new
+        {
+            ESP = esp,
+            EBP = ebp,
+            Message = "Call stack reconstruction not yet fully implemented"
+        };
+    }
+
+    /// <summary>
+    /// Get loaded modules for MCP tools
+    /// </summary>
+    public object GetLoadedModules()
+    {
+        if (_dispatcher == null || _image == null)
+        {
+            return new { Error = "Emulator not initialized" };
+        }
+
+        var modules = new List<object> { new { Name = _image.Name, BaseAddress = _image.BaseAddress } };
+        
+        // Add loaded DLL modules from dispatcher
+        if (_dispatcher != null)
+        {
+            // Get module names from dispatcher (this would need to be exposed)
+            modules.Add(new { Message = "DLL enumeration not yet fully implemented" });
+        }
+
+        return modules;
+    }
+
+    /// <summary>
+    /// Search memory for byte pattern for MCP tools
+    /// </summary>
+    public object SearchMemory(byte[] pattern, uint startAddress, int maxResults)
+    {
+        if (_vm == null)
+        {
+            return new { Error = "Emulator not initialized" };
+        }
+
+        var results = new List<uint>();
+        var memSize = _vm.Size;
+        
+        for (uint addr = startAddress; addr < memSize - pattern.Length && results.Count < maxResults; addr++)
+        {
+            var match = true;
+            for (var i = 0; i < pattern.Length; i++)
+            {
+                if (_vm.ReadByte(addr + (uint)i) != pattern[i])
+                {
+                    match = false;
+                    break;
+                }
+            }
+            
+            if (match)
+            {
+                results.Add(addr);
+            }
+        }
+
+        return new { Results = results, Count = results.Count };
+    }
+
+    /// <summary>
+    /// Get API trace for MCP tools
+    /// </summary>
+    public object GetApiTrace(int count)
+    {
+        if (_env == null)
+        {
+            return new { Error = "Emulator not initialized" };
+        }
+
+        // This would need API tracing to be implemented and exposed
+        return new { Message = "API tracing not yet implemented", Count = count };
+    }
+
+    /// <summary>
+    /// Disassemble instructions at address for MCP tools
+    /// </summary>
+    public object Disassemble(uint address, int count)
+    {
+        if (_vm == null)
+        {
+            return new { Error = "Emulator not initialized" };
+        }
+
+        var instructions = new List<object>();
+        var currentAddr = address;
+
+        for (var i = 0; i < count; i++)
+        {
+            // Read up to 15 bytes (max x86 instruction length)
+            var bytes = new byte[15];
+            for (var j = 0; j < 15; j++)
+            {
+                bytes[j] = _vm.ReadByte(currentAddr + (uint)j);
+            }
+
+            var hex = BitConverter.ToString(bytes, 0, Math.Min(8, bytes.Length)).Replace("-", " ");
+            instructions.Add(new
+            {
+                Address = currentAddr,
+                Bytes = hex,
+                Message = "Full disassembly not yet implemented"
+            });
+
+            // Assume average instruction length of 3 bytes for now
+            currentAddr += 3;
+        }
+
+        return new { Instructions = instructions };
+    }
+
+    #endregion
+
     public void Dispose()
     {
         // Stop event processing if running
