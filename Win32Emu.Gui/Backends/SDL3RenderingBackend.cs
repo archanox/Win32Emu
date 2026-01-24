@@ -168,19 +168,10 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                 var paletteIndex = indexedData[rowOffset + x];
                 var color = palette[paletteIndex];
 
-                var r = (byte)(color & 0xFF);
-                var g = (byte)((color >> 8) & 0xFF);
-                var b = (byte)((color >> 16) & 0xFF);
-                var a = (byte)((color >> 24) & 0xFF);
-                if (a == 0)
-                {
-                    a = 0xFF;
-                }
-
-                rgbaData[rgbaIndex++] = r;
-                rgbaData[rgbaIndex++] = g;
-                rgbaData[rgbaIndex++] = b;
-                rgbaData[rgbaIndex++] = a;
+                rgbaData[rgbaIndex++] = (byte)(color & 0xFF);
+                rgbaData[rgbaIndex++] = (byte)((color >> 8) & 0xFF);
+                rgbaData[rgbaIndex++] = (byte)((color >> 16) & 0xFF);
+                rgbaData[rgbaIndex++] = 0xFF;
             }
         }
 
