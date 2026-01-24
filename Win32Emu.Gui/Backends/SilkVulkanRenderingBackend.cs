@@ -608,11 +608,16 @@ public unsafe class SilkVulkanRenderingBackend : IRenderingBackend
                     if (paletteIndex < palette.Length)
                     {
                         var color = palette[paletteIndex];
+                        var a = (byte)((color >> 24) & 0xFF);
+                        if (a == 0)
+                        {
+                            a = 0xFF;
+                        }
 
                         rgbaData[dstOffset + 0] = (byte)(color & 0xFF);         // R
                         rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G
                         rgbaData[dstOffset + 2] = (byte)((color >> 16) & 0xFF); // B
-                        rgbaData[dstOffset + 3] = 0xFF;                          // A
+                        rgbaData[dstOffset + 3] = a;
                     }
                 }
             }
