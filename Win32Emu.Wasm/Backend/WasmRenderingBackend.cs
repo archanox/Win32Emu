@@ -98,15 +98,10 @@ public class WasmRenderingBackend : IRenderingBackend
 						// Byte 0: peRed, Byte 1: peGreen, Byte 2: peBlue, Byte 3: peFlags
 						// As a uint32: 0xFFBBGGRR (flags in high byte, blue, green, red in low byte)
 						var color = palette[paletteIndex];
-						var a = (byte)((color >> 24) & 0xFF);
-						if (a == 0)
-						{
-							a = 0xFF;
-						}
 						rgbaData[dstOffset + 0] = (byte)(color & 0xFF);         // R (bits 0-7)
 						rgbaData[dstOffset + 1] = (byte)((color >> 8) & 0xFF);  // G (bits 8-15)
 						rgbaData[dstOffset + 2] = (byte)((color >> 16) & 0xFF); // B (bits 16-23)
-						rgbaData[dstOffset + 3] = a;
+						rgbaData[dstOffset + 3] = 0xFF;
 					}
 				}
 			}
