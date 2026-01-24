@@ -506,6 +506,8 @@ namespace Win32Emu.Win32.Modules
 			public uint WriteCursor { get; set; } = 0;
 			public bool IsPlaying { get; set; } = false;
 			public bool IsLooping { get; set; } = false;
+			public long PlayStartTime { get; set; } = 0; // Timestamp when playback started (in ticks)
+			public uint PlayStartPosition { get; set; } = 0; // Position when playback started
 		}
 
 		// COM interface methods for IDirectSound
@@ -899,14 +901,58 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DSResult.DSERR_GENERIC;
 			}
 
+			// Calculate current position based on elapsed time if buffer is playing
+			uint playCursor = buffer.PlayCursor;
+			uint writeCursor = buffer.WriteCursor;
+
+			if (buffer.IsPlaying && buffer.PlayStartTime > 0 && !buffer.IsPrimary)
+			{
+				// Calculate elapsed time since playback started
+				var currentTime = Environment.TickCount64;
+				var elapsedMs = currentTime - buffer.PlayStartTime;
+
+				// Calculate bytes per millisecond: (samples/sec) * (bytes/sample) / 1000
+				// bytes/sample = (channels * bitsPerSample) / 8
+				var bytesPerSample = (buffer.Channels * buffer.BitsPerSample) / 8;
+				var bytesPerMs = (buffer.Frequency * bytesPerSample) / 1000.0;
+				var bytesAdvanced = (uint)(elapsedMs * bytesPerMs);
+
+				// Calculate new play cursor position
+				playCursor = buffer.PlayStartPosition + bytesAdvanced;
+
+				// Handle looping - wrap around if we've exceeded buffer size
+				if (buffer.IsLooping && playCursor >= buffer.Size)
+				{
+					playCursor = playCursor % (uint)buffer.Size;
+				}
+				else if (playCursor >= buffer.Size)
+				{
+					// Non-looping buffer has finished playing
+					playCursor = (uint)buffer.Size;
+					buffer.IsPlaying = false;
+				}
+
+				// Write cursor is typically ahead of play cursor by a small amount (hardware buffer)
+				// We'll use a conservative estimate of 100ms of buffering
+				var writeAheadBytes = (uint)(bytesPerMs * 100);
+				writeCursor = (playCursor + writeAheadBytes) % (uint)buffer.Size;
+
+				// Update cached values
+				buffer.PlayCursor = playCursor;
+				buffer.WriteCursor = writeCursor;
+
+				_logger.LogDebug("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Calculated position - play={PlayCursor}, write={WriteCursor}, elapsed={ElapsedMs}ms",
+					playCursor, writeCursor, elapsedMs);
+			}
+
 			// Return current positions
 			if (pdwCurrentPlayCursor != 0)
 			{
-				memory.Write32(pdwCurrentPlayCursor, buffer.PlayCursor);
+				memory.Write32(pdwCurrentPlayCursor, playCursor);
 			}
 			if (pdwCurrentWriteCursor != 0)
 			{
-				memory.Write32(pdwCurrentWriteCursor, buffer.WriteCursor);
+				memory.Write32(pdwCurrentWriteCursor, writeCursor);
 			}
 
 			return (uint)DSResult.DS_OK;
@@ -1198,6 +1244,10 @@ namespace Win32Emu.Win32.Modules
 			buffer.IsLooping = (dwFlags & (uint)DSBPlay.LOOPING) != 0;
 			buffer.IsPlaying = true;
 
+			// Record playback start time and position for cursor tracking
+			buffer.PlayStartTime = Environment.TickCount64;
+			buffer.PlayStartPosition = buffer.PlayCursor;
+
 			// Create audio stream if not already created
 			if (buffer.AudioStreamId == 0 && _env.AudioBackend != null)
 			{
@@ -1216,7 +1266,7 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogInformation("[DSound COM] Wrote {Length} bytes of audio data to stream {StreamId}", buffer.Data.Length, buffer.AudioStreamId);
 			}
 
-			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Started playback (looping={IsLooping})", buffer.IsLooping);
+			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Started playback (looping={IsLooping}, startPos={StartPos})", buffer.IsLooping, buffer.PlayStartPosition);
 			return (uint)DSResult.DS_OK;
 		}
 
@@ -1251,6 +1301,8 @@ namespace Win32Emu.Win32.Modules
 
 			buffer.PlayCursor = dwNewPosition;
 			buffer.WriteCursor = dwNewPosition;
+			// Reset start position for when playback starts
+			buffer.PlayStartPosition = dwNewPosition;
 
 			_logger.LogInformation("[DSound COM] IDirectSoundBuffer::SetCurrentPosition: Set position to {DwNewPosition}", dwNewPosition);
 
