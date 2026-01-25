@@ -42,6 +42,9 @@ namespace Win32Emu.Win32.Modules
 		private const int CANCELLATION_CHECK_INTERVAL = 1000; // Check cancellation token every 1K steps
 		private const uint MINIMUM_VALID_EIP = 0x00001000; // Minimum valid instruction pointer (4KB)
 
+		// Constants for DirectSound buffer position tracking
+		private const int WRITE_CURSOR_AHEAD_MS = 100; // Write cursor is typically 100ms ahead of play cursor (hardware buffer simulation)
+
 		public bool TryInvokeUnsafe(string export, ICpu cpu, VirtualMemory memory, out uint returnValue)
 		{
 			_cpu = cpu;
@@ -506,7 +509,7 @@ namespace Win32Emu.Win32.Modules
 			public uint WriteCursor { get; set; } = 0;
 			public bool IsPlaying { get; set; } = false;
 			public bool IsLooping { get; set; } = false;
-			public long PlayStartTime { get; set; } = 0; // Timestamp when playback started (in ticks)
+			public long PlayStartTime { get; set; } = 0; // Timestamp when playback started (in milliseconds since system start)
 			public uint PlayStartPosition { get; set; } = 0; // Position when playback started
 		}
 
@@ -907,42 +910,87 @@ namespace Win32Emu.Win32.Modules
 
 			if (buffer.IsPlaying && buffer.PlayStartTime > 0 && !buffer.IsPrimary)
 			{
-				// Calculate elapsed time since playback started
-				var currentTime = Environment.TickCount64;
-				var elapsedMs = currentTime - buffer.PlayStartTime;
-
-				// Calculate bytes per millisecond: (samples/sec) * (bytes/sample) / 1000
-				// bytes/sample = (channels * bitsPerSample) / 8
-				var bytesPerSample = (buffer.Channels * buffer.BitsPerSample) / 8;
-				var bytesPerMs = (buffer.Frequency * bytesPerSample) / 1000.0;
-				var bytesAdvanced = (uint)(elapsedMs * bytesPerMs);
-
-				// Calculate new play cursor position
-				playCursor = buffer.PlayStartPosition + bytesAdvanced;
-
-				// Handle looping - wrap around if we've exceeded buffer size
-				if (buffer.IsLooping && playCursor >= buffer.Size)
+				// Validate buffer size before position calculation
+				if (buffer.Size <= 0)
 				{
-					playCursor = playCursor % (uint)buffer.Size;
+					_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Invalid buffer size {Size}, treating as finished", buffer.Size);
+					playCursor = 0;
+					writeCursor = 0;
 				}
-				else if (playCursor >= buffer.Size)
+				else
 				{
-					// Non-looping buffer has finished playing
-					playCursor = (uint)buffer.Size;
-					buffer.IsPlaying = false;
+					// Calculate elapsed time since playback started
+					var currentTime = Environment.TickCount64;
+					var elapsedMs = currentTime - buffer.PlayStartTime;
+
+					// Calculate bytes per millisecond: (samples/sec) * (bytes/sample) / 1000
+					// bytes/sample = (channels * bitsPerSample) / 8
+					var bytesPerSample = (buffer.Channels * buffer.BitsPerSample) / 8;
+					
+					// Validate audio format parameters
+					if (bytesPerSample <= 0 || buffer.Frequency <= 0)
+					{
+						_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Invalid audio format (channels={Channels}, bitsPerSample={BitsPerSample}, frequency={Frequency})",
+							buffer.Channels, buffer.BitsPerSample, buffer.Frequency);
+						// Keep current cached positions
+					}
+					else
+					{
+						// Calculate bytes per millisecond with proper type conversion to avoid overflow
+						var bytesPerMs = (double)buffer.Frequency * bytesPerSample / 1000.0;
+						
+						// Calculate bytes advanced with overflow protection
+						var totalBytesAdvanced = elapsedMs * bytesPerMs;
+						uint bytesAdvanced;
+						if (totalBytesAdvanced <= 0)
+						{
+							bytesAdvanced = 0;
+						}
+						else if (totalBytesAdvanced >= uint.MaxValue)
+						{
+							// For very long playback, wrap to buffer size
+							bytesAdvanced = (uint)(totalBytesAdvanced % buffer.Size);
+						}
+						else
+						{
+							bytesAdvanced = (uint)totalBytesAdvanced;
+						}
+
+						// Calculate new play cursor position with overflow protection
+						var bufferSizeUint = (uint)buffer.Size;
+						var newPosition = (ulong)buffer.PlayStartPosition + bytesAdvanced;
+						
+						// Handle position exceeding uint.MaxValue or buffer boundaries
+						if (newPosition >= bufferSizeUint)
+						{
+							if (buffer.IsLooping)
+							{
+								// Wrap around for looping buffers
+								playCursor = (uint)(newPosition % bufferSizeUint);
+							}
+							else
+							{
+								// Non-looping buffer has finished playing - clamp to end
+								playCursor = bufferSizeUint;
+							}
+						}
+						else
+						{
+							playCursor = (uint)newPosition;
+						}
+
+						// Calculate write cursor ahead of play cursor
+						var writeAheadBytes = (uint)(bytesPerMs * WRITE_CURSOR_AHEAD_MS);
+						writeCursor = (playCursor + writeAheadBytes) % bufferSizeUint;
+
+						// Update cached values
+						buffer.PlayCursor = playCursor;
+						buffer.WriteCursor = writeCursor;
+
+						_logger.LogDebug("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Calculated position - play={PlayCursor}, write={WriteCursor}, elapsed={ElapsedMs}ms",
+							playCursor, writeCursor, elapsedMs);
+					}
 				}
-
-				// Write cursor is typically ahead of play cursor by a small amount (hardware buffer)
-				// We'll use a conservative estimate of 100ms of buffering
-				var writeAheadBytes = (uint)(bytesPerMs * 100);
-				writeCursor = (playCursor + writeAheadBytes) % (uint)buffer.Size;
-
-				// Update cached values
-				buffer.PlayCursor = playCursor;
-				buffer.WriteCursor = writeCursor;
-
-				_logger.LogDebug("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Calculated position - play={PlayCursor}, write={WriteCursor}, elapsed={ElapsedMs}ms",
-					playCursor, writeCursor, elapsedMs);
 			}
 
 			// Return current positions
