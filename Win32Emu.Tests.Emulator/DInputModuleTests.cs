@@ -420,30 +420,106 @@ public class DInputModuleTests
     }
 
     /// <summary>
-    /// Regression test documentation for IGN_TEAS.EXE crash:
-    /// 
-    /// The issue was that SetDataFormat and SetProperty in DInputModule.cs were accessing
-    /// memory structures (DIDATAFORMAT and DIPROPHEADER) without try-catch blocks.
-    /// When invalid pointers were passed, the memory reads would throw exceptions,
-    /// causing the emulator to stop without logging the error.
-    /// 
-    /// Fix: Added try-catch blocks around structure parsing and return DIERR_INVALIDPARAM
-    /// on any exceptions. Also added validation for NULL pointers before accessing memory.
-    /// 
-    /// This test exists to document the fix and can be expanded in the future with
-    /// integration tests that verify the actual behavior through the COM vtable dispatcher.
+    /// Regression test for IGN_TEAS.EXE crash:
+    /// Verifies SetDataFormat returns DIERR_INVALIDPARAM when given NULL pointer.
     /// </summary>
     [Fact]
-    public void RegressionTest_IGN_TEAS_DInputCrash_Documentation()
+    public void SetDataFormat_WithNullPointer_ReturnsInvalidParamError()
     {
-        // This test documents the fix for the IGN_TEAS unexpected stop issue.
-        // The fix added proper error handling to:
-        // 1. DInputDevice_SetDataFormat - validates lpdf pointer and catches exceptions
-        // 2. DInputDevice_SetProperty - validates pdiph pointer and catches exceptions
-        //
-        // Both methods now return DIERR_INVALIDPARAM (0x80004003) instead of crashing
-        // when given NULL pointers or invalid memory addresses.
+        // Arrange
+        var vm = new VirtualMemory(0x10000000);
+        var cpu = new JitCpu(vm);
+        var backendFactory = new MockBackendFactory();
+        var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
+        var dinputModule = new DInputModule(env, 0x00400000, logger: NullLogger.Instance);
+
+        // Setup stack for SetDataFormat call with NULL lpdf parameter
+        cpu.SetRegister("ESP", 0x001FED00);
+        vm.Write32(0x001FED04, 0x014508C0);  // this pointer (ESP+4 = arg 0)
+        vm.Write32(0x001FED08, 0x00000000);  // lpdf = NULL (ESP+8 = arg 1)
         
-        Assert.True(true, "This test documents the regression fix for IGN_TEAS DInput crash");
+        // Use reflection to invoke the private method
+        var method = typeof(DInputModule).GetMethod("DInputDevice_SetDataFormat", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        // Act
+        var returnValue = (uint)method!.Invoke(dinputModule, new object[] { cpu, vm })!;
+
+        // Assert - Should return DIERR_INVALIDPARAM (0x80070057)
+        Assert.Equal(0x80070057u, returnValue);
+    }
+
+    /// <summary>
+    /// Regression test for IGN_TEAS.EXE crash:
+    /// Verifies SetDataFormat returns DIERR_INVALIDPARAM when given invalid memory address.
+    /// </summary>
+    [Fact]
+    public void SetDataFormat_WithInvalidMemory_ReturnsInvalidParamError()
+    {
+        // Arrange
+        var vm = new VirtualMemory(0x10000000);
+        var cpu = new JitCpu(vm);
+        var backendFactory = new MockBackendFactory();
+        var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
+        var dinputModule = new DInputModule(env, 0x00400000, logger: NullLogger.Instance);
+
+        // First create DirectInput to initialize internal state
+        var outputPtr = 0x001FF000u;
+        vm.Write32(outputPtr, 0x00000000);
+        cpu.SetRegister("ESP", 0x001FFF00);
+        vm.Write32(0x001FFF04, 0x00400000); // hinst
+        vm.Write32(0x001FFF08, 0x00000300); // dwVersion
+        vm.Write32(0x001FFF0C, outputPtr);  // lplpDirectInput
+        vm.Write32(0x001FFF10, 0x00000000); // pUnkOuter
+        dinputModule.TryInvokeUnsafe("DirectInputCreateA", cpu, vm, out _);
+
+        // Setup stack for SetDataFormat call with invalid memory address
+        cpu.SetRegister("ESP", 0x001FED00);
+        vm.Write32(0x001FED04, 0x014508C0);  // this pointer (ESP+4 = arg 0)
+        vm.Write32(0x001FED08, 0xFFFFFF00);  // lpdf = invalid address (ESP+8 = arg 1)
+        
+        // Use reflection to invoke the private method
+        var method = typeof(DInputModule).GetMethod("DInputDevice_SetDataFormat", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        // Act
+        var returnValue = (uint)method!.Invoke(dinputModule, new object[] { cpu, vm })!;
+
+        // Assert - Should return DIERR_INVALIDPARAM (0x80070057) due to exception
+        Assert.Equal(0x80070057u, returnValue);
+    }
+
+    /// <summary>
+    /// Regression test for IGN_TEAS.EXE crash:
+    /// Verifies SetProperty returns DIERR_INVALIDPARAM when given NULL pointer.
+    /// </summary>
+    [Fact]
+    public void SetProperty_WithNullPointer_ReturnsInvalidParamError()
+    {
+        // Arrange
+        var vm = new VirtualMemory(0x10000000);
+        var cpu = new JitCpu(vm);
+        var backendFactory = new MockBackendFactory();
+        var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
+        var dinputModule = new DInputModule(env, 0x00400000, logger: NullLogger.Instance);
+
+        // Setup stack for SetProperty call with NULL pdiph parameter
+        cpu.SetRegister("ESP", 0x001FED00);
+        vm.Write32(0x001FED04, 0x014508C0);  // this pointer (ESP+4 = arg 0)
+        vm.Write32(0x001FED08, 1);           // rguidProp = DIPROP_BUFFERSIZE (ESP+8 = arg 1)
+        vm.Write32(0x001FED0C, 0x00000000);  // pdiph = NULL (ESP+12 = arg 2)
+        
+        // Use reflection to invoke the private method
+        var method = typeof(DInputModule).GetMethod("DInputDevice_SetProperty", 
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Assert.NotNull(method);
+
+        // Act
+        var returnValue = (uint)method!.Invoke(dinputModule, new object[] { cpu, vm })!;
+
+        // Assert - Should return DIERR_INVALIDPARAM (0x80070057)
+        Assert.Equal(0x80070057u, returnValue);
     }
 }
