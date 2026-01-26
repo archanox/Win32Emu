@@ -3484,22 +3484,26 @@ namespace Win32Emu.Win32.Modules
 			// Store previous focus window handle
 			var previousFocus = _focusWindow;
 			
-			// If we're setting focus to a new window (not removing focus)
-			if (hwnd != 0 && hwnd != previousFocus)
+			// No change in focus, nothing to do
+			if (hwnd == previousFocus)
 			{
-				// Post WM_ACTIVATEAPP to indicate application activation
-				// This is critical for games like ign_teas that use this message
-				// to switch from blocking GetMessageA to active PeekMessageA loop
-				const uint WM_ACTIVATEAPP = 0x001C;
-				var threadId = _env.GetCurrentThreadId();
-				_env.PostMessage(hwnd, WM_ACTIVATEAPP, 1, threadId);
-				_logger.LogDebug("[User32] SetFocus: Posted WM_ACTIVATEAPP to HWND=0x{Hwnd:X8}", hwnd);
-				
-				// Also post WM_ACTIVATE for completeness
-				const uint WM_ACTIVATE = 0x0006;
-				const uint WA_ACTIVE = 0x0001;
-				_env.PostMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
-				_logger.LogDebug("[User32] SetFocus: Posted WM_ACTIVATE to HWND=0x{Hwnd:X8}", hwnd);
+				return previousFocus;
+			}
+			
+			// Send WM_KILLFOCUS to the window losing focus, if any
+			if (previousFocus != 0)
+			{
+				const uint WM_KILLFOCUS = 0x0008;
+				_env.PostMessage(previousFocus, WM_KILLFOCUS, hwnd, 0);
+				_logger.LogDebug("[User32] SetFocus: Posted WM_KILLFOCUS to HWND=0x{Hwnd:X8} (new focus 0x{NewHwnd:X8})", previousFocus, hwnd);
+			}
+			
+			// Send WM_SETFOCUS to the window gaining focus, if any
+			if (hwnd != 0)
+			{
+				const uint WM_SETFOCUS = 0x0007;
+				_env.PostMessage(hwnd, WM_SETFOCUS, previousFocus, 0);
+				_logger.LogDebug("[User32] SetFocus: Posted WM_SETFOCUS to HWND=0x{Hwnd:X8} (previous focus 0x{PrevHwnd:X8})", hwnd, previousFocus);
 			}
 			
 			// Update stored focus window
