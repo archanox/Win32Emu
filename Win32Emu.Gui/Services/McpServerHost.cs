@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -27,44 +28,66 @@ public class McpServerHost : IDisposable
 
 		try
 		{
-			// Create and configure MCP server
-			var builder = Host.CreateApplicationBuilder();
-
-			// Configure logging to use the emulator's logger
-			builder.Logging.ClearProviders();
-			builder.Logging.AddProvider(new McpLoggerProvider(logger));
-			builder.Logging.SetMinimumLevel(LogLevel.Information);
-
-			// Register the MCP debug tools
-			builder.Services.AddSingleton(emulatorService);
-			builder.Services.AddSingleton(logger);
-			builder.Services.AddSingleton<McpDebugTools>();
-
-			// Configure MCP server with appropriate transport
-			var mcpBuilder = builder.Services.AddMcpServer();
-			
 			if (_config.McpUseHttpTransport)
 			{
-				// Use HTTP transport for Visual Studio and other HTTP-based clients
+				// Use HTTP transport - requires ASP.NET Core WebApplication
 				var port = _config.McpHttpPort;
 				var url = $"http://127.0.0.1:{port}";
 				_logger.LogInformation("[MCP] Configuring HTTP transport at {Url}", url);
+
+				// Create builder with specific URL
+				var args = new[] { $"--urls={url}" };
+				var builder = WebApplication.CreateBuilder(args);
 				
-				mcpBuilder.WithHttpServerTransport(options =>
-				{
-					options.ListenUrl = url;
-				});
+				// Configure logging to use the emulator's logger
+				builder.Logging.ClearProviders();
+				builder.Logging.AddProvider(new McpLoggerProvider(logger));
+				builder.Logging.SetMinimumLevel(LogLevel.Information);
+				
+				// Register the MCP debug tools
+				builder.Services.AddSingleton(emulatorService);
+				builder.Services.AddSingleton(logger);
+				builder.Services.AddSingleton<McpDebugTools>();
+				
+				// Configure MCP server with HTTP transport
+				builder.Services
+					.AddMcpServer()
+					.WithHttpTransport()
+					.WithToolsFromAssembly();
+				
+				var app = builder.Build();
+				
+				// Map MCP endpoints
+				app.MapMcp();
+				
+				_host = app;
 			}
 			else
 			{
 				// Use STDIO transport for command-line AI tools
 				_logger.LogInformation("[MCP] Configuring STDIO transport");
-				mcpBuilder.WithStdioServerTransport();
+				
+				var builder = Host.CreateApplicationBuilder();
+
+				// Configure logging to use the emulator's logger
+				builder.Logging.ClearProviders();
+				builder.Logging.AddProvider(new McpLoggerProvider(logger));
+				builder.Logging.SetMinimumLevel(LogLevel.Information);
+
+				// Register the MCP debug tools
+				builder.Services.AddSingleton(emulatorService);
+				builder.Services.AddSingleton(logger);
+				builder.Services.AddSingleton<McpDebugTools>();
+
+				// Configure MCP server with STDIO transport
+				builder.Services
+					.AddMcpServer()
+					.WithStdioServerTransport()
+					.WithToolsFromAssembly();
+
+				_host = builder.Build();
 			}
 			
-			mcpBuilder.WithToolsFromAssembly();
-
-			_host = builder.Build();
 			_logger.LogInformation("[MCP] Server initialized and ready");
 		}
 		catch (Exception ex)
