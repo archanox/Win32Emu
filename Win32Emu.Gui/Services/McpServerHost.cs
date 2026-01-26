@@ -13,17 +13,19 @@ namespace Win32Emu.Gui.Services;
 /// </summary>
 public class McpServerHost : IDisposable
 {
+	private const string McpBindAddress = "127.0.0.1";
+	
 	private readonly IHost? _host;
 	private readonly ILogger _logger;
 	private readonly EmulatorService _emulatorService;
 	private readonly EmulatorConfiguration _config;
 	private bool _isRunning;
 
-	public McpServerHost(EmulatorService emulatorService, ILogger logger, EmulatorConfiguration config)
+	public McpServerHost(EmulatorConfiguration config, EmulatorService emulatorService, ILogger logger)
 	{
+		_config = config;
 		_emulatorService = emulatorService;
 		_logger = logger;
-		_config = config;
 		_isRunning = false;
 
 		try
@@ -32,7 +34,7 @@ public class McpServerHost : IDisposable
 			{
 				// Use HTTP transport - requires ASP.NET Core WebApplication
 				var port = _config.McpHttpPort;
-				var url = $"http://127.0.0.1:{port}";
+				var url = $"http://{McpBindAddress}:{port}";
 				_logger.LogInformation("[MCP] Configuring HTTP transport at {Url}", url);
 
 				// Create builder with specific URL

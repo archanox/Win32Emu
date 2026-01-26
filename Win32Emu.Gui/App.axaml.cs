@@ -166,7 +166,7 @@ public class App : Application
                     // This allows AI to interact with the app before any emulation session starts
                     var emulatorService = new EmulatorService(config, null, logger);
                     
-                    _mcpServerHost = new McpServerHost(emulatorService, logger, config);
+                    _mcpServerHost = new McpServerHost(config, emulatorService, logger);
                     McpServerHost = _mcpServerHost;
                     
                     // Start the server asynchronously
