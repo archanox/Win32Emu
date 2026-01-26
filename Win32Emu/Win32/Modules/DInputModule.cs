@@ -38,7 +38,7 @@ namespace Win32Emu.Win32.Modules
 		// DirectInput constants
 		private const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
 		private const uint DI_OK = 0; // Success return value
-		private const uint DIERR_INVALIDPARAM = 0x80004003; // Invalid parameter error
+		private const uint DIERR_INVALIDPARAM = 0x80070057; // Invalid parameter error (E_INVALIDARG)
 		private const uint DIERR_NOTACQUIRED = 0x8007001E; // Device not acquired error
 		private const uint DIPROPDWORD_DATA_SIZE = 4; // Size of dwData field in DIPROPDWORD
 		
