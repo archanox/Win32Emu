@@ -488,8 +488,14 @@ namespace Win32Emu.Win32.Modules
 			// DIPROP_AUTOCENTER      = 9  // Set/get auto-center
 			// DIPROP_CALIBRATIONMODE = 10 // Set/get calibration mode
 
-			// Parse DIPROPHEADER structure if pdiph is valid
-			if (pdiph != 0)
+			// Validate pdiph pointer
+			if (pdiph == 0)
+			{
+				_logger.LogError("[DInput COM] SetProperty: pdiph is NULL");
+				return 0x80004003; // DIERR_INVALIDPARAM
+			}
+
+			try
 			{
 				// typedef struct DIPROPHEADER {
 				//   DWORD dwSize;      // +0: Size of enclosing structure
@@ -505,7 +511,7 @@ namespace Win32Emu.Win32.Modules
 
 				// For properties like DIPROP_BUFFERSIZE, there's additional data after the header
 				// DIPROPDWORD contains: DIPROPHEADER diph; DWORD dwData;
-			if (diph.dwSize >= diph.dwHeaderSize + 4)
+				if (diph.dwSize >= diph.dwHeaderSize + 4)
 				{
 					var dwData = _env.MemRead32(pdiph + diph.dwHeaderSize);
 					_logger.LogInformation("[DInput COM]   Property value: {DwData}", dwData);
@@ -523,6 +529,11 @@ namespace Win32Emu.Win32.Modules
 						device.Properties[rguidProp] = dwData;
 					}
 				}
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DInput COM] SetProperty: Failed to read DIPROPHEADER structure at 0x{Pdiph:X8}", pdiph);
+				return 0x80004003; // DIERR_INVALIDPARAM
 			}
 
 			return 0; // DI_OK
@@ -858,6 +869,13 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DInput COM] IDirectInputDevice::SetDataFormat(this=0x{ThisPtr:X8}, lpdf=0x{Lpdf:X8})", thisPtr, lpdf);
 
+			// Validate lpdf pointer
+			if (lpdf == 0)
+			{
+				_logger.LogError("[DInput COM] SetDataFormat: lpdf is NULL");
+				return 0x80004003; // DIERR_INVALIDPARAM
+			}
+
 			// Find the device object based on this pointer
 			// In COM, we need to look up the device by the COM object address
 			DirectInputDevice? device = null;
@@ -867,7 +885,13 @@ namespace Win32Emu.Win32.Modules
 				break; // For now, use the first device - in production would need proper COM object lookup
 			}
 
-			if (device != null && lpdf != 0)
+			if (device == null)
+			{
+				_logger.LogError("[DInput COM] SetDataFormat: Device not found for this=0x{ThisPtr:X8}", thisPtr);
+				return 0x80004003; // DIERR_INVALIDPARAM
+			}
+
+			try
 			{
 				// Parse DIDATAFORMAT structure
 				// typedef struct DIDATAFORMAT {
@@ -879,7 +903,7 @@ namespace Win32Emu.Win32.Modules
 				//   LPDIOBJECTDATAFORMAT rgodf; // +20: Array of object formats
 				// } DIDATAFORMAT;
 
-			var df = new DiDataFormatRef(_env.Memory, lpdf);
+				var df = new DiDataFormatRef(_env.Memory, lpdf);
 
 				_logger.LogInformation("[DInput COM]   DIDATAFORMAT: size={DwSize}, objSize={DwObjSize}, flags=0x{DwFlags:X}, dataSize={DwDataSize}, numObjs={DwNumObjs}, rgodf=0x{Rgodf:X8}",
 					df.dwSize, df.dwObjSize, df.dwFlags, df.dwDataSize, df.dwNumObjs, df.rgodf);
@@ -887,6 +911,11 @@ namespace Win32Emu.Win32.Modules
 				// Store the data format information
 				device.DataFormat = lpdf;
 				device.DataFormatSize = df.dwDataSize;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "[DInput COM] SetDataFormat: Failed to read DIDATAFORMAT structure at 0x{Lpdf:X8}", lpdf);
+				return 0x80004003; // DIERR_INVALIDPARAM
 			}
 
 			return 0; // DI_OK
