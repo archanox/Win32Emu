@@ -434,7 +434,14 @@ For command-line tools that use STDIO transport:
 **Solutions**:
 1. Check that ModelContextProtocol packages are installed:
    ```bash
+   # Linux/macOS
    dotnet list package | grep ModelContextProtocol
+   
+   # Windows PowerShell
+   dotnet list package | Select-String ModelContextProtocol
+   
+   # Windows Command Prompt
+   dotnet list package | findstr ModelContextProtocol
    ```
    Should show both `ModelContextProtocol` and `ModelContextProtocol.AspNetCore`
 2. Verify .NET 10.0 SDK is installed: `dotnet --version`
