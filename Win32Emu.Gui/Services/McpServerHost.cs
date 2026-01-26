@@ -55,7 +55,7 @@ public class McpServerHost : IDisposable
 				builder.Services
 					.AddMcpServer()
 					.WithHttpTransport()
-					.WithToolsFromAssembly();
+					.WithToolsFromAssembly(typeof(McpDebugTools).Assembly);
 				
 				var app = builder.Build();
 				
@@ -85,7 +85,7 @@ public class McpServerHost : IDisposable
 				builder.Services
 					.AddMcpServer()
 					.WithStdioServerTransport()
-					.WithToolsFromAssembly();
+					.WithToolsFromAssembly(typeof(McpDebugTools).Assembly);
 
 				_host = builder.Build();
 			}
