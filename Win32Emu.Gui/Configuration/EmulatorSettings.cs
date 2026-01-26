@@ -68,6 +68,17 @@ public class EmulatorSettings
     /// </summary>
     public bool AutoStartMcpServer { get; set; } = false;
     
+    /// <summary>
+    /// Use HTTP transport for MCP server (required for Visual Studio integration).
+    /// If false, uses STDIO transport (for command-line AI tools).
+    /// </summary>
+    public bool McpUseHttpTransport { get; set; } = true;
+    
+    /// <summary>
+    /// Port for MCP HTTP server (default: 5111)
+    /// </summary>
+    public int McpHttpPort { get; set; } = 5111;
+    
     // Virtual Disk Settings
     /// <summary>
     /// Enable virtual disk by default for all games (can be overridden per-game)

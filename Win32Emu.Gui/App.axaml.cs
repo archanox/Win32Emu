@@ -166,7 +166,7 @@ public class App : Application
                     // This allows AI to interact with the app before any emulation session starts
                     var emulatorService = new EmulatorService(config, null, logger);
                     
-                    _mcpServerHost = new McpServerHost(emulatorService, logger);
+                    _mcpServerHost = new McpServerHost(emulatorService, logger, config);
                     McpServerHost = _mcpServerHost;
                     
                     // Start the server asynchronously
@@ -175,7 +175,12 @@ public class App : Application
                         try
                         {
                             await _mcpServerHost.StartAsync();
-                            logger.LogInformation("[MCP] Server started successfully - AI assistants can now connect");
+                            var transportType = config.McpUseHttpTransport ? "HTTP" : "STDIO";
+                            var endpoint = config.McpUseHttpTransport 
+                                ? $"http://127.0.0.1:{config.McpHttpPort}" 
+                                : "STDIO";
+                            logger.LogInformation("[MCP] Server started successfully using {Transport} transport at {Endpoint} - AI assistants can now connect", 
+                                transportType, endpoint);
                         }
                         catch (Exception ex)
                         {

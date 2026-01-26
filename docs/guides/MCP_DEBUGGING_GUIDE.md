@@ -31,6 +31,22 @@ The Model Context Protocol is an open standard that allows AI applications to in
 
 ## Enabling MCP Server
 
+### Transport Types
+
+Win32Emu MCP server supports two transport types:
+
+1. **HTTP Transport** (default, recommended for Visual Studio):
+   - URL: `http://127.0.0.1:5111` (configurable port)
+   - Best for Visual Studio, IDEs, and web-based AI tools
+   - Supports remote connections
+   - Easy to test with curl or browser
+
+2. **STDIO Transport** (for command-line tools):
+   - Uses standard input/output streams
+   - Best for CLI-based AI assistants
+   - Local-only, more secure
+   - No network configuration needed
+
 ### Method 1: Configuration File
 
 Edit your `appsettings.json` or GUI settings:
@@ -39,10 +55,18 @@ Edit your `appsettings.json` or GUI settings:
 {
   "EmulatorSettings": {
     "EnableMcpServer": true,
-    "AutoStartMcpServer": true
+    "AutoStartMcpServer": true,
+    "McpUseHttpTransport": true,
+    "McpHttpPort": 5111
   }
 }
 ```
+
+**Configuration Options**:
+- `EnableMcpServer`: Enable MCP server functionality
+- `AutoStartMcpServer`: Start MCP server when application launches
+- `McpUseHttpTransport`: Use HTTP transport (true) or STDIO (false). Default: true
+- `McpHttpPort`: Port for HTTP server. Default: 5111
 
 The MCP server will start when you launch Win32Emu.Gui, before any emulation session begins. This allows AI assistants to:
 - Connect immediately when the application starts
@@ -56,8 +80,10 @@ The MCP server will start when you launch Win32Emu.Gui, before any emulation ses
 2. Go to **Settings** → **Debugging**
 3. Check **Enable MCP Server**
 4. Check **Auto-start MCP server** (optional)
-5. Click **Save**
-6. Restart the application for changes to take effect
+5. Select **HTTP Transport** for Visual Studio (or **STDIO** for CLI tools)
+6. Set **HTTP Port** (default: 5111)
+7. Click **Save**
+8. Restart the application for changes to take effect
 
 ### Method 3: Command Line
 
@@ -276,9 +302,89 @@ This design allows AI to:
 1. Calls `SearchMemory` with pattern "48 65 6C 6C 6F"
 2. Responds: "Yes, found 15 instances of 'Hello' in memory at addresses: 0x00410000, 0x00420000, ..."
 
-## Integrating with GitHub Copilot
+## Integrating with Visual Studio
 
-To use MCP with GitHub Copilot:
+Visual Studio (version 18.2+) has built-in MCP support. To connect Win32Emu MCP server to Visual Studio:
+
+### Configuration
+
+1. **Enable HTTP Transport**: In Win32Emu settings, ensure `McpUseHttpTransport` is `true` and `McpHttpPort` is set to `5111` (or your preferred port)
+
+2. **Create `.mcp.json` Configuration**: Create a `.mcp.json` file in your workspace or user profile directory:
+
+```json
+{
+  "mcpServers": {
+    "win32emu-debugger": {
+      "url": "http://127.0.0.1:5111",
+      "description": "Win32Emu Debugging Server - Inspect and control x86 emulation"
+    }
+  }
+}
+```
+
+3. **Start Win32Emu**: Launch Win32Emu.Gui with MCP server enabled. The server will start at `http://127.0.0.1:5111`
+
+4. **Verify Connection**: In Visual Studio:
+   - Open a chat window with GitHub Copilot or another AI assistant
+   - The MCP tools from Win32Emu should appear in the available tools list
+   - Look for tools like `GetEmulatorState`, `ReadMemory`, `SetBreakpoint`, etc.
+
+### Testing the Connection
+
+You can test the MCP HTTP endpoint with curl:
+
+```bash
+# Test server health
+curl http://127.0.0.1:5111/health
+
+# Test initialize endpoint
+curl -X POST http://127.0.0.1:5111/initialize \
+  -H "Content-Type: application/json" \
+  -d '{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}'
+
+# Test tools/list endpoint
+curl -X POST http://127.0.0.1:5111/tools/list \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+### Expected Response
+
+The `/tools/list` endpoint should return all available MCP tools:
+
+```json
+{
+  "tools": [
+    {
+      "name": "GetEmulatorState",
+      "description": "Get current CPU state including registers and flags"
+    },
+    {
+      "name": "ReadMemory",
+      "description": "Read memory at a specified address",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string",
+            "description": "Memory address in hexadecimal"
+          },
+          "length": {
+            "type": "integer",
+            "description": "Number of bytes to read"
+          }
+        }
+      }
+    }
+    // ... more tools
+  ]
+}
+```
+
+## Integrating with GitHub Copilot (VS Code)
+
+To use MCP with GitHub Copilot in VS Code:
 
 1. Ensure you have the latest version of VS Code with GitHub Copilot
 2. Configure MCP in your VS Code settings
@@ -286,7 +392,9 @@ To use MCP with GitHub Copilot:
 4. Open a chat with Copilot
 5. Ask debugging questions about your emulated program
 
-### Example `mcp.json` Configuration
+### Example `mcp.json` Configuration for STDIO
+
+For command-line tools that use STDIO transport:
 
 ```json
 {
@@ -300,17 +408,58 @@ To use MCP with GitHub Copilot:
 }
 ```
 
+**Note**: Ensure `McpUseHttpTransport` is set to `false` when using STDIO transport.
+
 ## Troubleshooting
+
+### Visual Studio Not Showing MCP Tools
+
+**Problem**: Visual Studio connects to MCP server but tools don't appear in the UI
+
+**Solutions**:
+1. **Verify HTTP Transport is Enabled**: Check that `McpUseHttpTransport` is `true` in your configuration
+2. **Verify Port Configuration**: Ensure `McpHttpPort` matches the port in your `.mcp.json` (default: 5111)
+3. **Test the Endpoint**: Use curl to verify the server is responding:
+   ```bash
+   curl http://127.0.0.1:5111/tools/list -X POST -H "Content-Type: application/json" -d '{}'
+   ```
+4. **Check Server Logs**: Look for "[MCP] Server started successfully using HTTP transport" in Win32Emu logs
+5. **Restart Visual Studio**: Sometimes VS needs to be restarted after the MCP server starts
+6. **Check .mcp.json Location**: Ensure your `.mcp.json` file is in the correct location (workspace root or user profile)
 
 ### MCP Server Won't Start
 
 **Problem**: MCP server fails to initialize
 
 **Solutions**:
-1. Check that ModelContextProtocol package is installed: `dotnet list package | grep ModelContextProtocol`
+1. Check that ModelContextProtocol packages are installed:
+   ```bash
+   dotnet list package | grep ModelContextProtocol
+   ```
+   Should show both `ModelContextProtocol` and `ModelContextProtocol.AspNetCore`
 2. Verify .NET 10.0 SDK is installed: `dotnet --version`
 3. Check logs for detailed error messages
-4. Ensure no firewall is blocking STDIO communication
+4. For HTTP transport: Ensure port 5111 (or configured port) is not already in use
+5. For STDIO transport: Ensure no firewall is blocking communication
+6. Try switching between HTTP and STDIO transport to isolate the issue
+
+### Port Already in Use
+
+**Problem**: HTTP MCP server can't start because port is in use
+
+**Solutions**:
+1. Change `McpHttpPort` to a different port (e.g., 5112, 5113)
+2. Find and stop the process using port 5111:
+   ```bash
+   # Windows
+   netstat -ano | findstr :5111
+   taskkill /PID <process_id> /F
+   
+   # Linux/macOS
+   lsof -i :5111
+   kill -9 <process_id>
+   ```
+3. Update your `.mcp.json` configuration to match the new port
 
 ### AI Can't Connect to Emulator
 

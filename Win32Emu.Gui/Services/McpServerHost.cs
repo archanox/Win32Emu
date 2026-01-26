@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
+using Win32Emu.Gui.Models;
 
 namespace Win32Emu.Gui.Services;
 
@@ -14,12 +15,14 @@ public class McpServerHost : IDisposable
 	private readonly IHost? _host;
 	private readonly ILogger _logger;
 	private readonly EmulatorService _emulatorService;
+	private readonly EmulatorConfiguration _config;
 	private bool _isRunning;
 
-	public McpServerHost(EmulatorService emulatorService, ILogger logger)
+	public McpServerHost(EmulatorService emulatorService, ILogger logger, EmulatorConfiguration config)
 	{
 		_emulatorService = emulatorService;
 		_logger = logger;
+		_config = config;
 		_isRunning = false;
 
 		try
@@ -37,11 +40,29 @@ public class McpServerHost : IDisposable
 			builder.Services.AddSingleton(logger);
 			builder.Services.AddSingleton<McpDebugTools>();
 
-			// Configure MCP server with STDIO transport
-			builder.Services
-				.AddMcpServer()
-				.WithStdioServerTransport()
-				.WithToolsFromAssembly();
+			// Configure MCP server with appropriate transport
+			var mcpBuilder = builder.Services.AddMcpServer();
+			
+			if (_config.McpUseHttpTransport)
+			{
+				// Use HTTP transport for Visual Studio and other HTTP-based clients
+				var port = _config.McpHttpPort;
+				var url = $"http://127.0.0.1:{port}";
+				_logger.LogInformation("[MCP] Configuring HTTP transport at {Url}", url);
+				
+				mcpBuilder.WithHttpServerTransport(options =>
+				{
+					options.ListenUrl = url;
+				});
+			}
+			else
+			{
+				// Use STDIO transport for command-line AI tools
+				_logger.LogInformation("[MCP] Configuring STDIO transport");
+				mcpBuilder.WithStdioServerTransport();
+			}
+			
+			mcpBuilder.WithToolsFromAssembly();
 
 			_host = builder.Build();
 			_logger.LogInformation("[MCP] Server initialized and ready");

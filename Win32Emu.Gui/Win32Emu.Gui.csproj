@@ -52,6 +52,7 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.2" />
     <PackageReference Include="ModelContextProtocol" Version="0.6.0-preview.1" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="0.6.0-preview.1" />
     <PackageReference Include="SDL3-CS" Version="3.3.7" />
     <PackageReference Include="SDL3-CS.Native" Version="3.3.7" />
     <PackageReference Include="SharpMetal" Version="1.1.0" />
