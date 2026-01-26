@@ -3480,8 +3480,29 @@ namespace Win32Emu.Win32.Modules
 		private uint SetFocus(uint hwnd)
 		{
 			_logger.LogInformation("[User32] SetFocus: HWND=0x{Hwnd:X8}", hwnd);
-			// Store and return previous focus window handle
+			
+			// Store previous focus window handle
 			var previousFocus = _focusWindow;
+			
+			// If we're setting focus to a new window (not removing focus)
+			if (hwnd != 0 && hwnd != previousFocus)
+			{
+				// Post WM_ACTIVATEAPP to indicate application activation
+				// This is critical for games like ign_teas that use this message
+				// to switch from blocking GetMessageA to active PeekMessageA loop
+				const uint WM_ACTIVATEAPP = 0x001C;
+				var threadId = _env.GetCurrentThreadId();
+				_env.PostMessage(hwnd, WM_ACTIVATEAPP, 1, threadId);
+				_logger.LogDebug("[User32] SetFocus: Posted WM_ACTIVATEAPP to HWND=0x{Hwnd:X8}", hwnd);
+				
+				// Also post WM_ACTIVATE for completeness
+				const uint WM_ACTIVATE = 0x0006;
+				const uint WA_ACTIVE = 0x0001;
+				_env.PostMessage(hwnd, WM_ACTIVATE, WA_ACTIVE, 0);
+				_logger.LogDebug("[User32] SetFocus: Posted WM_ACTIVATE to HWND=0x{Hwnd:X8}", hwnd);
+			}
+			
+			// Update stored focus window
 			_focusWindow = hwnd;
 			return previousFocus;
 		}
