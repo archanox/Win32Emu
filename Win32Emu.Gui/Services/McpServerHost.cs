@@ -55,7 +55,7 @@ public class McpServerHost : IDisposable
 				builder.Services
 					.AddMcpServer()
 					.WithHttpTransport()
-					.WithToolsFromAssembly(typeof(McpDebugTools).Assembly);
+					.WithTools<McpDebugTools>();  // Use WithTools for instance-based tools with DI
 				
 				var app = builder.Build();
 				
@@ -85,7 +85,7 @@ public class McpServerHost : IDisposable
 				builder.Services
 					.AddMcpServer()
 					.WithStdioServerTransport()
-					.WithToolsFromAssembly(typeof(McpDebugTools).Assembly);
+					.WithTools<McpDebugTools>();  // Use WithTools for instance-based tools with DI
 
 				_host = builder.Build();
 			}
