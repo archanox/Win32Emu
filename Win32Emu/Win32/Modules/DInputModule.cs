@@ -38,6 +38,9 @@ namespace Win32Emu.Win32.Modules
 		// DirectInput constants
 		private const uint DIDEVICEOBJECTDATA_SIZE = 16; // sizeof(DIDEVICEOBJECTDATA)
 		private const uint DI_OK = 0; // Success return value
+		private const uint DIERR_INVALIDPARAM = 0x80004003; // Invalid parameter error
+		private const uint DIERR_NOTACQUIRED = 0x8007001E; // Device not acquired error
+		private const uint DIPROPDWORD_DATA_SIZE = 4; // Size of dwData field in DIPROPDWORD
 		
 		// DirectInput keyboard constants
 		private const int DIKEYBOARD_MAX_KEYS = 256; // Number of keys in DirectInput keyboard
@@ -126,7 +129,7 @@ namespace Win32Emu.Win32.Modules
 			if (PlatformHelpers.IsWasm)
 			{
 				_logger.LogError("[DInput] DirectInputCreateA called on WASM - should use async path");
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 			
 			return DirectInputCreateAAsync(hinst, dwVersion, lplpDirectInput, pUnkOuter).GetAwaiter().GetResult();
@@ -145,7 +148,7 @@ namespace Win32Emu.Win32.Modules
 			if (lplpDirectInput == 0)
 			{
 				_logger.LogError("[DInput] DirectInputCreateA: lplpDirectInput is NULL");
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 
 			// Detect if lplpDirectInput looks like a stack pointer (potential parameter handling bug)
@@ -220,7 +223,7 @@ namespace Win32Emu.Win32.Modules
 			if (PlatformHelpers.IsWasm)
 			{
 				_logger.LogError("[DInput] DirectInputCreate called on WASM - should use async path");
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 			
 			// DirectInputCreate and DirectInputCreateA are identical, so reuse the async implementation
@@ -492,7 +495,7 @@ namespace Win32Emu.Win32.Modules
 			if (pdiph == 0)
 			{
 				_logger.LogError("[DInput COM] SetProperty: pdiph is NULL");
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 
 			try
@@ -511,7 +514,7 @@ namespace Win32Emu.Win32.Modules
 
 				// For properties like DIPROP_BUFFERSIZE, there's additional data after the header
 				// DIPROPDWORD contains: DIPROPHEADER diph; DWORD dwData;
-				if (diph.dwSize >= diph.dwHeaderSize + 4)
+				if (diph.dwSize >= diph.dwHeaderSize + DIPROPDWORD_DATA_SIZE)
 				{
 					var dwData = _env.MemRead32(pdiph + diph.dwHeaderSize);
 					_logger.LogInformation("[DInput COM]   Property value: {DwData}", dwData);
@@ -533,7 +536,7 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[DInput COM] SetProperty: Failed to read DIPROPHEADER structure at 0x{Pdiph:X8}", pdiph);
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 
 			return 0; // DI_OK
@@ -595,7 +598,7 @@ namespace Win32Emu.Win32.Modules
 			if (!_devices.TryGetValue(thisPtr, out var device) || !device.IsAcquired)
 			{
 				_logger.LogWarning("[DInput COM] Device not acquired or not found");
-				return 0x8007001E; // DIERR_NOTACQUIRED
+				return DIERR_NOTACQUIRED;
 			}
 
 			// Zero out the buffer first
@@ -705,7 +708,7 @@ namespace Win32Emu.Win32.Modules
 			if (device == null || !device.IsAcquired)
 			{
 				_logger.LogWarning("[DInput COM] Device not acquired or not found");
-				return 0x8007001E; // DIERR_NOTACQUIRED
+				return DIERR_NOTACQUIRED;
 			}
 
 			// Read the number of elements requested
@@ -873,7 +876,7 @@ namespace Win32Emu.Win32.Modules
 			if (lpdf == 0)
 			{
 				_logger.LogError("[DInput COM] SetDataFormat: lpdf is NULL");
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 
 			// Find the device object based on this pointer
@@ -888,7 +891,7 @@ namespace Win32Emu.Win32.Modules
 			if (device == null)
 			{
 				_logger.LogError("[DInput COM] SetDataFormat: Device not found for this=0x{ThisPtr:X8}", thisPtr);
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 
 			try
@@ -915,7 +918,7 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[DInput COM] SetDataFormat: Failed to read DIDATAFORMAT structure at 0x{Lpdf:X8}", lpdf);
-				return 0x80004003; // DIERR_INVALIDPARAM
+				return DIERR_INVALIDPARAM;
 			}
 
 			return 0; // DI_OK
