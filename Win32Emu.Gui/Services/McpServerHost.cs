@@ -48,7 +48,7 @@ public class McpServerHost : IDisposable
 				
 				// Register the MCP debug tools
 				builder.Services.AddSingleton(emulatorService);
-				builder.Services.AddSingleton(logger);
+				builder.Services.AddSingleton<ILogger>(logger);  // Register with explicit interface type
 				builder.Services.AddSingleton<McpDebugTools>();
 				
 				// Configure MCP server with HTTP transport
@@ -78,7 +78,7 @@ public class McpServerHost : IDisposable
 
 				// Register the MCP debug tools
 				builder.Services.AddSingleton(emulatorService);
-				builder.Services.AddSingleton(logger);
+				builder.Services.AddSingleton<ILogger>(logger);  // Register with explicit interface type
 				builder.Services.AddSingleton<McpDebugTools>();
 
 				// Configure MCP server with STDIO transport
