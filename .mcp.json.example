@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "win32emu-debugger": {
+      "url": "http://127.0.0.1:5111",
+      "description": "Win32Emu Debugging Server - Inspect and control x86 emulation",
+      "transport": "http"
+    }
+  }
+}
