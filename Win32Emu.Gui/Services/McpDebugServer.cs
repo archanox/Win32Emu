@@ -23,6 +23,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Get the current state of the emulator including CPU registers and flags")]
 	public string GetEmulatorState()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -45,6 +46,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Read memory contents at a specified address with hex and ASCII output")]
 	public string ReadMemory(
 		[System.ComponentModel.Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address,
 		[System.ComponentModel.Description("Number of bytes to read")] int length = 16)
@@ -78,6 +80,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Set a breakpoint at a specified memory address")]
 	public string SetBreakpoint(
 		[System.ComponentModel.Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address)
 	{
@@ -105,6 +108,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Resume emulator execution until next breakpoint or halt")]
 	public string ContinueExecution()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -126,6 +130,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Execute a single CPU instruction and return the result")]
 	public string StepInstruction()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -147,6 +152,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Get the history of recently executed instructions")]
 	public string GetExecutionHistory(
 		[System.ComponentModel.Description("Number of instructions to retrieve")] int count = 10)
 	{
@@ -169,6 +175,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Get the current call stack with return addresses and frame information")]
 	public string GetCallStack()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -190,6 +197,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Get a list of all loaded DLL modules with their base addresses")]
 	public string GetLoadedModules()
 	{
 		var emulator = _emulatorService.CurrentEmulator;
@@ -211,6 +219,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Search for a byte pattern in emulator memory")]
 	public string SearchMemory(
 		[System.ComponentModel.Description("Hex byte pattern to search for (e.g., '4D 5A' for PE header)")] string pattern,
 		[System.ComponentModel.Description("Starting address in hexadecimal")] string? startAddress = null,
@@ -259,6 +268,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Get a trace of recent Win32 API calls with parameters and return values")]
 	public string GetWin32ApiTrace(
 		[System.ComponentModel.Description("Number of recent API calls to retrieve")] int count = 20)
 	{
@@ -281,6 +291,7 @@ public class McpDebugTools
 	}
 
 	[McpServerTool]
+	[Description("Disassemble x86 instructions at a specified memory address")]
 	public string DisassembleAt(
 		[System.ComponentModel.Description("Memory address in hexadecimal")] string address,
 		[System.ComponentModel.Description("Number of instructions to disassemble")] int count = 10)
