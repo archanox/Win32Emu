@@ -45,9 +45,10 @@ public class McpSettingsTests : IDisposable
 		// Act
 		var config = configService.GetEmulatorConfiguration();
 
-		// Assert - Verify that MCP properties exist
+		// Assert - Verify that MCP properties exist and have correct default values
 		Assert.NotNull(config);
-		// McpHttpPort is an int and cannot be null
+		Assert.Equal(5111, config.McpHttpPort);
+		Assert.True(config.McpUseHttpTransport);
 	}
 
 	[Fact]

@@ -335,34 +335,29 @@ Visual Studio (version 18.2+) has built-in MCP support. To connect Win32Emu MCP 
 You can test the MCP HTTP endpoint with curl:
 
 ```bash
-# Test server health
-curl http://127.0.0.1:5111/health
-
-# Test initialize endpoint
-curl -X POST http://127.0.0.1:5111/initialize \
+# Test initialize endpoint (MCP protocol requires this first)
+curl -X POST http://127.0.0.1:5111/ \
   -H "Content-Type: application/json" \
-  -d '{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}'
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}'
 
-# Test tools/list endpoint
-curl -X POST http://127.0.0.1:5111/tools/list \
-  -H "Content-Type: application/json" \
-  -d '{}'
+# Note: The MCP protocol uses the root endpoint (/) for all requests.
+# There is no separate /tools/list endpoint - use the root with the appropriate method.
 ```
 
 ### Expected Response
 
-The `/tools/list` endpoint should return all available MCP tools:
+The MCP protocol returns responses in JSON-RPC 2.0 format. After initialization, you can list tools:
 
 ```json
 {
   "tools": [
     {
       "name": "GetEmulatorState",
-      "description": "Get current CPU state including registers and flags"
+      "description": "Get the current state of the emulator including CPU registers and flags"
     },
     {
       "name": "ReadMemory",
-      "description": "Read memory at a specified address",
+      "description": "Read memory contents at a specified address with hex and ASCII output",
       "inputSchema": {
         "type": "object",
         "properties": {

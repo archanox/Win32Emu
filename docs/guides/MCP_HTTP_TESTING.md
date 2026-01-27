@@ -99,7 +99,7 @@ curl -X POST http://127.0.0.1:5111/tools/list \
   "tools": [
     {
       "name": "GetEmulatorState",
-      "description": "Get current CPU state including all registers and flags",
+      "description": "Get the current state of the emulator including CPU registers and flags",
       "inputSchema": {
         "type": "object",
         "properties": {}
@@ -107,7 +107,7 @@ curl -X POST http://127.0.0.1:5111/tools/list \
     },
     {
       "name": "ReadMemory",
-      "description": "Read memory at a specified address",
+      "description": "Read memory contents at a specified address with hex and ASCII output",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -208,7 +208,7 @@ Create a `.mcp.json` file in your workspace or user profile directory:
 **Issue**: `/tools/list` returns empty array
 
 **Check**:
-1. Verify `WithToolsFromAssembly()` is called in McpServerHost
+1. Verify `WithTools<McpDebugTools>()` (or the appropriate `WithTools<T>()` call) is used in McpServerHost to register tools
 2. Check McpDebugTools class has `[McpServerToolType]` attribute
 3. Verify tool methods have `[McpServerTool]` attributes
 
