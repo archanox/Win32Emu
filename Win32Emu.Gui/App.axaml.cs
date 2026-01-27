@@ -18,6 +18,7 @@ public class App : Application
     private TelemetryService? _telemetryService;
     private LoggingService? _loggingService;
     private McpServerHost? _mcpServerHost;
+	private EmulatorRuntimeService? _emulatorRuntimeService;
     
     /// <summary>
     /// Global telemetry service instance for the entire Avalonia session
@@ -34,6 +35,11 @@ public class App : Application
     /// </summary>
     public static McpServerHost? McpServerHost { get; private set; }
 
+	/// <summary>
+	/// Global emulator runtime used by both GUI and MCP.
+	/// </summary>
+	public static EmulatorRuntimeService? EmulatorRuntime { get; private set; }
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -41,6 +47,36 @@ public class App : Application
         // Initialize the optimized SIMD blitter for desktop platforms
         InitializeBlitter();
     }
+
+	private void InitializeEmulatorRuntime()
+	{
+		try
+		{
+			var configService = new ConfigurationService();
+			var config = configService.GetEmulatorConfiguration();
+
+			if (LoggingService == null)
+			{
+				return;
+			}
+
+			var logger = LoggingService.CreateLogger<App>();
+			_emulatorRuntimeService = new EmulatorRuntimeService(config, logger);
+			EmulatorRuntime = _emulatorRuntimeService;
+			logger.LogInformation("[EmulatorRuntime] Initialized");
+		}
+		catch (Exception ex)
+		{
+			if (LoggingService != null)
+			{
+				var logger = LoggingService.CreateLogger<App>();
+				logger.LogWarning(ex, "[EmulatorRuntime] Initialization failed");
+			}
+
+			_emulatorRuntimeService = null;
+			EmulatorRuntime = null;
+		}
+	}
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -55,6 +91,9 @@ public class App : Application
             
             // Initialize OpenTelemetry based on configuration
             InitializeTelemetry();
+			
+			// Initialize emulator runtime for shared access (GUI + MCP)
+			InitializeEmulatorRuntime();
             
             // Initialize MCP server for AI-assisted debugging if enabled
             InitializeMcpServer();
@@ -161,12 +200,13 @@ public class App : Application
                 {
                     var logger = LoggingService.CreateLogger<App>();
                     logger.LogInformation("[MCP] Initializing server at application startup for AI-assisted debugging");
-                    
-                    // Create a temporary EmulatorService to pass to McpServerHost
-                    // This allows AI to interact with the app before any emulation session starts
-                    var emulatorService = new EmulatorService(config, null, logger);
-                    
-                    _mcpServerHost = new McpServerHost(config, emulatorService, logger);
+					var runtime = EmulatorRuntime;
+					if (runtime == null)
+					{
+						logger.LogWarning("[MCP] Emulator runtime is not available; MCP will start without emulator visibility");
+					}
+					
+					_mcpServerHost = new McpServerHost(config, runtime, logger);
                     McpServerHost = _mcpServerHost;
                     
                     // Start the server asynchronously
@@ -208,6 +248,17 @@ public class App : Application
     
     private void CleanupServices()
     {
+		try
+		{
+			EmulatorRuntime?.Stop();
+		}
+		catch (Exception)
+		{
+			// Best-effort stop during shutdown.
+		}
+		_emulatorRuntimeService = null;
+		EmulatorRuntime = null;
+		
         _mcpServerHost?.StopAsync().GetAwaiter().GetResult();
         _mcpServerHost?.Dispose();
         _mcpServerHost = null;

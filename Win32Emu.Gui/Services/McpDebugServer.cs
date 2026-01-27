@@ -1,6 +1,11 @@
 using Microsoft.Extensions.Logging;
 using ModelContextProtocol.Server;
 using System.ComponentModel;
+using Avalonia.Threading;
+using Win32Emu.Gui.Configuration;
+using Win32Emu.Gui.Models;
+using Win32Emu.Gui.ViewModels;
+using Win32Emu.Gui.Views;
 using Win32Emu.Cpu;
 using Win32Emu.Memory;
 
@@ -13,20 +18,150 @@ namespace Win32Emu.Gui.Services;
 [McpServerToolType]
 public class McpDebugTools
 {
-	private readonly EmulatorService _emulatorService;
+	private readonly EmulatorRuntimeService _emulatorRuntime;
 	private readonly ILogger _logger;
+	private readonly ConfigurationService _configService;
+	private readonly object _launchGate = new();
+	private DateTimeOffset? _lastLaunchRequestedUtc;
+	private string? _lastLaunchTitle;
+	private string? _lastLaunchError;
 
-	public McpDebugTools(EmulatorService emulatorService, ILogger logger)
+	public McpDebugTools(EmulatorRuntimeService emulatorRuntime, ILogger logger)
 	{
-		_emulatorService = emulatorService;
+		_emulatorRuntime = emulatorRuntime;
 		_logger = logger;
+		_configService = new ConfigurationService();
+	}
+
+	[McpServerTool]
+	[Description("List games from the saved game library")]
+	public string ListLibraryGames()
+	{
+		try
+		{
+			var games = _configService.GetGames()
+				.Select(g => new
+				{
+					g.Title,
+					g.ExecutablePath,
+					g.VhdExecutablePath,
+					g.VirtualDiskPath,
+					g.LastPlayed,
+					g.TimesPlayed
+				})
+				.ToArray();
+
+			return System.Text.Json.JsonSerializer.Serialize(games, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to list library games");
+			return $"Error: {ex.Message}";
+		}
+	}
+
+	[McpServerTool]
+	[Description("Launch a game from the saved library by title (case-insensitive). Creates an emulator window and starts the shared runtime.")]
+	public string LaunchLibraryGame(
+		[System.ComponentModel.Description("Game title from library (case-insensitive)")] string title)
+	{
+		if (string.IsNullOrWhiteSpace(title))
+		{
+			return "Error: title is required";
+		}
+
+		try
+		{
+			var games = _configService.GetGames();
+			var game = games.FirstOrDefault(g => string.Equals(g.Title, title, StringComparison.OrdinalIgnoreCase));
+			if (game == null)
+			{
+				return $"Error: Game not found in library: {title}";
+			}
+
+			_ = Dispatcher.UIThread.InvokeAsync(async () =>
+			{
+				try
+				{
+					var window = new EmulatorWindow();
+					var logger = _logger;
+					var viewModel = new EmulatorWindowViewModel(logger: logger);
+					window.DataContext = viewModel;
+					viewModel.SetOwnerWindow(window);
+					window.Show();
+
+					var gameSettings = _configService.GetGameSettings(game.ExecutablePath);
+					string[]? programArgs = null;
+					if (gameSettings?.ProgramArguments != null && !string.IsNullOrWhiteSpace(gameSettings.ProgramArguments))
+					{
+						programArgs = gameSettings.ProgramArguments.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+					}
+
+					// Keep a per-window EmulatorService for dialog callbacks and message dispatcher integration.
+					var config = _configService.GetEmulatorConfiguration(game.ExecutablePath);
+					var serviceForDialogs = new EmulatorService(config, viewModel, logger);
+					viewModel.SetEmulatorService(serviceForDialogs);
+					viewModel.InitializeMessageDispatcher();
+
+					await _emulatorRuntime.LaunchGameAsync(game, viewModel, programArgs);
+				}
+				catch (Exception ex) when (ex is not OutOfMemoryException && ex is not StackOverflowException)
+				{
+					_logger.LogError(ex, "Failed to launch game via MCP");
+				}
+			});
+
+			return $"Launch requested for: {game.Title}";
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to launch library game {Title}", title);
+			return $"Error: {ex.Message}";
+		}
+	}
+
+	[McpServerTool]
+	[Description("Get MCP server and emulator runtime status (running state, run id)")]
+	public string GetServerStatus()
+	{
+		try
+		{
+			string? lastTitle;
+			DateTimeOffset? lastRequested;
+			string? lastError;
+			lock (_launchGate)
+			{
+				lastTitle = _lastLaunchTitle;
+				lastRequested = _lastLaunchRequestedUtc;
+				lastError = _lastLaunchError;
+			}
+
+			var status = new
+			{
+				RuntimeInitialized = true,
+				IsRunning = _emulatorRuntime.IsRunning,
+				RunId = _emulatorRuntime.CurrentRunId,
+				HasEmulatorInstance = _emulatorRuntime.CurrentEmulator != null,
+				LastException = _emulatorRuntime.CurrentEmulator?.LastException?.Message,
+				LastLaunchRequestedUtc = lastRequested,
+				LastLaunchTitle = lastTitle,
+				LastLaunchError = lastError
+			};
+
+			return System.Text.Json.JsonSerializer.Serialize(status, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "Failed to get server status");
+			return $"Error: {ex.Message}";
+		}
 	}
 
 	[McpServerTool]
 	[Description("Get the current state of the emulator including CPU registers and flags")]
 	public string GetEmulatorState()
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -51,7 +186,7 @@ public class McpDebugTools
 		[System.ComponentModel.Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address,
 		[System.ComponentModel.Description("Number of bytes to read")] int length = 16)
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -84,7 +219,7 @@ public class McpDebugTools
 	public string SetBreakpoint(
 		[System.ComponentModel.Description("Memory address in hexadecimal (e.g., '0x00401000')")] string address)
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -111,7 +246,7 @@ public class McpDebugTools
 	[Description("Resume emulator execution until next breakpoint or halt")]
 	public string ContinueExecution()
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -133,7 +268,7 @@ public class McpDebugTools
 	[Description("Execute a single CPU instruction and return the result")]
 	public string StepInstruction()
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -156,7 +291,7 @@ public class McpDebugTools
 	public string GetExecutionHistory(
 		[System.ComponentModel.Description("Number of instructions to retrieve")] int count = 10)
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -178,7 +313,7 @@ public class McpDebugTools
 	[Description("Get the current call stack with return addresses and frame information")]
 	public string GetCallStack()
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -200,7 +335,7 @@ public class McpDebugTools
 	[Description("Get a list of all loaded DLL modules with their base addresses")]
 	public string GetLoadedModules()
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -225,7 +360,7 @@ public class McpDebugTools
 		[System.ComponentModel.Description("Starting address in hexadecimal")] string? startAddress = null,
 		[System.ComponentModel.Description("Maximum number of results to return")] int maxResults = 10)
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -272,7 +407,7 @@ public class McpDebugTools
 	public string GetWin32ApiTrace(
 		[System.ComponentModel.Description("Number of recent API calls to retrieve")] int count = 20)
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";
@@ -296,7 +431,7 @@ public class McpDebugTools
 		[System.ComponentModel.Description("Memory address in hexadecimal")] string address,
 		[System.ComponentModel.Description("Number of instructions to disassemble")] int count = 10)
 	{
-		var emulator = _emulatorService.CurrentEmulator;
+		var emulator = _emulatorRuntime.CurrentEmulator;
 		if (emulator == null)
 		{
 			return "Emulator is not running";

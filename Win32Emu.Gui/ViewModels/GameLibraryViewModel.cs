@@ -536,13 +536,17 @@ public partial class GameLibraryViewModel : ViewModelBase
                 }
             }
             
-            // Launch the game with the view model as the host
-            var service = new EmulatorService(_configuration, viewModel, logger);
-            
-            // Set the emulator service reference in the view model so dialog callbacks can access CurrentEmulator
-            viewModel.SetEmulatorService(service);
-            
-            await service.LaunchGame(game, programArgs);
+			var runtime = App.EmulatorRuntime;
+			if (runtime == null)
+			{
+				throw new InvalidOperationException("Emulator runtime is not initialized.");
+			}
+			
+			// Create a per-window service for view model callbacks, but route execution through the shared runtime.
+			var serviceForDialogs = new EmulatorService(_configuration, viewModel, logger);
+			viewModel.SetEmulatorService(serviceForDialogs);
+			
+			await runtime.LaunchGameAsync(game, viewModel, programArgs);
         }
         catch (Exception ex)
         {

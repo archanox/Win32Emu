@@ -21,14 +21,14 @@ public class McpServerHost : IDisposable
 	
 	private readonly IHost? _host;
 	private readonly ILogger _logger;
-	private readonly EmulatorService _emulatorService;
+	private readonly EmulatorRuntimeService? _emulatorRuntime;
 	private readonly EmulatorConfiguration _config;
 	private bool _isRunning;
 
-	public McpServerHost(EmulatorConfiguration config, EmulatorService emulatorService, ILogger logger)
+	public McpServerHost(EmulatorConfiguration config, EmulatorRuntimeService? emulatorRuntime, ILogger logger)
 	{
 		_config = config;
-		_emulatorService = emulatorService;
+		_emulatorRuntime = emulatorRuntime;
 		_logger = logger;
 		_isRunning = false;
 
@@ -47,12 +47,14 @@ public class McpServerHost : IDisposable
 				
 				// Configure logging and MCP services
 				ConfigureLogging(builder.Logging, logger);
-				ConfigureMcpServices(builder.Services, emulatorService, logger, useHttpTransport: true);
+				ConfigureMcpServices(builder.Services, config, emulatorRuntime, logger, useHttpTransport: true);
 				
 				var app = builder.Build();
 				
-				// Map MCP endpoints
-				app.MapMcp();
+				// Map MCP endpoints at root.
+				// The MCP HTTP transport uses routes like POST `/initialize`, `/tools/list`, `/tools/call`.
+				// Mapping at an extra prefix can cause clients to hit the wrong route (e.g., POST `/`) and get 404.
+				app.MapMcp("");
 				
 				_host = app;
 			}
@@ -65,7 +67,7 @@ public class McpServerHost : IDisposable
 
 				// Configure logging and MCP services
 				ConfigureLogging(builder.Logging, logger);
-				ConfigureMcpServices(builder.Services, emulatorService, logger, useHttpTransport: false);
+			ConfigureMcpServices(builder.Services, config, emulatorRuntime, logger, useHttpTransport: false);
 
 				_host = builder.Build();
 			}
@@ -92,10 +94,10 @@ public class McpServerHost : IDisposable
 	/// <summary>
 	/// Configure MCP services and register debug tools
 	/// </summary>
-	private static void ConfigureMcpServices(IServiceCollection services, EmulatorService emulatorService, ILogger logger, bool useHttpTransport)
+	private static void ConfigureMcpServices(IServiceCollection services, EmulatorConfiguration config, EmulatorRuntimeService? emulatorRuntime, ILogger logger, bool useHttpTransport)
 	{
 		// Register the MCP debug tools
-		services.AddSingleton(emulatorService);
+		services.AddSingleton(emulatorRuntime ?? new EmulatorRuntimeService(config, logger));
 		services.AddSingleton<ILogger>(logger);  // Register with explicit interface type
 		services.AddSingleton<McpDebugTools>();
 		

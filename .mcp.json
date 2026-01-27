@@ -1,0 +1,10 @@
+{
+  "inputs": [],
+  "servers": {
+	"win32emu": {
+		"type": "http",
+		"url": "http://127.0.0.1:5111",
+		"description": "Win32Emu - launch and debug emulated x86 games"
+	}
+  }
+}
