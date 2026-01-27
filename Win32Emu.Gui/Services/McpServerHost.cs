@@ -13,6 +13,10 @@ namespace Win32Emu.Gui.Services;
 /// </summary>
 public class McpServerHost : IDisposable
 {
+	// NOTE: The MCP debug server is intentionally bound to localhost only.
+	// This is a security measure to prevent remote access to emulator internals.
+	// Do NOT make this configurable without carefully considering the risk of exposing
+	// powerful debugging and control tools over the network.
 	private const string McpBindAddress = "127.0.0.1";
 	
 	private readonly IHost? _host;
@@ -41,21 +45,9 @@ public class McpServerHost : IDisposable
 				var args = new[] { $"--urls={url}" };
 				var builder = WebApplication.CreateBuilder(args);
 				
-				// Configure logging to use the emulator's logger
-				builder.Logging.ClearProviders();
-				builder.Logging.AddProvider(new McpLoggerProvider(logger));
-				builder.Logging.SetMinimumLevel(LogLevel.Information);
-				
-				// Register the MCP debug tools
-				builder.Services.AddSingleton(emulatorService);
-				builder.Services.AddSingleton<ILogger>(logger);  // Register with explicit interface type
-				builder.Services.AddSingleton<McpDebugTools>();
-				
-				// Configure MCP server with HTTP transport
-				builder.Services
-					.AddMcpServer()
-					.WithHttpTransport()
-					.WithTools<McpDebugTools>();  // Use WithTools for instance-based tools with DI
+				// Configure logging and MCP services
+				ConfigureLogging(builder.Logging, logger);
+				ConfigureMcpServices(builder.Services, emulatorService, logger, useHttpTransport: true);
 				
 				var app = builder.Build();
 				
@@ -71,21 +63,9 @@ public class McpServerHost : IDisposable
 				
 				var builder = Host.CreateApplicationBuilder();
 
-				// Configure logging to use the emulator's logger
-				builder.Logging.ClearProviders();
-				builder.Logging.AddProvider(new McpLoggerProvider(logger));
-				builder.Logging.SetMinimumLevel(LogLevel.Information);
-
-				// Register the MCP debug tools
-				builder.Services.AddSingleton(emulatorService);
-				builder.Services.AddSingleton<ILogger>(logger);  // Register with explicit interface type
-				builder.Services.AddSingleton<McpDebugTools>();
-
-				// Configure MCP server with STDIO transport
-				builder.Services
-					.AddMcpServer()
-					.WithStdioServerTransport()
-					.WithTools<McpDebugTools>();  // Use WithTools for instance-based tools with DI
+				// Configure logging and MCP services
+				ConfigureLogging(builder.Logging, logger);
+				ConfigureMcpServices(builder.Services, emulatorService, logger, useHttpTransport: false);
 
 				_host = builder.Build();
 			}
@@ -97,6 +77,41 @@ public class McpServerHost : IDisposable
 			_logger.LogError(ex, "[MCP] Failed to initialize server");
 			_host = null;
 		}
+	}
+
+	/// <summary>
+	/// Configure logging to use the emulator's logger
+	/// </summary>
+	private static void ConfigureLogging(ILoggingBuilder loggingBuilder, ILogger logger)
+	{
+		loggingBuilder.ClearProviders();
+		loggingBuilder.AddProvider(new McpLoggerProvider(logger));
+		loggingBuilder.SetMinimumLevel(LogLevel.Information);
+	}
+
+	/// <summary>
+	/// Configure MCP services and register debug tools
+	/// </summary>
+	private static void ConfigureMcpServices(IServiceCollection services, EmulatorService emulatorService, ILogger logger, bool useHttpTransport)
+	{
+		// Register the MCP debug tools
+		services.AddSingleton(emulatorService);
+		services.AddSingleton<ILogger>(logger);  // Register with explicit interface type
+		services.AddSingleton<McpDebugTools>();
+		
+		// Configure MCP server with appropriate transport
+		var mcpBuilder = services.AddMcpServer();
+		
+		if (useHttpTransport)
+		{
+			mcpBuilder.WithHttpTransport();
+		}
+		else
+		{
+			mcpBuilder.WithStdioServerTransport();
+		}
+		
+		mcpBuilder.WithTools<McpDebugTools>();  // Use WithTools for instance-based tools with DI
 	}
 
 	/// <summary>
