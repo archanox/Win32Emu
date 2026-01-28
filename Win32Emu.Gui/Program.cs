@@ -35,6 +35,21 @@ sealed class Program
             // Remove --nogui from args and pass the rest to the emulator launcher
             var emuArgs = args.Where(arg => arg != "--nogui").ToArray();
             
+            // Enable interpreter mode by default for headless execution to avoid JIT compilation issues
+            // Users can still explicitly disable by not using this flag, but interpreter mode is more stable
+            // for headless environments where JIT compilation may fail
+            if (!emuArgs.Contains("--interpreter"))
+            {
+                // Add --interpreter flag to enable interpreter mode by default in headless mode
+                var emuArgsList = emuArgs.ToList();
+                emuArgsList.Add("--interpreter");
+                emuArgs = emuArgsList.ToArray();
+                
+                // NOTE: Console.WriteLine is used here because this runs before ILogger is available
+                // This is an acceptable exception for early diagnostic output
+                Console.WriteLine("[Win32Emu] Interpreter mode enabled by default for --nogui mode (use explicit flags to override)");
+            }
+            
             // Create a logger factory for CLI mode
             // This ensures consistent logging between GUI and CLI modes
             var enableDebugMode = args.Contains("--debug");
