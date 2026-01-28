@@ -9,6 +9,9 @@ namespace Win32Emu.Gui.Backends;
 public class HeadlessEmulatorHost : IEmulatorHost
 {
 	private readonly ILogger _logger;
+	
+	// MessageBox result constants (matching Win32 API)
+	private const int IDOK = 1;
 
 	public HeadlessEmulatorHost(ILogger logger)
 	{
@@ -23,8 +26,9 @@ public class HeadlessEmulatorHost : IEmulatorHost
 
 	public void OnStdOutput(string output)
 	{
-		// Standard output is handled by console in headless mode
-		// Already logged through the standard logging system
+		// In headless mode, forward guest standard output to console to preserve CLI behavior
+		// This ensures piping and redirection work correctly (e.g., "emulator.exe > output.txt")
+		Console.Write(output);
 	}
 
 	public void OnWindowCreate(WindowCreateInfo info)
@@ -38,9 +42,10 @@ public class HeadlessEmulatorHost : IEmulatorHost
 
 	public Task<int> OnDialogCreate(DialogCreateInfo info)
 	{
-		_logger.LogWarning("[HeadlessHost] Dialog creation requested in headless mode: Handle=0x{Handle:X8}, returning error", info.Handle);
-		// Return error code indicating dialogs are not supported in headless mode
-		return Task.FromResult(-1);
+		_logger.LogDebug("[HeadlessHost] Dialog creation requested in headless mode: Handle=0x{Handle:X8}", info.Handle);
+		// Return 0 for success/acknowledgment (consistent with other host implementations)
+		// The dialog will be handled internally by the emulator without UI representation
+		return Task.FromResult(0);
 	}
 
 	public void OnDialogEnd(uint dialogHandle, int result)
@@ -51,8 +56,8 @@ public class HeadlessEmulatorHost : IEmulatorHost
 	public int OnMessageBox(MessageBoxInfo info)
 	{
 		_logger.LogWarning("[HeadlessHost] MessageBox in headless mode: '{Text}' - '{Caption}', returning IDOK", info.Text, info.Caption);
-		// Return IDOK (1) to automatically dismiss message boxes in headless mode
-		return 1; // IDOK
+		// Return IDOK to automatically dismiss message boxes in headless mode
+		return IDOK;
 	}
 
 	public void OnDialogControlTextChanged(uint dialogHandle, int controlId, string text)
