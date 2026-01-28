@@ -18,8 +18,9 @@ public static class EmulatorLauncher
 	/// <param name="args">Command-line arguments (first argument should be the path to the PE executable)</param>
 	/// <param name="loggerFactory">Optional logger factory. If null, a default console logger will be created.</param>
 	/// <param name="backendFactory">Optional backend factory for rendering support in headless/CLI mode.</param>
+	/// <param name="host">Optional emulator host for window management and UI callbacks. If null, windows will be created but no UI callbacks will fire.</param>
 	/// <returns>Exit code (0 for success, non-zero for error)</returns>
-	public static int Launch(string[] args, ILoggerFactory? loggerFactory = null, IBackendFactory? backendFactory = null)
+	public static int Launch(string[] args, ILoggerFactory? loggerFactory = null, IBackendFactory? backendFactory = null, IEmulatorHost? host = null)
 	{
 		if (args.Length == 0)
 		{
@@ -283,7 +284,7 @@ public static class EmulatorLauncher
 					}
 					// Let critical exceptions propagate
 					
-					using var emulator = new Emulator(null, logger, telemetryService, backendFactory);
+					using var emulator = new Emulator(host, logger, telemetryService, backendFactory);
 					emulator.LoadExecutable(vfsExecutablePath, null, debugMode, interactiveDebugMode, 256, gdbServerMode, gdbServerPort, false, false, forceInterpreterMode, virtualDiskPath, null, null, force32BitStackOps, ansiCodePage, oemCodePage);
 					
 					// Enable API tracing if requested

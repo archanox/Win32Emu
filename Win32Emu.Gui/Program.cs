@@ -88,8 +88,13 @@ sealed class Program
                 }
             }
             
-            // Run the emulator directly on the main thread with the logger factory and backend factory (no GUI)
-            return EmulatorLauncher.Launch(emuArgs, loggerFactory, backendFactory);
+            // Create a minimal emulator host for headless mode
+            // This ensures window creation callbacks are properly handled even without a GUI
+            var hostLogger = loggerFactory.CreateLogger<Backends.HeadlessEmulatorHost>();
+            var headlessHost = new Backends.HeadlessEmulatorHost(hostLogger);
+            
+            // Run the emulator directly on the main thread with the logger factory, backend factory, and host (no GUI)
+            return EmulatorLauncher.Launch(emuArgs, loggerFactory, backendFactory, headlessHost);
         }
         
         // Otherwise, start the Avalonia GUI application
