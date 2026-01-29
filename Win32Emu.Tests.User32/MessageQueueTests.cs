@@ -20,7 +20,7 @@ public class MessageQueueTests : IDisposable
 	public void PostMessageA_ShouldQueueMessage()
 	{
 		// Arrange
-		const uint hwnd = 0x00010000;
+		const uint hwnd = 0; // Use hwnd=0 for thread message queue
 		const uint WM_USER = 0x0400;
 		const uint wParam = 0x12345678;
 		const uint lParam = 0x87654321;
@@ -49,7 +49,7 @@ public class MessageQueueTests : IDisposable
 	public void PeekMessageA_WithQueuedMessage_ShouldReturnMessage()
 	{
 		// Arrange
-		const uint hwnd = 0x00010000;
+		const uint hwnd = 0; // Use hwnd=0 for thread message queue
 		const uint WM_USER = 0x0400;
 		const uint wParam = 0x12345678;
 		const uint lParam = 0x87654321;
@@ -81,7 +81,7 @@ public class MessageQueueTests : IDisposable
 	public void GetMessageA_WithQueuedMessage_ShouldReturnMessage()
 	{
 		// Arrange
-		const uint hwnd = 0x00010000;
+		const uint hwnd = 0; // Use hwnd=0 for thread message queue
 		const uint WM_USER = 0x0400;
 		const uint wParam = 0x12345678;
 		const uint lParam = 0x87654321;
@@ -136,7 +136,7 @@ public class MessageQueueTests : IDisposable
 	public void MessageQueue_FIFO_Order()
 	{
 		// Arrange
-		const uint hwnd = 0x00010000;
+		const uint hwnd = 0; // Use hwnd=0 for thread message queue
 		const uint WM_USER = 0x0400;
 
 		// Post messages in order
@@ -164,7 +164,7 @@ public class MessageQueueTests : IDisposable
 	public void PeekMessageA_WithPM_NOREMOVE_ShouldNotRemoveMessage()
 	{
 		// Arrange
-		const uint hwnd = 0x00010000;
+		const uint hwnd = 0; // Use hwnd=0 for thread message queue
 		const uint WM_USER = 0x0400;
 
 		_testEnv.CallUser32Api("POSTMESSAGEA", hwnd, WM_USER, 0, 0);
@@ -219,36 +219,51 @@ public class MessageQueueTests : IDisposable
 	}
 
 	[Fact]
-	public void GetMessageA_WithNoMessages_ShouldTimeoutGracefully()
+	public void GetMessageA_WithPostedMessage_ShouldReturnMessageImmediately()
 	{
 		// Arrange
 		var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+		const uint hwnd = 0; // Use hwnd=0 for thread message queue
+		const uint WM_USER = 0x0400;
+		const uint wParam = 0x11111111;
+		const uint lParam = 0x22222222;
 
-		// Act - Should timeout and return WM_NULL without throwing exception
+		// Post a message before calling GetMessageA
+		var postResult = _testEnv.CallUser32Api("POSTMESSAGEA", hwnd, WM_USER, wParam, lParam);
+		Assert.Equal(1u, postResult); // Verify post succeeded
+
+		// Act - Should return immediately with the posted message
 		var result = _testEnv.CallUser32Api("GETMESSAGEA", msgAddr, 0, 0, 0);
 
 		// Assert
 		Assert.Equal(1u, result); // Non-zero for non-WM_QUIT messages
 		var message = _testEnv.Memory.Read32(msgAddr + 4);
-		Assert.Equal(0u, message); // WM_NULL
+		Assert.Equal(WM_USER, message);
 	}
 
 	[Fact]
-	public void GetMessageA_MultipleTimeoutsInSuccession_ShouldNotThrowExceptions()
+	public void GetMessageA_MultipleMessagesInSuccession_ShouldRetrieveAllMessages()
 	{
 		// Arrange
 		var msgAddr = _testEnv.AllocateMemory(28); // MSG structure size
+		const uint hwnd = 0; // Use hwnd=0 for thread message queue
+		const uint WM_USER = 0x0400;
 
-		// Act - Call GetMessageA multiple times in succession to ensure no TaskCanceledException
-		// This tests the fix for the issue where readTask.Wait() was called on an already-canceled task
+		// Act - Post and retrieve multiple messages in succession
+		// This tests that the message queue handles multiple sequential operations correctly
 		for (int i = 0; i < 10; i++)
 		{
+			// Post a message
+			var postResult = _testEnv.CallUser32Api("POSTMESSAGEA", hwnd, WM_USER + (uint)i, (uint)i, (uint)(i * 2));
+			Assert.Equal(1u, postResult); // Verify post succeeded
+			
+			// Retrieve the message
 			var result = _testEnv.CallUser32Api("GETMESSAGEA", msgAddr, 0, 0, 0);
 			
 			// Assert - Each call should succeed without exceptions
 			Assert.Equal(1u, result); // Non-zero for non-WM_QUIT messages
 			var message = _testEnv.Memory.Read32(msgAddr + 4);
-			Assert.Equal(0u, message); // WM_NULL
+			Assert.Equal(WM_USER + (uint)i, message);
 		}
 	}
 

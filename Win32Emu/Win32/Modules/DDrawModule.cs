@@ -3830,7 +3830,7 @@ namespace Win32Emu.Win32.Modules
 				var sampleStr = sampleNonZeroBytes.Count > 0 
 					? string.Join(", ", sampleNonZeroBytes.Select(s => $"[{s.offset}]=0x{s.value:X2}"))
 					: "none";
-				_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} unlock: {NonZeroCount}/1000 bytes are non-zero. Samples: {Samples}", 
+				_logger.LogDebug("[DDraw] Surface 0x{SurfaceHandle:X8} unlock: {NonZeroCount}/1000 bytes are non-zero. Samples: {Samples}", 
 					surfaceHandle, nonZeroCount, sampleStr);
 
 				// Don't reset LockedMemoryPtr - we keep using the same memory
