@@ -2555,8 +2555,31 @@ public sealed class Emulator : IDisposable
                 // Use async syscall handler to support async Win32 API implementations
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
+                var eipAfterSyscall = _cpu.GetEip();
                 var espAfterSyscall = _cpu.GetRegister("ESP");
-                _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, _cpu.GetEip(), espAfterSyscall);
+                _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAfterSyscall, espAfterSyscall);
+                
+                // Validate EIP after syscall - it should point to the syscall dispatcher's RET instruction
+                // The syscall dispatcher is at 0x0E000000: INT 0x80 (2 bytes) | RET (1 byte)
+                // After HandleSyscallAsync advances EIP by +2, it should be 0x0E000002
+                var expectedEip = MemoryRegions.SyscallDispatcherAddress + 2; // 0x0E000002
+                if (eipAfterSyscall != expectedEip)
+                {
+                    _logger.LogError(
+                        "[Emulator] SYSCALL STATE CORRUPTION: EIP after syscall is 0x{ActualEip:X8} but expected 0x{ExpectedEip:X8}. " +
+                        "ESP=0x{Esp:X8}. This indicates the syscall handler or async context corrupted CPU state.",
+                        eipAfterSyscall, expectedEip, espAfterSyscall);
+                    
+                    // If EIP is in heap range, this is definitely wrong - try to recover
+                    if (eipAfterSyscall >= _heapBase && eipAfterSyscall < HEAP_LIMIT)
+                    {
+                        _logger.LogWarning(
+                            "[Emulator] EIP 0x{Eip:X8} is in heap range - forcing EIP to syscall dispatcher RET at 0x{ExpectedEip:X8}",
+                            eipAfterSyscall, expectedEip);
+                        _cpu.SetEip(expectedEip);
+                    }
+                }
+                
                 continue; // Continue to next iteration, let CPU execute RET
             }
 
@@ -3615,6 +3638,17 @@ public sealed class Emulator : IDisposable
         {
             _logger.LogError("[Syscall] Unknown import stub at 0x{Stub:X8} (retAddr=0x{RetAddr:X8})", importStubAddr, retToStub);
             _cpu.SetRegister("EAX", 0);
+        }
+        
+        // Final validation: EIP should point to syscall dispatcher's RET instruction
+        var finalEip = _cpu.GetEip();
+        var expectedFinalEip = MemoryRegions.SyscallDispatcherAddress + 2; // 0x0E000002
+        if (finalEip != expectedFinalEip)
+        {
+            _logger.LogError(
+                "[Syscall] FINAL EIP VALIDATION FAILED: EIP is 0x{ActualEip:X8} but should be 0x{ExpectedEip:X8}. " +
+                "Something modified EIP during syscall handling!",
+                finalEip, expectedFinalEip);
         }
         
         return true;
