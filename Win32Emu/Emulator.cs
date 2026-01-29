@@ -204,6 +204,11 @@ public sealed class Emulator : IDisposable
     private const byte ASCII_PRINTABLE_MIN = 32;                           // Minimum ASCII printable character
     private const byte ASCII_PRINTABLE_MAX = 127;                          // Maximum ASCII printable character (exclusive)
     
+    // Syscall state validation constants
+    // After HandleSyscallAsync advances EIP past INT 0x80 (2 bytes), EIP should point to the RET instruction
+    // Syscall dispatcher layout: 0x0E000000: INT 0x80 (2 bytes) | 0x0E000002: RET (1 byte)
+    private const uint EXPECTED_EIP_AFTER_SYSCALL = MemoryRegions.SyscallDispatcherAddress + 2; // 0x0E000002
+    
     // IGN_TEAS post-CRT progress tracking
     private ulong _ignTeasPostCrtInstructions = 0;
     private ulong _ignTeasLimboInstructions = 0;
@@ -2560,23 +2565,20 @@ public sealed class Emulator : IDisposable
                 _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAfterSyscall, espAfterSyscall);
                 
                 // Validate EIP after syscall - it should point to the syscall dispatcher's RET instruction
-                // The syscall dispatcher is at 0x0E000000: INT 0x80 (2 bytes) | RET (1 byte)
-                // After HandleSyscallAsync advances EIP by +2, it should be 0x0E000002
-                var expectedEip = MemoryRegions.SyscallDispatcherAddress + 2; // 0x0E000002
-                if (eipAfterSyscall != expectedEip)
+                if (eipAfterSyscall != EXPECTED_EIP_AFTER_SYSCALL)
                 {
                     _logger.LogError(
                         "[Emulator] SYSCALL STATE CORRUPTION: EIP after syscall is 0x{ActualEip:X8} but expected 0x{ExpectedEip:X8}. " +
                         "ESP=0x{Esp:X8}. This indicates the syscall handler or async context corrupted CPU state.",
-                        eipAfterSyscall, expectedEip, espAfterSyscall);
+                        eipAfterSyscall, EXPECTED_EIP_AFTER_SYSCALL, espAfterSyscall);
                     
                     // If EIP is in heap range, this is definitely wrong - try to recover
                     if (eipAfterSyscall >= _heapBase && eipAfterSyscall < HEAP_LIMIT)
                     {
                         _logger.LogWarning(
                             "[Emulator] EIP 0x{Eip:X8} is in heap range - forcing EIP to syscall dispatcher RET at 0x{ExpectedEip:X8}",
-                            eipAfterSyscall, expectedEip);
-                        _cpu.SetEip(expectedEip);
+                            eipAfterSyscall, EXPECTED_EIP_AFTER_SYSCALL);
+                        _cpu.SetEip(EXPECTED_EIP_AFTER_SYSCALL);
                     }
                 }
                 
@@ -3642,13 +3644,22 @@ public sealed class Emulator : IDisposable
         
         // Final validation: EIP should point to syscall dispatcher's RET instruction
         var finalEip = _cpu.GetEip();
-        var expectedFinalEip = MemoryRegions.SyscallDispatcherAddress + 2; // 0x0E000002
-        if (finalEip != expectedFinalEip)
+        var finalEsp = _cpu.GetRegister("ESP");
+        if (finalEip != EXPECTED_EIP_AFTER_SYSCALL)
         {
             _logger.LogError(
                 "[Syscall] FINAL EIP VALIDATION FAILED: EIP is 0x{ActualEip:X8} but should be 0x{ExpectedEip:X8}. " +
-                "Something modified EIP during syscall handling!",
-                finalEip, expectedFinalEip);
+                "ESP=0x{Esp:X8}. Something modified EIP during syscall handling!",
+                finalEip, EXPECTED_EIP_AFTER_SYSCALL, finalEsp);
+            
+            // Attempt recovery: if EIP is in heap range, force it back to the correct value
+            if (finalEip >= _heapBase && finalEip < HEAP_LIMIT)
+            {
+                _logger.LogWarning(
+                    "[Syscall] EIP 0x{Eip:X8} is in heap range - forcing EIP to syscall dispatcher RET at 0x{ExpectedEip:X8}",
+                    finalEip, EXPECTED_EIP_AFTER_SYSCALL);
+                _cpu.SetEip(EXPECTED_EIP_AFTER_SYSCALL);
+            }
         }
         
         return true;
