@@ -56,7 +56,10 @@ public class BackendFactory : IBackendFactory
 
 	/// <summary>
 	/// Create a rendering backend with automatic Avalonia integration.
-	/// If a host is provided, creates an AvaloniaRenderingBackend for GUI integration.
+	/// If CurrentBackendType is Software or Headless, always creates those backends
+	/// regardless of whether a host is available (for headless/testing scenarios).
+	/// If a host is provided and we're not in Software/Headless mode, creates an 
+	/// AvaloniaRenderingBackend for GUI integration.
 	/// Otherwise, creates a platform-specific backend based on CurrentBackendType.
 	/// </summary>
 	/// <param name="logger">Logger instance</param>
@@ -64,6 +67,20 @@ public class BackendFactory : IBackendFactory
 	/// <returns>Rendering backend instance</returns>
 	public IRenderingBackend CreateRenderingBackendWithHost(ILogger logger, IEmulatorHost? host)
 	{
+		// Software and Headless backends are special - always use them when requested
+		// This allows headless testing with frame dumping even when a host is available
+		if (CurrentBackendType == BackendType.Software)
+		{
+			logger.LogInformation("[BackendFactory] Using Software rendering backend as requested");
+			return new SoftwareRenderingBackend(logger);
+		}
+		
+		if (CurrentBackendType == BackendType.Headless)
+		{
+			logger.LogInformation("[BackendFactory] Using Headless rendering backend as requested");
+			return new HeadlessRenderingBackend(logger);
+		}
+		
 		// Use Avalonia backend if host is available for GUI integration
 		if (host != null)
 		{

@@ -2349,37 +2349,57 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				// Use async message waiting with timeout
+				// Use async message waiting with timeout and retry loop
 				// This path is used on WASM (where blocking operations are not supported),
 				// when scheduler is null, or when host is null
+				// GetMessageA should block until a message arrives, so we retry on timeout
 				_logger.LogTrace("[User32] GetMessageA: Using async message wait (WASM/no scheduler/no host)");
 				
-				// Use the async version with timeout which properly yields to browser event loop
-				queuedMsg = await _env.GetMessageAsync(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 100).ConfigureAwait(false);
-
-				if (queuedMsg.HasValue)
+				// Retry loop - GetMessageA should block until a message is available
+				// In async environments, we simulate blocking by polling with short timeouts
+				while (!cancellationToken.IsCancellationRequested)
 				{
-					if (queuedMsg.Value.Message == 0x0012)
+					// Check for quit message first (in case it was posted while waiting)
+					if (_env.HasQuitMessage())
 					{
-						WriteMessageToMemory(lpMsg, 0, 0x0012, queuedMsg.Value.WParam, 0,
-							queuedMsg.Value.Time, (int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
+						var exitCode = _env.GetQuitExitCode();
+						_logger.LogInformation("[User32] GetMessageA: WM_QUIT (exitCode={ExitCode})", exitCode);
+						WriteMessageToMemory(lpMsg, 0, 0x0012, (uint)exitCode, 0, 0, 0, 0);
 						return 0; // GetMessage returns 0 for WM_QUIT
 					}
+					
+					// Use the async version with timeout which properly yields to browser event loop
+					queuedMsg = await _env.GetMessageAsync(hWnd, wMsgFilterMin, wMsgFilterMax, timeoutMs: 16).ConfigureAwait(false);
 
-					_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
+					if (queuedMsg.HasValue)
+					{
+						if (queuedMsg.Value.Message == 0x0012)
+						{
+							WriteMessageToMemory(lpMsg, 0, 0x0012, queuedMsg.Value.WParam, 0,
+								queuedMsg.Value.Time, (int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
+							return 0; // GetMessage returns 0 for WM_QUIT
+						}
 
-					WriteMessageToMemory(lpMsg, queuedMsg.Value.Hwnd, queuedMsg.Value.Message,
-						queuedMsg.Value.WParam, queuedMsg.Value.LParam, queuedMsg.Value.Time,
-						(int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
+						_logger.LogInformation("[User32] GetMessageA: retrieved MSG=0x{ValueMessage:X4} HWND=0x{ValueHwnd:X8}", queuedMsg.Value.Message, queuedMsg.Value.Hwnd);
 
-					return 1; // GetMessage returns non-zero for all messages except WM_QUIT
+						WriteMessageToMemory(lpMsg, queuedMsg.Value.Hwnd, queuedMsg.Value.Message,
+							queuedMsg.Value.WParam, queuedMsg.Value.LParam, queuedMsg.Value.Time,
+							(int)queuedMsg.Value.PtX, (int)queuedMsg.Value.PtY);
+
+						return 1; // GetMessage returns non-zero for all messages except WM_QUIT
+					}
+					
+					// No message available - process backend events before retrying
+					// This allows DirectDraw/Glide to post WM_PAINT and other messages
+					_env.ProcessAllBackendEvents();
+					
+					// Yield to allow other async tasks to run
+					await Task.Yield();
 				}
-
-				// Timeout - return WM_NULL for compatibility
-				_logger.LogTrace("[User32] GetMessageA: Timeout, returning WM_NULL");
-				WriteMessageToMemory(lpMsg, 0, 0, 0, 0, (uint)Environment.TickCount, 0, 0);
-
-				return 1; // GetMessage returns non-zero for WM_NULL (only 0 for WM_QUIT)
+				
+				// Cancellation requested - return error
+				_logger.LogDebug("[User32] GetMessageA: Cancellation requested during wait loop");
+				return 0xFFFFFFFF; // -1 for error
 			}
 		}
 
