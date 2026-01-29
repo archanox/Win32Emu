@@ -2395,6 +2395,10 @@ namespace Win32Emu.Win32.Modules
 					
 					// Yield to allow other async tasks to run
 					await Task.Yield();
+					
+					// Small delay to avoid busy-waiting and high CPU usage when no messages are available
+					// Task.Delay(1) is safe for WASM as it uses browser setTimeout internally
+					await Task.Delay(1).ConfigureAwait(false);
 				}
 				
 				// Cancellation requested - return error
