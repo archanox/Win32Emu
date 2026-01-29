@@ -2439,6 +2439,16 @@ public sealed class Emulator : IDisposable
             // IGN_TEAS.EXE: Track progress beyond CRT
             TrackIgnTeasProgress(eipBeforeStep);
 
+            // Syscall dispatcher RET detection: log when we're about to execute the syscall dispatcher's RET
+            // This helps diagnose issues where EIP should be 0x0E000002 but isn't
+            if (eipBeforeStep == EXPECTED_EIP_AFTER_SYSCALL)
+            {
+                var espBeforeRet = _cpu.GetRegister("ESP");
+                var retAddr = _vm!.Read32(espBeforeRet);
+                _logger.LogDebug("[Emulator] Executing syscall dispatcher RET at 0x{Eip:X8}, ESP=0x{Esp:X8}, return address=0x{RetAddr:X8}",
+                    eipBeforeStep, espBeforeRet, retAddr);
+            }
+
             CpuStepResult step;
             try
             {
@@ -3662,6 +3672,8 @@ public sealed class Emulator : IDisposable
     {
         var eip = _cpu!.GetEip();
         var esp = _cpu.GetRegister("ESP");
+        var ebp = _cpu.GetRegister("EBP");
+        var eax = _cpu.GetRegister("EAX");
         
         if (eip == EXPECTED_EIP_AFTER_SYSCALL)
         {
@@ -3670,8 +3682,30 @@ public sealed class Emulator : IDisposable
         
         _logger.LogError(
             "[Emulator] SYSCALL STATE CORRUPTION ({Context}): EIP is 0x{ActualEip:X8} but expected 0x{ExpectedEip:X8}. " +
-            "ESP=0x{Esp:X8}. This indicates CPU state was corrupted during syscall handling.",
-            context, eip, EXPECTED_EIP_AFTER_SYSCALL, esp);
+            "ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EAX=0x{Eax:X8}. This indicates CPU state was corrupted during syscall handling.",
+            context, eip, EXPECTED_EIP_AFTER_SYSCALL, esp, ebp, eax);
+        
+        // Dump stack contents to help diagnose the issue
+        try
+        {
+            var stackDump = new System.Text.StringBuilder();
+            stackDump.Append("[Emulator] Stack dump around corruption:");
+            for (int offset = -16; offset <= 32; offset += 4)
+            {
+                var addr = (uint)(esp + offset);
+                if (addr >= MemoryRegions.MinValidUserAddress && addr < _vm!.Size - 4)
+                {
+                    var val = _vm!.Read32(addr);
+                    var marker = offset == 0 ? " <-- ESP" : "";
+                    stackDump.Append($"\n  [ESP{offset:+0;-0;+0}] = 0x{addr:X8}: 0x{val:X8}{marker}");
+                }
+            }
+            _logger.LogError("{StackDump}", stackDump.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "[Emulator] Failed to dump stack during corruption diagnostics");
+        }
         
         // Attempt recovery if EIP is in heap range (definitely wrong)
         if (eip >= _heapBase && eip < HEAP_LIMIT)
