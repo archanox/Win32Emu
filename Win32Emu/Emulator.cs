@@ -2565,22 +2565,7 @@ public sealed class Emulator : IDisposable
                 _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAfterSyscall, espAfterSyscall);
                 
                 // Validate EIP after syscall - it should point to the syscall dispatcher's RET instruction
-                if (eipAfterSyscall != EXPECTED_EIP_AFTER_SYSCALL)
-                {
-                    _logger.LogError(
-                        "[Emulator] SYSCALL STATE CORRUPTION: EIP after syscall is 0x{ActualEip:X8} but expected 0x{ExpectedEip:X8}. " +
-                        "ESP=0x{Esp:X8}. This indicates the syscall handler or async context corrupted CPU state.",
-                        eipAfterSyscall, EXPECTED_EIP_AFTER_SYSCALL, espAfterSyscall);
-                    
-                    // If EIP is in heap range, this is definitely wrong - try to recover
-                    if (eipAfterSyscall >= _heapBase && eipAfterSyscall < HEAP_LIMIT)
-                    {
-                        _logger.LogWarning(
-                            "[Emulator] EIP 0x{Eip:X8} is in heap range - forcing EIP to syscall dispatcher RET at 0x{ExpectedEip:X8}",
-                            eipAfterSyscall, EXPECTED_EIP_AFTER_SYSCALL);
-                        _cpu.SetEip(EXPECTED_EIP_AFTER_SYSCALL);
-                    }
-                }
+                ValidateAndRecoverSyscallEip("after syscall handling");
                 
                 continue; // Continue to next iteration, let CPU execute RET
             }
@@ -3643,24 +3628,7 @@ public sealed class Emulator : IDisposable
         }
         
         // Final validation: EIP should point to syscall dispatcher's RET instruction
-        var finalEip = _cpu.GetEip();
-        var finalEsp = _cpu.GetRegister("ESP");
-        if (finalEip != EXPECTED_EIP_AFTER_SYSCALL)
-        {
-            _logger.LogError(
-                "[Syscall] FINAL EIP VALIDATION FAILED: EIP is 0x{ActualEip:X8} but should be 0x{ExpectedEip:X8}. " +
-                "ESP=0x{Esp:X8}. Something modified EIP during syscall handling!",
-                finalEip, EXPECTED_EIP_AFTER_SYSCALL, finalEsp);
-            
-            // Attempt recovery: if EIP is in heap range, force it back to the correct value
-            if (finalEip >= _heapBase && finalEip < HEAP_LIMIT)
-            {
-                _logger.LogWarning(
-                    "[Syscall] EIP 0x{Eip:X8} is in heap range - forcing EIP to syscall dispatcher RET at 0x{ExpectedEip:X8}",
-                    finalEip, EXPECTED_EIP_AFTER_SYSCALL);
-                _cpu.SetEip(EXPECTED_EIP_AFTER_SYSCALL);
-            }
-        }
+        ValidateAndRecoverSyscallEip("final validation in HandleSyscallAsync");
         
         return true;
     }
@@ -3681,6 +3649,40 @@ public sealed class Emulator : IDisposable
         // This is safe on desktop/server runtimes in these specific contexts where
         // there's no synchronization context that could cause deadlock
         return HandleSyscallAsync().GetAwaiter().GetResult();
+    }
+
+    /// <summary>
+    /// Validates that EIP points to the expected syscall dispatcher RET instruction.
+    /// If EIP has been corrupted (e.g., points to heap memory), this method will attempt
+    /// to recover by forcing EIP back to the correct address.
+    /// </summary>
+    /// <param name="context">Context string for logging (e.g., "after syscall handling", "final validation")</param>
+    /// <returns>True if EIP was valid, false if corruption was detected (recovery may have been attempted)</returns>
+    private bool ValidateAndRecoverSyscallEip(string context)
+    {
+        var eip = _cpu!.GetEip();
+        var esp = _cpu.GetRegister("ESP");
+        
+        if (eip == EXPECTED_EIP_AFTER_SYSCALL)
+        {
+            return true; // EIP is valid
+        }
+        
+        _logger.LogError(
+            "[Emulator] SYSCALL STATE CORRUPTION ({Context}): EIP is 0x{ActualEip:X8} but expected 0x{ExpectedEip:X8}. " +
+            "ESP=0x{Esp:X8}. This indicates CPU state was corrupted during syscall handling.",
+            context, eip, EXPECTED_EIP_AFTER_SYSCALL, esp);
+        
+        // Attempt recovery if EIP is in heap range (definitely wrong)
+        if (eip >= _heapBase && eip < HEAP_LIMIT)
+        {
+            _logger.LogWarning(
+                "[Emulator] EIP 0x{Eip:X8} is in heap range - forcing EIP to syscall dispatcher RET at 0x{ExpectedEip:X8}",
+                eip, EXPECTED_EIP_AFTER_SYSCALL);
+            _cpu.SetEip(EXPECTED_EIP_AFTER_SYSCALL);
+        }
+        
+        return false; // EIP was corrupted
     }
 
     /// <summary>
