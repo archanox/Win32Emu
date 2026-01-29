@@ -2119,11 +2119,28 @@ public sealed class Emulator : IDisposable
         {
             iterationCount++;
             
+            // DIAGNOSTIC: Check for heap EIP at start of each iteration (catch corruption early)
+            var eipAtLoopStart = _cpu!.GetEip();
+            var espAtLoopStart = _cpu.GetRegister("ESP");
+            if (eipAtLoopStart >= _heapBase && eipAtLoopStart < HEAP_LIMIT && 
+                !MemoryRegions.IsInSpecialRange(eipAtLoopStart))
+            {
+                _logger.LogWarning(
+                    "[Emulator] LOOP START CORRUPTION: EIP=0x{Eip:X8} is in heap range at start of iteration {Iter}! ESP=0x{Esp:X8}",
+                    eipAtLoopStart, iterationCount, espAtLoopStart);
+                
+                // Dump stack to diagnose
+                try
+                {
+                    var retAddr = _vm!.Read32(espAtLoopStart);
+                    _logger.LogWarning("[Emulator] Stack top [ESP]=0x{RetAddr:X8}, ESP=0x{Esp:X8}", retAddr, espAtLoopStart);
+                }
+                catch { }
+            }
+            
             // Debug: Log EIP at start of iteration to track changes (trace-only to avoid hot-path overhead)
             if (iterationCount <= 40 && _logger.IsEnabled(LogLevel.Trace))
             {
-                var eipAtLoopStart = _cpu!.GetEip();
-                var espAtLoopStart = _cpu.GetRegister("ESP");
                 _logger.LogTrace("[Emulator] Iteration {Count} START: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAtLoopStart, espAtLoopStart);
             }
             
@@ -2567,6 +2584,10 @@ public sealed class Emulator : IDisposable
             // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
             if (step.IsSyscall)
             {
+                // Capture state before syscall handling for diagnostics
+                var eipBeforeSyscall = _cpu.GetEip();
+                var espBeforeSyscall = _cpu.GetRegister("ESP");
+                
                 // Use async syscall handler to support async Win32 API implementations
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
@@ -2575,7 +2596,15 @@ public sealed class Emulator : IDisposable
                 _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAfterSyscall, espAfterSyscall);
                 
                 // Validate EIP after syscall - it should point to the syscall dispatcher's RET instruction
-                ValidateAndRecoverSyscallEip("after syscall handling");
+                var wasValid = ValidateAndRecoverSyscallEip("after syscall handling");
+                
+                // DIAGNOSTIC: Log warning if EIP or ESP changed unexpectedly during syscall
+                if (!wasValid || espAfterSyscall != espBeforeSyscall)
+                {
+                    _logger.LogWarning(
+                        "[Emulator] SYSCALL STATE CHANGE: Before: EIP=0x{EipBefore:X8}, ESP=0x{EspBefore:X8} | After: EIP=0x{EipAfter:X8}, ESP=0x{EspAfter:X8} | EIP Valid={Valid}",
+                        eipBeforeSyscall, espBeforeSyscall, eipAfterSyscall, espAfterSyscall, wasValid);
+                }
                 
                 continue; // Continue to next iteration, let CPU execute RET
             }
