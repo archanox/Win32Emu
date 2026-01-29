@@ -385,6 +385,11 @@ namespace Win32Emu.Win32.Modules
 			public uint DirectDrawHandle { get; set; }
 			public IntPtr TexturePtr { get; set; }
 			public uint LockedMemoryPtr { get; set; }
+			/// <summary>
+			/// The persistent memory pointer allocated for this surface.
+			/// This is reused across multiple Lock/Unlock calls to maintain consistency.
+			/// </summary>
+			public uint AllocatedMemoryPtr { get; set; }
 			public uint PaletteHandle { get; set; }
 			public uint ColorKeyLow { get; set; }
 			public uint ColorKeyHigh { get; set; }
@@ -3696,7 +3701,24 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Get a pointer to the surface memory
-			var surfaceMemPtr = _env.VirtualAlloc(0, (uint)(surface.Pitch * surface.Height), 0x1000, 0x04); // MEM_COMMIT, PAGE_READWRITE
+			// Reuse the same pointer if we allocated one before to maintain consistency
+			// Some games cache the surface pointer from the first Lock call
+			uint surfaceMemPtr;
+			if (surface.AllocatedMemoryPtr != 0)
+			{
+				// Reuse the same memory pointer
+				surfaceMemPtr = surface.AllocatedMemoryPtr;
+				_logger.LogDebug("[DDraw] Reusing previously allocated memory at 0x{SurfaceMemPtr:X8} for surface 0x{SurfaceHandle:X8}", 
+					surfaceMemPtr, surface.Handle);
+			}
+			else
+			{
+				// First time locking - allocate new memory
+				surfaceMemPtr = _env.VirtualAlloc(0, (uint)(surface.Pitch * surface.Height), 0x1000, 0x04); // MEM_COMMIT, PAGE_READWRITE
+				surface.AllocatedMemoryPtr = surfaceMemPtr;
+				_logger.LogDebug("[DDraw] Allocated new memory at 0x{SurfaceMemPtr:X8} for surface 0x{SurfaceHandle:X8}", 
+					surfaceMemPtr, surface.Handle);
+			}
 			surface.LockedMemoryPtr = surfaceMemPtr;
 
 			// Fill the surface description structure
