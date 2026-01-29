@@ -3727,16 +3727,27 @@ namespace Win32Emu.Win32.Modules
 				var dwSize = _env.MemRead32(lpDDSurfaceDesc);
 
 				// Write the surface description
-				_env.MemWrite32(lpDDSurfaceDesc + 4, (uint)(DDSD.CAPS | DDSD.HEIGHT | DDSD.WIDTH | DDSD.PIXELFORMAT));
+				// DDSURFACEDESC structure layout:
+				// Offset 0: dwSize
+				// Offset 4: dwFlags
+				// Offset 8: dwHeight
+				// Offset 12: dwWidth
+				// Offset 16: lPitch (or dwLinearSize)
+				// Offset 20: dwBackBufferCount
+				// Offset 24: dwMipMapCount/dwZBufferBitDepth/dwRefreshRate
+				// Offset 28: dwAlphaBitDepth
+				// Offset 32: dwReserved
+				// Offset 36: lpSurface  <-- THIS IS WHERE THE GAME READS THE POINTER!
+				// Offset 40+: color keys, pixel format, caps
+				_env.MemWrite32(lpDDSurfaceDesc + 4, (uint)(DDSD.CAPS | DDSD.HEIGHT | DDSD.WIDTH | DDSD.PITCH | DDSD.PIXELFORMAT | DDSD.LPSURFACE));
 				_env.MemWrite32(lpDDSurfaceDesc + 8, (uint)surface.Height); // dwHeight
 				_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)surface.Width); // dwWidth
 				_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch); // lPitch
 				_env.MemWrite32(lpDDSurfaceDesc + 20, 0); // dwBackBufferCount
-				_env.MemWrite32(lpDDSurfaceDesc + 24, 0); // dwMipMapCount
-				_env.MemWrite32(lpDDSurfaceDesc + 28, 0); // dwRefreshRate
-				_env.MemWrite32(lpDDSurfaceDesc + 32, 0); // dwAlphaBitDepth
-				_env.MemWrite32(lpDDSurfaceDesc + 36, 0); // dwReserved
-				_env.MemWrite32(lpDDSurfaceDesc + 40, surfaceMemPtr); // lpSurface
+				_env.MemWrite32(lpDDSurfaceDesc + 24, 0); // dwMipMapCount/dwRefreshRate
+				_env.MemWrite32(lpDDSurfaceDesc + 28, 0); // dwAlphaBitDepth
+				_env.MemWrite32(lpDDSurfaceDesc + 32, 0); // dwReserved
+				_env.MemWrite32(lpDDSurfaceDesc + 36, surfaceMemPtr); // lpSurface - THE CRITICAL FIELD!
 
 				// Write pixel format if needed (offset 76)
 				if (dwSize >= 108)
@@ -3798,11 +3809,31 @@ namespace Win32Emu.Win32.Modules
 			// Copy memory from the locked pointer to our surface bits
 			if (surface.LockedMemoryPtr != 0 && surface.Bits != null)
 			{
-				var data = _env.MemReadBytes(surface.LockedMemoryPtr, surface.Pitch * surface.Height);
+				var dataSize = surface.Pitch * surface.Height;
+				var data = _env.MemReadBytes(surface.LockedMemoryPtr, dataSize);
 				Array.Copy(data, surface.Bits, data.Length);
 
-				// We don't actually free memory in this implementation
-				// Just mark it as no longer locked
+				// Debug: Check if surface data has any non-zero pixels
+				var nonZeroCount = 0;
+				var sampleNonZeroBytes = new List<(int offset, byte value)>();
+				for (var i = 0; i < Math.Min(data.Length, 1000); i++)
+				{
+					if (data[i] != 0)
+					{
+						nonZeroCount++;
+						if (sampleNonZeroBytes.Count < 10)
+						{
+							sampleNonZeroBytes.Add((i, data[i]));
+						}
+					}
+				}
+				var sampleStr = sampleNonZeroBytes.Count > 0 
+					? string.Join(", ", sampleNonZeroBytes.Select(s => $"[{s.offset}]=0x{s.value:X2}"))
+					: "none";
+				_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} unlock: {NonZeroCount}/1000 bytes are non-zero. Samples: {Samples}", 
+					surfaceHandle, nonZeroCount, sampleStr);
+
+				// Don't reset LockedMemoryPtr - we keep using the same memory
 				surface.LockedMemoryPtr = 0;
 			}
 
