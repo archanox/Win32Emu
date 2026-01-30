@@ -3822,6 +3822,11 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpDDSurfaceDesc + 28, 0); // dwAlphaBitDepth
 				_env.MemWrite32(lpDDSurfaceDesc + 32, 0); // dwReserved
 				_env.MemWrite32(lpDDSurfaceDesc + 36, surfaceMemPtr); // lpSurface - THE CRITICAL FIELD!
+				
+				// Debug: verify the write
+				var verifyLpSurface = _env.MemRead32(lpDDSurfaceDesc + 36);
+				_logger.LogDebug("[DDraw] Lock: Wrote lpSurface=0x{SurfaceMemPtr:X8} to lpDDSurfaceDesc+36 (0x{Addr:X8}), verified read back: 0x{VerifyValue:X8}",
+					surfaceMemPtr, lpDDSurfaceDesc + 36, verifyLpSurface);
 
 				// Write pixel format if needed (offset 76)
 				if (dwSize >= 108)
