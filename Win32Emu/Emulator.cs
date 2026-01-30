@@ -204,11 +204,6 @@ public sealed class Emulator : IDisposable
     private const byte ASCII_PRINTABLE_MIN = 32;                           // Minimum ASCII printable character
     private const byte ASCII_PRINTABLE_MAX = 127;                          // Maximum ASCII printable character (exclusive)
     
-    // Syscall state validation constants
-    // After HandleSyscallAsync advances EIP past INT 0x80 (2 bytes), EIP should point to the RET instruction
-    // Syscall dispatcher layout: 0x0E000000: INT 0x80 (2 bytes) | 0x0E000002: RET (1 byte)
-    private const uint EXPECTED_EIP_AFTER_SYSCALL = MemoryRegions.SyscallDispatcherAddress + 2; // 0x0E000002
-    
     // IGN_TEAS post-CRT progress tracking
     private ulong _ignTeasPostCrtInstructions = 0;
     private ulong _ignTeasLimboInstructions = 0;
@@ -2119,28 +2114,11 @@ public sealed class Emulator : IDisposable
         {
             iterationCount++;
             
-            // DIAGNOSTIC: Check for heap EIP at start of each iteration (catch corruption early)
-            var eipAtLoopStart = _cpu!.GetEip();
-            var espAtLoopStart = _cpu.GetRegister("ESP");
-            if (eipAtLoopStart >= _heapBase && eipAtLoopStart < HEAP_LIMIT && 
-                !MemoryRegions.IsInSpecialRange(eipAtLoopStart))
-            {
-                _logger.LogWarning(
-                    "[Emulator] LOOP START CORRUPTION: EIP=0x{Eip:X8} is in heap range at start of iteration {Iter}! ESP=0x{Esp:X8}",
-                    eipAtLoopStart, iterationCount, espAtLoopStart);
-                
-                // Dump stack to diagnose
-                try
-                {
-                    var retAddr = _vm!.Read32(espAtLoopStart);
-                    _logger.LogWarning("[Emulator] Stack top [ESP]=0x{RetAddr:X8}, ESP=0x{Esp:X8}", retAddr, espAtLoopStart);
-                }
-                catch { }
-            }
-            
             // Debug: Log EIP at start of iteration to track changes (trace-only to avoid hot-path overhead)
             if (iterationCount <= 40 && _logger.IsEnabled(LogLevel.Trace))
             {
+                var eipAtLoopStart = _cpu!.GetEip();
+                var espAtLoopStart = _cpu.GetRegister("ESP");
                 _logger.LogTrace("[Emulator] Iteration {Count} START: EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAtLoopStart, espAtLoopStart);
             }
             
@@ -2456,16 +2434,6 @@ public sealed class Emulator : IDisposable
             // IGN_TEAS.EXE: Track progress beyond CRT
             TrackIgnTeasProgress(eipBeforeStep);
 
-            // Syscall dispatcher RET detection: log when we're about to execute the syscall dispatcher's RET
-            // This helps diagnose issues where EIP should be 0x0E000002 but isn't
-            if (eipBeforeStep == EXPECTED_EIP_AFTER_SYSCALL)
-            {
-                var espBeforeRet = _cpu.GetRegister("ESP");
-                var retAddr = _vm!.Read32(espBeforeRet);
-                _logger.LogDebug("[Emulator] Executing syscall dispatcher RET at 0x{Eip:X8}, ESP=0x{Esp:X8}, return address=0x{RetAddr:X8}",
-                    eipBeforeStep, espBeforeRet, retAddr);
-            }
-
             CpuStepResult step;
             try
             {
@@ -2584,28 +2552,11 @@ public sealed class Emulator : IDisposable
             // The syscall dispatcher triggers INT 0x80, we handle it, then CPU executes RET naturally
             if (step.IsSyscall)
             {
-                // Capture state before syscall handling for diagnostics
-                var eipBeforeSyscall = _cpu.GetEip();
-                var espBeforeSyscall = _cpu.GetRegister("ESP");
-                
                 // Use async syscall handler to support async Win32 API implementations
                 // This is required for WASM where blocking operations are not supported
                 await HandleSyscallAsync().ConfigureAwait(false);
-                var eipAfterSyscall = _cpu.GetEip();
                 var espAfterSyscall = _cpu.GetRegister("ESP");
-                _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, eipAfterSyscall, espAfterSyscall);
-                
-                // Validate EIP after syscall - it should point to the syscall dispatcher's RET instruction
-                var wasValid = ValidateAndRecoverSyscallEip("after syscall handling");
-                
-                // DIAGNOSTIC: Log warning if EIP or ESP changed unexpectedly during syscall
-                if (!wasValid || espAfterSyscall != espBeforeSyscall)
-                {
-                    _logger.LogWarning(
-                        "[Emulator] SYSCALL STATE CHANGE: Before: EIP=0x{EipBefore:X8}, ESP=0x{EspBefore:X8} | After: EIP=0x{EipAfter:X8}, ESP=0x{EspAfter:X8} | EIP Valid={Valid}",
-                        eipBeforeSyscall, espBeforeSyscall, eipAfterSyscall, espAfterSyscall, wasValid);
-                }
-                
+                _logger.LogDebug("[Emulator] Iteration {Iter}: Syscall handled, continuing to next iteration. EIP=0x{Eip:X8}, ESP=0x{Esp:X8}", iterationCount, _cpu.GetEip(), espAfterSyscall);
                 continue; // Continue to next iteration, let CPU execute RET
             }
 
@@ -3666,9 +3617,6 @@ public sealed class Emulator : IDisposable
             _cpu.SetRegister("EAX", 0);
         }
         
-        // Final validation: EIP should point to syscall dispatcher's RET instruction
-        ValidateAndRecoverSyscallEip("final validation in HandleSyscallAsync");
-        
         return true;
     }
 
@@ -3688,64 +3636,6 @@ public sealed class Emulator : IDisposable
         // This is safe on desktop/server runtimes in these specific contexts where
         // there's no synchronization context that could cause deadlock
         return HandleSyscallAsync().GetAwaiter().GetResult();
-    }
-
-    /// <summary>
-    /// Validates that EIP points to the expected syscall dispatcher RET instruction.
-    /// If EIP has been corrupted (e.g., points to heap memory), this method will attempt
-    /// to recover by forcing EIP back to the correct address.
-    /// </summary>
-    /// <param name="context">Context string for logging (e.g., "after syscall handling", "final validation")</param>
-    /// <returns>True if EIP was valid, false if corruption was detected (recovery may have been attempted)</returns>
-    private bool ValidateAndRecoverSyscallEip(string context)
-    {
-        var eip = _cpu!.GetEip();
-        var esp = _cpu.GetRegister("ESP");
-        var ebp = _cpu.GetRegister("EBP");
-        var eax = _cpu.GetRegister("EAX");
-        
-        if (eip == EXPECTED_EIP_AFTER_SYSCALL)
-        {
-            return true; // EIP is valid
-        }
-        
-        _logger.LogError(
-            "[Emulator] SYSCALL STATE CORRUPTION ({Context}): EIP is 0x{ActualEip:X8} but expected 0x{ExpectedEip:X8}. " +
-            "ESP=0x{Esp:X8}, EBP=0x{Ebp:X8}, EAX=0x{Eax:X8}. This indicates CPU state was corrupted during syscall handling.",
-            context, eip, EXPECTED_EIP_AFTER_SYSCALL, esp, ebp, eax);
-        
-        // Dump stack contents to help diagnose the issue
-        try
-        {
-            var stackDump = new System.Text.StringBuilder();
-            stackDump.Append("[Emulator] Stack dump around corruption:");
-            for (int offset = -16; offset <= 32; offset += 4)
-            {
-                var addr = (uint)(esp + offset);
-                if (addr >= MemoryRegions.MinValidUserAddress && addr < _vm!.Size - 4)
-                {
-                    var val = _vm!.Read32(addr);
-                    var marker = offset == 0 ? " <-- ESP" : "";
-                    stackDump.Append($"\n  [ESP{offset:+0;-0;+0}] = 0x{addr:X8}: 0x{val:X8}{marker}");
-                }
-            }
-            _logger.LogError("{StackDump}", stackDump.ToString());
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "[Emulator] Failed to dump stack during corruption diagnostics");
-        }
-        
-        // Attempt recovery if EIP is in heap range (definitely wrong)
-        if (eip >= _heapBase && eip < HEAP_LIMIT)
-        {
-            _logger.LogWarning(
-                "[Emulator] EIP 0x{Eip:X8} is in heap range - forcing EIP to syscall dispatcher RET at 0x{ExpectedEip:X8}",
-                eip, EXPECTED_EIP_AFTER_SYSCALL);
-            _cpu.SetEip(EXPECTED_EIP_AFTER_SYSCALL);
-        }
-        
-        return false; // EIP was corrupted
     }
 
     /// <summary>
