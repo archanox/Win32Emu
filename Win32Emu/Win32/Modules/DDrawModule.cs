@@ -769,48 +769,9 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogWarning("[DDraw] SetEntries: clamping count from {RequestedCount} to {ActualCount} (start={Start}, max={Max})", dwCount, actualCount, dwStartingEntry, palette.Entries.Length);
 			}
 
-			// Read palette entries from memory and check if all entries are zero
-			// (which indicates uninitialized memory being passed)
-			var allZero = true;
-			
-			for (var i = 0u; i < actualCount; i++)
-			{
-				var entry = _env.MemRead32(lpEntries + (i * 4));
-				
-				if (entry != 0)
-				{
-					allZero = false;
-					// Stop checking once we find a non-zero entry - we'll read all entries below
-					break;
-				}
-			}
-			
-			// Skip update if all entries are zero AND the palette already has valid data.
-			// This indicates uninitialized memory being passed to SetEntries, likely due to
-			// game code path differences in emulation (e.g., GetEntries not called before SetEntries).
-			// We only skip if the palette already has non-zero values to preserve it.
-			// This allows legitimate "set all black" operations if the palette was already black.
-			if (allZero && dwStartingEntry == 0 && actualCount == 256)
-			{
-				// Check if existing palette has any non-zero entries
-				var existingHasData = false;
-				for (var i = 0; i < palette.Entries.Length; i++)
-				{
-					if (palette.Entries[i] != 0)
-					{
-						existingHasData = true;
-						break;
-					}
-				}
-				
-				if (existingHasData)
-				{
-					_logger.LogWarning("[DDraw] SetEntries: Skipping update - all {Count} entries are zero (uninitialized memory), preserving existing palette", actualCount);
-					return (uint)DDResult.DD_OK;
-				}
-			}
-			
-			// Read and apply all the entries (may have already checked some, but re-read for simplicity)
+			// Read and apply all the entries from memory
+			// Note: Setting all entries to zero (all-black palette) is a valid DirectDraw operation
+			// commonly used for fade effects, so we always apply the caller-provided entries.
 			for (var i = 0u; i < actualCount; i++)
 			{
 				var entry = _env.MemRead32(lpEntries + (i * 4));
@@ -903,7 +864,16 @@ namespace Win32Emu.Win32.Modules
 			}
 			else
 			{
-				_logger.LogWarning("[DDraw] CreatePalette: lpColorTable is null, palette will be empty");
+				// Passing a null lpColorTable is valid when DDPCAPS_INITIALIZE is not set
+				// (the palette is created uninitialized). Only log a warning if INITIALIZE was expected.
+				if ((dwFlags & (uint)DDPCaps.DDPCAPS_INITIALIZE) != 0)
+				{
+					_logger.LogWarning("[DDraw] CreatePalette: lpColorTable is null but DDPCAPS_INITIALIZE is set, palette will be empty");
+				}
+				else
+				{
+					_logger.LogDebug("[DDraw] CreatePalette: lpColorTable is null, palette created uninitialized");
+				}
 			}
 
 			var paletteHandle = _nextPaletteHandle++;
