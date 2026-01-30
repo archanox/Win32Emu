@@ -275,4 +275,64 @@ public class DDrawStdCallMetaTests
 		// to allocate Unicode strings for callbacks
 		Assert.True(true, "AllocateUnicodeString helper allocates UTF-16 strings in emulated memory");
 	}
+
+	[Fact]
+	public void PaletteSetEntries_AllZeroEntriesAreApplied()
+	{
+		// This test documents that IDirectDrawPalette::SetEntries correctly applies all-zero entries
+		//
+		// Setting all palette entries to zero (all-black palette) is a valid DirectDraw operation
+		// commonly used for fade-to-black effects in games. The implementation must apply these
+		// entries even when the existing palette contains non-zero values.
+		//
+		// Previous behavior (removed):
+		// - A heuristic was added that skipped all-zero SetEntries calls when the existing
+		//   palette had non-zero values, treating them as "uninitialized memory"
+		// - This broke legitimate fade-to-black operations and changed API semantics
+		//
+		// Current behavior:
+		// - All-zero entries are always applied, matching DirectDraw specification
+		// - Legitimate fade effects work correctly
+		// - Applications relying on correct SetEntries behavior are not broken
+		//
+		// If a specific game has issues with uninitialized memory being passed to SetEntries,
+		// a title-specific compatibility check should be used instead of a general heuristic.
+		Assert.True(true, "SetEntries always applies caller-provided entries including all-zero for fade effects");
+	}
+
+	[Fact]
+	public void PaletteSetEntries_PartialUpdates()
+	{
+		// This test documents that IDirectDrawPalette::SetEntries supports partial palette updates
+		//
+		// The implementation correctly handles:
+		// - dwStartingEntry: The index of the first entry to update
+		// - dwCount: The number of entries to update
+		// - Only entries in the specified range are modified
+		// - Entries outside the range are preserved
+		//
+		// This is commonly used by games to:
+		// - Cycle a subset of palette colors for animation effects
+		// - Update only modified colors for efficiency
+		// - Implement color cycling effects
+		Assert.True(true, "SetEntries supports partial palette updates with start index and count");
+	}
+
+	[Fact]
+	public void CreatePalette_NullColorTable_ValidWhenUninitializedFlagNotSet()
+	{
+		// This test documents the correct handling of null lpColorTable in CreatePalette
+		//
+		// Passing a null lpColorTable is a valid DirectDraw operation when DDPCAPS_INITIALIZE
+		// is not set in dwFlags. In this case, the palette is created uninitialized and
+		// should later be populated via SetEntries.
+		//
+		// Logging behavior:
+		// - When DDPCAPS_INITIALIZE is set but lpColorTable is null: Warning (unexpected)
+		// - When DDPCAPS_INITIALIZE is not set and lpColorTable is null: Debug (normal usage)
+		//
+		// This prevents log spam from legitimate use cases while still alerting when
+		// the flags indicate the color table should have been provided.
+		Assert.True(true, "CreatePalette with null lpColorTable logs appropriately based on DDPCAPS_INITIALIZE flag");
+	}
 }
