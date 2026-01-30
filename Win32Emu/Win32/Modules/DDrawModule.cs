@@ -775,6 +775,25 @@ namespace Win32Emu.Win32.Modules
 				var entry = _env.MemRead32(lpEntries + (i * 4));
 				palette.Entries[dwStartingEntry + i] = entry;
 			}
+			
+			// Debug: log sample palette entries after reading
+			if (_logger.IsEnabled(LogLevel.Debug))
+			{
+				var sampleIndices = new[] { 0u, 1u, 10u, 100u, 200u, 229u, 164u, 255u };
+				foreach (var idx in sampleIndices)
+				{
+					if (idx < palette.Entries.Length)
+					{
+						var entry = palette.Entries[idx];
+						_logger.LogDebug("[DDraw] SetEntries: Palette entry[{Index}] = 0x{Entry:X8} (R={R}, G={G}, B={B}, Flags={Flags})",
+							idx, entry,
+							(byte)(entry & 0xFF),
+							(byte)((entry >> 8) & 0xFF),
+							(byte)((entry >> 16) & 0xFF),
+							(byte)((entry >> 24) & 0xFF));
+					}
+				}
+			}
 
 			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", actualCount, dwStartingEntry);
 			return (uint)DDResult.DD_OK;
@@ -859,6 +878,29 @@ namespace Win32Emu.Win32.Modules
 					// PALETTEENTRY is 4 bytes (r,g,b,flags)
 					paletteEntries[i] = _env.MemRead32(lpColorTable + (uint)(i * 4));
 				}
+				
+				// Debug: log sample palette entries after reading from lpColorTable
+				if (_logger.IsEnabled(LogLevel.Debug))
+				{
+					var sampleIndices = new[] { 0, 1, 10, 100, 200, 229, 164, 255 };
+					foreach (var idx in sampleIndices)
+					{
+						if (idx < paletteEntries.Length)
+						{
+							var entry = paletteEntries[idx];
+							_logger.LogDebug("[DDraw] CreatePalette: Initial entry[{Index}] = 0x{Entry:X8} (R={R}, G={G}, B={B}, Flags={Flags})",
+								idx, entry,
+								(byte)(entry & 0xFF),
+								(byte)((entry >> 8) & 0xFF),
+								(byte)((entry >> 16) & 0xFF),
+								(byte)((entry >> 24) & 0xFF));
+						}
+					}
+				}
+			}
+			else
+			{
+				_logger.LogWarning("[DDraw] CreatePalette: lpColorTable is null, palette will be empty");
 			}
 
 			var paletteHandle = _nextPaletteHandle++;
@@ -4027,7 +4069,27 @@ namespace Win32Emu.Win32.Modules
 				if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
 				{
 					// Convert palettized (8-bit indexed) to RGBA using attached palette
-					_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA");
+					_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA using palette 0x{PaletteHandle:X8}", surface.PaletteHandle);
+					
+					// Log sample palette entries for debugging
+					if (_logger.IsEnabled(LogLevel.Debug))
+					{
+						var sampleIndices = new int[] { 0, 1, 0xE5, 0xA4, 255 };
+						foreach (var idx in sampleIndices)
+						{
+							if (idx < palette.Entries.Length)
+							{
+								var entry = palette.Entries[idx];
+								_logger.LogDebug("[DDraw] Palette[{Index}] = 0x{Entry:X8} (R={R}, G={G}, B={B}, A={A})", 
+									idx, entry,
+									(byte)(entry & 0xFF),
+									(byte)((entry >> 8) & 0xFF),
+									(byte)((entry >> 16) & 0xFF),
+									(byte)((entry >> 24) & 0xFF));
+							}
+						}
+					}
+					
 					displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
 						surface.Bits,
 						palette.Entries,
