@@ -769,62 +769,52 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogWarning("[DDraw] SetEntries: clamping count from {RequestedCount} to {ActualCount} (start={Start}, max={Max})", dwCount, actualCount, dwStartingEntry, palette.Entries.Length);
 			}
 
-			// Read palette entries from memory first to check if they're valid
-			var tempEntries = new uint[actualCount];
+			// Read palette entries from memory and check if all entries are zero
+			// (which indicates uninitialized memory being passed)
 			var allZero = true;
-			var hasNonBlackEntries = false;
 			
 			for (var i = 0u; i < actualCount; i++)
 			{
 				var entry = _env.MemRead32(lpEntries + (i * 4));
-				tempEntries[i] = entry;
 				
 				if (entry != 0)
 				{
 					allZero = false;
-				}
-				
-				// Check if entry has non-zero RGB (ignoring flags byte)
-				// Entry format: 0xFFRRGGBB (flags, red, green, blue in little-endian)
-				var rgb = entry & 0x00FFFFFF;
-				if (rgb != 0)
-				{
-					hasNonBlackEntries = true;
+					// Stop checking once we find a non-zero entry - we'll read all entries below
+					break;
 				}
 			}
 			
-			// Skip update if all entries are zero - this indicates uninitialized memory
-			// being passed to SetEntries, likely due to game code path differences in emulation.
-			// The palette was already initialized correctly in CreatePalette, so we preserve it.
+			// Skip update if all entries are zero AND the palette already has valid data.
+			// This indicates uninitialized memory being passed to SetEntries, likely due to
+			// game code path differences in emulation (e.g., GetEntries not called before SetEntries).
+			// We only skip if the palette already has non-zero values to preserve it.
+			// This allows legitimate "set all black" operations if the palette was already black.
 			if (allZero && dwStartingEntry == 0 && actualCount == 256)
 			{
-				_logger.LogWarning("[DDraw] SetEntries: Skipping update - all {Count} entries are zero (uninitialized memory), preserving existing palette", actualCount);
-				return (uint)DDResult.DD_OK;
-			}
-			
-			// Apply the entries
-			for (var i = 0u; i < actualCount; i++)
-			{
-				palette.Entries[dwStartingEntry + i] = tempEntries[i];
-			}
-			
-			// Debug: log sample palette entries after reading
-			if (_logger.IsEnabled(LogLevel.Debug))
-			{
-				var sampleIndices = new[] { 0u, 1u, 10u, 100u, 200u, 229u, 164u, 255u };
-				foreach (var idx in sampleIndices)
+				// Check if existing palette has any non-zero entries
+				var existingHasData = false;
+				for (var i = 0; i < palette.Entries.Length; i++)
 				{
-					if (idx < palette.Entries.Length)
+					if (palette.Entries[i] != 0)
 					{
-						var entry = palette.Entries[idx];
-						_logger.LogDebug("[DDraw] SetEntries: Palette entry[{Index}] = 0x{Entry:X8} (R={R}, G={G}, B={B}, Flags={Flags})",
-							idx, entry,
-							(byte)(entry & 0xFF),
-							(byte)((entry >> 8) & 0xFF),
-							(byte)((entry >> 16) & 0xFF),
-							(byte)((entry >> 24) & 0xFF));
+						existingHasData = true;
+						break;
 					}
 				}
+				
+				if (existingHasData)
+				{
+					_logger.LogWarning("[DDraw] SetEntries: Skipping update - all {Count} entries are zero (uninitialized memory), preserving existing palette", actualCount);
+					return (uint)DDResult.DD_OK;
+				}
+			}
+			
+			// Read and apply all the entries (may have already checked some, but re-read for simplicity)
+			for (var i = 0u; i < actualCount; i++)
+			{
+				var entry = _env.MemRead32(lpEntries + (i * 4));
+				palette.Entries[dwStartingEntry + i] = entry;
 			}
 
 			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", actualCount, dwStartingEntry);
@@ -909,25 +899,6 @@ namespace Win32Emu.Win32.Modules
 				{
 					// PALETTEENTRY is 4 bytes (r,g,b,flags)
 					paletteEntries[i] = _env.MemRead32(lpColorTable + (uint)(i * 4));
-				}
-				
-				// Debug: log sample palette entries after reading from lpColorTable
-				if (_logger.IsEnabled(LogLevel.Debug))
-				{
-					var sampleIndices = new[] { 0, 1, 10, 100, 200, 229, 164, 255 };
-					foreach (var idx in sampleIndices)
-					{
-						if (idx < paletteEntries.Length)
-						{
-							var entry = paletteEntries[idx];
-							_logger.LogDebug("[DDraw] CreatePalette: Initial entry[{Index}] = 0x{Entry:X8} (R={R}, G={G}, B={B}, Flags={Flags})",
-								idx, entry,
-								(byte)(entry & 0xFF),
-								(byte)((entry >> 8) & 0xFF),
-								(byte)((entry >> 16) & 0xFF),
-								(byte)((entry >> 24) & 0xFF));
-						}
-					}
 				}
 			}
 			else
@@ -3822,11 +3793,6 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpDDSurfaceDesc + 28, 0); // dwAlphaBitDepth
 				_env.MemWrite32(lpDDSurfaceDesc + 32, 0); // dwReserved
 				_env.MemWrite32(lpDDSurfaceDesc + 36, surfaceMemPtr); // lpSurface - THE CRITICAL FIELD!
-				
-				// Debug: verify the write
-				var verifyLpSurface = _env.MemRead32(lpDDSurfaceDesc + 36);
-				_logger.LogDebug("[DDraw] Lock: Wrote lpSurface=0x{SurfaceMemPtr:X8} to lpDDSurfaceDesc+36 (0x{Addr:X8}), verified read back: 0x{VerifyValue:X8}",
-					surfaceMemPtr, lpDDSurfaceDesc + 36, verifyLpSurface);
 
 				// Write pixel format if needed (offset 76)
 				if (dwSize >= 108)
@@ -4107,25 +4073,6 @@ namespace Win32Emu.Win32.Modules
 				{
 					// Convert palettized (8-bit indexed) to RGBA using attached palette
 					_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA using palette 0x{PaletteHandle:X8}", surface.PaletteHandle);
-					
-					// Log sample palette entries for debugging
-					if (_logger.IsEnabled(LogLevel.Debug))
-					{
-						var sampleIndices = new int[] { 0, 1, 0xE5, 0xA4, 255 };
-						foreach (var idx in sampleIndices)
-						{
-							if (idx < palette.Entries.Length)
-							{
-								var entry = palette.Entries[idx];
-								_logger.LogDebug("[DDraw] Palette[{Index}] = 0x{Entry:X8} (R={R}, G={G}, B={B}, A={A})", 
-									idx, entry,
-									(byte)(entry & 0xFF),
-									(byte)((entry >> 8) & 0xFF),
-									(byte)((entry >> 16) & 0xFF),
-									(byte)((entry >> 24) & 0xFF));
-							}
-						}
-					}
 					
 					displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
 						surface.Bits,
