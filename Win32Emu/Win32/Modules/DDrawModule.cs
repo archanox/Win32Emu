@@ -769,11 +769,43 @@ namespace Win32Emu.Win32.Modules
 				_logger.LogWarning("[DDraw] SetEntries: clamping count from {RequestedCount} to {ActualCount} (start={Start}, max={Max})", dwCount, actualCount, dwStartingEntry, palette.Entries.Length);
 			}
 
-			// Read and update palette entries (PALETTEENTRY is 4 bytes: r,g,b,flags)
+			// Read palette entries from memory first to check if they're valid
+			var tempEntries = new uint[actualCount];
+			var allZero = true;
+			var hasNonBlackEntries = false;
+			
 			for (var i = 0u; i < actualCount; i++)
 			{
 				var entry = _env.MemRead32(lpEntries + (i * 4));
-				palette.Entries[dwStartingEntry + i] = entry;
+				tempEntries[i] = entry;
+				
+				if (entry != 0)
+				{
+					allZero = false;
+				}
+				
+				// Check if entry has non-zero RGB (ignoring flags byte)
+				// Entry format: 0xFFRRGGBB (flags, red, green, blue in little-endian)
+				var rgb = entry & 0x00FFFFFF;
+				if (rgb != 0)
+				{
+					hasNonBlackEntries = true;
+				}
+			}
+			
+			// Skip update if all entries are zero - this indicates uninitialized memory
+			// being passed to SetEntries, likely due to game code path differences in emulation.
+			// The palette was already initialized correctly in CreatePalette, so we preserve it.
+			if (allZero && dwStartingEntry == 0 && actualCount == 256)
+			{
+				_logger.LogWarning("[DDraw] SetEntries: Skipping update - all {Count} entries are zero (uninitialized memory), preserving existing palette", actualCount);
+				return (uint)DDResult.DD_OK;
+			}
+			
+			// Apply the entries
+			for (var i = 0u; i < actualCount; i++)
+			{
+				palette.Entries[dwStartingEntry + i] = tempEntries[i];
 			}
 			
 			// Debug: log sample palette entries after reading
