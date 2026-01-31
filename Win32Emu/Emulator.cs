@@ -48,14 +48,13 @@ public sealed class Emulator : IDisposable
     private const ulong PROGRESS_LOG_INTERVAL = 10000;
     
     // Event processing interval - process backend events and post synthetic messages
-    // Set to 1000 iterations for responsive message handling
-    // Lower than PROGRESS_LOG_INTERVAL to ensure apps waiting for messages don't block for long
-    // Note: Based on instruction count, not real time - actual latency depends on CPU performance
-    private const ulong EVENT_PROCESSING_INTERVAL = 100;
+    // Default values are tuned to avoid excessive overhead; headless mode uses faster intervals for responsiveness.
+    private const ulong EVENT_PROCESSING_INTERVAL = 1000;
+    private const ulong EVENT_PROCESSING_INTERVAL_HEADLESS = 100;
     
     // Idle processing interval - when all threads are waiting, process idle state periodically
-    // Set to match EVENT_PROCESSING_INTERVAL to avoid excessive overhead while maintaining responsiveness
-    private const ulong IDLE_PROCESSING_INTERVAL = 100;
+    private const ulong IDLE_PROCESSING_INTERVAL = 1000;
+    private const ulong IDLE_PROCESSING_INTERVAL_HEADLESS = 100;
     
     // x86 CPU flags
     private const uint FLAG_DF = 1u << 10;  // Direction Flag (bit 10) - used for Win95 ABI compliance
@@ -2097,6 +2096,8 @@ public sealed class Emulator : IDisposable
         var scheduler = _env!.ThreadScheduler;
         var iterationCount = 0ul;
         var lastLogTime = DateTime.UtcNow;
+        var eventProcessingInterval = EVENT_PROCESSING_INTERVAL;
+        var idleProcessingInterval = IDLE_PROCESSING_INTERVAL;
         
         // Throttle noisy warning logs to reduce spam
         var lastHeapEipWarning = 0u;
@@ -2108,6 +2109,14 @@ public sealed class Emulator : IDisposable
         // WASM emergency yield: Track last yield time to prevent prolonged browser freezes
         // If more than 100ms passes without yielding, force an emergency yield
         var lastYieldTime = DateTime.UtcNow;
+        
+        if (_backendFactory?.CurrentBackendType == BackendType.Headless)
+        {
+            eventProcessingInterval = EVENT_PROCESSING_INTERVAL_HEADLESS;
+            idleProcessingInterval = IDLE_PROCESSING_INTERVAL_HEADLESS;
+            _logger.LogDebug("[Emulator] Using headless event processing intervals (events={EventInterval}, idle={IdleInterval})",
+                eventProcessingInterval, idleProcessingInterval);
+        }
 
         // Run indefinitely until stop/exit requested or no threads running
         while (!_stopRequested && !_env!.ExitRequested && _env.PendingChildProcessRequest == null)
@@ -2195,7 +2204,7 @@ public sealed class Emulator : IDisposable
             // This is essential for applications that wait for window messages (WM_PAINT, WM_TIMER, etc.)
             // and ensures GetMessageA doesn't block forever when no DirectDraw rendering is happening
             // Process events every EVENT_PROCESSING_INTERVAL iterations for responsive message handling
-            if (iterationCount % EVENT_PROCESSING_INTERVAL == 0)
+            if (iterationCount % eventProcessingInterval == 0)
             {
                 _env?.ProcessAllBackendEvents();
                 
@@ -2228,7 +2237,7 @@ public sealed class Emulator : IDisposable
                 // This is a generalized idle processing mechanism that handles timers, events, and messages
                 // Critical for headless mode where threads may be waiting for GetMessageA
                 // Only process periodically to avoid excessive overhead (every IDLE_PROCESSING_INTERVAL iterations)
-                if (iterationCount - lastIdleProcessingIteration >= IDLE_PROCESSING_INTERVAL)
+                if (iterationCount - lastIdleProcessingIteration >= idleProcessingInterval)
                 {
                     lastIdleProcessingIteration = iterationCount;
                     
