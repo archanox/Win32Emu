@@ -51,11 +51,11 @@ public sealed class Emulator : IDisposable
     // Set to 1000 iterations for responsive message handling
     // Lower than PROGRESS_LOG_INTERVAL to ensure apps waiting for messages don't block for long
     // Note: Based on instruction count, not real time - actual latency depends on CPU performance
-    private const ulong EVENT_PROCESSING_INTERVAL = 1000;
+    private const ulong EVENT_PROCESSING_INTERVAL = 100;
     
     // Idle processing interval - when all threads are waiting, process idle state periodically
     // Set to match EVENT_PROCESSING_INTERVAL to avoid excessive overhead while maintaining responsiveness
-    private const ulong IDLE_PROCESSING_INTERVAL = 1000;
+    private const ulong IDLE_PROCESSING_INTERVAL = 100;
     
     // x86 CPU flags
     private const uint FLAG_DF = 1u << 10;  // Direction Flag (bit 10) - used for Win95 ABI compliance
