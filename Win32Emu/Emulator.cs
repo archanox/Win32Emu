@@ -2203,7 +2203,7 @@ public sealed class Emulator : IDisposable
             // Process events from rendering and input backends periodically
             // This is essential for applications that wait for window messages (WM_PAINT, WM_TIMER, etc.)
             // and ensures GetMessageA doesn't block forever when no DirectDraw rendering is happening
-            // Process events every EVENT_PROCESSING_INTERVAL iterations for responsive message handling
+            // Process events every configured interval (eventProcessingInterval) for responsive message handling
             if (iterationCount % eventProcessingInterval == 0)
             {
                 _env?.ProcessAllBackendEvents();
@@ -2236,7 +2236,7 @@ public sealed class Emulator : IDisposable
                 // We have waiting threads - process idle state to potentially wake them up
                 // This is a generalized idle processing mechanism that handles timers, events, and messages
                 // Critical for headless mode where threads may be waiting for GetMessageA
-                // Only process periodically to avoid excessive overhead (every IDLE_PROCESSING_INTERVAL iterations)
+                // Only process periodically to avoid excessive overhead (every configured idleProcessingInterval iterations)
                 if (iterationCount - lastIdleProcessingIteration >= idleProcessingInterval)
                 {
                     lastIdleProcessingIteration = iterationCount;
