@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.2" PrivateAssets="all" />
-    <PackageReference Include="PeNet" Version="5.1.0" />
+    <PackageReference Include="PeNet" Version="6.0.0" />
   </ItemGroup>
 
   <ItemGroup>
