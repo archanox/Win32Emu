@@ -1202,33 +1202,34 @@ public class JitCpu : IAsyncCpu
 				ExecDoubleShift(insn);
 				break;
 			
-			// String operations (REP prefix support for MOVS, STOS, LODS)
+			// String operations (REP/REPNE prefix support for MOVS, STOS, LODS)
+			// Both F3 (REP) and F2 (REPNE/REPNZ) repeat based on ECX for these instructions (ZF is ignored)
 			case Mnemonic.Movsb:
-				ExecMovs(1, insn.HasRepPrefix, _mem);
+				ExecMovs(1, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Movsw:
-				ExecMovs(2, insn.HasRepPrefix, _mem);
+				ExecMovs(2, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Movsd:
-				ExecMovs(4, insn.HasRepPrefix, _mem);
+				ExecMovs(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Stosb:
-				ExecStos(1, insn.HasRepPrefix, _mem);
+				ExecStos(1, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Stosw:
-				ExecStos(2, insn.HasRepPrefix, _mem);
+				ExecStos(2, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Stosd:
-				ExecStos(4, insn.HasRepPrefix, _mem);
+				ExecStos(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Lodsb:
-				ExecLods(1, insn.HasRepPrefix, _mem);
+				ExecLods(1, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Lodsw:
-				ExecLods(2, insn.HasRepPrefix, _mem);
+				ExecLods(2, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Lodsd:
-				ExecLods(4, insn.HasRepPrefix, _mem);
+				ExecLods(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Scasb:
 				ExecScasbWithRep(insn, oldEip);
