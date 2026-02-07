@@ -1202,33 +1202,33 @@ public class JitCpu : IAsyncCpu
 				ExecDoubleShift(insn);
 				break;
 			
-			// String operations
+			// String operations (REP prefix support for MOVS, STOS, LODS)
 			case Mnemonic.Movsb:
-				ExecMovsb();
+				ExecMovs(1, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Movsw:
-				ExecMovsw();
+				ExecMovs(2, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Movsd:
-				ExecMovsd();
+				ExecMovs(4, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Stosb:
-				ExecStosb();
+				ExecStos(1, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Stosw:
-				ExecStosw();
+				ExecStos(2, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Stosd:
-				ExecStosd();
+				ExecStos(4, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Lodsb:
-				ExecLodsb();
+				ExecLods(1, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Lodsw:
-				ExecLodsw();
+				ExecLods(2, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Lodsd:
-				ExecLodsd();
+				ExecLods(4, insn.HasRepPrefix, _mem);
 				break;
 			case Mnemonic.Scasb:
 				ExecScasbWithRep(insn, oldEip);
