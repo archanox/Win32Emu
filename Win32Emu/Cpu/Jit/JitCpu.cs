@@ -1232,40 +1232,40 @@ public class JitCpu : IAsyncCpu
 				ExecLods(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Scasb:
-				ExecScasbWithRep(insn, oldEip);
+				ExecScas(1, insn.HasRepPrefix, insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Scasw:
-				ExecScaswWithRep(insn, oldEip);
+				ExecScas(2, insn.HasRepPrefix, insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Scasd:
-				ExecScasdWithRep(insn, oldEip);
+				ExecScas(4, insn.HasRepPrefix, insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Cmpsb:
-				ExecCmpsbWithRep(insn, oldEip);
+				ExecCmps(1, insn.HasRepPrefix, insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Cmpsw:
-				ExecCmpswWithRep(insn, oldEip);
+				ExecCmps(2, insn.HasRepPrefix, insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Cmpsd:
-				ExecCmpsdWithRep(insn, oldEip);
+				ExecCmps(4, insn.HasRepPrefix, insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Insb:
-				ExecInsb();
+				ExecIns(1, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Insw:
-				ExecInsw();
+				ExecIns(2, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Insd:
-				ExecInsd();
+				ExecIns(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Outsb:
-				ExecOutsb();
+				ExecOuts(1, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Outsw:
-				ExecOutsw();
+				ExecOuts(2, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Outsd:
-				ExecOutsd();
+				ExecOuts(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
 				break;
 			
 			// System/Privileged instructions
@@ -7694,14 +7694,17 @@ public class JitCpu : IAsyncCpu
 			};
 			SetFlagsSub(a & mask, b & mask, r, signBit);
 			_edi = (uint)(_edi + delta);
-			_ecx--;
-			if (repe && !GetFlag(Zf))
+			if (repe || repne)
 			{
-				break;
-			}
-			if (repne && GetFlag(Zf))
-			{
-				break;
+				_ecx--;
+				if (repe && !GetFlag(Zf))
+				{
+					break;
+				}
+				if (repne && GetFlag(Zf))
+				{
+					break;
+				}
 			}
 		}
 	}
@@ -7740,14 +7743,17 @@ public class JitCpu : IAsyncCpu
 			SetFlagsSub(a & mask, b & mask, r, signBit);
 			_esi = (uint)(_esi + delta);
 			_edi = (uint)(_edi + delta);
-			_ecx--;
-			if (repe && !GetFlag(Zf))
+			if (repe || repne)
 			{
-				break;
-			}
-			if (repne && GetFlag(Zf))
-			{
-				break;
+				_ecx--;
+				if (repe && !GetFlag(Zf))
+				{
+					break;
+				}
+				if (repne && GetFlag(Zf))
+				{
+					break;
+				}
 			}
 		}
 	}
