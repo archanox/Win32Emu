@@ -1,13 +1,15 @@
 @page "/"
 @implements IDisposable
 @using System.Text
+@using System.Linq
 @using Win32Emu
 @using Win32Emu.Wasm.Components
+@using Win32Emu.Wasm.Services
 @inject IJSRuntime JS
 @inject ILogger<Home> Logger
 @inject Win32Emu.Wasm.Services.EmulatorService EmulatorService
 @inject Win32Emu.Wasm.Services.WasmDebugLogService DebugLogService
-@inject Win32Emu.Wasm.Services.VfsPersistenceService PersistenceService
+@inject Win32Emu.Wasm.Services.VhdStorageService VhdStorageService
 
 <PageTitle>Win32Emu - Web Emulator</PageTitle>
 
@@ -326,24 +328,12 @@
 							<strong>@(EmulatorService.IsCacheEnabled ? "Loaded" : "Disabled")</strong>
 						</div>
 						<div class="d-flex justify-content-between">
-							<span>VFS Files:</span>
+							<span>VHD Files:</span>
 							<strong>@EmulatorService.VfsFileCount</strong>
 						</div>
 					</div>
 				</div>
 			</div>
-			
-			<!-- VFS Persistence Manager -->
-			<!-- TODO: Re-enable VfsPersistenceManager component once Razor compilation issues are resolved -->
-			<!-- 
-			<div class="card mb-3">
-				<VfsPersistenceManager 
-					CanSave="@(_executableLoaded && !_isRunning)"
-					CurrentExecutableName="@_loadedFileName"
-					CurrentVfsFiles="@EmulatorService.GetVfsFiles()"
-					OnStateLoaded="@HandleVfsStateLoaded" />
-			</div>
-			-->
 			
 			<!-- Auto-Save Configuration -->
 			<div class="card mb-3">
@@ -438,10 +428,65 @@
 		</div>
 	</div>
 	
-	<!-- Virtual File System Browser -->
+	<!-- VHD Library -->
 	<div class="row mt-3">
 		<div class="col-12">
-			<VirtualFileSystemBrowser Files="@_vfsFiles" OnRefresh="@RefreshVfsFiles" />
+			<div class="card">
+				<div class="card-header d-flex justify-content-between align-items-center">
+					<strong>VHD Library</strong>
+					<div class="btn-group btn-group-sm">
+						<button class="btn btn-outline-primary" @onclick="RefreshVhdLibrary" title="Refresh VHD list">
+							<i class="bi bi-arrow-repeat"></i> Refresh
+						</button>
+					</div>
+				</div>
+				<div class="card-body">
+					@if (_vhdLibrary.Count == 0)
+					{
+						<div class="alert alert-secondary mb-0">
+							No VHD images saved yet. Load a game or executable to create one automatically.
+						</div>
+					}
+					else
+					{
+						<div class="table-responsive">
+							<table class="table table-sm align-middle mb-0">
+								<thead>
+									<tr>
+										<th>Name</th>
+										<th>Executable</th>
+										<th>Size</th>
+										<th>Updated</th>
+										<th style="width: 160px;">Actions</th>
+									</tr>
+								</thead>
+								<tbody>
+									@foreach (var entry in _vhdLibrary)
+									{
+										var isSelected = _selectedVhd?.Name == entry.Name;
+										<tr class="@(isSelected ? "table-primary" : string.Empty)">
+											<td>@entry.Name</td>
+											<td class="text-truncate" style="max-width: 220px;" title="@entry.ExecutablePath">@entry.ExecutablePath</td>
+											<td>@FormatFileSize(entry.Size)</td>
+											<td>@entry.UpdatedAt.ToLocalTime().ToString("g")</td>
+											<td>
+												<div class="btn-group btn-group-sm">
+													<button class="btn btn-outline-primary" @onclick="@(() => SelectVhd(entry))" disabled="@_isRunning">
+														@(isSelected ? "Selected" : "Select")
+													</button>
+													<button class="btn btn-outline-danger" @onclick="@(() => DeleteVhd(entry.Name))" disabled="@_isRunning">
+														Delete
+													</button>
+												</div>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					}
+				</div>
+			</div>
 		</div>
 	</div>
 
@@ -468,9 +513,9 @@
 					<li>✅ Full emulator core integration (LoadExecutableFromBytes)</li>
 					<li>✅ WASM backend factory for rendering, audio, and input</li>
 					<li>✅ EmulatorService for lifecycle management</li>
-					<li>✅ Browser-based VFS for game data files (in-memory, case-insensitive)</li>
+					<li>✅ VHD-backed virtual disk for game data (DiscUtils FAT32)</li>
 					<li>✅ Win32 windows and dialogs rendering (MessageBox, DialogBox, CreateWindow)</li>
-					<li>✅ IndexedDB persistence for VFS (save and restore game states)</li>
+					<li>✅ IndexedDB persistence for VHD images with selectable library</li>
 				</ul>
 				<p class="mb-0">
 					<strong>Remaining work:</strong>
@@ -621,8 +666,9 @@
 	private MessageBoxInfo? _activeMessageBox = null;
 	private Win32Emu.Wasm.Services.WasmEmulatorHost.MessageBoxEventArgs? _activeMessageBoxEventArgs = null;
 	
-	// Virtual File System state
-	private IReadOnlyDictionary<string, byte[]>? _vfsFiles = null;
+	// VHD library state
+	private List<VhdMetadata> _vhdLibrary = new();
+	private VhdMetadata? _selectedVhd = null;
 	
 	// Track the currently subscribed host to avoid double subscriptions and enable proper cleanup
 	private Win32Emu.Wasm.Services.WasmEmulatorHost? _subscribedHost = null;
@@ -649,6 +695,64 @@
 		// Note: EmulatorHost event subscription is deferred until after LoadExecutableAsync
 		// to ensure proper timing after the emulator and backend are fully initialized.
 		// See SubscribeToEmulatorHost() called from StartEmulation.
+		_ = RefreshVhdLibrary();
+	}
+
+	private async Task RefreshVhdLibrary()
+	{
+		try
+		{
+			var items = await VhdStorageService.ListAsync();
+			_vhdLibrary = items.OrderByDescending(v => v.UpdatedAt).ToList();
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Failed to refresh VHD library");
+		}
+		finally
+		{
+			await InvokeAsync(StateHasChanged);
+		}
+	}
+
+	private void SelectVhd(VhdMetadata entry)
+	{
+		_selectedVhd = entry;
+		_loadedFileName = $"{entry.Name}.vhd";
+		_loadedFileSize = entry.Size;
+		_executableData = null;
+		_loadedFiles.Clear();
+		_discoveredExecutables.Clear();
+		_selectedExecutablePath = string.Empty;
+		_executableLoaded = true;
+		_folderMode = false;
+		_programArguments = string.Empty;
+		AddDebugOutput($"Selected VHD: {entry.Name}");
+	}
+
+	private async Task DeleteVhd(string name)
+	{
+		try
+		{
+			var deleted = await VhdStorageService.DeleteAsync(name);
+			if (deleted)
+			{
+				if (_selectedVhd?.Name == name)
+				{
+					_selectedVhd = null;
+				}
+				await RefreshVhdLibrary();
+				AddDebugOutput($"Deleted VHD: {name}");
+			}
+			else
+			{
+				AddDebugOutput($"Failed to delete VHD: {name}");
+			}
+		}
+		catch (Exception ex)
+		{
+			Logger.LogError(ex, "Error deleting VHD {Name}", name);
+		}
 	}
 	
 	/// <summary>
@@ -719,6 +823,7 @@
 		_loadedFiles.Clear();
 		_discoveredExecutables.Clear();
 		_selectedExecutablePath = string.Empty;
+		_selectedVhd = null;
 	}
 
 	private async Task HandleFolderSelected(ChangeEventArgs e)
@@ -728,6 +833,7 @@
 			_loadedFiles.Clear();
 			_discoveredExecutables.Clear();
 			_selectedExecutablePath = string.Empty;
+			_selectedVhd = null;
 			_executableLoaded = false;
 			_loadedFileName = string.Empty;
 			
@@ -844,6 +950,7 @@
 				_executableData = ms.ToArray();
 				
 				_executableLoaded = true;
+				_selectedVhd = null;
 				AddDebugOutput($"Loaded executable: {_loadedFileName} ({FormatFileSize(_loadedFileSize)})");
 				
 				Logger.LogInformation("Loaded executable: {FileName} ({Size} bytes)", _loadedFileName, _loadedFileSize);
@@ -858,9 +965,9 @@
 
 	private async Task StartEmulation()
 	{
-		if (_executableData == null)
+		if (_executableData == null && _selectedVhd == null)
 		{
-			AddDebugOutput("Error: No executable loaded");
+			AddDebugOutput("Error: No executable or VHD selected");
 			return;
 		}
 
@@ -916,17 +1023,26 @@
 				AddDebugOutput($"Program Arguments: {string.Join(" ", programArgs)}");
 			}
 			
-			var loadSuccess = await EmulatorService.LoadExecutableAsync(
-				_executableData, 
-				_loadedFileName,
-				_folderMode ? _loadedFiles : null,
-				programArgs,
-				_force32BitStackOps,
-				_useCache,
-				_enableInstructionAnalyzer,
-				_enableLegacyInstructionDecoding,
-				_ansiCodePage,
-				_oemCodePage);
+			var loadSuccess = _selectedVhd != null
+				? await EmulatorService.LoadVhdFromLibraryAsync(
+					_selectedVhd.Name,
+					programArgs,
+					_force32BitStackOps,
+					_enableInstructionAnalyzer,
+					_enableLegacyInstructionDecoding,
+					_ansiCodePage,
+					_oemCodePage)
+				: await EmulatorService.LoadExecutableAsync(
+					_executableData!, 
+					_loadedFileName,
+					_folderMode ? _loadedFiles : null,
+					programArgs,
+					_force32BitStackOps,
+					_useCache,
+					_enableInstructionAnalyzer,
+					_enableLegacyInstructionDecoding,
+					_ansiCodePage,
+					_oemCodePage);
 			
 			if (!loadSuccess)
 			{
@@ -934,6 +1050,8 @@
 				_isRunning = false;
 				return;
 			}
+
+			await RefreshVhdLibrary();
 			
 			AddDebugOutput("Executable loaded successfully");
 			await AddStdOutput("Executable loaded and ready\n");
@@ -954,10 +1072,6 @@
 				{
 					_instructionsExecuted = (long)EmulatorService.InstructionsExecuted;
 					_fps = 60; // TODO: Get actual FPS from emulator
-					
-					// Refresh VFS files to show any new files created by the emulator
-					_vfsFiles = EmulatorService.GetVfsFiles();
-					
 					await InvokeAsync(StateHasChanged);
 					await Task.Delay(100); // Update UI at 10 FPS
 				}
@@ -1176,6 +1290,7 @@
 			_folderMode = false;
 			_loadedFiles.Clear();
 			_discoveredExecutables.Clear();
+			_selectedVhd = null;
 			
 			AddDebugOutput($"Sample loaded: {fileName} ({FormatFileSize(_loadedFileSize)})");
 			Logger.LogInformation("Sample executable loaded: {FileName} ({Size} bytes)", fileName, _loadedFileSize);
@@ -1236,6 +1351,7 @@
 			
 			_executableLoaded = true;
 			_folderMode = true;
+			_selectedVhd = null;
 			
 			AddDebugOutput($"Sample folder loaded: {fileDataList.Count} files, {FormatFileSize(totalSize)}");
 			Logger.LogInformation("Sample folder loaded: {Folder} with {FileCount} files", folderPath, fileDataList.Count);
@@ -1493,38 +1609,8 @@
 		}
 	}
 	
-	private void RefreshVfsFiles()
-	{
-		_vfsFiles = EmulatorService.GetVfsFiles();
-		StateHasChanged();
-	}
-	
 	/// <summary>
-	/// Handle loading of a saved VFS state.
-	/// </summary>
-	private void HandleVfsStateLoaded(Dictionary<string, byte[]> files)
-	{
-		try
-		{
-			AddDebugOutput($"Loading VFS state with {files.Count} files...");
-			
-			// Load files into the emulator's VFS
-			EmulatorService.LoadVfsFiles(files);
-			
-			// Refresh the VFS browser to show the loaded files
-			RefreshVfsFiles();
-			
-			AddDebugOutput($"Successfully loaded VFS state ({files.Count} files)");
-		}
-		catch (Exception ex)
-		{
-			AddDebugOutput($"Error loading VFS state: {ex.Message}");
-			Logger.LogError(ex, "Error loading VFS state");
-		}
-	}
-	
-	/// <summary>
-	/// Start auto-save task that periodically saves VFS state.
+	/// Start auto-save task that periodically saves the VHD.
 	/// </summary>
 	private void StartAutoSave()
 	{
@@ -1574,26 +1660,22 @@
 	}
 	
 	/// <summary>
-	/// Perform an auto-save of the current VFS state.
+	/// Perform an auto-save of the current VHD image.
 	/// </summary>
 	private async Task PerformAutoSave()
 	{
 		try
 		{
-			var files = EmulatorService.GetVfsFiles();
-			if (files == null || files.Count == 0)
+			var targetName = _selectedVhd?.Name ?? _loadedFileName;
+			if (string.IsNullOrEmpty(targetName))
 			{
 				return;
 			}
-			
-			var stateName = $"autosave-{_loadedFileName}";
-			var success = await PersistenceService.SaveVfsStateAsync(stateName, _loadedFileName, files);
-			
-			if (success)
-			{
-				_lastAutoSaveTime = DateTime.Now;
-				AddDebugOutput($"Auto-saved VFS state: {stateName} ({files.Count} files)");
-			}
+
+			await EmulatorService.SaveCurrentVhdAsync($"autosave-{targetName}");
+			_lastAutoSaveTime = DateTime.Now;
+			AddDebugOutput($"Auto-saved VHD: autosave-{targetName}");
+			await RefreshVhdLibrary();
 		}
 		catch (Exception ex)
 		{
