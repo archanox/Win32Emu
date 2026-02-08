@@ -1372,6 +1372,133 @@
 		};
 		
 		// ===========================================
+		// VHD Library Persistence (IndexedDB)
+		// ===========================================
+		const VHD_DB_NAME = 'Win32EmuVhd';
+		const VHD_STORE_NAME = 'vhdImages';
+		const VHD_DB_VERSION = 1;
+
+		window.openVhdDatabase = async function() {
+			return new Promise((resolve, reject) => {
+				const request = indexedDB.open(VHD_DB_NAME, VHD_DB_VERSION);
+
+				request.onerror = () => {
+					console.error('Failed to open VHD IndexedDB:', request.error);
+					reject(request.error);
+				};
+
+				request.onsuccess = () => resolve(request.result);
+
+				request.onupgradeneeded = (event) => {
+					const db = event.target.result;
+					if (!db.objectStoreNames.contains(VHD_STORE_NAME)) {
+						db.createObjectStore(VHD_STORE_NAME, { keyPath: 'name' });
+						console.log('Created VHD object store:', VHD_STORE_NAME);
+					}
+				};
+			});
+		};
+
+		window.saveVhdImage = async function(name, executablePath, bytes) {
+			let db;
+			try {
+				db = await window.openVhdDatabase();
+				const transaction = db.transaction([VHD_STORE_NAME], 'readwrite');
+				const store = transaction.objectStore(VHD_STORE_NAME);
+				const record = {
+					name: name,
+					executablePath: executablePath,
+					updatedAt: new Date().toISOString(),
+					size: bytes ? bytes.length || bytes.byteLength || 0 : 0,
+					bytes: bytes
+				};
+
+				const request = store.put(record);
+				return await new Promise((resolve) => {
+					request.onsuccess = () => resolve(true);
+					request.onerror = () => {
+						console.error('Failed to save VHD image:', request.error);
+						resolve(false);
+					};
+				});
+			} catch (err) {
+				console.error('Error saving VHD image:', err);
+				return false;
+			} finally {
+				if (db) db.close();
+			}
+		};
+
+		window.loadVhdImage = async function(name) {
+			let db;
+			try {
+				db = await window.openVhdDatabase();
+				const transaction = db.transaction([VHD_STORE_NAME], 'readonly');
+				const store = transaction.objectStore(VHD_STORE_NAME);
+				const request = store.get(name);
+
+				return await new Promise((resolve) => {
+					request.onsuccess = () => resolve(request.result || null);
+					request.onerror = () => {
+						console.error('Failed to load VHD image:', request.error);
+						resolve(null);
+					};
+				});
+			} catch (err) {
+				console.error('Error loading VHD image:', err);
+				return null;
+			} finally {
+				if (db) db.close();
+			}
+		};
+
+		window.listVhdImages = async function() {
+			let db;
+			try {
+				db = await window.openVhdDatabase();
+				const transaction = db.transaction([VHD_STORE_NAME], 'readonly');
+				const store = transaction.objectStore(VHD_STORE_NAME);
+				const request = store.getAll();
+
+				return await new Promise((resolve) => {
+					request.onsuccess = () => resolve(request.result || []);
+					request.onerror = () => {
+						console.error('Failed to list VHD images:', request.error);
+						resolve([]);
+					};
+				});
+			} catch (err) {
+				console.error('Error listing VHD images:', err);
+				return [];
+			} finally {
+				if (db) db.close();
+			}
+		};
+
+		window.deleteVhdImage = async function(name) {
+			let db;
+			try {
+				db = await window.openVhdDatabase();
+				const transaction = db.transaction([VHD_STORE_NAME], 'readwrite');
+				const store = transaction.objectStore(VHD_STORE_NAME);
+				const request = store.delete(name);
+
+				return await new Promise((resolve) => {
+					request.onsuccess = () => resolve(true);
+					request.onerror = () => {
+						console.error('Failed to delete VHD image:', request.error);
+						resolve(false);
+					};
+				});
+			} catch (err) {
+				console.error('Error deleting VHD image:', err);
+				return false;
+			} finally {
+				if (db) db.close();
+			}
+		};
+
+		// ===========================================
 		// xterm.js Terminal Emulation
 		// ===========================================
 		

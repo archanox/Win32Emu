@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
+using Win32Emu.VirtualFileSystem;
 using Win32Emu.Wasm.Backend;
-using Win32Emu.Wasm.VirtualFileSystem;
 
 namespace Win32Emu.Wasm.Services;
 
@@ -15,11 +15,15 @@ public class EmulatorService : IDisposable
 	private readonly IJSRuntime _jsRuntime;
 	private readonly ILoggerFactory _loggerFactory;
 	private readonly ILogger<EmulatorService> _logger;
+	private readonly VhdStorageService _vhdStorage;
 	
 	private Emulator? _emulator;
 	private readonly WasmEmulatorHost _emulatorHost;
 	private WasmBackendFactory? _backendFactory;
-	private BrowserVirtualFileSystem? _browserVfs;
+	private string? _currentVhdPath;
+	private string? _currentExecutableVhdPath;
+	private string? _currentVhdName;
+	private int _vhdFileCount;
 	private CancellationTokenSource? _emulationCts;
 	private Task? _emulationTask;
 	
@@ -34,6 +38,7 @@ public class EmulatorService : IDisposable
 	
 	// Maximum depth for child process chains to prevent infinite loops
 	private const int MaxChildProcessRecursionDepth = 10;
+	private const long DefaultVhdSizeBytes = 512L * 1024 * 1024;
 	
 	// Events for UI updates
 	public event EventHandler<string>? OnStdOutput;
@@ -61,7 +66,7 @@ public class EmulatorService : IDisposable
 	/// <summary>
 	/// Gets the number of files in the virtual file system.
 	/// </summary>
-	public int VfsFileCount => _browserVfs?.FileCount ?? 0;
+	public int VfsFileCount => _vhdFileCount;
 	
 	/// <summary>
 	/// Gets whether cache is enabled and loaded
@@ -84,11 +89,12 @@ public class EmulatorService : IDisposable
 		}
 	}
 	
-	public EmulatorService(IJSRuntime jsRuntime, ILoggerFactory loggerFactory)
+	public EmulatorService(IJSRuntime jsRuntime, ILoggerFactory loggerFactory, VhdStorageService vhdStorage)
 	{
 		_jsRuntime = jsRuntime;
 		_loggerFactory = loggerFactory;
 		_logger = loggerFactory.CreateLogger<EmulatorService>();
+		_vhdStorage = vhdStorage;
 		
 		// Initialize EmulatorHost early to ensure it's never null for event subscriptions
 		_emulatorHost = new WasmEmulatorHost(_loggerFactory.CreateLogger<WasmEmulatorHost>());
@@ -127,46 +133,26 @@ public class EmulatorService : IDisposable
 	{
 		try
 		{
-			// Always route cleanup through StopAsync to ensure any background task
-			// is properly awaited and we don't lose track of a still-running task.
-			// This handles both explicit stops and cases where emulation stopped on its own.
 			await StopAsync();
-			
+
 			EmitDebugOutput($"Loading executable: {fileName} ({executableBytes.Length} bytes)");
-			
+
 			if (programArgs != null && programArgs.Length > 0)
 			{
 				EmitDebugOutput($"Program arguments: {string.Join(" ", programArgs)}");
 			}
-			
-			// Create backend factory if not already created
+
 			_backendFactory ??= new WasmBackendFactory(_jsRuntime, _loggerFactory);
-			
-			// Note: EmulatorHost is now initialized in the constructor, no need to create it here
-			
-			// Create browser-based virtual file system
-			// Note: Do NOT dispose _browserVfs here if an emulator exists, as the old emulator's
-			// ProcessEnvironment.Cleanup() will dispose it. Disposing it here would cause an
-			// ObjectDisposedException when the old emulator tries to cleanup its registry.
-			// The old VFS will be properly disposed when _emulator.Dispose() is called below.
-			_browserVfs = new BrowserVirtualFileSystem(_loggerFactory.CreateLogger<BrowserVirtualFileSystem>());
-			
-			// Add the main executable to VFS
+
+			var vfsFiles = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 			var exePath = $"WASM\\{fileName}";
-			_browserVfs.AddFile(exePath, executableBytes);
-			EmitDebugOutput($"Added executable to VFS: \\{exePath}");
-			
-			// Add additional files to VFS if provided (for folder uploads)
+			var normalizedExePath = NormalizeVfsPath(exePath);
+			vfsFiles[normalizedExePath] = executableBytes;
+
 			if (additionalFiles != null && additionalFiles.Count > 0)
 			{
-				EmitDebugOutput($"Adding {additionalFiles.Count} additional files to VFS...");
-				
-				// webkitRelativePath gives paths like "folderName/subdir/file.txt"
-				// The browser's folder upload API (webkitRelativePath) includes the top-level folder name
-				// in all paths. The emulator expects all files to be under the "WASM" directory (C:\WASM).
-				// We detect the common folder prefix so we can replace it with "WASM", ensuring the VFS
-				// structure matches the emulator's working directory and avoids mismatches between
-				// uploaded folder names and the expected VFS root.
+				EmitDebugOutput($"Adding {additionalFiles.Count} additional files to VHD...");
+
 				var normalizedPaths = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase);
 				foreach (var kvp in additionalFiles)
 				{
@@ -176,100 +162,98 @@ public class EmulatorService : IDisposable
 						EmitDebugOutput($"Warning: Duplicate file path detected (case-insensitive): {normalizedKey}");
 					}
 				}
-				
-				// Detect the common folder prefix from the uploaded files
-				// This is used to strip the top-level container folder from browser file uploads
-				// BUT we should only strip if ALL files are in that folder (no top-level files exist)
+
 				string? commonPrefix = null;
-				bool hasTopLevelFiles = false;
-				
+				var hasTopLevelFiles = false;
+
 				foreach (var path in normalizedPaths.Keys)
 				{
 					var firstSlash = path.IndexOf('\\');
 					if (firstSlash > 0)
 					{
-						var prefix = path.Substring(0, firstSlash);
+						var prefix = path[..firstSlash];
 						if (commonPrefix == null)
 						{
 							commonPrefix = prefix;
 						}
 						else if (!string.Equals(commonPrefix, prefix, StringComparison.OrdinalIgnoreCase))
 						{
-							// Mixed prefixes - don't try to normalize
 							commonPrefix = null;
 							break;
 						}
 					}
 					else
 					{
-						// This is a top-level file (no subdirectory)
-						// If we have top-level files, the prefix is NOT a container - it's a real subdirectory
 						hasTopLevelFiles = true;
 					}
 				}
-				
-				// Only use common prefix if there are NO top-level files
+
 				if (hasTopLevelFiles)
 				{
 					commonPrefix = null;
 				}
-				
+
 				foreach (var kvp in normalizedPaths)
 				{
-					// Replace the folder prefix with WASM to match emulator's working directory (C:\WASM)
 					var vfsPath = kvp.Key;
-					
+
 					if (commonPrefix != null && vfsPath.StartsWith(commonPrefix + "\\", StringComparison.OrdinalIgnoreCase))
 					{
-						// Replace the original folder prefix with WASM
 						vfsPath = $"WASM{vfsPath.Substring(commonPrefix.Length)}";
 					}
 					else if (!vfsPath.StartsWith("WASM\\", StringComparison.OrdinalIgnoreCase))
 					{
-						// Any file not already prefixed with WASM needs it
 						vfsPath = $"WASM\\{vfsPath}";
 					}
-					
-					_browserVfs.AddFile(vfsPath, kvp.Value);
+
+					vfsFiles[NormalizeVfsPath(vfsPath)] = kvp.Value;
 				}
-				EmitDebugOutput($"VFS initialized with {_browserVfs.FileCount} files");
+
+				EmitDebugOutput($"VHD file set initialized with {vfsFiles.Count} files");
 			}
-			
-			// Dispose old emulator if it exists to prevent memory leaks when loading multiple executables
+
+			var vhdName = Path.GetFileNameWithoutExtension(fileName);
+			var vhdPath = await CreateVhdFromFilesAsync(vhdName, vfsFiles, normalizedExePath);
+
 			_emulator?.Dispose();
-			
-			// Create emulator with WASM backend factory AND emulator host for output
-			var emulatorLogger = _loggerFactory.CreateLogger<Emulator>();
-			_emulator = new Emulator(_emulatorHost, emulatorLogger, null, _backendFactory);
-			
-			// Load the executable from bytes using the Emulator's built-in method
-			// with the browser VFS for file operations
-			// Note: Unified JitCpu backend is always used (runs in interpreter mode in WASM)
-			// When enableInstructionAnalyzer is true, instruction analysis features are available
-			// When enableLegacyInstructionDecoding is true, legacy instruction sets are supported (MPX, Cyrix, etc.)
-			_emulator.LoadExecutableFromBytes(executableBytes, fileName, programArgs, false, 256, _browserVfs, force32BitStackOps, forceInterpreterMode: true, enableInstructionAnalyzer, enableLegacyInstructionDecoding, ansiCodePage, oemCodePage);
-			
-			// Load cache if enabled - JitCpu uses RTL-based cache
-			// Note: JitCpu in WASM always uses interpreter mode (no JIT compilation)
-			// Therefore, cache loading is not applicable - all instructions are interpreted on-demand
+			_emulator = new Emulator(_emulatorHost, _loggerFactory.CreateLogger<Emulator>(), null, _backendFactory);
+
+			_loadedExecutableName = fileName;
+
+			_emulator.LoadExecutable(
+				$"C:{normalizedExePath}",
+				programArgs,
+				debugMode: false,
+				reservedMemoryMb: 256,
+				forceInterpreterMode: true,
+				virtualDiskPath: vhdPath,
+				preloadedBytes: null,
+				customVirtualFileSystem: null,
+				force32BitStackOps: force32BitStackOps,
+				enableInstructionAnalyzer: enableInstructionAnalyzer,
+				enableLegacyInstructionDecoding: enableLegacyInstructionDecoding,
+				ansiCodePage: ansiCodePage,
+				oemCodePage: oemCodePage);
+
 			if (useCache)
 			{
 				_logger.LogInformation("[WASM] JitCpu runs in interpreter mode - cache loading not needed");
 				EmitDebugOutput("[Cache] JitCpu uses interpreter mode in WASM - no cache needed");
 			}
-			
-			_loadedExecutableName = fileName;
+
+			await PersistCurrentVhdAsync();
+
 			EmitDebugOutput($"Successfully loaded: {fileName}");
 			EmitDebugOutput($"Entry point: 0x{_emulator.LoadedImage?.EntryPointAddress:X8}");
 			EmitDebugOutput($"Image base: 0x{_emulator.LoadedImage?.BaseAddress:X8}");
-			
+
 			OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
 			{
 				IsLoaded = true,
 				IsRunning = false,
 				ExecutableName = fileName
 			});
-			
+
 			return true;
 		}
 		catch (Exception ex)
@@ -279,8 +263,191 @@ public class EmulatorService : IDisposable
 			return false;
 		}
 	}
-	
-	
+
+	public async Task<bool> LoadVhdFromLibraryAsync(string name, string[]? programArgs = null, bool force32BitStackOps = true, bool enableInstructionAnalyzer = false, bool enableLegacyInstructionDecoding = false, uint? ansiCodePage = null, uint? oemCodePage = null)
+	{
+		try
+		{
+			var image = await _vhdStorage.LoadAsync(name);
+			if (image == null)
+			{
+				EmitDebugOutput($"[VHD] VHD not found: {name}");
+				return false;
+			}
+
+			await StopAsync();
+
+			var vhdDir = Path.Combine(Path.GetTempPath(), "Win32Emu_VHDs");
+			Directory.CreateDirectory(vhdDir);
+			var vhdPath = Path.Combine(vhdDir, $"{name}.vhd");
+			await File.WriteAllBytesAsync(vhdPath, image.Data);
+
+			_currentVhdPath = vhdPath;
+			_currentExecutableVhdPath = image.ExecutablePath;
+			_currentVhdName = name;
+			_vhdFileCount = 0;
+
+			_backendFactory ??= new WasmBackendFactory(_jsRuntime, _loggerFactory);
+
+			_emulator?.Dispose();
+			_emulator = new Emulator(_emulatorHost, _loggerFactory.CreateLogger<Emulator>(), null, _backendFactory);
+			_loadedExecutableName = Path.GetFileName(image.ExecutablePath);
+
+			_emulator.LoadExecutable(
+				image.ExecutablePath,
+				programArgs,
+				debugMode: false,
+				reservedMemoryMb: 256,
+				forceInterpreterMode: true,
+				virtualDiskPath: vhdPath,
+				preloadedBytes: null,
+				customVirtualFileSystem: null,
+				force32BitStackOps: force32BitStackOps,
+				enableInstructionAnalyzer: enableInstructionAnalyzer,
+				enableLegacyInstructionDecoding: enableLegacyInstructionDecoding,
+				ansiCodePage: ansiCodePage,
+				oemCodePage: oemCodePage);
+
+			await PersistCurrentVhdAsync(name);
+
+			OnStateChanged?.Invoke(this, new EmulatorStateChangedEventArgs
+			{
+				IsLoaded = true,
+				IsRunning = false,
+				ExecutableName = _loadedExecutableName
+			});
+
+			return true;
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[VHD] Failed to load VHD {Name}", name);
+			EmitDebugOutput($"[VHD] Failed to load {name}: {ex.Message}");
+			return false;
+		}
+	}
+
+	private async Task<string> CreateVhdFromFilesAsync(string vhdName, Dictionary<string, byte[]> files, string executablePath)
+	{
+		var vhdDir = Path.Combine(Path.GetTempPath(), "Win32Emu_VHDs");
+		Directory.CreateDirectory(vhdDir);
+
+		var vhdPath = Path.Combine(vhdDir, $"{vhdName}.vhd");
+		if (File.Exists(vhdPath))
+		{
+			File.Delete(vhdPath);
+		}
+
+		using (var vfs = DiskVirtualFileSystem.Create(vhdPath, DiskFormat.Vhd, DefaultVhdSizeBytes, _logger))
+		{
+			foreach (var kvp in files)
+			{
+				var normalizedPath = NormalizeVfsPath(kvp.Key);
+				EnsureDirectories(vfs, normalizedPath);
+
+				var handle = vfs.OpenFile(normalizedPath, VfsFileMode.Create, VfsFileAccess.Write);
+				if (handle == null)
+				{
+					_logger.LogWarning("[VHD] Failed to open {Path} for writing", normalizedPath);
+					continue;
+				}
+
+				using (handle)
+				{
+					handle.Write(kvp.Value, 0, kvp.Value.Length);
+				}
+			}
+		}
+
+		_currentVhdPath = vhdPath;
+		_currentExecutableVhdPath = $"C:{executablePath}";
+		_currentVhdName = vhdName;
+		_vhdFileCount = files.Count;
+
+		return vhdPath;
+	}
+
+	private static string NormalizeVfsPath(string path)
+	{
+		var normalized = path.Replace('/', '\\');
+
+		if (normalized.Length >= 2 && normalized[1] == ':')
+		{
+			normalized = normalized.Substring(2);
+		}
+
+		if (!normalized.StartsWith('\\'))
+		{
+			normalized = "\\" + normalized;
+		}
+
+		if (normalized.Length > 1 && normalized.EndsWith('\\'))
+		{
+			normalized = normalized.TrimEnd('\\');
+		}
+
+		return System.Text.RegularExpressions.Regex.Replace(normalized, @"\\+", "\\");
+	}
+
+	private static void EnsureDirectories(DiskVirtualFileSystem vfs, string normalizedPath)
+	{
+		var lastBackslash = normalizedPath.LastIndexOf('\\');
+		if (lastBackslash <= 0)
+		{
+			return;
+		}
+
+		var directory = normalizedPath.Substring(0, lastBackslash);
+		if (string.IsNullOrEmpty(directory))
+		{
+			return;
+		}
+
+		var parts = directory.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+		var current = "";
+		foreach (var part in parts)
+		{
+			current += "\\" + part;
+			vfs.CreateDirectory(current);
+		}
+	}
+
+	public async Task<bool> SaveCurrentVhdAsync(string? nameOverride = null)
+	{
+		await PersistCurrentVhdAsync(nameOverride);
+		return true;
+	}
+
+	private async Task PersistCurrentVhdAsync(string? nameOverride = null)
+	{
+		if (string.IsNullOrEmpty(_currentVhdPath) || string.IsNullOrEmpty(_currentExecutableVhdPath))
+		{
+			return;
+		}
+
+		if (!File.Exists(_currentVhdPath))
+		{
+			_logger.LogWarning("[VHD] Current VHD path missing: {Path}", _currentVhdPath);
+			return;
+		}
+
+		try
+		{
+			var name = nameOverride ?? _currentVhdName ?? Path.GetFileNameWithoutExtension(_currentVhdPath);
+			var data = await File.ReadAllBytesAsync(_currentVhdPath);
+			var saved = await _vhdStorage.SaveAsync(name, _currentExecutableVhdPath, data);
+
+			if (saved)
+			{
+				EmitDebugOutput($"[VHD] Persisted {name} ({data.LongLength} bytes)");
+			}
+		}
+		catch (Exception ex)
+		{
+			_logger.LogError(ex, "[VHD] Failed to persist VHD {Path}", _currentVhdPath);
+		}
+	}
+
 	/// <summary>
 	/// Start emulation
 	/// </summary>
@@ -455,7 +622,7 @@ public class EmulatorService : IDisposable
 	/// </summary>
 	public IReadOnlyDictionary<string, byte[]>? GetVfsFiles()
 	{
-		return _browserVfs?.Files;
+		return null;
 	}
 	
 	/// <summary>
@@ -465,19 +632,7 @@ public class EmulatorService : IDisposable
 	/// <param name="files">Dictionary of VFS files to load</param>
 	public void LoadVfsFiles(Dictionary<string, byte[]> files)
 	{
-		if (_browserVfs == null)
-		{
-			EmitDebugOutput("Cannot load VFS files: VFS not initialized");
-			return;
-		}
-
-		EmitDebugOutput($"Loading {files.Count} files into VFS...");
-		
-		// Clear existing VFS and load new files
-		_browserVfs.Clear();
-		_browserVfs.AddFiles(files);
-		
-		EmitDebugOutput($"VFS loaded with {files.Count} files");
+		EmitDebugOutput("VFS load skipped: browser VFS replaced by VHD-backed storage");
 	}
 	
 	private void EmitStdOutput(string message)
@@ -558,25 +713,25 @@ public class EmulatorService : IDisposable
 						childPath = "\\" + childPath;
 					}
 					
-					// Check if the child executable exists in VFS
-					if (_browserVfs == null || !_browserVfs.FileExists(childPath))
+					if (string.IsNullOrEmpty(_currentVhdPath) || !File.Exists(_currentVhdPath))
 					{
-						EmitDebugOutput($"[ChildProcess] ERROR: Child executable not found in VFS: {childPath}");
-						EmitStdOutput($"ERROR: Child executable not found: {childPath}\n");
+						EmitDebugOutput("[ChildProcess] ERROR: No virtual disk available for child process");
+						EmitStdOutput("ERROR: Virtual disk missing for child process\n");
 						break;
 					}
-					
-					// Get the child executable bytes from VFS
-					// Files dictionary is case-insensitive and uses normalized paths (with leading backslash)
-					var vfsFiles = _browserVfs.Files;
-					if (!vfsFiles.TryGetValue(childPath, out var childBytes) || childBytes == null || childBytes.Length == 0)
+
+					var normalizedChildPath = NormalizeVfsPath(childPath);
+					using (var diskVfs = new DiskVirtualFileSystem(_currentVhdPath, _loggerFactory.CreateLogger<DiskVirtualFileSystem>()))
 					{
-						EmitDebugOutput($"[ChildProcess] ERROR: Child executable is empty or could not be read: {childPath}");
-						EmitStdOutput($"ERROR: Could not read child executable: {childPath}\n");
-						break;
+						if (!diskVfs.FileExists(normalizedChildPath))
+						{
+							EmitDebugOutput($"[ChildProcess] ERROR: Child executable not found in VHD: {normalizedChildPath}");
+							EmitStdOutput($"ERROR: Child executable not found: {normalizedChildPath}\n");
+							break;
+						}
 					}
 					
-					EmitDebugOutput($"[ChildProcess] Found child executable in VFS: {childPath} ({childBytes.Length} bytes)");
+					EmitDebugOutput($"[ChildProcess] Found child executable in VHD: {normalizedChildPath}");
 					
 					// Parse command line to extract arguments (if any)
 					var cmdLine = childRequest.CommandLine;
@@ -607,13 +762,14 @@ public class EmulatorService : IDisposable
 					var childFileName = lastBackslash >= 0 ? childPath.Substring(lastBackslash + 1) : childPath;
 					EmitDebugOutput($"[ChildProcess] Loading child executable: {childFileName}");
 					_loadedExecutableName = childFileName;
-					_emulator.LoadExecutableFromBytes(
-						childBytes, 
-						childFileName, 
+					_emulator.LoadExecutable(
+						$"C:{normalizedChildPath}", 
 						args, 
 						debugMode: false, 
 						reservedMemoryMb: 256, 
-						virtualFileSystem: _browserVfs, 
+						virtualDiskPath: _currentVhdPath, 
+						preloadedBytes: null, 
+						customVirtualFileSystem: null, 
 						force32BitStackOps: true, 
 						forceInterpreterMode: true);
 					
@@ -689,7 +845,6 @@ public class EmulatorService : IDisposable
 		_emulationCts?.Cancel();
 		_emulationCts?.Dispose();
 		_emulator?.Dispose();
-		_browserVfs?.Dispose();
 		
 		// Clear references to allow garbage collection
 		// Note: _emulatorHost is readonly and managed separately
