@@ -1250,23 +1250,29 @@ public class JitCpu : IAsyncCpu
 				ExecCmps(4, insn.HasRepPrefix, insn.HasRepnePrefix, _mem);
 				break;
 			case Mnemonic.Insb:
-				ExecIns(1, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
-				break;
 			case Mnemonic.Insw:
-				ExecIns(2, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
-				break;
 			case Mnemonic.Insd:
-				ExecIns(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
-				break;
 			case Mnemonic.Outsb:
-				ExecOuts(1, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
-				break;
 			case Mnemonic.Outsw:
-				ExecOuts(2, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
-				break;
 			case Mnemonic.Outsd:
-				ExecOuts(4, insn.HasRepPrefix || insn.HasRepnePrefix, _mem);
+			{
+				var hasRep = insn.HasRepPrefix || insn.HasRepnePrefix;
+				var ioSize = insn.Mnemonic switch
+				{
+					Mnemonic.Insb or Mnemonic.Outsb => 1,
+					Mnemonic.Insw or Mnemonic.Outsw => 2,
+					_ => 4
+				};
+				if (insn.Mnemonic is Mnemonic.Insb or Mnemonic.Insw or Mnemonic.Insd)
+				{
+					ExecIns(ioSize, hasRep, _mem);
+				}
+				else
+				{
+					ExecOuts(ioSize, hasRep, _mem);
+				}
 				break;
+			}
 			
 			// System/Privileged instructions
 			case Mnemonic.Rdtsc:
@@ -7706,6 +7712,10 @@ public class JitCpu : IAsyncCpu
 					break;
 				}
 			}
+			else
+			{
+				break; // No REP prefix - execute exactly once
+			}
 		}
 	}
 	
@@ -7755,9 +7765,12 @@ public class JitCpu : IAsyncCpu
 					break;
 				}
 			}
+			else
+			{
+				break; // No REP prefix - execute exactly once
+			}
 		}
 	}
-	
 	private void ExecIns(int size, bool rep, VirtualMemory mem)
 	{
 		var count = rep ? _ecx : 1u;
