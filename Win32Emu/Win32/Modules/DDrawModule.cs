@@ -2082,14 +2082,11 @@ namespace Win32Emu.Win32.Modules
 					// Process events to keep the window responsive
 					ddrawObj.RenderingBackend.ProcessEvents();
 
-					// Post a WM_PAINT message to keep the message queue active
-					// This ensures GetMessageA doesn't block forever when there are no user interactions
-					// Find the first window and post a paint message to it
+					// Mark window as needing paint - WM_PAINT will be synthesized when queue is empty
 					var firstWindow = _env.GetAllWindowHandles().FirstOrDefault();
 					if (firstWindow != 0)
 					{
-						_env.PostMessage(firstWindow, (uint)Messaging.WM.PAINT, 0, 0);
-						_logger.LogTrace("[DDraw] Posted WM_PAINT to window 0x{Hwnd:X8} to keep message loop active", firstWindow);
+						_env.SetWindowNeedsPaint(firstWindow);
 					}
 
 					_logger.LogInformation("[DDraw] Flipped primary surface");
@@ -3860,18 +3857,13 @@ namespace Win32Emu.Win32.Modules
 			{
 				UpdateRenderingBackend(surface, ddrawObj);
 
-				// Post a WM_PAINT message to keep the message queue active
-				// This ensures GetMessageA doesn't block forever when there are no user interactions
-				// This is especially important for applications that use Lock/Unlock directly on the
-				// primary surface (like simple_ddraw.c) instead of using Flip() with backbuffers
-				// Use the window handle associated with this DirectDraw object if available
+				// Mark window as needing paint - WM_PAINT will be synthesized when queue is empty
 				var targetWindow = ddrawObj.WindowHandle != IntPtr.Zero 
 					? (uint)ddrawObj.WindowHandle.ToInt32() 
 					: _env.GetAllWindowHandles().FirstOrDefault();
 				if (targetWindow != 0)
 				{
-					_env.PostMessage(targetWindow, (uint)Messaging.WM.PAINT, 0, 0);
-					_logger.LogTrace("[DDraw] Posted WM_PAINT to window 0x{Hwnd:X8} after primary surface unlock", targetWindow);
+					_env.SetWindowNeedsPaint(targetWindow);
 				}
 			}
 

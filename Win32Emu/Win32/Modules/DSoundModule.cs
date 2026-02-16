@@ -908,10 +908,17 @@ namespace Win32Emu.Win32.Modules
 			uint playCursor = buffer.PlayCursor;
 			uint writeCursor = buffer.WriteCursor;
 
-			if (buffer.IsPlaying && buffer.PlayStartTime > 0 && !buffer.IsPrimary)
+			if (buffer.IsPlaying && buffer.PlayStartTime > 0)
 			{
+				// For primary buffers with no explicit size, calculate a virtual buffer size
+				var effectiveSize = buffer.Size;
+				if (effectiveSize <= 0 && buffer.IsPrimary && buffer.Frequency > 0 && buffer.BitsPerSample > 0 && buffer.Channels > 0)
+				{
+					effectiveSize = buffer.Frequency * buffer.Channels * (buffer.BitsPerSample / 8);
+				}
+
 				// Validate buffer size before position calculation
-				if (buffer.Size <= 0)
+				if (effectiveSize <= 0)
 				{
 					_logger.LogWarning("[DSound COM] IDirectSoundBuffer::GetCurrentPosition: Invalid buffer size {Size}, treating as finished", buffer.Size);
 					playCursor = 0;
@@ -949,7 +956,7 @@ namespace Win32Emu.Win32.Modules
 						else if (totalBytesAdvanced >= uint.MaxValue)
 						{
 							// For very long playback, wrap to buffer size
-							bytesAdvanced = (uint)(totalBytesAdvanced % buffer.Size);
+							bytesAdvanced = (uint)(totalBytesAdvanced % effectiveSize);
 						}
 						else
 						{
@@ -957,7 +964,7 @@ namespace Win32Emu.Win32.Modules
 						}
 
 						// Calculate new play cursor position with overflow protection
-						var bufferSizeUint = (uint)buffer.Size;
+						var bufferSizeUint = (uint)effectiveSize;
 						var newPosition = (ulong)buffer.PlayStartPosition + bytesAdvanced;
 						
 						// Handle position exceeding uint.MaxValue or buffer boundaries
@@ -1281,10 +1288,14 @@ namespace Win32Emu.Win32.Modules
 				return (uint)DSResult.DSERR_GENERIC;
 			}
 
-			// Don't play primary buffers
+			// For primary buffers, mark as playing but don't create audio streams
 			if (buffer.IsPrimary)
 			{
-				_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Primary buffer, nothing to do");
+				buffer.IsLooping = (dwFlags & (uint)DSBPlay.LOOPING) != 0;
+				buffer.IsPlaying = true;
+				buffer.PlayStartTime = Environment.TickCount64;
+				buffer.PlayStartPosition = buffer.PlayCursor;
+				_logger.LogInformation("[DSound COM] IDirectSoundBuffer::Play: Primary buffer started (looping={IsLooping})", buffer.IsLooping);
 				return (uint)DSResult.DS_OK;
 			}
 
