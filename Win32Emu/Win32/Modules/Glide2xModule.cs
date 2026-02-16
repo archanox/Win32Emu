@@ -863,15 +863,11 @@ namespace Win32Emu.Win32.Modules
 			
 			_renderingBackend.ProcessEvents();
 			
-			// Post a WM_PAINT message to keep the message queue active
-			// This ensures GetMessageA doesn't block forever when there are no user interactions
-			// Find the first window and post a paint message to it
+			// Mark window as needing paint - WM_PAINT will be synthesized when queue is empty
 			var windows = _env.GetAllWindowHandles().ToList();
 			if (windows.Count > 0)
 			{
-				var firstWindow = windows[0];
-				_env.PostMessage(firstWindow, (uint)Messaging.WM.PAINT, 0, 0);
-				_logger.LogTrace("[GLIDE2x] Posted WM_PAINT to window 0x{Hwnd:X8} to keep message loop active", firstWindow);
+				_env.SetWindowNeedsPaint(windows[0]);
 			}
 			
 			// Begin next frame

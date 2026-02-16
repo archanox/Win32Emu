@@ -2572,6 +2572,7 @@ namespace Win32Emu.Win32.Modules
 
 				case 0x000F: // WM_PAINT
 					_logger.LogInformation($"[User32] DefWindowProcA: WM_PAINT");
+					_env.ClearWindowNeedsPaint(hwnd);
 					return 0;
 
 				case 0x0014: // WM_ERASEBKGND
@@ -4481,6 +4482,9 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] BeginPaint: HWND=0x{Hwnd:X8} lpPaint=0x{LpPaint:X8}", hwnd, lpPaint);
 
+			// BeginPaint validates the update region, preventing further WM_PAINT synthesis
+			_env.ClearWindowNeedsPaint(hwnd);
+
 			if (lpPaint == 0)
 			{
 				return 0;
@@ -5884,7 +5888,21 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] InvalidateRect(hWnd=0x{HWnd:X8}, lpRect=0x{LpRect:X8}, bErase={BErase})",
 				hWnd, lpRect, bErase);
-			// Stub - always succeed
+
+			// Mark the window as needing paint - WM_PAINT will be synthesized when queue is empty
+			if (hWnd != 0)
+			{
+				_env.SetWindowNeedsPaint(hWnd);
+			}
+			else
+			{
+				// hWnd == 0 means invalidate all windows
+				foreach (var wndHandle in _env.GetAllWindowHandles())
+				{
+					_env.SetWindowNeedsPaint(wndHandle);
+				}
+			}
+
 			return 1; // TRUE
 		}
 

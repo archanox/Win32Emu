@@ -553,6 +553,11 @@ public class ProcessEnvironment
 	
 	// Message queue wait token - used by thread scheduler to identify threads waiting for messages
 	private readonly object _messageQueueWaitToken = new object();
+
+	// Windows that need painting - WM_PAINT is synthesized from this set
+	// In real Windows, WM_PAINT is never posted to the message queue; it is generated on-the-fly
+	// when the queue is empty and a window has an invalid (dirty) region.
+	private readonly HashSet<uint> _windowsNeedingPaint = new();
 	
 	// Message structure for queueing
 	public record struct QueuedMessage(
@@ -2417,10 +2422,70 @@ public class ProcessEnvironment
 		return _windows.Keys;
 	}
 
+	/// <summary>
+	/// Marks a window as needing painting. WM_PAINT will be synthesized for this window
+	/// when the message queue is empty (matching real Windows behavior).
+	/// </summary>
+	public void SetWindowNeedsPaint(uint hwnd)
+	{
+		lock (_windowsNeedingPaint)
+		{
+			_windowsNeedingPaint.Add(hwnd);
+		}
+	}
+
+	/// <summary>
+	/// Clears the "needs paint" flag for a window. Called by BeginPaint or when
+	/// WM_PAINT is dispatched via DefWindowProcA.
+	/// </summary>
+	public void ClearWindowNeedsPaint(uint hwnd)
+	{
+		lock (_windowsNeedingPaint)
+		{
+			_windowsNeedingPaint.Remove(hwnd);
+		}
+	}
+
+	/// <summary>
+	/// Tries to synthesize a WM_PAINT message for a window that needs painting.
+	/// Returns true if a WM_PAINT was synthesized.
+	/// </summary>
+	private bool TrySynthesizeWmPaint(out QueuedMessage message, uint hwndFilter, bool remove)
+	{
+		const uint WM_PAINT = 0x000F;
+		message = default;
+		lock (_windowsNeedingPaint)
+		{
+			uint found = 0;
+			foreach (var h in _windowsNeedingPaint)
+			{
+				if (!_windows.ContainsKey(h)) continue;
+				if (hwndFilter != 0 && h != hwndFilter) continue;
+				found = h;
+				break;
+			}
+
+			if (found != 0)
+			{
+				message = new QueuedMessage(found, WM_PAINT, 0, 0, (uint)Environment.TickCount, 0, 0);
+				if (remove)
+				{
+					_windowsNeedingPaint.Remove(found);
+				}
+				return true;
+			}
+
+			// Clean up stale entries
+			_windowsNeedingPaint.RemoveWhere(h => !_windows.ContainsKey(h));
+		}
+		return false;
+	}
+
 	public bool DestroyWindow(uint hwnd)
 	{
 		if (_windows.Remove(hwnd))
 		{
+			ClearWindowNeedsPaint(hwnd);
 			_logger.LogInformation("[ProcessEnv] Destroyed window: HWND=0x{Hwnd:X8}", hwnd);
 			return true;
 		}
@@ -2729,6 +2794,15 @@ public class ProcessEnvironment
 				return message;
 			}
 
+			// Queue is empty - check for synthesized WM_PAINT before waiting
+			const uint WM_PAINT = 0x000F;
+			bool wmPaintPassesFilter = (msgFilterMin == 0 && msgFilterMax == 0) ||
+			                           (WM_PAINT >= msgFilterMin && WM_PAINT <= msgFilterMax);
+			if (wmPaintPassesFilter && TrySynthesizeWmPaint(out var paintMsg, hwnd, remove: true))
+			{
+				return paintMsg;
+			}
+
 			// Wait for a message with timeout
 			using var cts = new CancellationTokenSource(timeoutMs);
 			
@@ -2849,6 +2923,15 @@ public class ProcessEnvironment
 			}
 		}
 
+		// Queue empty - synthesize WM_PAINT if applicable (GetMessage always removes)
+		const uint WM_PAINT = 0x000F;
+		bool wmPaintPassesFilter = (msgFilterMin == 0 && msgFilterMax == 0) ||
+		                           (WM_PAINT >= msgFilterMin && WM_PAINT <= msgFilterMax);
+		if (wmPaintPassesFilter && TrySynthesizeWmPaint(out var paintMsg, hwnd, remove: true))
+		{
+			return paintMsg;
+		}
+
 		return null;
 	}
 
@@ -2886,7 +2969,8 @@ public class ProcessEnvironment
 				
 				return true;
 			}
-			return false;
+			// Queue empty - synthesize WM_PAINT if any window needs painting
+			return TrySynthesizeWmPaint(out message, hwnd, remove);
 		}
 
 		// Complex case: need to search for a matching message
@@ -2942,7 +3026,14 @@ public class ProcessEnvironment
 			}
 		}
 
-		return false;
+		// No matching posted messages - synthesize WM_PAINT if applicable
+		const uint WM_PAINT = 0x000F;
+		if (msgFilterMin != 0 || msgFilterMax != 0)
+		{
+			if (WM_PAINT < msgFilterMin || WM_PAINT > msgFilterMax)
+				return false; // WM_PAINT filtered out
+		}
+		return TrySynthesizeWmPaint(out message, hwnd, remove);
 	}
 
 	/// <summary>
@@ -3519,13 +3610,8 @@ public class ProcessEnvironment
 			}
 		}
 		
-		// 3. Post a synthetic WM_PAINT message to wake up threads waiting in GetMessageA
-		// This is a fallback to ensure threads don't deadlock when no other events occur
-		var firstWindow = GetAllWindowHandles().FirstOrDefault();
-		if (firstWindow != 0)
-		{
-			PostMessage(firstWindow, (uint)Messaging.WM.PAINT, 0, 0);
-		}
+		// Note: WM_PAINT is no longer posted here. It is synthesized on-the-fly by
+		// TryPeekMessage/TryGetMessageNonBlocking when a window has been invalidated.
 	}
 
 	/// <summary>

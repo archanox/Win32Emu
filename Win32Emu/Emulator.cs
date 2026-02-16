@@ -2207,15 +2207,6 @@ public sealed class Emulator : IDisposable
             if (iterationCount % eventProcessingInterval == 0)
             {
                 _env?.ProcessAllBackendEvents();
-                
-                // Post a synthetic WM_PAINT message to keep the message queue active
-                // This is especially important in headless mode where SDL may not generate any events
-                // DirectDraw does the same thing after Flip - we need it for apps that don't use DirectDraw
-                var firstWindow = _env?.GetAllWindowHandles().FirstOrDefault() ?? 0;
-                if (firstWindow != 0)
-                {
-                    _env?.PostMessage(firstWindow, (uint)Win32.Messaging.WM.PAINT, 0, 0);
-                }
             }
 
             // Check if we have any runnable threads
