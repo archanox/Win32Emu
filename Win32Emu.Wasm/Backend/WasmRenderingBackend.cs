@@ -178,22 +178,11 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
-			// Determine which canvas to render to
-			// If targetWindowHandle is provided and not zero, use window-specific canvas
-			// Otherwise, fall back to default emulatorCanvas
-			var canvasId = _canvasId; // Default to main canvas
-			if (targetWindowHandle != IntPtr.Zero)
-			{
-				// Use window-specific canvas ID format: "window-canvas-{HWND}"
-				// Use ToInt64() to safely handle both 32-bit and 64-bit handle values
-				var windowHandleValue = (uint)targetWindowHandle.ToInt64();
-				canvasId = $"window-canvas-{windowHandleValue:X8}";
-				_logger.LogTrace("[WASM] Rendering to window-specific canvas: {CanvasId} (HWND 0x{WindowHandle:X8})", canvasId, windowHandleValue);
-			}
-			else
-			{
-				_logger.LogTrace("[WASM] Rendering to default canvas: {CanvasId}", canvasId);
-			}
+			// Always render to the main emulator canvas
+			// In WASM mode, there is only one canvas element (emulatorCanvas) in the DOM.
+			// Unlike native backends (SDL) which manage their own windows, the WASM backend
+			// must always render to the single shared canvas regardless of the target window handle.
+			var canvasId = _canvasId;
 			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, targetWindow={TargetWindow:X}", 
@@ -230,7 +219,6 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			// Use fire-and-forget pattern but with proper error tracking
 			// We return success immediately for performance, but track errors for future calls
-			// Use the computed canvasId instead of _canvasId to ensure correct routing
 			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", canvasId, base64Data, _width, _height)
 				.AsTask()
 				.ContinueWith(t =>
