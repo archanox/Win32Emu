@@ -477,9 +477,28 @@
 		window.updateCanvas = (canvasId, base64Data, width, height) => {
 			const BYTES_PER_PIXEL = 4; // RGBA format
 			
-			const canvas = document.getElementById(canvasId);
+			let canvas = document.getElementById(canvasId);
 			if (!canvas) {
-				throw new Error("Canvas not found: " + canvasId);
+				// Dynamically create a canvas for window-specific rendering
+				const container = document.getElementById('canvasContainer');
+				if (!container) {
+					throw new Error("Canvas container not found and canvas not found: " + canvasId);
+				}
+				canvas = document.createElement('canvas');
+				canvas.id = canvasId;
+				canvas.width = width;
+				canvas.height = height;
+				canvas.style.maxWidth = '100%';
+				canvas.style.height = 'auto';
+				canvas.style.imageRendering = 'pixelated';
+				container.appendChild(canvas);
+				
+				// Hide the default emulatorCanvas since a window-specific canvas is now active
+				const mainCanvas = document.getElementById('emulatorCanvas');
+				if (mainCanvas) {
+					mainCanvas.style.display = 'none';
+				}
+				console.log(`Created dynamic canvas '${canvasId}' (${width}x${height}) for window rendering`);
 			}
 			
 			const ctx = canvas.getContext('2d');
