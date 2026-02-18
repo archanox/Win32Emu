@@ -178,11 +178,15 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
-			// Always render to the main emulator canvas
-			// In WASM mode, there is only one canvas element (emulatorCanvas) in the DOM.
-			// Unlike native backends (SDL) which manage their own windows, the WASM backend
-			// must always render to the single shared canvas regardless of the target window handle.
+			// Route rendering to a window-specific canvas when a target window handle is provided.
+			// The JavaScript updateCanvas function will dynamically create the canvas element
+			// inside the canvasContainer div if it doesn't already exist.
 			var canvasId = _canvasId;
+			if (targetWindowHandle != IntPtr.Zero)
+			{
+				var windowHandleValue = (uint)targetWindowHandle.ToInt64();
+				canvasId = $"window-canvas-{windowHandleValue:X8}";
+			}
 			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, targetWindow={TargetWindow:X}", 
