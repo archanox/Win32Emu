@@ -178,15 +178,10 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
-			// Route rendering to a window-specific canvas when a target window handle is provided.
-			// The JavaScript updateCanvas function will dynamically create the canvas element
-			// inside the canvasContainer div if it doesn't already exist.
+			// Always render to the main emulatorCanvas in WASM.
+			// Unlike desktop backends with real OS windows, WASM has a single display surface.
+			// Per-window canvas routing is not needed and causes frames to go to invisible canvases.
 			var canvasId = _canvasId;
-			if (targetWindowHandle != IntPtr.Zero)
-			{
-				var windowHandleValue = (uint)targetWindowHandle.ToInt64();
-				canvasId = $"window-canvas-{windowHandleValue:X8}";
-			}
 			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, targetWindow={TargetWindow:X}", 
