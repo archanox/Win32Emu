@@ -247,18 +247,7 @@
 		// Refresh DirectDraw diagnostics display
 		window.refreshDDrawDiagnostics = function() {
 			try {
-				// Find the active rendering canvas: check for per-window canvases first,
-				// then fall back to the default emulatorCanvas
-				const container = document.getElementById('canvasContainer');
-				const windowCanvases = container ? container.querySelectorAll('canvas[id^="window-canvas-"]') : [];
-				const canvas = windowCanvases.length > 0 ? windowCanvases[0] : document.getElementById('emulatorCanvas');
-				const activeCanvasId = canvas ? canvas.id : 'emulatorCanvas';
-				
-				// Update active canvas ID display
-				const canvasIdEl = document.getElementById('activeCanvasId');
-				if (canvasIdEl) {
-					canvasIdEl.textContent = activeCanvasId;
-				}
+				const canvas = document.getElementById('emulatorCanvas');
 				
 				// Update canvas dimensions
 				const dimEl = document.getElementById('canvasDimensions');
