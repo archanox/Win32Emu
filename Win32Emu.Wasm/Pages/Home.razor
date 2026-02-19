@@ -1512,9 +1512,14 @@
 	/// <summary>
 	/// Handle window close events.
 	/// </summary>
-	private void HandleWindowClose(uint windowHandle)
+	private async void HandleWindowClose(uint windowHandle)
 	{
 		_activeWindows.Remove(windowHandle);
+		
+		// Remove the dynamically created canvas for this window
+		var canvasId = $"window-canvas-{windowHandle:X8}";
+		await JS.InvokeVoidAsync("removeWindowCanvas", canvasId);
+		
 		AddDebugOutput($"Window closed: 0x{windowHandle:X8}");
 		StateHasChanged();
 	}
