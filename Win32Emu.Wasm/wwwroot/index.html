@@ -484,21 +484,29 @@
 				if (!container) {
 					throw new Error("Canvas container not found and canvas not found: " + canvasId);
 				}
-				canvas = document.createElement('canvas');
-				canvas.id = canvasId;
-				canvas.width = width;
-				canvas.height = height;
-				canvas.style.maxWidth = '100%';
-				canvas.style.height = 'auto';
-				canvas.style.imageRendering = 'pixelated';
-				container.appendChild(canvas);
 				
-				// Hide the default emulatorCanvas since a window-specific canvas is now active
-				const mainCanvas = document.getElementById('emulatorCanvas');
-				if (mainCanvas) {
-					mainCanvas.style.display = 'none';
+				// Re-check if another concurrent call has already created and attached the canvas
+				const existingCanvas = document.getElementById(canvasId);
+				if (existingCanvas) {
+					canvas = existingCanvas;
+				} else {
+					const newCanvas = document.createElement('canvas');
+					newCanvas.id = canvasId;
+					newCanvas.width = width;
+					newCanvas.height = height;
+					newCanvas.style.maxWidth = '100%';
+					newCanvas.style.height = 'auto';
+					newCanvas.style.imageRendering = 'pixelated';
+					container.appendChild(newCanvas);
+					canvas = newCanvas;
+					
+					// Hide the default emulatorCanvas since a window-specific canvas is now active
+					const mainCanvas = document.getElementById('emulatorCanvas');
+					if (mainCanvas) {
+						mainCanvas.style.display = 'none';
+					}
+					console.log(`Created dynamic canvas '${canvasId}' (${width}x${height}) for window rendering`);
 				}
-				console.log(`Created dynamic canvas '${canvasId}' (${width}x${height}) for window rendering`);
 			}
 			
 			const ctx = canvas.getContext('2d');
@@ -538,6 +546,25 @@
 			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
 			
 			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
+		};
+		
+		// Remove a dynamically created window canvas and restore the default emulatorCanvas
+		window.removeWindowCanvas = (canvasId) => {
+			const canvas = document.getElementById(canvasId);
+			if (canvas) {
+				canvas.remove();
+				console.log(`Removed dynamic canvas '${canvasId}'`);
+				
+				// If no other window canvases remain, restore the default emulatorCanvas
+				const container = document.getElementById('canvasContainer');
+				const remaining = container ? container.querySelectorAll('canvas[id^="window-canvas-"]') : [];
+				if (remaining.length === 0) {
+					const mainCanvas = document.getElementById('emulatorCanvas');
+					if (mainCanvas) {
+						mainCanvas.style.display = '';
+					}
+				}
+			}
 		};
 		
 		// Wrapper function that stops emulator on error
