@@ -247,7 +247,18 @@
 		// Refresh DirectDraw diagnostics display
 		window.refreshDDrawDiagnostics = function() {
 			try {
-				const canvas = document.getElementById('emulatorCanvas');
+				// Find the active rendering canvas: check for per-window canvases first,
+				// then fall back to the default emulatorCanvas
+				const container = document.getElementById('canvasContainer');
+				const windowCanvases = container ? container.querySelectorAll('canvas[id^="window-canvas-"]') : [];
+				const canvas = windowCanvases.length > 0 ? windowCanvases[0] : document.getElementById('emulatorCanvas');
+				const activeCanvasId = canvas ? canvas.id : 'emulatorCanvas';
+				
+				// Update active canvas ID display
+				const canvasIdEl = document.getElementById('activeCanvasId');
+				if (canvasIdEl) {
+					canvasIdEl.textContent = activeCanvasId;
+				}
 				
 				// Update canvas dimensions
 				const dimEl = document.getElementById('canvasDimensions');
@@ -479,34 +490,12 @@
 			
 			let canvas = document.getElementById(canvasId);
 			if (!canvas) {
-				// Dynamically create a canvas for window-specific rendering
-				const container = document.getElementById('canvasContainer');
-				if (!container) {
-					throw new Error("Canvas container not found and canvas not found: " + canvasId);
-				}
-				
-				// Re-check if another concurrent call has already created and attached the canvas
-				const existingCanvas = document.getElementById(canvasId);
-				if (existingCanvas) {
-					canvas = existingCanvas;
-				} else {
-					const newCanvas = document.createElement('canvas');
-					newCanvas.id = canvasId;
-					newCanvas.width = width;
-					newCanvas.height = height;
-					newCanvas.style.maxWidth = '100%';
-					newCanvas.style.height = 'auto';
-					newCanvas.style.imageRendering = 'pixelated';
-					container.appendChild(newCanvas);
-					canvas = newCanvas;
-					
-					// Hide the default emulatorCanvas since a window-specific canvas is now active
-					const mainCanvas = document.getElementById('emulatorCanvas');
-					if (mainCanvas) {
-						mainCanvas.style.display = 'none';
-					}
-					console.log(`Created dynamic canvas '${canvasId}' (${width}x${height}) for window rendering`);
-				}
+				// Canvas not yet available in the DOM. For per-window canvases, the Blazor
+				// WindowComponent creates the canvas element. If the first frame arrives
+				// before Blazor has rendered the component, skip this frame gracefully.
+				// The next frame will find the canvas once the component is rendered.
+				console.warn(`Canvas '${canvasId}' not found in DOM, skipping frame (component may not have rendered yet)`);
+				return;
 			}
 			
 			const ctx = canvas.getContext('2d');
@@ -548,23 +537,9 @@
 			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
 		};
 		
-		// Remove a dynamically created window canvas and restore the default emulatorCanvas
+		// Clean up when a window canvas is no longer needed
 		window.removeWindowCanvas = (canvasId) => {
-			const canvas = document.getElementById(canvasId);
-			if (canvas) {
-				canvas.remove();
-				console.log(`Removed dynamic canvas '${canvasId}'`);
-				
-				// If no other window canvases remain, restore the default emulatorCanvas
-				const container = document.getElementById('canvasContainer');
-				const remaining = container ? container.querySelectorAll('canvas[id^="window-canvas-"]') : [];
-				if (remaining.length === 0) {
-					const mainCanvas = document.getElementById('emulatorCanvas');
-					if (mainCanvas) {
-						mainCanvas.style.display = '';
-					}
-				}
-			}
+			console.log(`Window canvas '${canvasId}' removed by Blazor component lifecycle`);
 		};
 		
 		// Wrapper function that stops emulator on error
