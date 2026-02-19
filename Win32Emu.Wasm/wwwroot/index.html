@@ -241,18 +241,26 @@
 			lastUpdateTime: null,
 			backendInitialized: false,
 			renderingError: false,
-			frameBufferSize: 0
+			frameBufferSize: 0,
+			lastCanvasId: null,
+			missingCanvasWarned: {}
 		};
 		
 		// Refresh DirectDraw diagnostics display
 		window.refreshDDrawDiagnostics = function() {
 			try {
-				// Find the active rendering canvas: check for per-window canvases first,
-				// then fall back to the default emulatorCanvas
-				const container = document.getElementById('canvasContainer');
-				const windowCanvases = container ? container.querySelectorAll('canvas[id^="window-canvas-"]') : [];
-				const canvas = windowCanvases.length > 0 ? windowCanvases[0] : document.getElementById('emulatorCanvas');
-				const activeCanvasId = canvas ? canvas.id : 'emulatorCanvas';
+				// Prefer the last canvas actually rendered to, fall back to DOM lookup
+				let canvas = null;
+				let activeCanvasId = 'emulatorCanvas';
+				if (window.ddrawDiagnostics.lastCanvasId) {
+					canvas = document.getElementById(window.ddrawDiagnostics.lastCanvasId);
+					if (canvas) {
+						activeCanvasId = window.ddrawDiagnostics.lastCanvasId;
+					}
+				}
+				if (!canvas) {
+					canvas = document.getElementById('emulatorCanvas');
+				}
 				
 				// Update active canvas ID display
 				const canvasIdEl = document.getElementById('activeCanvasId');
@@ -490,12 +498,23 @@
 			
 			let canvas = document.getElementById(canvasId);
 			if (!canvas) {
-				// Canvas not yet available in the DOM. For per-window canvases, the Blazor
-				// WindowComponent creates the canvas element. If the first frame arrives
-				// before Blazor has rendered the component, skip this frame gracefully.
-				// The next frame will find the canvas once the component is rendered.
-				console.warn(`Canvas '${canvasId}' not found in DOM, skipping frame (component may not have rendered yet)`);
-				return;
+				const isPerWindowCanvas = typeof canvasId === 'string' && canvasId.startsWith('window-canvas-');
+				const message = `Canvas '${canvasId}' not found in DOM`;
+				
+				if (isPerWindowCanvas) {
+					// Canvas not yet available in the DOM. For per-window canvases, the Blazor
+					// WindowComponent creates the canvas element. If the first frame arrives
+					// before Blazor has rendered the component, skip this frame gracefully.
+					// The next frame will find the canvas once the component is rendered.
+					if (!window.ddrawDiagnostics.missingCanvasWarned[canvasId]) {
+						console.warn(`${message}, skipping frame (component may not have rendered yet)`);
+						window.ddrawDiagnostics.missingCanvasWarned[canvasId] = true;
+					}
+					return;
+				}
+				
+				// For non per-window canvases (e.g., the main emulatorCanvas), treat this as an error
+				throw new Error(`${message}. This indicates a missing or incorrect canvasId (e.g., emulatorCanvas not present).`);
 			}
 			
 			const ctx = canvas.getContext('2d');
@@ -533,13 +552,13 @@
 			window.ddrawDiagnostics.lastUpdateTime = Date.now();
 			window.ddrawDiagnostics.backendInitialized = true;
 			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
+			window.ddrawDiagnostics.lastCanvasId = canvasId;
 			
 			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
 		};
 		
-		// Clean up when a window canvas is no longer needed
+		// Clean up when a window canvas is no longer needed (Blazor manages canvas lifecycle)
 		window.removeWindowCanvas = (canvasId) => {
-			console.log(`Window canvas '${canvasId}' removed by Blazor component lifecycle`);
 		};
 		
 		// Wrapper function that stops emulator on error
