@@ -68,14 +68,11 @@ public sealed class Emulator : IDisposable
     // Log a warning every 1M iterations to avoid excessive log spam during legitimate tight loops
     private const ulong STUCK_EIP_LOG_INTERVAL = 1000000;
     
-    // WASM yield interval - yield to browser event loop every N iterations
-    // This prevents the browser from freezing when emulating tight loops.
-    // Increased from 10 to 1000 for better performance on compute-heavy workloads like ign_teas.
-    // The emergency time-based yield (EMERGENCY_YIELD_THRESHOLD_MS) ensures browser responsiveness
-    // even with this higher interval. Each yield involves JavaScript timer overhead (~4ms minimum),
-    // so reducing yield frequency significantly improves emulation throughput.
-    // For compute-heavy games like ign_teas, this allows ~1000 instructions between yields
-    // instead of only 10, greatly improving texture loading performance.
+    // WASM yield interval - yield to browser event loop every N main loop iterations.
+    // With batch instruction execution (up to 500 instructions per iteration), each yield
+    // cycle processes up to 500,000 instructions. The emergency time-based yield
+    // (EMERGENCY_YIELD_THRESHOLD_MS) ensures browser responsiveness regardless of this interval.
+    // Each yield involves JavaScript timer overhead (~4ms minimum).
     private const ulong WASM_YIELD_INTERVAL = 1000;
     
     // Emergency yield threshold - force yield if more than this many milliseconds pass without yielding
@@ -1037,7 +1034,15 @@ public sealed class Emulator : IDisposable
                 var stepCount = 0;
                 while (_cpu.GetEip() != RETURN_MARKER)
                 {
-                    await _cpu.SingleStepAsync(_vm).ConfigureAwait(false);
+                    // Use batch execution in WASM for better performance
+                    if (PlatformHelpers.IsWasm && _cpu is IAsyncCpu tlsAsyncCpu)
+                    {
+                        await tlsAsyncCpu.ExecuteBlockAsync(_vm).ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await _cpu.SingleStepAsync(_vm).ConfigureAwait(false);
+                    }
                     
                     // Yield periodically on WASM to keep browser responsive
                     // Use Task.Delay(1) to actually return control to browser, not Task.Yield()
