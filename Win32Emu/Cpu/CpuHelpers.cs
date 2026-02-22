@@ -36,9 +36,9 @@ public static class CpuHelpers
 	#endregion
 	
 	/// <summary>
-	/// Execute CPU instruction(s) asynchronously, using ExecuteBlockAsync for JIT-enabled CPUs
-	/// or SingleStepAsync for interpreter CPUs. This provides optimal performance while maintaining
-	/// compatibility across all CPU backends.
+	/// Execute CPU instruction(s) asynchronously, using ExecuteBlockAsync for optimal performance.
+	/// ExecuteBlockAsync handles both JIT compilation (native) and batch interpretation (WASM/interpreter),
+	/// providing the best execution strategy for each environment.
 	/// </summary>
 	/// <param name="cpu">The CPU instance</param>
 	/// <param name="memory">Virtual memory instance</param>
@@ -47,14 +47,9 @@ public static class CpuHelpers
 	{
 		if (cpu is IAsyncCpu asyncCpu)
 		{
-			// For JIT-enabled CPUs, use ExecuteBlockAsync for better performance
-			if (asyncCpu.SupportsJit)
-			{
-				return await asyncCpu.ExecuteBlockAsync(memory);
-			}
-			
-			// For interpreter CPUs, use SingleStepAsync
-			return await asyncCpu.SingleStepAsync(memory);
+			// Always use ExecuteBlockAsync - it handles both JIT compilation (native)
+			// and batch interpretation (WASM/interpreter) for optimal performance
+			return await asyncCpu.ExecuteBlockAsync(memory);
 		}
 		
 		// Fallback to synchronous execution for non-async CPUs

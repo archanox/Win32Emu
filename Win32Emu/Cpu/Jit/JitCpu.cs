@@ -1678,6 +1678,10 @@ public class JitCpu : IAsyncCpu
 	/// </summary>
 	private CpuStepResult InterpretInstructionBatch(VirtualMemory mem, int maxInstructions)
 	{
+		const uint THREAD_EXIT_MARKER = 0xFFFFFFFF;
+		const uint CALLBACK_MARKER_START = 0xDEAD0000;
+		const uint CALLBACK_MARKER_END = 0xDEADFFFF;
+		
 		var lastResult = new CpuStepResult(IsCall: false, CallTarget: 0, IsSyscall: false, IsDosInterrupt: false);
 		
 		for (int i = 0; i < maxInstructions; i++)
@@ -1694,11 +1698,11 @@ public class JitCpu : IAsyncCpu
 				return lastResult;
 			
 			// Stop if EIP is in low memory (likely corruption) or thread exit marker
-			if (_eip < MemoryRegions.MinValidUserAddress || _eip == 0xFFFFFFFF)
+			if (_eip < MemoryRegions.MinValidUserAddress || _eip == THREAD_EXIT_MARKER)
 				return lastResult;
 			
-			// Stop if EIP is a callback return marker (0xDEAD0000-0xDEADFFFF)
-			if (_eip >= 0xDEAD0000 && _eip <= 0xDEADFFFF)
+			// Stop if EIP is a callback return marker
+			if (_eip >= CALLBACK_MARKER_START && _eip <= CALLBACK_MARKER_END)
 				return lastResult;
 		}
 		
