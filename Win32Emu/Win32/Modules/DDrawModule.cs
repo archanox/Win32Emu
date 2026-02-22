@@ -5171,9 +5171,9 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-					await CpuHelpers.ExecuteAsync(_currentCpu, _currentMemory);
-					steps++;
+					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, batch interpretation for WASM/interpreter
+					var stepResult = await CpuHelpers.ExecuteAsync(_currentCpu, _currentMemory);
+					steps += stepResult.InstructionsExecuted;
 
 					// Periodically yield for cooperative multitasking
 					// In WASM, use Task.Delay(1) to return control to browser event loop
