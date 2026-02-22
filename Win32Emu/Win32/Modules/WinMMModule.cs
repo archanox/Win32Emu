@@ -2296,9 +2296,9 @@ namespace Win32Emu.Win32.Modules
 						}
 					}
 
-					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
-					await CpuHelpers.ExecuteAsync(_cpu, _memory!);
-					steps++;
+					// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, batch interpretation for WASM/interpreter
+					var stepResult = await CpuHelpers.ExecuteAsync(_cpu, _memory!);
+					steps += stepResult.InstructionsExecuted;
 
 					// Periodically check if we should yield to other threads
 					if (steps % YIELD_INTERVAL == 0)

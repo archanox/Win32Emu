@@ -1035,13 +1035,27 @@ public sealed class Emulator : IDisposable
                 while (_cpu.GetEip() != RETURN_MARKER)
                 {
                     // Use batch execution in WASM for better performance
+                    CpuStepResult stepResult;
                     if (PlatformHelpers.IsWasm && _cpu is IAsyncCpu tlsAsyncCpu)
                     {
-                        await tlsAsyncCpu.ExecuteBlockAsync(_vm).ConfigureAwait(false);
+                        stepResult = await tlsAsyncCpu.ExecuteBlockAsync(_vm).ConfigureAwait(false);
                     }
                     else
                     {
-                        await _cpu.SingleStepAsync(_vm).ConfigureAwait(false);
+                        stepResult = await _cpu.SingleStepAsync(_vm).ConfigureAwait(false);
+                    }
+                    
+                    // Handle syscalls (INT 0x80 from import stubs) - without this, the CPU
+                    // resets EIP back to the INT instruction and the loop re-executes it indefinitely
+                    if (stepResult.IsSyscall)
+                    {
+                        await HandleSyscallAsync().ConfigureAwait(false);
+                    }
+                    
+                    // Handle DOS interrupts (INT 21h from Win16 NE executables)
+                    if (stepResult.IsDosInterrupt)
+                    {
+                        await HandleDosInterruptAsync().ConfigureAwait(false);
                     }
                     
                     // Yield periodically on WASM to keep browser responsive

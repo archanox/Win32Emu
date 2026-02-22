@@ -2941,11 +2941,11 @@ namespace Win32Emu.Win32.Modules
 						eipChangedSinceCheck = false;
 					}
 
-			// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, SingleStepAsync for interpreters
+			// Execute instruction(s) - uses ExecuteBlockAsync for JIT CPUs, batch interpretation for WASM/interpreter
 			var step = await CpuHelpers.ExecuteAsync(cpu, memory).ConfigureAwait(false);
 
-			// Increment step counter (done here so syscall handling is counted)
-			steps++;
+			// Increment step counter by actual instructions executed (batch may execute multiple)
+			steps += step.InstructionsExecuted;
 
 			// Handle syscalls (INT 0x80 from import stubs)
 			if (step.IsSyscall)

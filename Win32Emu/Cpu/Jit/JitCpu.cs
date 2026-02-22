@@ -1690,23 +1690,23 @@ public class JitCpu : IAsyncCpu
 			
 			// Stop immediately on syscall or DOS interrupt - main loop must handle these
 			if (lastResult.IsSyscall || lastResult.IsDosInterrupt)
-				return lastResult;
+				return lastResult with { InstructionsExecuted = i + 1 };
 			
 			// Stop if EIP entered a special range (import hooks, COM vtables, syscall dispatcher)
 			// These addresses need to be handled by the main emulation loop
 			if (MemoryRegions.IsInSpecialRange(_eip))
-				return lastResult;
+				return lastResult with { InstructionsExecuted = i + 1 };
 			
 			// Stop if EIP is in low memory (likely corruption) or thread exit marker
 			if (_eip < MemoryRegions.MinValidUserAddress || _eip == THREAD_EXIT_MARKER)
-				return lastResult;
+				return lastResult with { InstructionsExecuted = i + 1 };
 			
 			// Stop if EIP is a callback return marker
 			if (_eip >= CALLBACK_MARKER_START && _eip <= CALLBACK_MARKER_END)
-				return lastResult;
+				return lastResult with { InstructionsExecuted = i + 1 };
 		}
 		
-		return lastResult;
+		return lastResult with { InstructionsExecuted = maxInstructions };
 	}
 
 	private RtlCompiledBlock CompileBlock(uint startEip, VirtualMemory mem)
