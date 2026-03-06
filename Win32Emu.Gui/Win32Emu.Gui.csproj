@@ -51,7 +51,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.3" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.3" />
-    <PackageReference Include="ModelContextProtocol" Version="1.0.0" />
+    <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.0.0" />
     <PackageReference Include="SDL3-CS" Version="3.3.7" />
     <PackageReference Include="SDL3-CS.Native" Version="3.3.7" />
