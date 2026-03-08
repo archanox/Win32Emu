@@ -184,7 +184,9 @@ public class WasmRenderingBackend : IRenderingBackend
 			var canvasId = _canvasId;
 			if (targetWindowHandle != IntPtr.Zero)
 			{
-				var windowHandleValue = (uint)targetWindowHandle.ToInt32();
+				// Win32Emu window handles are modeled as 32-bit Win32 HWND values even when carried in IntPtr.
+				// Use the low 32 bits explicitly so the browser canvas ID stays aligned with WindowCreateInfo.Handle.
+				var windowHandleValue = unchecked((uint)targetWindowHandle.ToInt64());
 				canvasId = $"window-canvas-{windowHandleValue:X8}";
 			}
 			

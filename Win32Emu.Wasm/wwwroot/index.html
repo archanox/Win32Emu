@@ -243,6 +243,9 @@
 			renderingError: false,
 			frameBufferSize: 0,
 			lastCanvasId: null,
+			samplePixelCount: 0,
+			sampleNonBlackPixels: 0,
+			firstVisibleColor: null,
 			missingCanvasWarned: {}
 		};
 		
@@ -298,6 +301,24 @@
 					const isVisible = rect.width > 0 && rect.height > 0;
 					visibleEl.textContent = isVisible ? 'Yes' : 'No';
 					visibleEl.style.color = isVisible ? 'green' : 'red';
+				}
+				
+				if (canvas) {
+					const sampleStats = window.sampleCanvasPixels(canvas);
+					window.ddrawDiagnostics.samplePixelCount = sampleStats.samplePixelCount;
+					window.ddrawDiagnostics.sampleNonBlackPixels = sampleStats.sampleNonBlackPixels;
+					window.ddrawDiagnostics.firstVisibleColor = sampleStats.firstVisibleColor;
+				}
+				
+				const sampledPixelsEl = document.getElementById('sampleNonBlackPixels');
+				if (sampledPixelsEl) {
+					sampledPixelsEl.textContent = `${window.ddrawDiagnostics.sampleNonBlackPixels} / ${window.ddrawDiagnostics.samplePixelCount}`;
+					sampledPixelsEl.style.color = window.ddrawDiagnostics.sampleNonBlackPixels > 0 ? 'green' : 'orange';
+				}
+				
+				const firstVisibleColorEl = document.getElementById('firstVisibleColor');
+				if (firstVisibleColorEl) {
+					firstVisibleColorEl.textContent = window.ddrawDiagnostics.firstVisibleColor || 'None';
 				}
 				
 				// Update backend status
@@ -492,8 +513,54 @@
 			alert(`Emulator stopped due to rendering error:\n\n${errorMessage}\n\nCheck console for details.`);
 		};
 		
+		window.sampleCanvasPixels = (canvas) => {
+			if (!canvas) {
+				return {
+					samplePixelCount: 0,
+					sampleNonBlackPixels: 0,
+					firstVisibleColor: null
+				};
+			}
+			
+			const ctx = canvas.getContext('2d');
+			if (!ctx) {
+				return {
+					samplePixelCount: 0,
+					sampleNonBlackPixels: 0,
+					firstVisibleColor: null
+				};
+			}
+			
+			const width = Math.min(canvas.width, 64);
+			const height = Math.min(canvas.height, 64);
+			const imageData = ctx.getImageData(0, 0, width, height);
+			let samplePixelCount = 0;
+			let sampleNonBlackPixels = 0;
+			let firstVisibleColor = null;
+			for (let i = 0; i < imageData.data.length; i += 4) {
+				const r = imageData.data[i];
+				const g = imageData.data[i + 1];
+				const b = imageData.data[i + 2];
+				const a = imageData.data[i + 3];
+				samplePixelCount++;
+				if (r !== 0 || g !== 0 || b !== 0) {
+					sampleNonBlackPixels++;
+					if (firstVisibleColor === null) {
+						firstVisibleColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+					}
+				}
+			}
+			
+			return {
+				samplePixelCount,
+				sampleNonBlackPixels,
+				firstVisibleColor
+			};
+		};
+		
 		// Update canvas with RGBA frame buffer data
 		window.updateCanvas = (canvasId, base64Data, width, height) => {
+			const MAX_SAMPLED_PIXELS = 4096;
 			const BYTES_PER_PIXEL = 4; // RGBA format
 			
 			let canvas = document.getElementById(canvasId);
@@ -547,12 +614,35 @@
 			const imageData = new ImageData(bytes, width, height);
 			ctx.putImageData(imageData, 0, 0);
 			
+			const pixelCount = width * height;
+			const pixelStep = Math.max(1, Math.floor(pixelCount / MAX_SAMPLED_PIXELS));
+			let samplePixelCount = 0;
+			let sampleNonBlackPixels = 0;
+			let firstVisibleColor = null;
+			for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += pixelStep) {
+				const offset = pixelIndex * BYTES_PER_PIXEL;
+				const r = bytes[offset];
+				const g = bytes[offset + 1];
+				const b = bytes[offset + 2];
+				const a = bytes[offset + 3];
+				samplePixelCount++;
+				if (r !== 0 || g !== 0 || b !== 0) {
+					sampleNonBlackPixels++;
+					if (firstVisibleColor === null) {
+						firstVisibleColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+					}
+				}
+			}
+			
 			// Update diagnostics
 			window.ddrawDiagnostics.canvasUpdateCount++;
 			window.ddrawDiagnostics.lastUpdateTime = Date.now();
 			window.ddrawDiagnostics.backendInitialized = true;
 			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
 			window.ddrawDiagnostics.lastCanvasId = canvasId;
+			window.ddrawDiagnostics.samplePixelCount = samplePixelCount;
+			window.ddrawDiagnostics.sampleNonBlackPixels = sampleNonBlackPixels;
+			window.ddrawDiagnostics.firstVisibleColor = firstVisibleColor;
 			
 			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
 		};
