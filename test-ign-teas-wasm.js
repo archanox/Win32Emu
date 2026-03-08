@@ -29,6 +29,7 @@ function resolveWwwRoot() {
 
     for (const candidate of candidates) {
         if (fs.existsSync(candidate)) {
+            console.log(`Using WASM wwwroot: ${candidate}`);
             return candidate;
         }
     }
@@ -56,9 +57,16 @@ function createServer() {
         }
         
         const requestPath = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
+        const normalizedPath = path.normalize(requestPath);
+        const normalizedForValidation = normalizedPath.replace(/\\/g, '/');
+        if (normalizedForValidation.startsWith('..') || normalizedForValidation.includes('/../') || path.isAbsolute(normalizedPath)) {
+            res.writeHead(403);
+            res.end('Forbidden');
+            return;
+        }
         
-        // Sanitize the URL to prevent directory traversal
-        let filePath = path.join(WWWROOT, requestPath);
+        // Build a file path from the validated request path
+        let filePath = path.join(WWWROOT, normalizedPath);
         
         // Prevent directory traversal
         if (!filePath.startsWith(WWWROOT)) {
@@ -359,7 +367,8 @@ async function runTest() {
         } else {
             console.log('\n⚠️  TEST INCOMPLETE - Issues need to be addressed');
             if (diagnostics.lastCanvasId !== 'emulatorCanvas') {
-                console.log(`   - Expected rendering on emulatorCanvas, got ${diagnostics.lastCanvasId}`);
+                const actualCanvas = diagnostics.lastCanvasId ?? 'null (no rendering detected)';
+                console.log(`   - Expected rendering on emulatorCanvas, got ${actualCanvas}`);
             }
         }
 
