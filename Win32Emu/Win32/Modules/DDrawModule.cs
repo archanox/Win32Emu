@@ -779,6 +779,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			_logger.LogInformation("[DDraw] Updated {Count} palette entries starting at index {Start}", actualCount, dwStartingEntry);
+			RefreshPrimarySurfacesUsingPalette(paletteHandle, "SetEntries");
 			return (uint)DDResult.DD_OK;
 		}
 
@@ -1223,6 +1224,7 @@ namespace Win32Emu.Win32.Modules
 
 			surface.PaletteHandle = paletteHandle;
 			_logger.LogInformation("[DDraw] Surface 0x{SurfaceHandle:X8} palette set to 0x{PaletteHandle:X8}", surfaceHandle, paletteHandle);
+			RefreshPrimarySurfacesUsingPalette(paletteHandle, "SetPalette");
 
 			return (uint)DDResult.DD_OK;
 		}
@@ -4003,6 +4005,32 @@ namespace Win32Emu.Win32.Modules
 			catch (Exception ex)
 			{
 				_logger.LogError(ex, "[DDraw] Failed to update rendering backend texture");
+			}
+		}
+
+		private void RefreshPrimarySurfacesUsingPalette(uint paletteHandle, string operationName)
+		{
+			foreach (var surface in _surfaces.Values)
+			{
+				if (surface.PaletteHandle != paletteHandle)
+				{
+					continue;
+				}
+
+				if (!_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
+				{
+					continue;
+				}
+
+				var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
+				if (!isEffectivelyPrimary || surface.Bits == null)
+				{
+					continue;
+				}
+
+				_logger.LogDebug("[DDraw] Refreshing primary surface 0x{SurfaceHandle:X8} after palette {Operation} for palette 0x{PaletteHandle:X8}",
+					surface.Handle, operationName, paletteHandle);
+				UpdateRenderingBackend(surface, ddrawObj);
 			}
 		}
 		
