@@ -356,9 +356,12 @@ async function runTest() {
         console.log('📸 Screenshot saved: ign-05-final-state.png');
 
         // Determine test result
+        const renderedToWindowCanvas =
+            typeof diagnostics.lastCanvasId === 'string' &&
+            diagnostics.lastCanvasId.startsWith('window-canvas-');
         const testPassed =
             canvasUpdates > 0 &&
-            diagnostics.lastCanvasId === 'emulatorCanvas' &&
+            renderedToWindowCanvas &&
             !diagnostics.renderingError &&
             errors.length === 0;
         
@@ -366,9 +369,9 @@ async function runTest() {
             console.log('\n✅ TEST PASSED - Game is rendering on canvas');
         } else {
             console.log('\n⚠️  TEST INCOMPLETE - Issues need to be addressed');
-            if (diagnostics.lastCanvasId !== 'emulatorCanvas') {
+            if (!renderedToWindowCanvas) {
                 const actualCanvas = diagnostics.lastCanvasId ?? 'null (no rendering detected)';
-                console.log(`   - Expected rendering on emulatorCanvas, got ${actualCanvas}`);
+                console.log(`   - Expected rendering on a window canvas, got ${actualCanvas}`);
             }
         }
 

@@ -44,10 +44,16 @@
 								style="max-width: 100%; height: auto; image-rendering: pixelated;">
 						</canvas>
 						
+						<!-- Windows that have been created by the emulated application -->
+						<!-- These windows will receive DirectDraw content if the application -->
+						<!-- uses SetCooperativeLevel with the window handle -->
+						@foreach (var window in _activeWindows.Values)
+						{
+							<WindowComponent Info="window" OnClose="@(() => HandleWindowClose(window.Handle))" />
+						}
+						
 						<!-- Dialogs and message boxes overlay -->
-						<!-- Regular CreateWindowEx windows render directly into emulatorCanvas in WASM. -->
-						<!-- Only dialogs and message boxes need HTML overlays because they use Win32 -->
-						<!-- controls that are not rendered through DirectDraw/GDI on the browser canvas. -->
+						<!-- Dialogs and message boxes use Win32 controls that aren't rendered via DirectDraw -->
 						@if (_activeDialog != null || _activeMessageBox != null)
 						{
 							<div class="win32-overlay">
