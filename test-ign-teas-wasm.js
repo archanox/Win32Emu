@@ -27,8 +27,22 @@ function resolveWwwRoot() {
         path.join(__dirname, 'Win32Emu.Wasm/bin/Debug/net10.0/wwwroot')
     ];
 
+    const isUsableWwwRoot = (candidate) => {
+        if (!fs.existsSync(candidate) || !fs.statSync(candidate).isDirectory()) {
+            return false;
+        }
+
+        const indexPath = path.join(candidate, 'index.html');
+        const frameworkPath = path.join(candidate, '_framework');
+        if (!fs.existsSync(indexPath) || !fs.existsSync(frameworkPath) || !fs.statSync(frameworkPath).isDirectory()) {
+            return false;
+        }
+
+        return fs.readdirSync(frameworkPath).some(file => file.startsWith('dotnet.js'));
+    };
+
     for (const candidate of candidates) {
-        if (fs.existsSync(candidate)) {
+        if (isUsableWwwRoot(candidate)) {
             console.log(`Using WASM wwwroot: ${candidate}`);
             return candidate;
         }
@@ -65,11 +79,12 @@ function createServer() {
             return;
         }
         
-        // Build a file path from the validated request path
-        let filePath = path.join(WWWROOT, normalizedPath);
+        const resolvedRoot = path.resolve(WWWROOT);
+        const filePath = path.resolve(resolvedRoot, normalizedPath);
+        const rootWithSeparator = resolvedRoot.endsWith(path.sep) ? resolvedRoot : resolvedRoot + path.sep;
         
         // Prevent directory traversal
-        if (!filePath.startsWith(WWWROOT)) {
+        if (filePath !== resolvedRoot && !filePath.startsWith(rootWithSeparator)) {
             res.writeHead(403);
             res.end('Forbidden');
             return;
@@ -291,12 +306,21 @@ async function runTest() {
         // Get DirectDraw diagnostics
         console.log('📊 Reading DirectDraw diagnostics...');
         const diagnostics = await page.evaluate(() => {
+            const canvasId = window.ddrawDiagnostics?.lastCanvasId || null;
+            const canvas = canvasId ? document.getElementById(canvasId) : null;
+            const sampleStats = typeof window.sampleCanvasPixels === 'function'
+                ? window.sampleCanvasPixels(canvas)
+                : { samplePixelCount: 0, sampleNonBlackPixels: 0, firstVisibleColor: null };
+
             return {
                 canvasUpdateCount: window.ddrawDiagnostics?.canvasUpdateCount || 0,
                 backendInitialized: window.ddrawDiagnostics?.backendInitialized || false,
                 renderingError: window.ddrawDiagnostics?.renderingError || false,
                 frameBufferSize: window.ddrawDiagnostics?.frameBufferSize || 0,
-                lastCanvasId: window.ddrawDiagnostics?.lastCanvasId || null
+                lastCanvasId: canvasId,
+                samplePixelCount: sampleStats.samplePixelCount,
+                sampleNonBlackPixels: sampleStats.sampleNonBlackPixels,
+                firstVisibleColor: sampleStats.firstVisibleColor
             };
         });
 
@@ -305,6 +329,8 @@ async function runTest() {
         console.log('   Rendering Error:', diagnostics.renderingError);
         console.log('   Frame Buffer Size:', diagnostics.frameBufferSize, 'bytes');
         console.log('   Last Canvas ID:', diagnostics.lastCanvasId);
+        console.log('   Sampled Visible Pixels:', `${diagnostics.sampleNonBlackPixels} / ${diagnostics.samplePixelCount}`);
+        console.log('   First Visible Color:', diagnostics.firstVisibleColor ?? 'None');
 
         // Check for errors
         console.log('\n📋 Test Summary');
@@ -337,6 +363,12 @@ async function runTest() {
             console.log(`✅ Canvas is being updated (${canvasUpdates} updates)`);
         }
         
+        if (diagnostics.sampleNonBlackPixels === 0) {
+            console.log('❌ Canvas updates are occurring, but sampled pixels are still all black');
+        } else {
+            console.log(`✅ Canvas contains visible non-black pixels (${diagnostics.sampleNonBlackPixels}/${diagnostics.samplePixelCount})`);
+        }
+        
         if (diagnostics.renderingError) {
             console.log('❌ Rendering error occurred - check debug output for details');
         }
@@ -362,6 +394,7 @@ async function runTest() {
         const testPassed =
             canvasUpdates > 0 &&
             renderedToWindowCanvas &&
+            diagnostics.sampleNonBlackPixels > 0 &&
             !diagnostics.renderingError &&
             errors.length === 0;
         
@@ -372,6 +405,9 @@ async function runTest() {
             if (!renderedToWindowCanvas) {
                 const actualCanvas = diagnostics.lastCanvasId ?? 'null (no rendering detected)';
                 console.log(`   - Expected rendering on a window canvas, got ${actualCanvas}`);
+            }
+            if (diagnostics.sampleNonBlackPixels === 0) {
+                console.log('   - Canvas updated, but sampled pixels remained black');
             }
         }
 
