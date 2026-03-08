@@ -55,10 +55,10 @@ function createServer() {
             url = url.substring('/Win32Emu/emulator'.length);
         }
         
-        const relativeUrl = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
+        const requestPath = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
         
         // Sanitize the URL to prevent directory traversal
-        let filePath = path.join(WWWROOT, relativeUrl);
+        let filePath = path.join(WWWROOT, requestPath);
         
         // Prevent directory traversal
         if (!filePath.startsWith(WWWROOT)) {
