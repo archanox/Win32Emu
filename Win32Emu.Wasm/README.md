@@ -126,6 +126,8 @@ The project follows Blazor WASM patterns:
 - `wwwroot/`: Static assets (CSS, JS, icons)
   - `wwwroot/index.html`: Entry point with JavaScript interop functions
 
+WASM currently presents DirectDraw output through a single display surface (`#emulatorCanvas`), including games that create their own Win32 windows before initializing DirectDraw.
+
 JavaScript interop functions in `index.html`:
 - `initializeEmulator(canvasId)`: Initialize the HTML5 canvas for rendering
 - `initializeAudio()`: Initialize Web Audio API context (placeholder)
