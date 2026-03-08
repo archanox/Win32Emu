@@ -17,7 +17,26 @@ const fs = require('fs');
 
 // Configuration
 const PORT = 8080;
-const WWWROOT = path.join(__dirname, 'Win32Emu.Wasm/bin/Release/net9.0/publish/wwwroot');
+function resolveWwwRoot() {
+    const candidates = [
+        path.join(__dirname, 'Win32Emu.Wasm/bin/Release/net10.0/publish/wwwroot'),
+        path.join(__dirname, 'Win32Emu.Wasm/bin/Debug/net10.0/publish/wwwroot'),
+        path.join(__dirname, 'Win32Emu.Wasm/bin/Release/net9.0/publish/wwwroot'),
+        path.join(__dirname, 'Win32Emu.Wasm/bin/Debug/net9.0/publish/wwwroot'),
+        path.join(__dirname, 'Win32Emu.Wasm/bin/Release/net10.0/wwwroot'),
+        path.join(__dirname, 'Win32Emu.Wasm/bin/Debug/net10.0/wwwroot')
+    ];
+
+    for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+            return candidate;
+        }
+    }
+
+    throw new Error(`Could not find published WASM wwwroot. Checked:\n${candidates.join('\n')}`);
+}
+
+const WWWROOT = resolveWwwRoot();
 const SCREENSHOT_DIR = path.join(__dirname, 'test-screenshots');
 
 // Ensure screenshot directory exists
@@ -36,8 +55,10 @@ function createServer() {
             url = url.substring('/Win32Emu/emulator'.length);
         }
         
+        const relativeUrl = url === '/' ? 'index.html' : url.replace(/^\/+/, '');
+        
         // Sanitize the URL to prevent directory traversal
-        let filePath = path.join(WWWROOT, url === '/' ? 'index.html' : url);
+        let filePath = path.join(WWWROOT, relativeUrl);
         
         // Prevent directory traversal
         if (!filePath.startsWith(WWWROOT)) {
@@ -266,7 +287,8 @@ async function runTest() {
                 canvasUpdateCount: window.ddrawDiagnostics?.canvasUpdateCount || 0,
                 backendInitialized: window.ddrawDiagnostics?.backendInitialized || false,
                 renderingError: window.ddrawDiagnostics?.renderingError || false,
-                frameBufferSize: window.ddrawDiagnostics?.frameBufferSize || 0
+                frameBufferSize: window.ddrawDiagnostics?.frameBufferSize || 0,
+                lastCanvasId: window.ddrawDiagnostics?.lastCanvasId || null
             };
         });
 
@@ -274,6 +296,7 @@ async function runTest() {
         console.log('   Backend Initialized:', diagnostics.backendInitialized);
         console.log('   Rendering Error:', diagnostics.renderingError);
         console.log('   Frame Buffer Size:', diagnostics.frameBufferSize, 'bytes');
+        console.log('   Last Canvas ID:', diagnostics.lastCanvasId);
 
         // Check for errors
         console.log('\n📋 Test Summary');
@@ -325,12 +348,19 @@ async function runTest() {
         console.log('📸 Screenshot saved: ign-05-final-state.png');
 
         // Determine test result
-        const testPassed = canvasUpdates > 0 && !diagnostics.renderingError && errors.length === 0;
+        const testPassed =
+            canvasUpdates > 0 &&
+            diagnostics.lastCanvasId === 'emulatorCanvas' &&
+            !diagnostics.renderingError &&
+            errors.length === 0;
         
         if (testPassed) {
             console.log('\n✅ TEST PASSED - Game is rendering on canvas');
         } else {
             console.log('\n⚠️  TEST INCOMPLETE - Issues need to be addressed');
+            if (diagnostics.lastCanvasId !== 'emulatorCanvas') {
+                console.log(`   - Expected rendering on emulatorCanvas, got ${diagnostics.lastCanvasId}`);
+            }
         }
 
         return testPassed ? 0 : 1;
