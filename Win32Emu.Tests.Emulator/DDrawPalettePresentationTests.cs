@@ -16,6 +16,26 @@ public class DDrawPalettePresentationTests
 	private const byte OpaqueAlpha = 0xFF;
 
 	[Fact]
+	public void UpdateRenderingBackend_ShouldSkipPrimarySurfacePresentation_WhenPaletteIsMissing()
+	{
+		var memory = new VirtualMemory();
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		var backend = new TestRenderingBackend();
+		const uint ddrawHandle = 0x70000010;
+		const uint surfaceHandle = 0x71000010;
+
+		var ddrawObject = AddDirectDrawObject(ddrawModule, ddrawHandle, backend);
+		AddPrimarySurface(ddrawModule, surfaceHandle, ddrawHandle, paletteHandle: 0);
+
+		var method = GetPrivateMethod("UpdateRenderingBackend");
+		method.Invoke(ddrawModule, [GetDictionaryField(ddrawModule, "_surfaces")[surfaceHandle]!, ddrawObject]);
+
+		Assert.Equal(0, backend.UpdateCallCount);
+		Assert.Null(backend.LastFrameData);
+	}
+
+	[Fact]
 	public void SurfaceSetPalette_ShouldRefreshPrimarySurfacePresentation()
 	{
 		var memory = new VirtualMemory();
