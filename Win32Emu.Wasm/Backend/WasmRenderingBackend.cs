@@ -174,17 +174,11 @@ public class WasmRenderingBackend : IRenderingBackend
 
 		try
 		{
-			// Route rendering to a window-specific canvas when a target window handle is provided.
-			// The JavaScript updateCanvas function will dynamically create the canvas element
-			// inside the canvasContainer div if it doesn't already exist.
+			// Always render DirectDraw output to the main emulator canvas.
+			// Per-window canvas routing was previously used here but caused a regression where
+			// frames were silently dropped when the Blazor WindowComponent had not yet rendered
+			// its canvas element, resulting in a completely black screen.
 			var canvasId = _canvasId;
-			if (targetWindowHandle != IntPtr.Zero)
-			{
-				// Win32Emu window handles are modeled as 32-bit Win32 HWND values even when carried in IntPtr.
-				// Use the low 32 bits explicitly so the browser canvas ID stays aligned with WindowCreateInfo.Handle.
-				var windowHandleValue = unchecked((uint)targetWindowHandle.ToInt64());
-				canvasId = $"window-canvas-{windowHandleValue:X8}";
-			}
 			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 			_logger.LogTrace("[WASM] UpdateFrameBuffer called: width={Width}, height={Height}, pitch={Pitch}, dataLength={DataLength}, targetWindow={TargetWindow:X}", 
