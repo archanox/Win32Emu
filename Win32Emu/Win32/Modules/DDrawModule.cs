@@ -4073,20 +4073,8 @@ namespace Win32Emu.Win32.Modules
 				}
 				else
 				{
-					// No palette set yet - use a default grayscale palette
-					_logger.LogWarning("[DDraw] No palette set for 8-bit surface, using grayscale");
-					var grayscalePalette = new uint[256];
-					for (var i = 0; i < 256; i++)
-					{
-						grayscalePalette[i] = (0xFFu << 24) | ((uint)i << 16) | ((uint)i << 8) | (uint)i; // RGBA: opaque grayscale
-					}
-
-					displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
-						surface.Bits,
-						grayscalePalette,
-						surface.Width,
-						surface.Height,
-						surface.Pitch);
+					_logger.LogDebug("[DDraw] Skipping 8-bit surface presentation until a palette is attached");
+					return null!;
 				}
 			}
 			else if (ddrawObj.BitsPerPixel == 16)
