@@ -206,6 +206,74 @@ public class DDrawPalettePresentationTests
 		Assert.Equal(255, backend.LastFrameData[3]); // Alpha channel
 	}
 
+	[Fact]
+	public void UpdateRenderingBackend_ShouldUsePaletteFromAttachedSurface_WhenPrimaryHasNoPalette()
+	{
+		var memory = new VirtualMemory();
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		var backend = new TestRenderingBackend();
+		const uint ddrawHandle = 0x70000020;
+		const uint primaryHandle = 0x71000020;
+		const uint backBufferHandle = 0x71000021;
+		const uint paletteHandle = 0x72000020;
+
+		var ddrawObject = AddDirectDrawObject(ddrawModule, ddrawHandle, backend);
+
+		// Palette is only on the backbuffer, not the primary surface
+		AddPalette(ddrawModule, paletteHandle, 0x00500020, CreatePaletteEntries(0x000000FFu));
+		AddSurfaceWithBackbuffer(ddrawModule, primaryHandle, ddrawHandle, paletteHandle: 0, backBufferHandle);
+		AddBackbufferSurface(ddrawModule, backBufferHandle, ddrawHandle, paletteHandle);
+
+		var method = GetPrivateMethod("UpdateRenderingBackend");
+		method.Invoke(ddrawModule, [GetDictionaryField(ddrawModule, "_surfaces")[primaryHandle]!, ddrawObject]);
+
+		// Primary has no palette but backbuffer does – rendering should succeed via flip-chain lookup
+		Assert.Equal(1, backend.UpdateCallCount);
+		Assert.NotNull(backend.LastFrameData);
+		// Pixel at index 1 -> palette entry 0x000000FF -> R=255, G=0, B=0
+		Assert.Equal(255, backend.LastFrameData![0]);
+		Assert.Equal(0, backend.LastFrameData[1]);
+		Assert.Equal(0, backend.LastFrameData[2]);
+		Assert.Equal(255, backend.LastFrameData[3]);
+	}
+
+	[Fact]
+	public void PaletteSetEntries_ShouldRefreshPrimaryViaFlipChain_WhenPaletteIsOnBackbuffer()
+	{
+		var memory = new VirtualMemory();
+		var cpu = new JitCpu(memory, NullLogger.Instance);
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		var backend = new TestRenderingBackend();
+		const uint ddrawHandle = 0x70000021;
+		const uint primaryHandle = 0x71000022;
+		const uint backBufferHandle = 0x71000023;
+		const uint paletteHandle = 0x72000021;
+
+		AddDirectDrawObject(ddrawModule, ddrawHandle, backend);
+		// Palette starts with all-zero entries; only the backbuffer references it
+		AddPalette(ddrawModule, paletteHandle, 0x00500024, CreatePaletteEntries(0));
+		AddSurfaceWithBackbuffer(ddrawModule, primaryHandle, ddrawHandle, paletteHandle: 0, backBufferHandle);
+		AddBackbufferSurface(ddrawModule, backBufferHandle, ddrawHandle, paletteHandle);
+
+		// Update palette entries on the backbuffer's palette; should trigger a primary surface refresh
+		const uint paletteEntriesAddress = 0x00700000;
+		memory.Write32(paletteEntriesAddress, 0x000000FFu);
+		SetupStackArgs(cpu, memory, 0x00500024, 0, 1, 1, paletteEntriesAddress);
+		var method = GetPrivateMethod("Palette_SetEntries");
+		var result = (uint)method.Invoke(ddrawModule, [cpu, memory, paletteHandle])!;
+
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, result);
+		// The primary surface should have been refreshed even though its PaletteHandle is 0
+		Assert.Equal(1, backend.UpdateCallCount);
+		Assert.NotNull(backend.LastFrameData);
+		Assert.Equal(255, backend.LastFrameData![0]);
+		Assert.Equal(0, backend.LastFrameData[1]);
+		Assert.Equal(0, backend.LastFrameData[2]);
+		Assert.Equal(255, backend.LastFrameData[3]);
+	}
+
 	private static uint[] CreatePaletteEntries(uint entryColor)
 	{
 		var entries = new uint[256];
