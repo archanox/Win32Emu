@@ -33,6 +33,10 @@ public class JitCpu : IAsyncCpu
 	private ushort _fpuControlWord = 0x037F;
 	private ushort _fpuStatusWord = 0x0000;
 	private ushort _fpuTagWord = 0xFFFF; // All tags set to 11b (empty)
+	private const ushort FpuConditionCodeMask = 0x4500; // C0 | C2 | C3
+	private const ushort FpuConditionCodeLessThan = 0x0100; // C0
+	private const ushort FpuConditionCodeEqual = 0x4000; // C3
+	private const ushort FpuConditionCodeUnordered = 0x4500; // C0 | C2 | C3
 	
 	// Interrupt numbers
 	private const byte DOS_INTERRUPT = 0x21;
@@ -5018,24 +5022,8 @@ public class JitCpu : IAsyncCpu
 			int i = reg - Register.ST0;
 			source = FpuGetSt(i);
 		}
-		
-		// Set EFLAGS based on comparison
-		if (double.IsNaN(st0) || double.IsNaN(source))
-		{
-			SetFlag(Zf); SetFlag(Pf); SetFlag(Cf);
-		}
-		else if (st0 > source)
-		{
-			ClearFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
-		}
-		else if (st0 < source)
-		{
-			ClearFlag(Zf); ClearFlag(Pf); SetFlag(Cf);
-		}
-		else
-		{
-			SetFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
-		}
+
+		SetFpuCompareConditionCodes(st0, source);
 	}
 	
 	private void ExecFcomp(Instruction insn, VirtualMemory mem)
@@ -5050,26 +5038,36 @@ public class JitCpu : IAsyncCpu
 		// FCOMPP - Compare and pop twice
 		double st0 = FpuGetSt(0);
 		double st1 = FpuGetSt(1);
-		
-		if (double.IsNaN(st0) || double.IsNaN(st1))
-		{
-			SetFlag(Zf); SetFlag(Pf); SetFlag(Cf);
-		}
-		else if (st0 > st1)
-		{
-			ClearFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
-		}
-		else if (st0 < st1)
-		{
-			ClearFlag(Zf); ClearFlag(Pf); SetFlag(Cf);
-		}
-		else
-		{
-			SetFlag(Zf); ClearFlag(Pf); ClearFlag(Cf);
-		}
+
+		SetFpuCompareConditionCodes(st0, st1);
 		
 		FpuPop();
 		FpuPop();
+	}
+
+	/// <summary>
+	/// Updates x87 condition codes C0, C2, and C3 in the FPU status word for compare instructions.
+	/// Greater-than clears all three bits, less-than sets C0, equal sets C3, and unordered sets C0/C2/C3.
+	/// This follows the x87 behavior used by FCOM/FUCOM-style instructions and is consumed via FNSTSW/FSTSW.
+	/// </summary>
+	private void SetFpuCompareConditionCodes(double left, double right)
+	{
+		// FCOM/FUCOM family write C0, C2, C3 in the x87 status word.
+		// They do not modify EFLAGS; only FCOMI/FUCOMI variants do that.
+		_fpuStatusWord &= unchecked((ushort)~FpuConditionCodeMask);
+
+		if (double.IsNaN(left) || double.IsNaN(right))
+		{
+			_fpuStatusWord |= FpuConditionCodeUnordered;
+		}
+		else if (left < right)
+		{
+			_fpuStatusWord |= FpuConditionCodeLessThan;
+		}
+		else if (left == right)
+		{
+			_fpuStatusWord |= FpuConditionCodeEqual;
+		}
 	}
 	
 	private void ExecFucomi(Instruction insn)

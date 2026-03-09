@@ -8,6 +8,9 @@ namespace Win32Emu.Tests.Emulator;
 public class FpuInstructionTests : IDisposable
 {
     private readonly CpuTestHelper _helper;
+    private const uint FpuConditionCodeMask = 0x4500;
+    private const uint FpuConditionCodeLessThan = 0x0100;
+    private const uint FpuConditionCodeEqual = 0x4000;
 
     public FpuInstructionTests()
     {
@@ -35,11 +38,14 @@ public class FpuInstructionTests : IDisposable
         // FCOMP ST(1) - Compare ST(0) with ST(1) and pop (D8 D9)
         _helper.WriteCode(0xD8, 0xD9);
         _helper.ExecuteInstruction();
-        
-        // Assert: When comparing equal values, ZF should be set, CF and PF should be clear
-        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when values are equal");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Pf), "PF should be clear when values are equal");
+
+        // FNSTSW AX (DF E0) - x87 compare results are reported in the status word, not EFLAGS
+        _helper.WriteCode(0xDF, 0xE0);
+        _helper.ExecuteInstruction();
+
+        // Assert: Equal => C3=1, C2=0, C0=0
+        var statusWord = _helper.GetReg("EAX") & 0xFFFF;
+        Assert.Equal(FpuConditionCodeEqual, statusWord & FpuConditionCodeMask);
     }
 
     [Fact]
@@ -67,11 +73,14 @@ public class FpuInstructionTests : IDisposable
             (byte)((memAddr >> 24) & 0xFF)
         );
         _helper.ExecuteInstruction();
-        
-        // Assert: ST(0)=1.0 < memory=2.5, so CF should be set
-        Assert.True(_helper.IsFlagSet(CpuFlag.Cf), "CF should be set when ST(0) < source");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when values are not equal");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Pf), "PF should be clear for ordered comparison");
+
+        // FNSTSW AX (DF E0)
+        _helper.WriteCode(0xDF, 0xE0);
+        _helper.ExecuteInstruction();
+
+        // Assert: Less than => C0=1, C2=0, C3=0
+        var statusWord = _helper.GetReg("EAX") & 0xFFFF;
+        Assert.Equal(FpuConditionCodeLessThan, statusWord & FpuConditionCodeMask);
     }
 
     [Fact]
@@ -98,11 +107,14 @@ public class FpuInstructionTests : IDisposable
             (byte)((memAddr >> 24) & 0xFF)
         );
         _helper.ExecuteInstruction();
-        
-        // Assert: ST(0)=1.0 > memory=0.5, so all flags should be clear
-        Assert.False(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be clear when ST(0) > source");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Cf), "CF should be clear when ST(0) > source");
-        Assert.False(_helper.IsFlagSet(CpuFlag.Pf), "PF should be clear for ordered comparison");
+
+        // FNSTSW AX (DF E0)
+        _helper.WriteCode(0xDF, 0xE0);
+        _helper.ExecuteInstruction();
+
+        // Assert: Greater than => C0=0, C2=0, C3=0
+        var statusWord = _helper.GetReg("EAX") & 0xFFFF;
+        Assert.Equal(0u, statusWord & FpuConditionCodeMask);
     }
 
     #endregion
