@@ -1,3 +1,4 @@
+using Win32Emu.Cpu;
 using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
 using Xunit;
@@ -10,6 +11,7 @@ namespace Win32Emu.Tests.Emulator;
 public class JitCpuInstructionTests
 {
 	private const uint FpuConditionCodeMask = 0x4500;
+	private const ushort FpuConditionCodeC1 = 0x0200;
 	private const uint FpuConditionCodeEqual = 0x4000;
 
 	[Fact]
@@ -1088,6 +1090,43 @@ public class JitCpuInstructionTests
 		cpu.SingleStep(mem);
 		
 		Assert.Equal(0x1008u, cpu.GetEip());
+		Assert.Equal(FpuConditionCodeEqual, cpu.GetRegister("EAX") & FpuConditionCodeMask);
+	}
+
+	[Fact]
+	public void Fcom_ShouldClearC1InStatusWord()
+	{
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		var state = cpu.SaveState();
+		state.FpuStatusWord = FpuConditionCodeC1;
+		cpu.RestoreState(state);
+		cpu.SetEip(0x1000);
+
+		// FLD1 = D9 E8 (load 1.0)
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem);
+
+		// FLD1 again
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE8);
+		cpu.SingleStep(mem);
+
+		// FCOM ST(1) = D8 D1
+		cpu.SetEip(0x1004);
+		mem.Write8(0x1004, 0xD8);
+		mem.Write8(0x1005, 0xD1);
+		cpu.SingleStep(mem);
+
+		// FNSTSW AX = DF E0
+		cpu.SetEip(0x1006);
+		mem.Write8(0x1006, 0xDF);
+		mem.Write8(0x1007, 0xE0);
+		cpu.SingleStep(mem);
+
+		Assert.Equal(0u, cpu.GetRegister("EAX") & FpuConditionCodeC1);
 		Assert.Equal(FpuConditionCodeEqual, cpu.GetRegister("EAX") & FpuConditionCodeMask);
 	}
 

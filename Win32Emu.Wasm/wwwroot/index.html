@@ -512,28 +512,35 @@
 			console.error(errorMessage);
 			alert(`Emulator stopped due to rendering error:\n\n${errorMessage}\n\nCheck console for details.`);
 		};
+
+		const zeroCanvasSampleStats = {
+			samplePixelCount: 0,
+			sampleNonBlackPixels: 0,
+			firstVisibleColor: null
+		};
 		
 		window.sampleCanvasPixels = (canvas) => {
 			if (!canvas) {
-				return {
-					samplePixelCount: 0,
-					sampleNonBlackPixels: 0,
-					firstVisibleColor: null
-				};
+				return zeroCanvasSampleStats;
 			}
 			
 			const ctx = canvas.getContext('2d');
 			if (!ctx) {
-				return {
-					samplePixelCount: 0,
-					sampleNonBlackPixels: 0,
-					firstVisibleColor: null
-				};
+				return zeroCanvasSampleStats;
 			}
 			
 			const width = Math.min(canvas.width, 64);
 			const height = Math.min(canvas.height, 64);
-			const imageData = ctx.getImageData(0, 0, width, height);
+			if (width <= 0 || height <= 0) {
+				return zeroCanvasSampleStats;
+			}
+
+			let imageData;
+			try {
+				imageData = ctx.getImageData(0, 0, width, height);
+			} catch (e) {
+				return zeroCanvasSampleStats;
+			}
 			let samplePixelCount = 0;
 			let sampleNonBlackPixels = 0;
 			let firstVisibleColor = null;
