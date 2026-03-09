@@ -3854,8 +3854,9 @@ namespace Win32Emu.Win32.Modules
 			// Mark the surface as unlocked
 			surface.IsLocked = false;
 
-			// If this is a primary surface, update the rendering backend texture
-			if (surface.IsPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
+			// If this is a primary surface or has attached surfaces (acts as primary), update the rendering backend texture
+			var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
+			if (isEffectivelyPrimary && _ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
 			{
 				UpdateRenderingBackend(surface, ddrawObj);
 
@@ -3874,7 +3875,7 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Helper method to update the rendering backend if the surface is primary.
+		/// Helper method to update the rendering backend if the surface is primary or has attached surfaces.
 		/// This reduces code duplication across Blt operations.
 		/// </summary>
 		/// <param name="surface">The DirectDraw surface to check and potentially update</param>
@@ -3882,7 +3883,9 @@ namespace Win32Emu.Win32.Modules
 		/// <param name="operationName">Name of the operation for logging purposes</param>
 		private void TryUpdatePrimarySurfaceDisplay(DirectDrawSurface surface, DirectDrawObject ddrawObj, string operationName)
 		{
-			if (!surface.IsPrimary)
+			// Check if this is a primary surface or has attached surfaces (acts as primary)
+			var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
+			if (!isEffectivelyPrimary)
 			{
 				return;
 			}
