@@ -95,6 +95,103 @@ public class DDrawPalettePresentationTests
 		Assert.Equal(255, backend.LastFrameData[3]);
 	}
 
+	[Fact]
+	public void SurfaceWithAttachedBackbuffers_ShouldBeRendered_WhenUnlocked()
+	{
+		var memory = new VirtualMemory();
+		var cpu = new JitCpu(memory, NullLogger.Instance);
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		var backend = new TestRenderingBackend();
+		const uint ddrawHandle = 0x70000002;
+		const uint primarySurfaceHandle = 0x71000002;
+		const uint backBufferHandle = 0x71000003;
+		const uint paletteHandle = 0x72000002;
+
+		AddDirectDrawObject(ddrawModule, ddrawHandle, backend);
+		AddPalette(ddrawModule, paletteHandle, 0x00500008, CreatePaletteEntries(0x0000FF00u));
+
+		// Create a primary surface with an attached backbuffer
+		var primarySurface = AddSurfaceWithBackbuffer(ddrawModule, primarySurfaceHandle, ddrawHandle, paletteHandle, backBufferHandle);
+		// Create backbuffer that also has attached surfaces (simulating a flip chain)
+		var backBuffer = AddBackbufferSurface(ddrawModule, backBufferHandle, ddrawHandle, paletteHandle);
+		// Add the primary surface as an "attached" surface to the backbuffer to create a flip chain
+		var backbufferAttachedSurfaces = (System.Collections.Generic.List<uint>)GetPropertyValue(backBuffer, "AttachedSurfaces")!;
+		backbufferAttachedSurfaces.Add(primarySurfaceHandle);
+
+		// Lock and unlock the backbuffer (which should trigger rendering because it has attached surfaces)
+		SetupStackArgs(cpu, memory, backBufferHandle, 0, 0);
+		var lockMethod = GetPrivateMethod("Surface_Lock");
+		var lockResult = (uint)lockMethod.Invoke(ddrawModule, [cpu, memory, backBufferHandle])!;
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, lockResult);
+
+		// Write some test data
+		var bits = (byte[])GetPropertyValue(backBuffer, "Bits")!;
+		bits[0] = 1; // Index into palette
+
+		// Unlock the backbuffer
+		SetupStackArgs(cpu, memory, backBufferHandle, 0);
+		var unlockMethod = GetPrivateMethod("Surface_Unlock");
+		var unlockResult = (uint)unlockMethod.Invoke(ddrawModule, [cpu, memory, backBufferHandle])!;
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, unlockResult);
+
+		// Verify the rendering backend was updated
+		Assert.Equal(1, backend.UpdateCallCount);
+		Assert.NotNull(backend.LastFrameData);
+		Assert.Equal(0, backend.LastFrameData[0]); // Green channel (color is 0x0000FF00)
+		Assert.Equal(255, backend.LastFrameData[1]); // Red channel
+		Assert.Equal(0, backend.LastFrameData[2]); // Blue channel
+		Assert.Equal(255, backend.LastFrameData[3]); // Alpha
+	}
+
+	[Fact]
+	public void SurfaceWithAttachedBackbuffers_ShouldBeRendered_WhenBltFastCalled()
+	{
+		var memory = new VirtualMemory();
+		var cpu = new JitCpu(memory, NullLogger.Instance);
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		var backend = new TestRenderingBackend();
+		const uint ddrawHandle = 0x70000003;
+		const uint surfaceHandle = 0x71000004;
+		const uint backBufferHandle = 0x71000005;
+		const uint sourceSurfaceHandle = 0x71000006;
+		const uint paletteHandle = 0x72000003;
+
+		AddDirectDrawObject(ddrawModule, ddrawHandle, backend);
+		AddPalette(ddrawModule, paletteHandle, 0x00500010, CreatePaletteEntries(0x00FF0000u));
+
+		// Create a primary surface with an attached backbuffer
+		AddSurfaceWithBackbuffer(ddrawModule, surfaceHandle, ddrawHandle, paletteHandle, backBufferHandle);
+		var backBuffer = AddBackbufferSurface(ddrawModule, backBufferHandle, ddrawHandle, paletteHandle);
+		// Add the primary surface as an "attached" surface to the backbuffer to create a flip chain
+		var backbufferAttachedSurfaces = (System.Collections.Generic.List<uint>)GetPropertyValue(backBuffer, "AttachedSurfaces")!;
+		backbufferAttachedSurfaces.Add(surfaceHandle);
+
+		var sourceSurface = AddOffscreenSurface(ddrawModule, sourceSurfaceHandle, ddrawHandle, paletteHandle);
+
+		// Set up source surface data
+		var sourceBits = (byte[])GetPropertyValue(sourceSurface, "Bits")!;
+		sourceBits[0] = 1; // Index into palette for blue color
+
+		// Call BltFast to blit to the backbuffer
+		const uint sourceSurfaceComAddr = 0x00600010;
+		SetPropertyValue(sourceSurface, "ComObjectAddress", sourceSurfaceComAddr);
+		const uint srcRectPtr = 0;
+		SetupStackArgs(cpu, memory, backBufferHandle, 0, 0, srcRectPtr, sourceSurfaceComAddr, 0);
+		var bltFastMethod = GetPrivateMethod("Surface_BltFast");
+		var result = (uint)bltFastMethod.Invoke(ddrawModule, [cpu, memory, backBufferHandle])!;
+
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, result);
+		// Verify the rendering backend was updated
+		Assert.Equal(1, backend.UpdateCallCount);
+		Assert.NotNull(backend.LastFrameData);
+		Assert.Equal(0, backend.LastFrameData[0]); // Blue channel (color is 0x00FF0000)
+		Assert.Equal(0, backend.LastFrameData[1]); // Green channel
+		Assert.Equal(255, backend.LastFrameData[2]); // Red channel
+		Assert.Equal(255, backend.LastFrameData[3]); // Alpha
+	}
+
 	private static uint[] CreatePaletteEntries(uint entryColor)
 	{
 		var entries = new uint[256];
@@ -135,6 +232,59 @@ public class DDrawPalettePresentationTests
 		SetPropertyValue(surface, "Pitch", 1);
 		SetPropertyValue(surface, "Bits", new byte[] { 1 });
 		SetPropertyValue(surface, "IsPrimary", true);
+		SetPropertyValue(surface, "DirectDrawHandle", ddrawHandle);
+		SetPropertyValue(surface, "PaletteHandle", paletteHandle);
+		GetDictionaryField(ddrawModule, "_surfaces")[handle] = surface;
+		return surface;
+	}
+
+	private static object AddSurfaceWithBackbuffer(DDrawModule ddrawModule, uint handle, uint ddrawHandle, uint paletteHandle, uint backBufferHandle)
+	{
+		var surface = CreateNestedInstance("DirectDrawSurface");
+		SetPropertyValue(surface, "Handle", handle);
+		SetPropertyValue(surface, "Width", 1);
+		SetPropertyValue(surface, "Height", 1);
+		SetPropertyValue(surface, "Pitch", 1);
+		SetPropertyValue(surface, "Bits", new byte[] { 1 });
+		SetPropertyValue(surface, "IsPrimary", true);
+		SetPropertyValue(surface, "DirectDrawHandle", ddrawHandle);
+		SetPropertyValue(surface, "PaletteHandle", paletteHandle);
+
+		// Add backbuffer to attached surfaces list
+		var attachedSurfaces = (System.Collections.Generic.List<uint>)GetPropertyValue(surface, "AttachedSurfaces")!;
+		attachedSurfaces.Add(backBufferHandle);
+
+		GetDictionaryField(ddrawModule, "_surfaces")[handle] = surface;
+		return surface;
+	}
+
+	private static object AddBackbufferSurface(DDrawModule ddrawModule, uint handle, uint ddrawHandle, uint paletteHandle)
+	{
+		var surface = CreateNestedInstance("DirectDrawSurface");
+		SetPropertyValue(surface, "Handle", handle);
+		SetPropertyValue(surface, "Width", 1);
+		SetPropertyValue(surface, "Height", 1);
+		SetPropertyValue(surface, "Pitch", 1);
+		SetPropertyValue(surface, "Bits", new byte[] { 1 });
+		SetPropertyValue(surface, "IsPrimary", false); // Backbuffer is not primary
+		SetPropertyValue(surface, "DirectDrawHandle", ddrawHandle);
+		SetPropertyValue(surface, "PaletteHandle", paletteHandle);
+
+		// Backbuffers can have attached surfaces (for triple buffering)
+		// In this test we use a backbuffer with AttachedSurfaces.Count > 0 to simulate flip chain behavior
+		GetDictionaryField(ddrawModule, "_surfaces")[handle] = surface;
+		return surface;
+	}
+
+	private static object AddOffscreenSurface(DDrawModule ddrawModule, uint handle, uint ddrawHandle, uint paletteHandle)
+	{
+		var surface = CreateNestedInstance("DirectDrawSurface");
+		SetPropertyValue(surface, "Handle", handle);
+		SetPropertyValue(surface, "Width", 1);
+		SetPropertyValue(surface, "Height", 1);
+		SetPropertyValue(surface, "Pitch", 1);
+		SetPropertyValue(surface, "Bits", new byte[] { 1 });
+		SetPropertyValue(surface, "IsPrimary", false);
 		SetPropertyValue(surface, "DirectDrawHandle", ddrawHandle);
 		SetPropertyValue(surface, "PaletteHandle", paletteHandle);
 		GetDictionaryField(ddrawModule, "_surfaces")[handle] = surface;
