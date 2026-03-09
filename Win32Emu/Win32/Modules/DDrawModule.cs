@@ -3939,7 +3939,7 @@ namespace Win32Emu.Win32.Modules
 					}
 
 					// Convert surface data to RGBA for buffering
-					byte[] displayData = ConvertSurfaceToRGBA(surface, ddrawObj);
+					byte[]? displayData = ConvertSurfaceToRGBA(surface, ddrawObj);
 					if (displayData != null)
 					{
 						var displayPitch = surface.Width * BytesPerPixelRgba;
@@ -3970,7 +3970,7 @@ namespace Win32Emu.Win32.Modules
 				}
 
 				// Convert surface to RGBA format
-				byte[] displayData = ConvertSurfaceToRGBA(surface, ddrawObj);
+				byte[]? displayData = ConvertSurfaceToRGBA(surface, ddrawObj);
 				
 				// Log converted RGBA pixel samples for debugging
 				if (_logger.IsEnabled(LogLevel.Debug) && displayData != null)
@@ -4040,7 +4040,7 @@ namespace Win32Emu.Win32.Modules
 		/// <param name="surface">The DirectDraw surface to convert</param>
 		/// <param name="ddrawObj">The DirectDraw object containing rendering backend and bit depth info</param>
 		/// <returns>RGBA byte array, or null if conversion fails</returns>
-		private byte[] ConvertSurfaceToRGBA(DirectDrawSurface surface, DirectDrawObject ddrawObj)
+		private byte[]? ConvertSurfaceToRGBA(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
 			if (surface.Bits == null)
 			{
@@ -4053,7 +4053,7 @@ namespace Win32Emu.Win32.Modules
 				return null!;
 			}
 
-			byte[] displayData;
+			byte[]? displayData;
 
 			// Check if we need to convert the surface data based on bit depth
 			if (ddrawObj.BitsPerPixel == 8)
@@ -4074,7 +4074,7 @@ namespace Win32Emu.Win32.Modules
 				else
 				{
 					_logger.LogDebug("[DDraw] Skipping 8-bit surface presentation until a palette is attached");
-					return null!;
+					return null;
 				}
 			}
 			else if (ddrawObj.BitsPerPixel == 16)
