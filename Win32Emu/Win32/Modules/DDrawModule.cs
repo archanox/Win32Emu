@@ -4039,18 +4039,22 @@ namespace Win32Emu.Win32.Modules
 		/// </summary>
 		/// <param name="surface">The DirectDraw surface to convert</param>
 		/// <param name="ddrawObj">The DirectDraw object containing rendering backend and bit depth info</param>
-		/// <returns>RGBA byte array, or null if conversion fails</returns>
+		/// <returns>
+		/// RGBA byte array when conversion succeeds and the surface is ready to be presented; otherwise
+		/// <c>null</c>, either if conversion fails or if the surface is not yet presentable (for example,
+		/// an 8-bit surface without an associated palette).
+		/// </returns>
 		private byte[]? ConvertSurfaceToRGBA(DirectDrawSurface surface, DirectDrawObject ddrawObj)
 		{
 			if (surface.Bits == null)
 			{
-				return null!;
+				return null;
 			}
 
 			if (ddrawObj.RenderingBackend == null)
 			{
 				_logger.LogWarning("[DDraw] Rendering backend is null during conversion");
-				return null!;
+				return null;
 			}
 
 			byte[]? displayData;

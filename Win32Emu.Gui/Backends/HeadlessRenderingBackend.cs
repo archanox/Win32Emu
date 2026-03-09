@@ -157,21 +157,8 @@ public class HeadlessRenderingBackend : IRenderingBackend
 			{
 				var pixelOffset = rowOffset + (x * 2);
 				var pixel = (ushort)(rgb565Data[pixelOffset] | (rgb565Data[pixelOffset + 1] << 8));
-
-				// Extract RGB565 components
-				var r5 = (byte)((pixel >> 11) & 0x1F);
-				var g6 = (byte)((pixel >> 5) & 0x3F);
-				var b5 = (byte)(pixel & 0x1F);
-
-				// Convert to 8-bit values
-				var r = (byte)((r5 << 3) | (r5 >> 2));
-				var g = (byte)((g6 << 2) | (g6 >> 4));
-				var b = (byte)((b5 << 3) | (b5 >> 2));
-
-				rgbaData[rgbaIndex++] = r;
-				rgbaData[rgbaIndex++] = g;
-				rgbaData[rgbaIndex++] = b;
-				rgbaData[rgbaIndex++] = 0xFF; // Fully opaque
+				PixelConversion.WriteRgb565ToRgba(pixel, rgbaData, rgbaIndex);
+				rgbaIndex += 4;
 			}
 		}
 
