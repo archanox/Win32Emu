@@ -222,7 +222,7 @@ public class DDrawPalettePresentationTests
 
 		// Palette is only on the backbuffer, not the primary surface
 		AddPalette(ddrawModule, paletteHandle, 0x00500020, CreatePaletteEntries(0x000000FFu));
-		AddSurfaceWithBackbuffer(ddrawModule, primaryHandle, ddrawHandle, paletteHandle: 0, backBufferHandle);
+		AddSurfaceWithBackbuffer(ddrawModule, primaryHandle, ddrawHandle, 0, backBufferHandle);
 		AddBackbufferSurface(ddrawModule, backBufferHandle, ddrawHandle, paletteHandle);
 
 		var method = GetPrivateMethod("UpdateRenderingBackend");
@@ -254,7 +254,7 @@ public class DDrawPalettePresentationTests
 		AddDirectDrawObject(ddrawModule, ddrawHandle, backend);
 		// Palette starts with all-zero entries; only the backbuffer references it
 		AddPalette(ddrawModule, paletteHandle, 0x00500024, CreatePaletteEntries(0));
-		AddSurfaceWithBackbuffer(ddrawModule, primaryHandle, ddrawHandle, paletteHandle: 0, backBufferHandle);
+		AddSurfaceWithBackbuffer(ddrawModule, primaryHandle, ddrawHandle, 0, backBufferHandle);
 		AddBackbufferSurface(ddrawModule, backBufferHandle, ddrawHandle, paletteHandle);
 
 		// Update palette entries on the backbuffer's palette; should trigger a primary surface refresh
