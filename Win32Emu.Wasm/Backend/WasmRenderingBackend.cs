@@ -124,15 +124,7 @@ public class WasmRenderingBackend : IRenderingBackend
 				if (srcOffset + 1 < rgb565Data.Length)
 				{
 					ushort pixel = (ushort)(rgb565Data[srcOffset] | (rgb565Data[srcOffset + 1] << 8));
-
-					var r5 = (byte)((pixel >> 11) & 0x1F);
-					var g6 = (byte)((pixel >> 5) & 0x3F);
-					var b5 = (byte)(pixel & 0x1F);
-
-					rgbaData[dstOffset + 0] = (byte)((r5 << 3) | (r5 >> 2));
-					rgbaData[dstOffset + 1] = (byte)((g6 << 2) | (g6 >> 4));
-					rgbaData[dstOffset + 2] = (byte)((b5 << 3) | (b5 >> 2));
-					rgbaData[dstOffset + 3] = 255;
+					PixelConversion.WriteRgb565ToRgba(pixel, rgbaData, dstOffset);
 				}
 			}
 		}
