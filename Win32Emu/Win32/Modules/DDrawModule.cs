@@ -4015,17 +4015,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			foreach (var surface in _surfaces.Values)
 			{
-				// Check if this surface uses the updated palette directly, or via a surface in its flip chain.
-				// Some games attach the palette to a backbuffer rather than the primary, so we must also
-				// check attached surfaces to avoid missing the refresh.
-				var usesThisPalette = surface.PaletteHandle == paletteHandle ||
-					surface.AttachedSurfaces.Any(h => _surfaces.TryGetValue(h, out var attached) && attached.PaletteHandle == paletteHandle);
-
-				if (!usesThisPalette)
-				{
-					continue;
-				}
-
+				// Cheap checks first: skip surfaces that are not presentable or lack the necessary context.
 				if (!_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
 				{
 					continue;
@@ -4033,6 +4023,17 @@ namespace Win32Emu.Win32.Modules
 
 				var isEffectivelyPrimary = surface.IsPrimary || surface.AttachedSurfaces.Count > 0;
 				if (!isEffectivelyPrimary || surface.Bits == null)
+				{
+					continue;
+				}
+
+				// Check if this surface uses the updated palette directly, or via a surface in its flip chain.
+				// Some games attach the palette to a backbuffer rather than the primary, so we must also
+				// check attached surfaces to avoid missing the refresh.
+				var usesThisPalette = surface.PaletteHandle == paletteHandle ||
+					surface.AttachedSurfaces.Any(h => _surfaces.TryGetValue(h, out var attached) && attached.PaletteHandle == paletteHandle);
+
+				if (!usesThisPalette)
 				{
 					continue;
 				}
