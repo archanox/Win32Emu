@@ -4363,8 +4363,7 @@ public class JitCpu : IAsyncCpu
 		double val = FpuGetSt(0);
 		uint addr = CalcMemAddress(insn, 0);
 		
-		// Round to nearest integer
-		long rounded = (long)Math.Round(val);
+		long rounded = RoundFpuValueToInteger(val);
 		
 		if (insn.MemorySize == MemorySize.Int16)
 		{
@@ -4393,11 +4392,19 @@ public class JitCpu : IAsyncCpu
 		double val = FpuGetSt(0);
 		uint addr = CalcMemAddress(insn, 0);
 		
-		long rounded = (long)Math.Round(val);
+		long rounded = RoundFpuValueToInteger(val);
 		
 		if (insn.MemorySize == MemorySize.Int16)
 		{
 			mem.Write16(addr, unchecked((ushort)(short)rounded));
+		}
+		else if (insn.MemorySize == MemorySize.Int32)
+		{
+			mem.Write32(addr, unchecked((uint)(int)rounded));
+		}
+		else if (insn.MemorySize == MemorySize.Int64)
+		{
+			mem.Write64(addr, unchecked((ulong)rounded));
 		}
 		else
 		{
@@ -6016,11 +6023,27 @@ public class JitCpu : IAsyncCpu
 	private void ExecFrndint()
 	{
 		// FRNDINT - Round to Integer
-		// Rounds ST(0) to an integer according to the current rounding mode
-		// For simplicity, use default rounding (round to nearest even)
 		double st0 = FpuGetSt(0);
-		double rounded = Math.Round(st0, MidpointRounding.ToEven);
+		double rounded = RoundFpuValue(st0);
 		FpuSetSt(0, rounded);
+	}
+
+	private double RoundFpuValue(double val)
+	{
+		int roundingControl = (_fpuControlWord >> 10) & 0x3;
+		return roundingControl switch
+		{
+			0 => Math.Round(val, MidpointRounding.ToEven),
+			1 => Math.Floor(val),
+			2 => Math.Ceiling(val),
+			3 => Math.Truncate(val),
+			_ => Math.Round(val, MidpointRounding.ToEven)
+		};
+	}
+
+	private long RoundFpuValueToInteger(double val)
+	{
+		return unchecked((long)RoundFpuValue(val));
 	}
 
 	private void ExecFxtract()

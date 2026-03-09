@@ -1182,6 +1182,72 @@ public class JitCpuInstructionTests
 	}
 
 	[Fact]
+	public void Frndint_ShouldRespectTruncateRoundingMode()
+	{
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+
+		mem.Write32(0x2000, unchecked((uint)BitConverter.SingleToInt32Bits(3.7f)));
+		mem.Write16(0x2010, 0x0F7F); // Default control word with RC bits 11b (truncate toward zero)
+
+		// FLD dword ptr [0x2000]
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0x05);
+		mem.Write32(0x1002, 0x2000);
+		cpu.SingleStep(mem);
+
+		// FLDCW word ptr [0x2010]
+		cpu.SetEip(0x1006);
+		mem.Write8(0x1006, 0xD9);
+		mem.Write8(0x1007, 0x2D);
+		mem.Write32(0x1008, 0x2010);
+		cpu.SingleStep(mem);
+
+		// FRNDINT
+		cpu.SetEip(0x100C);
+		mem.Write8(0x100C, 0xD9);
+		mem.Write8(0x100D, 0xFC);
+		cpu.SingleStep(mem);
+
+		Assert.Equal(3.0, cpu.FpuGetSt(0));
+	}
+
+	[Fact]
+	public void Fistp_ShouldRespectTruncateRoundingMode()
+	{
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+
+		mem.Write32(0x2000, unchecked((uint)BitConverter.SingleToInt32Bits(3.7f)));
+		mem.Write16(0x2010, 0x0F7F); // Default control word with RC bits 11b (truncate toward zero)
+
+		// FLD dword ptr [0x2000]
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0x05);
+		mem.Write32(0x1002, 0x2000);
+		cpu.SingleStep(mem);
+
+		// FLDCW word ptr [0x2010]
+		cpu.SetEip(0x1006);
+		mem.Write8(0x1006, 0xD9);
+		mem.Write8(0x1007, 0x2D);
+		mem.Write32(0x1008, 0x2010);
+		cpu.SingleStep(mem);
+
+		// FISTP dword ptr [0x2020]
+		cpu.SetEip(0x100C);
+		mem.Write8(0x100C, 0xDB);
+		mem.Write8(0x100D, 0x1D);
+		mem.Write32(0x100E, 0x2020);
+		cpu.SingleStep(mem);
+
+		Assert.Equal(3u, mem.Read32(0x2020));
+		Assert.Equal(0.0, cpu.FpuGetSt(0));
+	}
+
+	[Fact]
 	public void Ftst_ShouldTestAgainstZero()
 	{
 		// Arrange
@@ -1364,4 +1430,3 @@ public class JitCpuInstructionTests
 
 	#endregion
 }
-
