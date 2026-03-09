@@ -4015,7 +4015,13 @@ namespace Win32Emu.Win32.Modules
 		{
 			foreach (var surface in _surfaces.Values)
 			{
-				if (surface.PaletteHandle != paletteHandle)
+				// Check if this surface uses the updated palette directly, or via a surface in its flip chain.
+				// Some games attach the palette to a backbuffer rather than the primary, so we must also
+				// check attached surfaces to avoid missing the refresh.
+				var usesThisPalette = surface.PaletteHandle == paletteHandle ||
+					surface.AttachedSurfaces.Any(h => _surfaces.TryGetValue(h, out var attached) && attached.PaletteHandle == paletteHandle);
+
+				if (!usesThisPalette)
 				{
 					continue;
 				}
@@ -4065,12 +4071,35 @@ namespace Win32Emu.Win32.Modules
 			// Check if we need to convert the surface data based on bit depth
 			if (ddrawObj.BitsPerPixel == 8)
 			{
-				// 8-bit palettized mode
-				if (surface.PaletteHandle != 0 && _palettes.TryGetValue(surface.PaletteHandle, out var palette))
+				// 8-bit palettized mode.
+				// Try to locate the palette first on this surface, then on any surface in its flip chain.
+				// Some games attach the palette to a backbuffer rather than the primary surface, so we must
+				// also search the attached-surface list to ensure the palette is found.
+				DirectDrawPalette? palette = null;
+				if (surface.PaletteHandle != 0)
 				{
-					// Convert palettized (8-bit indexed) to RGBA using attached palette
-					_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA using palette 0x{PaletteHandle:X8}", surface.PaletteHandle);
-					
+					_palettes.TryGetValue(surface.PaletteHandle, out palette);
+				}
+
+				if (palette == null)
+				{
+					foreach (var attachedHandle in surface.AttachedSurfaces)
+					{
+						if (_surfaces.TryGetValue(attachedHandle, out var attached) &&
+							attached.PaletteHandle != 0 &&
+							_palettes.TryGetValue(attached.PaletteHandle, out palette))
+						{
+							_logger.LogDebug("[DDraw] Found palette 0x{PaletteHandle:X8} from attached surface 0x{AttachedHandle:X8}", attached.PaletteHandle, attachedHandle);
+							break;
+						}
+					}
+				}
+
+				if (palette != null)
+				{
+					// Convert palettized (8-bit indexed) to RGBA using the resolved palette
+					_logger.LogDebug("[DDraw] Converting 8-bit palettized surface to RGBA using palette 0x{PaletteHandle:X8}", palette.Handle);
+
 					displayData = ddrawObj.RenderingBackend.ConvertPalettizedToRGBA(
 						surface.Bits,
 						palette.Entries,
