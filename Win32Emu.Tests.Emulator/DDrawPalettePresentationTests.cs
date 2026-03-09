@@ -112,7 +112,7 @@ public class DDrawPalettePresentationTests
 		AddPalette(ddrawModule, paletteHandle, 0x00500008, CreatePaletteEntries(0x0000FF00u));
 
 		// Create a primary surface with an attached backbuffer
-		var primarySurface = AddSurfaceWithBackbuffer(ddrawModule, primarySurfaceHandle, ddrawHandle, paletteHandle, backBufferHandle);
+		_ = AddSurfaceWithBackbuffer(ddrawModule, primarySurfaceHandle, ddrawHandle, paletteHandle, backBufferHandle);
 		// Create backbuffer that also has attached surfaces (simulating a flip chain)
 		var backBuffer = AddBackbufferSurface(ddrawModule, backBufferHandle, ddrawHandle, paletteHandle);
 		// Add the primary surface as an "attached" surface to the backbuffer to create a flip chain
@@ -125,9 +125,9 @@ public class DDrawPalettePresentationTests
 		var lockResult = (uint)lockMethod.Invoke(ddrawModule, [cpu, memory, backBufferHandle])!;
 		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, lockResult);
 
-		// Write some test data
-		var bits = (byte[])GetPropertyValue(backBuffer, "Bits")!;
-		bits[0] = 1; // Index into palette
+		// Write some test data to the locked memory pointer (simulating what a game does)
+		var lockedMemoryPtr = (uint)GetPropertyValue(backBuffer, "LockedMemoryPtr")!;
+		memory.Write8(lockedMemoryPtr, 1); // Index into palette
 
 		// Unlock the backbuffer
 		SetupStackArgs(cpu, memory, backBufferHandle, 0);
@@ -138,10 +138,10 @@ public class DDrawPalettePresentationTests
 		// Verify the rendering backend was updated
 		Assert.Equal(1, backend.UpdateCallCount);
 		Assert.NotNull(backend.LastFrameData);
-		Assert.Equal(0, backend.LastFrameData[0]); // Green channel (color is 0x0000FF00)
-		Assert.Equal(255, backend.LastFrameData[1]); // Red channel
+		Assert.Equal(0, backend.LastFrameData[0]); // Red channel (color is 0x0000FF00)
+		Assert.Equal(255, backend.LastFrameData[1]); // Green channel
 		Assert.Equal(0, backend.LastFrameData[2]); // Blue channel
-		Assert.Equal(255, backend.LastFrameData[3]); // Alpha
+		Assert.Equal(255, backend.LastFrameData[3]); // Alpha channel
 	}
 
 	[Fact]
@@ -170,26 +170,40 @@ public class DDrawPalettePresentationTests
 
 		var sourceSurface = AddOffscreenSurface(ddrawModule, sourceSurfaceHandle, ddrawHandle, paletteHandle);
 
+		// Lock the source surface
+		SetupStackArgs(cpu, memory, sourceSurfaceHandle, 0, 0);
+		var lockMethod = GetPrivateMethod("Surface_Lock");
+		var lockResult = (uint)lockMethod.Invoke(ddrawModule, [cpu, memory, sourceSurfaceHandle])!;
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, lockResult);
+
 		// Set up source surface data
-		var sourceBits = (byte[])GetPropertyValue(sourceSurface, "Bits")!;
-		sourceBits[0] = 1; // Index into palette for blue color
+		var sourceLockedMemoryPtr = (uint)GetPropertyValue(sourceSurface, "LockedMemoryPtr")!;
+		memory.Write8(sourceLockedMemoryPtr, 1); // Index into palette for blue color
+
+		// Unlock the source surface (this copies LockedMemoryPtr back to Bits)
+		SetupStackArgs(cpu, memory, sourceSurfaceHandle, 0);
+		var unlockMethod = GetPrivateMethod("Surface_Unlock");
+		var unlockResult = (uint)unlockMethod.Invoke(ddrawModule, [cpu, memory, sourceSurfaceHandle])!;
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, unlockResult);
 
 		// Call BltFast to blit to the backbuffer
+		const uint backBufferComAddr = 0x00600000;
 		const uint sourceSurfaceComAddr = 0x00600010;
+		SetPropertyValue(backBuffer, "ComObjectAddress", backBufferComAddr);
 		SetPropertyValue(sourceSurface, "ComObjectAddress", sourceSurfaceComAddr);
 		const uint srcRectPtr = 0;
-		SetupStackArgs(cpu, memory, backBufferHandle, 0, 0, srcRectPtr, sourceSurfaceComAddr, 0);
+		SetupStackArgs(cpu, memory, backBufferComAddr, 0, 0, sourceSurfaceComAddr, srcRectPtr, 0);
 		var bltFastMethod = GetPrivateMethod("Surface_BltFast");
-		var result = (uint)bltFastMethod.Invoke(ddrawModule, [cpu, memory, backBufferHandle])!;
+		var result = (uint)bltFastMethod.Invoke(ddrawModule, [cpu, memory])!;
 
 		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, result);
 		// Verify the rendering backend was updated
 		Assert.Equal(1, backend.UpdateCallCount);
 		Assert.NotNull(backend.LastFrameData);
-		Assert.Equal(0, backend.LastFrameData[0]); // Blue channel (color is 0x00FF0000)
+		Assert.Equal(0, backend.LastFrameData[0]); // Red channel (color is 0x00FF0000)
 		Assert.Equal(0, backend.LastFrameData[1]); // Green channel
-		Assert.Equal(255, backend.LastFrameData[2]); // Red channel
-		Assert.Equal(255, backend.LastFrameData[3]); // Alpha
+		Assert.Equal(255, backend.LastFrameData[2]); // Blue channel
+		Assert.Equal(255, backend.LastFrameData[3]); // Alpha channel
 	}
 
 	private static uint[] CreatePaletteEntries(uint entryColor)
