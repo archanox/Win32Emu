@@ -159,9 +159,9 @@ public class HeadlessRenderingBackend : IRenderingBackend
 				var pixel = (ushort)(rgb565Data[pixelOffset] | (rgb565Data[pixelOffset + 1] << 8));
 
 				// Extract RGB565 components
-				var r5 = (pixel >> 11) & 0x1F;
-				var g6 = (pixel >> 5) & 0x3F;
-				var b5 = pixel & 0x1F;
+				var r5 = (byte)((pixel >> 11) & 0x1F);
+				var g6 = (byte)((pixel >> 5) & 0x3F);
+				var b5 = (byte)(pixel & 0x1F);
 
 				// Convert to 8-bit values
 				var r = (byte)((r5 << 3) | (r5 >> 2));
