@@ -9,6 +9,9 @@ namespace Win32Emu.Tests.Emulator;
 /// </summary>
 public class JitCpuInstructionTests
 {
+	private const uint FpuConditionCodeMask = 0x4500;
+	private const uint FpuConditionCodeEqual = 0x4000;
+
 	[Fact]
 	public void CallWithMemoryOperand_ShouldJumpToAddressInMemory()
 	{
@@ -1052,6 +1055,40 @@ public class JitCpuInstructionTests
 		// Assert - when equal, ZF=1, CF=0, PF=0
 		Assert.Equal(0x1006u, cpu.GetEip());
 		// Note: EFLAGS verification would require accessing CPU flags
+	}
+
+	[Fact]
+	public void Fcom_ShouldSetStatusWordRatherThanEflags()
+	{
+		var mem = new VirtualMemory(1024 * 1024);
+		var cpu = new JitCpu(mem);
+		cpu.SetEip(0x1000);
+		
+		// FLD1 = D9 E8 (load 1.0)
+		mem.Write8(0x1000, 0xD9);
+		mem.Write8(0x1001, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FLD1 again
+		cpu.SetEip(0x1002);
+		mem.Write8(0x1002, 0xD9);
+		mem.Write8(0x1003, 0xE8);
+		cpu.SingleStep(mem);
+		
+		// FCOM ST(1) = D8 D1
+		cpu.SetEip(0x1004);
+		mem.Write8(0x1004, 0xD8);
+		mem.Write8(0x1005, 0xD1);
+		cpu.SingleStep(mem);
+		
+		// FNSTSW AX = DF E0
+		cpu.SetEip(0x1006);
+		mem.Write8(0x1006, 0xDF);
+		mem.Write8(0x1007, 0xE0);
+		cpu.SingleStep(mem);
+		
+		Assert.Equal(0x1008u, cpu.GetEip());
+		Assert.Equal(FpuConditionCodeEqual, cpu.GetRegister("EAX") & FpuConditionCodeMask);
 	}
 
 	[Fact]
