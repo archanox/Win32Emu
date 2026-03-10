@@ -17,4 +17,9 @@ public partial class EmulatorWindow : Window
     {
         return this.FindControl<TerminalControl>("TerminalControl");
     }
+
+    public Image? GetDisplayImage()
+    {
+        return this.FindControl<Image>("DisplayImage");
+    }
 }
