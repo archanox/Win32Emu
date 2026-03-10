@@ -299,22 +299,22 @@ public partial class GameLibraryViewModel : ViewModelBase
     {
         if (_storageProvider == null)
         {
-	        return;
+            return;
         }
 
         var files = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Select Game Executable",
-			AllowMultiple = true,
-			FileTypeFilter = new[]
-			{
-				new FilePickerFileType("Windows Executable")
-				{
-					Patterns = new[] { "*.exe", "*.EXE" },
-					MimeTypes = new[] { "application/vnd.microsoft.portable-executable" }
-				}
-			}
-		});
+            AllowMultiple = true,
+            FileTypeFilter = new[]
+            {
+                new FilePickerFileType("Windows Executable")
+                {
+                    Patterns = new[] { "*.[eE][xX][eE]" },
+                    MimeTypes = new[] { "application/vnd.microsoft.portable-executable" }
+                }
+            }
+        });
 
         foreach (var file in files)
         {
@@ -390,19 +390,19 @@ public partial class GameLibraryViewModel : ViewModelBase
         }
     }
 
-	private async Task ScanFolderForGames(string folderPath)
-	{
-		await Task.Run(() =>
-		{
-			try
-			{
-				var exeFiles = Directory.GetFiles(folderPath, "*", SearchOption.TopDirectoryOnly)
-					.Where(file => string.Equals(Path.GetExtension(file), ".exe", StringComparison.OrdinalIgnoreCase))
-					.ToArray();
-				var virtualDiskService = new VirtualDiskService(_configuration, _logger);
-				
-				foreach (var exeFile in exeFiles)
-				{
+    private async Task ScanFolderForGames(string folderPath)
+    {
+        await Task.Run(() =>
+        {
+            try
+            {
+                var exeFiles = Directory.EnumerateFiles(folderPath, "*.*", SearchOption.TopDirectoryOnly)
+                    .Where(file => string.Equals(Path.GetExtension(file), ".exe", StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+                var virtualDiskService = new VirtualDiskService(_configuration, _logger);
+                
+                foreach (var exeFile in exeFiles)
+                {
                     // Validate that the file is a valid PE32 executable
                     if (!PeImageLoader.IsPE32(exeFile))
                     {
