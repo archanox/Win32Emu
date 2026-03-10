@@ -3555,28 +3555,28 @@ namespace Win32Emu.Win32.Modules
 				_env.DisplayBitsPerPixel = (int)dwBPP;
 				_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
 
-				var requiresBackendResize = obj.RenderingBackend?.IsInitialized == true &&
+				var shouldRecreateBackend = obj.RenderingBackend?.IsInitialized == true &&
 					(obj.RenderingBackend.Width != (int)dwWidth || obj.RenderingBackend.Height != (int)dwHeight);
 
-				if (requiresBackendResize)
+				if (shouldRecreateBackend)
 				{
 					_logger.LogInformation("[DDraw] Reinitializing rendering backend for display mode change from {OldWidth}x{OldHeight} to {NewWidth}x{NewHeight}",
 						obj.RenderingBackend!.Width, obj.RenderingBackend.Height, dwWidth, dwHeight);
 
-					var backendToReinitialize = obj.RenderingBackend;
-					backendToReinitialize.Dispose();
+					obj.RenderingBackend.Dispose();
 
 					if (_env.BackendFactory != null)
 					{
 						obj.RenderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
 						if (_env.Host != null)
 						{
-							_logger.LogInformation("[DDraw] Recreated Avalonia rendering backend after display mode change");
+							_logger.LogInformation("[DDraw] Recreated rendering backend with host after display mode change");
 						}
 					}
 					else
 					{
-						obj.RenderingBackend = backendToReinitialize;
+						obj.RenderingBackend = null;
+						_logger.LogWarning("[DDraw] BackendFactory not available after display mode change; rendering backend will remain unavailable until one can be created");
 					}
 				}
 
