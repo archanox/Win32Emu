@@ -310,7 +310,8 @@ public partial class GameLibraryViewModel : ViewModelBase
 			{
 				new FilePickerFileType("Windows Executable")
 				{
-					Patterns = new[] { "*.exe", "*.EXE" }
+					Patterns = new[] { "*.exe", "*.EXE" },
+					MimeTypes = new[] { "application/vnd.microsoft.portable-executable" }
 				}
 			}
 		});
