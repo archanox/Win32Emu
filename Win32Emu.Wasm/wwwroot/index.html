@@ -243,10 +243,12 @@
 			renderingError: false,
 			frameBufferSize: 0,
 			lastCanvasId: null,
+			lastFrameSequence: 0,
 			samplePixelCount: 0,
 			sampleNonBlackPixels: 0,
 			firstVisibleColor: null,
-			missingCanvasWarned: {}
+			missingCanvasWarned: {},
+			canvasFrameSequences: {}
 		};
 		
 		// Refresh DirectDraw diagnostics display
@@ -566,9 +568,14 @@
 		};
 		
 		// Update canvas with RGBA frame buffer data
-		window.updateCanvas = (canvasId, base64Data, width, height) => {
+		window.updateCanvas = (canvasId, base64Data, width, height, frameSequence = 0) => {
 			const MAX_SAMPLED_PIXELS = 4096;
 			const BYTES_PER_PIXEL = 4; // RGBA format
+			const lastFrameSequence = window.ddrawDiagnostics.canvasFrameSequences[canvasId] || 0;
+			if (frameSequence !== 0 && frameSequence < lastFrameSequence) {
+				console.debug(`Skipping stale canvas update for ${canvasId}: frame ${frameSequence} < ${lastFrameSequence}`);
+				return;
+			}
 			
 			let canvas = document.getElementById(canvasId);
 			if (!canvas) {
@@ -647,11 +654,13 @@
 			window.ddrawDiagnostics.backendInitialized = true;
 			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
 			window.ddrawDiagnostics.lastCanvasId = canvasId;
+			window.ddrawDiagnostics.lastFrameSequence = frameSequence;
+			window.ddrawDiagnostics.canvasFrameSequences[canvasId] = frameSequence;
 			window.ddrawDiagnostics.samplePixelCount = samplePixelCount;
 			window.ddrawDiagnostics.sampleNonBlackPixels = sampleNonBlackPixels;
 			window.ddrawDiagnostics.firstVisibleColor = firstVisibleColor;
 			
-			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
+			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount}, frame #${frameSequence})`);
 		};
 		
 		// Clean up when a window canvas is no longer needed (Blazor manages canvas lifecycle)
@@ -659,7 +668,7 @@
 		};
 		
 		// Wrapper function that stops emulator on error
-		window.updateCanvasWithErrorHandling = (canvasId, base64Data, width, height) => {
+		window.updateCanvasWithErrorHandling = (canvasId, base64Data, width, height, frameSequence = 0) => {
 			// Check if emulator was already stopped
 			if (window.emulatorStopped) {
 				console.error("🛑 Emulator is stopped, ignoring canvas update");
@@ -667,7 +676,7 @@
 			}
 			
 			try {
-				console.log(`[updateCanvas] Called: ${canvasId}, ${width}x${height}, data length: ${base64Data?.length || 0}`);
+				console.log(`[updateCanvas] Called: ${canvasId}, ${width}x${height}, data length: ${base64Data?.length || 0}, frame #${frameSequence}`);
 				
 				// Validate inputs
 				if (!canvasId) {
@@ -681,7 +690,7 @@
 				}
 				
 				// Call the actual update function
-				window.updateCanvas(canvasId, base64Data, width, height);
+				window.updateCanvas(canvasId, base64Data, width, height, frameSequence);
 				
 				console.log(`[updateCanvas] SUCCESS`);
 			} catch (error) {

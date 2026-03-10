@@ -1,6 +1,7 @@
 using Microsoft.JSInterop;
 using Microsoft.Extensions.Logging;
 using System.Numerics;
+using System.Threading;
 using Win32Emu.Rendering;
 
 namespace Win32Emu.Wasm.Backend;
@@ -30,6 +31,7 @@ public class WasmRenderingBackend : IRenderingBackend
 	private string _canvasId = "emulatorCanvas";
 	private byte[]? _frameBuffer;
 	private volatile bool _renderingErrorOccurred = false;
+	private long _frameSequence;
 	
 	public event EventHandler<UIEventArgs>? UIEvent;
 	
@@ -214,14 +216,15 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			// Update canvas through JavaScript with better error handling
 			var base64Data = Convert.ToBase64String(_frameBuffer);
+			var frameSequence = Interlocked.Increment(ref _frameSequence);
 			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
-			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
-				canvasId, _width, _height, base64Data.Length);
+			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}, frameSequence={FrameSequence}",
+				canvasId, _width, _height, base64Data.Length, frameSequence);
 			
 			// Use fire-and-forget pattern but with proper error tracking
 			// We return success immediately for performance, but track errors for future calls
-			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", canvasId, base64Data, _width, _height)
+			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", canvasId, base64Data, _width, _height, frameSequence)
 				.AsTask()
 				.ContinueWith(t =>
 				{
