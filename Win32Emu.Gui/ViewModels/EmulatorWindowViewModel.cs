@@ -1052,6 +1052,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 image.Width = info.Width;
                 image.Height = info.Height;
                 image.IsVisible = true;
+                image.InvalidateVisual();
                 window.InvalidateVisual();
             }
         }
