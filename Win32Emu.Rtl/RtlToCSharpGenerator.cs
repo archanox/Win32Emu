@@ -266,30 +266,31 @@ public class RtlToCSharpGenerator
         return sb.ToString();
     }
     
-    private string GenerateReturn(RtlReturn ret)
-    {
-        // RET instruction semantics:
-        // 1. Pop return address from stack: retAddr = [ESP]; ESP += 4
-        // 2. If immediate operand, add it to ESP (stdcall cleanup): ESP += imm16
+	private string GenerateReturn(RtlReturn ret)
+	{
+		// RET instruction semantics:
+		// 1. Pop return address from stack: retAddr = [ESP]; ESP += 4
+		// 2. If immediate operand, add it to ESP (stdcall cleanup): ESP += imm16
         // 3. Update EIP to return address
         // 4. Return from compiled block
         // Note: ESP variable is defined in the generated method (see GenerateCSharpCode line 43)
         
-        var sb = new StringBuilder();
-        // For multi-line blocks, include offset on the opening line instead of closing brace
-        sb.AppendLine($"{{ // RET instruction @0x{ret.Offset:X}");
-        sb.AppendLine("                uint retAddr = mem.Read32(ESP);");
-        sb.AppendLine("                ESP += 4;");
-        if (ret.StackCleanup > 0)
-        {
-            sb.AppendLine($"                ESP += 0x{ret.StackCleanup:X}u; // stdcall cleanup");
-        }
-        sb.AppendLine("                cpu.SetEip(retAddr);");
-        sb.AppendLine("                cpu.SetRegister(\"ESP\", ESP);");
-        sb.AppendLine("                return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));");
-        sb.Append("            }");
-        return sb.ToString();
-    }
+		var sb = new StringBuilder();
+		// For multi-line blocks, include offset on the opening line instead of closing brace
+		sb.AppendLine($"{{ // RET instruction @0x{ret.Offset:X}");
+		sb.AppendLine("                uint retAddr = mem.Read32(ESP);");
+		sb.AppendLine("                ESP += 4;");
+		if (ret.StackCleanup > 0)
+		{
+			sb.AppendLine($"                ESP += 0x{ret.StackCleanup:X}u; // stdcall cleanup");
+		}
+		sb.AppendLine("                // Save all registers before return");
+		sb.AppendLine($"                {GenerateRegisterSave()}");
+		sb.AppendLine("                cpu.SetEip(retAddr);");
+		sb.AppendLine("                return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));");
+		sb.Append("            }");
+		return sb.ToString();
+	}
     
     private string ExpressionToString(RtlExpression expr)
     {
@@ -558,4 +559,3 @@ public class RtlToCSharpGenerator
         return (CompilationUnitSyntax)SyntaxFactory.ParseCompilationUnit(code);
     }
 }
-
