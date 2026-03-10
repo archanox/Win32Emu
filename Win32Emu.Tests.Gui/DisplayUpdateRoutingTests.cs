@@ -1,6 +1,7 @@
 using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Win32Emu.Gui.ViewModels;
 using Win32Emu.Gui.Views;
@@ -77,6 +78,50 @@ public class DisplayUpdateRoutingTests
 		Assert.False(viewModel.HasDisplay);
 	}
 
+	[AvaloniaFact]
+	public async Task OnDialogEnd_RemovesTrackedDialogBitmap()
+	{
+		var viewModel = new EmulatorWindowViewModel();
+		var dialogHandle = 0x00013000u;
+
+		await viewModel.OnDialogCreate(new DialogCreateInfo
+		{
+			Handle = dialogHandle,
+			Template = new DialogTemplate
+			{
+				Title = "Cleanup Dialog",
+				Width = 64,
+				Height = 48,
+				Items = []
+			}
+		});
+		await FlushUiThreadAsync();
+
+		viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+		{
+			FrameBuffer = CreateFrameBuffer(4, 3),
+			Width = 4,
+			Height = 3,
+			Stride = 16,
+			TargetWindowHandle = (IntPtr)(long)dialogHandle
+		});
+		await FlushUiThreadAsync();
+
+		var dialogs = GetTrackedWindows<DialogWindow>(viewModel, "_createdDialogs");
+		var bitmaps = GetTrackedBitmaps(viewModel);
+
+		Assert.Contains(dialogHandle, dialogs.Keys);
+		Assert.True(bitmaps.ContainsKey(dialogHandle));
+
+		viewModel.OnDialogEnd(dialogHandle, 1);
+		await FlushUiThreadAsync();
+		// EndDialog posts Close(), and the dialog Closing handler performs the bitmap cleanup on the UI thread.
+		await FlushUiThreadAsync();
+
+		Assert.DoesNotContain(dialogHandle, dialogs.Keys);
+		Assert.False(bitmaps.ContainsKey(dialogHandle));
+	}
+
 	private static Dictionary<uint, TWindow> GetTrackedWindows<TWindow>(EmulatorWindowViewModel viewModel, string fieldName)
 		where TWindow : Window
 	{
@@ -84,6 +129,14 @@ public class DisplayUpdateRoutingTests
 		Assert.NotNull(field);
 
 		return Assert.IsType<Dictionary<uint, TWindow>>(field.GetValue(viewModel));
+	}
+
+	private static Dictionary<uint, WriteableBitmap> GetTrackedBitmaps(EmulatorWindowViewModel viewModel)
+	{
+		var field = typeof(EmulatorWindowViewModel).GetField("_windowBitmaps", BindingFlags.Instance | BindingFlags.NonPublic);
+		Assert.NotNull(field);
+
+		return Assert.IsType<Dictionary<uint, WriteableBitmap>>(field.GetValue(viewModel));
 	}
 
 	private static byte[] CreateFrameBuffer(int width, int height)
