@@ -1,7 +1,9 @@
 using System.Reflection;
 using Avalonia.Controls;
+using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
 using Avalonia.Media.Imaging;
+using Avalonia.Rendering;
 using Avalonia.Threading;
 using Win32Emu.Gui.ViewModels;
 using Win32Emu.Gui.Views;
@@ -79,6 +81,59 @@ public class DisplayUpdateRoutingTests
 	}
 
 	[AvaloniaFact]
+	public async Task OnDisplayUpdate_MainDisplay_RerendersWhenUpdatingExistingBitmap()
+	{
+		var viewModel = new EmulatorWindowViewModel
+		{
+			ShowDebugPanel = false,
+			ShowStdOutputPanel = false
+		};
+		var window = new EmulatorWindow
+		{
+			DataContext = viewModel,
+			Width = 800,
+			Height = 600
+		};
+		viewModel.SetOwnerWindow(window);
+
+		window.Show();
+		await FlushUiThreadAsync();
+		var renderer = GetRenderer(window);
+		var sceneInvalidations = 0;
+		var invalidationHandler = SubscribeToSceneInvalidated(renderer, () => sceneInvalidations++);
+
+		viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+		{
+			FrameBuffer = CreateSolidFrameBuffer(320, 240, 0x10, 0x40, 0x80),
+			Width = 320,
+			Height = 240,
+			Stride = 320 * 4
+		});
+		await FlushUiThreadAsync();
+		await ForceRenderAsync();
+		Assert.NotNull(viewModel.DisplayBitmap);
+		var displayBitmap = viewModel.DisplayBitmap;
+
+		sceneInvalidations = 0;
+		viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+		{
+			FrameBuffer = CreateSolidFrameBuffer(320, 240, 0xD0, 0x20, 0x40),
+			Width = 320,
+			Height = 240,
+			Stride = 320 * 4
+		});
+		await FlushUiThreadAsync();
+		await ForceRenderAsync();
+
+		Assert.Same(displayBitmap, viewModel.DisplayBitmap);
+		Assert.True(sceneInvalidations > 0);
+		UnsubscribeFromSceneInvalidated(renderer, invalidationHandler);
+
+		window.Close();
+		await FlushUiThreadAsync();
+	}
+
+	[AvaloniaFact]
 	public async Task OnDialogEnd_RemovesTrackedDialogBitmap()
 	{
 		var viewModel = new EmulatorWindowViewModel();
@@ -153,8 +208,51 @@ public class DisplayUpdateRoutingTests
 		return bytes;
 	}
 
+	private static byte[] CreateSolidFrameBuffer(int width, int height, byte red, byte green, byte blue)
+	{
+		var bytes = new byte[width * height * 4];
+		for (var i = 0; i < bytes.Length; i += 4)
+		{
+			bytes[i] = red;
+			bytes[i + 1] = green;
+			bytes[i + 2] = blue;
+			bytes[i + 3] = 0xFF;
+		}
+
+		return bytes;
+	}
+
+	private static IRenderer GetRenderer(Window window)
+	{
+		var property = typeof(TopLevel).GetProperty("Renderer", BindingFlags.Instance | BindingFlags.NonPublic);
+		Assert.NotNull(property);
+
+		return Assert.IsAssignableFrom<IRenderer>(property.GetValue(window));
+	}
+
+	private static Delegate SubscribeToSceneInvalidated(IRenderer renderer, Action onSceneInvalidated)
+	{
+		EventHandler<SceneInvalidatedEventArgs> handler = (_, _) => onSceneInvalidated();
+		var addMethod = typeof(IRenderer).GetMethod("add_SceneInvalidated");
+		Assert.NotNull(addMethod);
+		addMethod.Invoke(renderer, [handler]);
+		return handler;
+	}
+
+	private static void UnsubscribeFromSceneInvalidated(IRenderer renderer, Delegate handler)
+	{
+		var removeMethod = typeof(IRenderer).GetMethod("remove_SceneInvalidated");
+		Assert.NotNull(removeMethod);
+		removeMethod.Invoke(renderer, [handler]);
+	}
+
 	private static async Task FlushUiThreadAsync()
 	{
 		await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
+	}
+
+	private static async Task ForceRenderAsync()
+	{
+		await Dispatcher.UIThread.InvokeAsync(() => AvaloniaHeadlessPlatform.ForceRenderTimerTick(1));
 	}
 }
