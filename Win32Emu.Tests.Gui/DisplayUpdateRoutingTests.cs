@@ -102,32 +102,38 @@ public class DisplayUpdateRoutingTests
 		var sceneInvalidations = 0;
 		var invalidationHandler = SubscribeToSceneInvalidated(renderer, () => sceneInvalidations++);
 
-		viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+		try
 		{
-			FrameBuffer = CreateSolidFrameBuffer(320, 240, 0x10, 0x40, 0x80),
-			Width = 320,
-			Height = 240,
-			Stride = 320 * 4
-		});
-		await FlushUiThreadAsync();
-		await ForceRenderAsync();
-		Assert.NotNull(viewModel.DisplayBitmap);
-		var displayBitmap = viewModel.DisplayBitmap;
+			viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+			{
+				FrameBuffer = CreateSolidFrameBuffer(320, 240, 0x10, 0x40, 0x80),
+				Width = 320,
+				Height = 240,
+				Stride = 320 * 4
+			});
+			await FlushUiThreadAsync();
+			await ForceRenderAsync();
+			Assert.NotNull(viewModel.DisplayBitmap);
+			var displayBitmap = viewModel.DisplayBitmap;
 
-		sceneInvalidations = 0;
-		viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+			sceneInvalidations = 0;
+			viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+			{
+				FrameBuffer = CreateSolidFrameBuffer(320, 240, 0xD0, 0x20, 0x40),
+				Width = 320,
+				Height = 240,
+				Stride = 320 * 4
+			});
+			await FlushUiThreadAsync();
+			await ForceRenderAsync();
+
+			Assert.Same(displayBitmap, viewModel.DisplayBitmap);
+			Assert.True(sceneInvalidations > 0);
+		}
+		finally
 		{
-			FrameBuffer = CreateSolidFrameBuffer(320, 240, 0xD0, 0x20, 0x40),
-			Width = 320,
-			Height = 240,
-			Stride = 320 * 4
-		});
-		await FlushUiThreadAsync();
-		await ForceRenderAsync();
-
-		Assert.Same(displayBitmap, viewModel.DisplayBitmap);
-		Assert.True(sceneInvalidations > 0);
-		UnsubscribeFromSceneInvalidated(renderer, invalidationHandler);
+			UnsubscribeFromSceneInvalidated(renderer, invalidationHandler);
+		}
 
 		window.Close();
 		await FlushUiThreadAsync();

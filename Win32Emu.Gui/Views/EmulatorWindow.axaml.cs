@@ -18,6 +18,9 @@ public partial class EmulatorWindow : Window
         return this.FindControl<TerminalControl>("TerminalControl");
     }
 
+    /// <summary>
+    /// Get the display image control for direct access from ViewModel.
+    /// </summary>
     public Image? GetDisplayImage()
     {
         return this.FindControl<Image>("DisplayImage");
