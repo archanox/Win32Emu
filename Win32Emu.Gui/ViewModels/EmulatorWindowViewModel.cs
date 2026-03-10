@@ -958,6 +958,11 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         }
 
         OnPropertyChanged(nameof(DisplayBitmap));
+        if (_ownerWindow?.FindControl<Avalonia.Controls.Image>("DisplayImage") is { } displayImage)
+        {
+            displayImage.InvalidateVisual();
+        }
+        _ownerWindow?.InvalidateVisual();
 
         OnDebugOutput($"Main display updated: {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
     }
