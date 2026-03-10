@@ -276,6 +276,17 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 
                 // Create DialogWindow from the template with dialog handle, control handles, message callback, and debug callback
                 var dialogWindow = new Views.DialogWindow(info.Template, info.Handle, info.ControlHandles, messageCallback, debugCallback);
+
+                dialogWindow.Closing += (s, e) =>
+                {
+                    if (Dispatcher.UIThread.CheckAccess())
+                    {
+                        CleanupDialogResources(info.Handle);
+                        return;
+                    }
+
+                    Dispatcher.UIThread.Post(() => CleanupDialogResources(info.Handle));
+                };
                 
                 // Track the dialog so we can close it later via EndDialog
                 _createdDialogs[info.Handle] = dialogWindow;
@@ -323,10 +334,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 {
                     // End the dialog with the specified result
                     dialogWindow.EndDialog(result);
-                    
-                    // Remove from tracking
-                    _createdDialogs.Remove(dialogHandle);
-                    
+
                     OnDebugOutput($"Dialog closed for HWND=0x{dialogHandle:X8}", DebugLevel.Info);
                 }
                 catch (Exception ex)
@@ -339,6 +347,24 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 OnDebugOutput($"Dialog HWND=0x{dialogHandle:X8} not found in tracking dictionary", DebugLevel.Warning);
             }
         });
+    }
+
+    private void CleanupDialogResources(uint dialogHandle)
+    {
+        _createdDialogs.Remove(dialogHandle);
+
+        if (_windowBitmaps.Remove(dialogHandle, out var bitmap))
+        {
+            try
+            {
+                bitmap.Dispose();
+                OnDebugOutput($"Disposed dialog bitmap for HWND=0x{dialogHandle:X8}", DebugLevel.Debug);
+            }
+            catch (Exception ex)
+            {
+                OnDebugOutput($"Error disposing dialog bitmap for HWND=0x{dialogHandle:X8}: {ex.Message}", DebugLevel.Warning);
+            }
+        }
     }
 
     public int OnMessageBox(MessageBoxInfo info)
