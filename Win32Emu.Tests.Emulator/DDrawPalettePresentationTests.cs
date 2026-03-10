@@ -286,7 +286,7 @@ public class DDrawPalettePresentationTests
 		const uint ddrawHandle = 0x70000030;
 		const uint comObjectAddress = 0x00500030;
 
-		backendFactory.NextBackend = new ResizableTestRenderingBackend(isInitialized: true, width: 640, height: 480);
+		backendFactory.ExistingBackend = new ResizableTestRenderingBackend(isInitialized: true, width: 640, height: 480);
 
 		var ddrawObject = CreateNestedInstance("DirectDrawObject");
 		SetPropertyValue(ddrawObject, "Handle", ddrawHandle);
@@ -294,9 +294,12 @@ public class DDrawPalettePresentationTests
 		SetPropertyValue(ddrawObject, "Width", 640);
 		SetPropertyValue(ddrawObject, "Height", 480);
 		SetPropertyValue(ddrawObject, "BitsPerPixel", 8);
-		SetPropertyValue(ddrawObject, "RenderingBackend", backendFactory.NextBackend);
+		SetPropertyValue(ddrawObject, "RenderingBackend", backendFactory.ExistingBackend);
 		GetDictionaryField(ddrawModule, "_ddrawObjects")[ddrawHandle] = ddrawObject;
 		GetDictionaryField(ddrawModule, "_comObjectToHandle")[comObjectAddress] = ddrawHandle;
+
+		Assert.Equal(640, backendFactory.ExistingBackend.Width);
+		Assert.Equal(480, backendFactory.ExistingBackend.Height);
 
 		var method = GetPrivateMethod("DDraw_SetDisplayModeAsync");
 
@@ -305,11 +308,11 @@ public class DDrawPalettePresentationTests
 
 		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, result);
 		Assert.Equal(1, backendFactory.CreateRenderingBackendWithHostCallCount);
-		Assert.Equal(1, backendFactory.InitialBackend.DisposeCallCount);
-		Assert.Equal(1, backendFactory.CreatedBackend.InitializeCallCount);
-		Assert.Equal(320, backendFactory.CreatedBackend.Width);
-		Assert.Equal(200, backendFactory.CreatedBackend.Height);
-		Assert.Same(backendFactory.CreatedBackend, GetPropertyValue(ddrawObject, "RenderingBackend"));
+		Assert.Equal(1, backendFactory.ExistingBackend.DisposeCallCount);
+		Assert.Equal(1, backendFactory.RecreatedBackend.InitializeCallCount);
+		Assert.Equal(320, backendFactory.RecreatedBackend.Width);
+		Assert.Equal(200, backendFactory.RecreatedBackend.Height);
+		Assert.Same(backendFactory.RecreatedBackend, GetPropertyValue(ddrawObject, "RenderingBackend"));
 	}
 
 	private static uint[] CreatePaletteEntries(uint entryColor)
@@ -515,9 +518,8 @@ public class DDrawPalettePresentationTests
 	private sealed class TestBackendFactory : IBackendFactory
 	{
 		public BackendType CurrentBackendType { get; set; } = BackendType.Headless;
-		public ResizableTestRenderingBackend? NextBackend { get; set; }
-		public ResizableTestRenderingBackend InitialBackend => NextBackend!;
-		public ResizableTestRenderingBackend CreatedBackend { get; private set; } = null!;
+		public ResizableTestRenderingBackend ExistingBackend { get; set; } = null!;
+		public ResizableTestRenderingBackend RecreatedBackend { get; private set; } = null!;
 		public int CreateRenderingBackendWithHostCallCount { get; private set; }
 
 		public IRenderingBackend CreateRenderingBackend(ILogger logger) => throw new NotSupportedException();
@@ -527,8 +529,8 @@ public class DDrawPalettePresentationTests
 		public IRenderingBackend CreateRenderingBackendWithHost(ILogger logger, IEmulatorHost? host)
 		{
 			CreateRenderingBackendWithHostCallCount++;
-			CreatedBackend = new ResizableTestRenderingBackend();
-			return CreatedBackend;
+			RecreatedBackend = new ResizableTestRenderingBackend();
+			return RecreatedBackend;
 		}
 	}
 
