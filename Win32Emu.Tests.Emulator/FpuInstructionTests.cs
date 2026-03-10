@@ -10,6 +10,7 @@ public class FpuInstructionTests : IDisposable
     private readonly CpuTestHelper _helper;
     private const uint FpuConditionCodeMask = 0x4500;
     private const uint FpuConditionCodeC1 = 0x0200;
+    private const uint FpuConditionCodeUnordered = 0x4500;
     private const uint FpuConditionCodeLessThan = 0x0100;
     private const uint FpuConditionCodeEqual = 0x4000;
 
@@ -244,23 +245,15 @@ public class FpuInstructionTests : IDisposable
     [Fact]
     public void FUCOM_ShouldClearPreviousConditionCodesAndC1()
     {
-        var memAddr = 0x00200000u;
-        var negativeOneBits = BitConverter.SingleToInt32Bits(-1.0f);
-        _helper.WriteMemory32(memAddr, unchecked((uint)negativeOneBits));
-
-        _helper.WriteCode(
-            0xD9, 0x05,
-            (byte)(memAddr & 0xFF),
-            (byte)((memAddr >> 8) & 0xFF),
-            (byte)((memAddr >> 16) & 0xFF),
-            (byte)((memAddr >> 24) & 0xFF));
+        // FLDZ - ST(0)=0.0
+        _helper.WriteCode(0xD9, 0xEE);
         _helper.ExecuteInstruction();
 
-        _helper.WriteCode(0xD9, 0xE5);
-        _helper.ExecuteInstruction();
-
+        // FLD1 - ST(0)=1.0, ST(1)=0.0 so FUCOM ST(1) is a greater-than compare.
         _helper.WriteCode(0xD9, 0xE8);
         _helper.ExecuteInstruction();
+
+        SeedFpuStatusWord((ushort)(FpuConditionCodeUnordered | FpuConditionCodeC1));
 
         _helper.WriteCode(0xDD, 0xE1);
         _helper.ExecuteInstruction();
@@ -272,23 +265,11 @@ public class FpuInstructionTests : IDisposable
     [Fact]
     public void FTST_ShouldClearPreviousConditionCodesAndC1()
     {
-        var memAddr = 0x00200000u;
-        var negativeOneBits = BitConverter.SingleToInt32Bits(-1.0f);
-        _helper.WriteMemory32(memAddr, unchecked((uint)negativeOneBits));
-
-        _helper.WriteCode(
-            0xD9, 0x05,
-            (byte)(memAddr & 0xFF),
-            (byte)((memAddr >> 8) & 0xFF),
-            (byte)((memAddr >> 16) & 0xFF),
-            (byte)((memAddr >> 24) & 0xFF));
-        _helper.ExecuteInstruction();
-
-        _helper.WriteCode(0xD9, 0xE5);
-        _helper.ExecuteInstruction();
-
+        // FLD1 - ST(0)=1.0 so FTST should report greater-than-zero and clear C0/C1/C2/C3.
         _helper.WriteCode(0xD9, 0xE8);
         _helper.ExecuteInstruction();
+
+        SeedFpuStatusWord((ushort)(FpuConditionCodeUnordered | FpuConditionCodeC1));
 
         _helper.WriteCode(0xD9, 0xE4);
         _helper.ExecuteInstruction();
@@ -384,5 +365,12 @@ public class FpuInstructionTests : IDisposable
         _helper.WriteCode(0xDF, 0xE0);
         _helper.ExecuteInstruction();
         return _helper.GetReg("EAX") & 0xFFFF;
+    }
+
+    private void SeedFpuStatusWord(ushort statusWord)
+    {
+        var state = _helper.Cpu.SaveState();
+        state.FpuStatusWord = statusWord;
+        _helper.Cpu.RestoreState(state);
     }
 }
