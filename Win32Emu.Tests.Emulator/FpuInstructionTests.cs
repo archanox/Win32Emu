@@ -213,7 +213,7 @@ public class FpuInstructionTests : IDisposable
     }
 
     [Fact]
-    public void FCOMI_ShouldUseST1WhenComparingRegisterOperands()
+    public void FCOMI_WithST1Operand_ShouldSetCarryFlagWhenST0IsLess()
     {
         var memAddr = 0x00200000u;
         var twoBits = BitConverter.SingleToInt32Bits(2.0f);
@@ -380,6 +380,7 @@ public class FpuInstructionTests : IDisposable
 
     private uint ReadStatusWord()
     {
+        // FNSTSW AX (DF E0) stores the current x87 status word in AX.
         _helper.WriteCode(0xDF, 0xE0);
         _helper.ExecuteInstruction();
         return _helper.GetReg("EAX") & 0xFFFF;
