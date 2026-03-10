@@ -374,6 +374,58 @@ public class DDrawPalettePresentationTests
 		Assert.Equal(0u, (uint)GetPropertyValue(backBuffer, "LockedMemoryPtr")!);
 	}
 
+	[Fact]
+	public async Task SetDisplayMode_ShouldLeaveSurfaceStateUnchanged_WhenResizeBufferWouldOverflow()
+	{
+		var memory = new VirtualMemory();
+		var cpu = new JitCpu(memory, NullLogger.Instance);
+		var backendFactory = new TestBackendFactory();
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance, backendFactory: backendFactory);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		const uint ddrawHandle = 0x70000032;
+		const uint comObjectAddress = 0x00500032;
+		const uint primaryHandle = 0x71000033;
+		const uint unusedBackBufferHandle = 0x71000034;
+
+		backendFactory.ExistingBackend = new ResizableTestRenderingBackend(isInitialized: true, width: 640, height: 480);
+
+		var ddrawObject = CreateNestedInstance("DirectDrawObject");
+		SetPropertyValue(ddrawObject, "Handle", ddrawHandle);
+		SetPropertyValue(ddrawObject, "ComObjectAddress", comObjectAddress);
+		SetPropertyValue(ddrawObject, "Width", 640);
+		SetPropertyValue(ddrawObject, "Height", 480);
+		SetPropertyValue(ddrawObject, "BitsPerPixel", 8);
+		SetPropertyValue(ddrawObject, "RenderingBackend", backendFactory.ExistingBackend);
+		GetDictionaryField(ddrawModule, "_ddrawObjects")[ddrawHandle] = ddrawObject;
+		GetDictionaryField(ddrawModule, "_comObjectToHandle")[comObjectAddress] = ddrawHandle;
+
+		var primarySurface = AddSurfaceWithBackbuffer(ddrawModule, primaryHandle, ddrawHandle, 0, unusedBackBufferHandle);
+		var originalBits = new byte[640 * 480];
+		SetPropertyValue(primarySurface, "Width", 640);
+		SetPropertyValue(primarySurface, "Height", 480);
+		SetPropertyValue(primarySurface, "Pitch", 640);
+		SetPropertyValue(primarySurface, "Bits", originalBits);
+		SetPropertyValue(primarySurface, "IsLocked", true);
+		SetPropertyValue(primarySurface, "LockedMemoryPtr", 0x00920000u);
+		SetPropertyValue(primarySurface, "AllocatedMemoryPtr", 0x00930000u);
+		SetPropertyValue(primarySurface, "IsTextureDirty", false);
+
+		var method = GetPrivateMethod("DDraw_SetDisplayModeAsync");
+
+		SetupStackArgs(cpu, memory, comObjectAddress, uint.MaxValue, 2, 8);
+		var result = (uint)await (Task<uint>)method.Invoke(ddrawModule, [cpu, memory, ddrawHandle])!;
+
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, result);
+		Assert.Equal(640, (int)GetPropertyValue(primarySurface, "Width")!);
+		Assert.Equal(480, (int)GetPropertyValue(primarySurface, "Height")!);
+		Assert.Equal(640, (int)GetPropertyValue(primarySurface, "Pitch")!);
+		Assert.Same(originalBits, GetPropertyValue(primarySurface, "Bits"));
+		Assert.True((bool)GetPropertyValue(primarySurface, "IsLocked")!);
+		Assert.Equal(0x00920000u, (uint)GetPropertyValue(primarySurface, "LockedMemoryPtr")!);
+		Assert.Equal(0x00930000u, (uint)GetPropertyValue(primarySurface, "AllocatedMemoryPtr")!);
+		Assert.False((bool)GetPropertyValue(primarySurface, "IsTextureDirty")!);
+	}
+
 	private static uint[] CreatePaletteEntries(uint entryColor)
 	{
 		var entries = new uint[256];

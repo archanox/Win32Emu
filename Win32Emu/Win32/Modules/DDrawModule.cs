@@ -3725,10 +3725,15 @@ namespace Win32Emu.Win32.Modules
 					continue;
 				}
 
-				surface.Width = width;
-				surface.Height = height;
-				surface.Pitch = width * bytesPerPixel;
-				var surfaceBufferSize = (long)surface.Pitch * surface.Height;
+				var pitchLong = (long)width * bytesPerPixel;
+				if (pitchLong <= 0 || pitchLong > int.MaxValue)
+				{
+					_logger.LogWarning("[DDraw] Skipping resize for surface 0x{SurfaceHandle:X8}: invalid pitch {Pitch} for {Width}x{Height}x{Bpp}",
+						surface.Handle, pitchLong, width, height, bitsPerPixel);
+					continue;
+				}
+
+				var surfaceBufferSize = pitchLong * height;
 				if (surfaceBufferSize <= 0 || surfaceBufferSize > int.MaxValue)
 				{
 					_logger.LogWarning("[DDraw] Skipping resize for surface 0x{SurfaceHandle:X8}: invalid buffer size {BufferSize} for {Width}x{Height}x{Bpp}",
@@ -3736,6 +3741,9 @@ namespace Win32Emu.Win32.Modules
 					continue;
 				}
 
+				surface.Width = width;
+				surface.Height = height;
+				surface.Pitch = (int)pitchLong;
 				surface.Bits = new byte[(int)surfaceBufferSize];
 				surface.IsLocked = false;
 				surface.LockedMemoryPtr = 0;
