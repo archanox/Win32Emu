@@ -284,7 +284,7 @@ public class RtlToCSharpGenerator
 		{
 			sb.AppendLine($"                ESP += 0x{ret.StackCleanup:X}u; // stdcall cleanup");
 		}
-		sb.AppendLine("                // Save all registers before return");
+		sb.AppendLine("                // Save register state before return; EIP is updated below");
 		sb.AppendLine($"                {GenerateRegisterSave()}");
 		sb.AppendLine("                cpu.SetEip(retAddr);");
 		sb.AppendLine("                return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));");
