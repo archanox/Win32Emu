@@ -930,16 +930,16 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 bytesToCopy);
         }
 
+        OnPropertyChanged(nameof(DisplayBitmap));
+
         OnDebugOutput($"Main display updated: {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
     }
 
     private void UpdateWindowDisplay(uint windowHandle, DisplayUpdateInfo info)
     {
-        // Find the window
-        if (!_createdWindows.TryGetValue(windowHandle, out var window))
+        if (!TryGetDisplayTargetWindow(windowHandle, out var window))
         {
-            OnDebugOutput($"Window 0x{windowHandle:X8} not found for display update, falling back to main display", DebugLevel.Warning);
-            UpdateMainDisplay(info);
+            OnDebugOutput($"Window 0x{windowHandle:X8} not found for display update, dropping targeted frame", DebugLevel.Warning);
             return;
         }
 
@@ -993,6 +993,13 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 bytesToCopy);
         }
 
+        if (window is Views.DialogWindow dialogWindow)
+        {
+            dialogWindow.SetDisplayBitmap(bitmap, info.Width, info.Height);
+            OnDebugOutput($"Dialog display updated: HWND=0x{windowHandle:X8}, {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
+            return;
+        }
+
         // Update the Image control in the window with the new bitmap
         if (window.Content is Canvas canvas)
         {
@@ -1004,10 +1011,30 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 image.Width = info.Width;
                 image.Height = info.Height;
                 image.IsVisible = true;
+                image.InvalidateVisual();
+                canvas.InvalidateVisual();
+                window.InvalidateVisual();
             }
         }
 
         OnDebugOutput($"Window display updated: HWND=0x{windowHandle:X8}, {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
+    }
+
+    private bool TryGetDisplayTargetWindow(uint windowHandle, out Window window)
+    {
+        if (_createdWindows.TryGetValue(windowHandle, out window!))
+        {
+            return true;
+        }
+
+        if (_createdDialogs.TryGetValue(windowHandle, out var dialogWindow))
+        {
+            window = dialogWindow;
+            return true;
+        }
+
+        window = null!;
+        return false;
     }
 
     public async Task<string?> OnBrowseForFolder(string? title, string? rootPath)

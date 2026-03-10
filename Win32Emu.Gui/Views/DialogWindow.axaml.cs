@@ -24,6 +24,7 @@ public partial class DialogWindow : Window
 	private readonly Action<uint, uint, uint, uint>? _messageCallback;
 	private readonly Action<string, DebugLevel>? _debugCallback;
 	private readonly uint _dialogHandle;
+	private Image? _displayImage;
 
 	public int DialogResult { get; private set; }
 
@@ -95,6 +96,15 @@ public partial class DialogWindow : Window
 			return;
 		}
 
+		_displayImage = new Image
+		{
+			IsVisible = false,
+			Stretch = Stretch.Fill,
+			HorizontalAlignment = HorizontalAlignment.Left,
+			VerticalAlignment = VerticalAlignment.Top
+		};
+		contentPanel.Children.Add(_displayImage);
+
 		// Create a canvas for absolute positioning of controls with margins
 		var canvas = new Canvas
 		{
@@ -131,6 +141,26 @@ public partial class DialogWindow : Window
 		}
 
 		contentPanel.Children.Add(canvas);
+	}
+
+	public void SetDisplayBitmap(Avalonia.Media.Imaging.IImage bitmap, int width, int height)
+	{
+		ArgumentNullException.ThrowIfNull(bitmap);
+
+		Dispatcher.UIThread.Post(() =>
+		{
+			if (_displayImage == null)
+			{
+				return;
+			}
+
+			_displayImage.Source = bitmap;
+			_displayImage.Width = width;
+			_displayImage.Height = height;
+			_displayImage.IsVisible = true;
+			_displayImage.InvalidateVisual();
+			InvalidateVisual();
+		});
 	}
 
 	private Control? CreateControlFromItem(DialogItem item)
