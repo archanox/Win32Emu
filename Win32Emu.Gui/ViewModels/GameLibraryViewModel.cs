@@ -305,15 +305,15 @@ public partial class GameLibraryViewModel : ViewModelBase
         var files = await _storageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             Title = "Select Game Executable",
-            AllowMultiple = true,
-            FileTypeFilter = new[]
-            {
-                new FilePickerFileType("Windows Executable")
-                {
-                    Patterns = new[] { "*.exe" }
-                }
-            }
-        });
+			AllowMultiple = true,
+			FileTypeFilter = new[]
+			{
+				new FilePickerFileType("Windows Executable")
+				{
+					Patterns = new[] { "*.exe", "*.EXE" }
+				}
+			}
+		});
 
         foreach (var file in files)
         {
@@ -389,17 +389,19 @@ public partial class GameLibraryViewModel : ViewModelBase
         }
     }
 
-    private async Task ScanFolderForGames(string folderPath)
-    {
-        await Task.Run(() =>
-        {
-            try
-            {
-                var exeFiles = Directory.GetFiles(folderPath, "*.exe", SearchOption.TopDirectoryOnly);
-                var virtualDiskService = new VirtualDiskService(_configuration, _logger);
-                
-                foreach (var exeFile in exeFiles)
-                {
+	private async Task ScanFolderForGames(string folderPath)
+	{
+		await Task.Run(() =>
+		{
+			try
+			{
+				var exeFiles = Directory.GetFiles(folderPath, "*", SearchOption.TopDirectoryOnly)
+					.Where(file => string.Equals(Path.GetExtension(file), ".exe", StringComparison.OrdinalIgnoreCase))
+					.ToArray();
+				var virtualDiskService = new VirtualDiskService(_configuration, _logger);
+				
+				foreach (var exeFile in exeFiles)
+				{
                     // Validate that the file is a valid PE32 executable
                     if (!PeImageLoader.IsPE32(exeFile))
                     {
