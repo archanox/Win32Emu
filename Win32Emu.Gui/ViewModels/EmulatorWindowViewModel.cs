@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Diagnostics.CodeAnalysis;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -970,6 +971,12 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             OnDebugOutput($"Created window bitmap for HWND=0x{windowHandle:X8}: {info.Width}x{info.Height}", DebugLevel.Info);
         }
 
+        if (bitmap == null)
+        {
+            OnDebugOutput($"Window bitmap could not be created for HWND=0x{windowHandle:X8}", DebugLevel.Error);
+            return;
+        }
+
         // Update the bitmap with the new frame buffer data
         using (var framebuffer = bitmap.Lock())
         {
@@ -1011,8 +1018,6 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
                 image.Width = info.Width;
                 image.Height = info.Height;
                 image.IsVisible = true;
-                image.InvalidateVisual();
-                canvas.InvalidateVisual();
                 window.InvalidateVisual();
             }
         }
@@ -1020,10 +1025,11 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         OnDebugOutput($"Window display updated: HWND=0x{windowHandle:X8}, {info.Width}x{info.Height}, stride={info.Stride}", DebugLevel.Trace);
     }
 
-    private bool TryGetDisplayTargetWindow(uint windowHandle, out Window window)
+    private bool TryGetDisplayTargetWindow(uint windowHandle, [NotNullWhen(true)] out Window? window)
     {
-        if (_createdWindows.TryGetValue(windowHandle, out window!))
+        if (_createdWindows.TryGetValue(windowHandle, out var createdWindow))
         {
+            window = createdWindow;
             return true;
         }
 
@@ -1033,7 +1039,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
             return true;
         }
 
-        window = null!;
+        window = null;
         return false;
     }
 

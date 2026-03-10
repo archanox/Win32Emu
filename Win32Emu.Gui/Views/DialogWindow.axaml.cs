@@ -143,11 +143,11 @@ public partial class DialogWindow : Window
 		contentPanel.Children.Add(canvas);
 	}
 
-	public void SetDisplayBitmap(Avalonia.Media.Imaging.IImage bitmap, int width, int height)
+	public void SetDisplayBitmap(IImage bitmap, int width, int height)
 	{
 		ArgumentNullException.ThrowIfNull(bitmap);
 
-		Dispatcher.UIThread.Post(() =>
+		void UpdateDisplayImage()
 		{
 			if (_displayImage == null)
 			{
@@ -160,7 +160,15 @@ public partial class DialogWindow : Window
 			_displayImage.IsVisible = true;
 			_displayImage.InvalidateVisual();
 			InvalidateVisual();
-		});
+		}
+
+		if (Dispatcher.UIThread.CheckAccess())
+		{
+			UpdateDisplayImage();
+			return;
+		}
+
+		Dispatcher.UIThread.Post(UpdateDisplayImage);
 	}
 
 	private Control? CreateControlFromItem(DialogItem item)
