@@ -3555,6 +3555,8 @@ namespace Win32Emu.Win32.Modules
 				_env.DisplayBitsPerPixel = (int)dwBPP;
 				_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
 
+				ResizeDisplayModeSurfaces(actualHandle, (int)dwWidth, (int)dwHeight, (int)dwBPP);
+
 				var shouldRecreateBackend = obj.RenderingBackend?.IsInitialized == true &&
 					(obj.RenderingBackend.Width != (int)dwWidth || obj.RenderingBackend.Height != (int)dwHeight);
 
@@ -3680,6 +3682,83 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			return (uint)DDResult.DD_OK;
+		}
+
+		private void ResizeDisplayModeSurfaces(uint ddrawHandle, int width, int height, int bitsPerPixel)
+		{
+			if (width <= 0 || height <= 0 || bitsPerPixel <= 0)
+			{
+				return;
+			}
+
+			var primarySurfaceHandles = _surfaces.Values
+				.Where(surface => surface.DirectDrawHandle == ddrawHandle && surface.IsPrimary)
+				.Select(surface => surface.Handle)
+				.ToArray();
+
+			if (primarySurfaceHandles.Length == 0)
+			{
+				return;
+			}
+
+			if (bitsPerPixel < 8)
+			{
+				_logger.LogWarning("[DDraw] Skipping surface resize for unsupported sub-byte pixel format {Bpp}", bitsPerPixel);
+				return;
+			}
+
+			if ((bitsPerPixel % 8) != 0)
+			{
+				_logger.LogWarning("[DDraw] Skipping surface resize for unsupported non-byte-aligned pixel format {Bpp}", bitsPerPixel);
+				return;
+			}
+
+			var bytesPerPixel = bitsPerPixel / 8;
+			var resizedSurfaceHandles = new HashSet<uint>();
+			var pendingSurfaceHandles = new Queue<uint>(primarySurfaceHandles);
+
+			while (pendingSurfaceHandles.Count > 0)
+			{
+				var surfaceHandle = pendingSurfaceHandles.Dequeue();
+				if (!resizedSurfaceHandles.Add(surfaceHandle) || !_surfaces.TryGetValue(surfaceHandle, out var surface))
+				{
+					continue;
+				}
+
+				surface.Width = width;
+				surface.Height = height;
+				surface.Pitch = width * bytesPerPixel;
+				var surfaceBufferSize = (long)surface.Pitch * surface.Height;
+				if (surfaceBufferSize <= 0 || surfaceBufferSize > int.MaxValue)
+				{
+					_logger.LogWarning("[DDraw] Skipping resize for surface 0x{SurfaceHandle:X8}: invalid buffer size {BufferSize} for {Width}x{Height}x{Bpp}",
+						surface.Handle, surfaceBufferSize, width, height, bitsPerPixel);
+					continue;
+				}
+
+				surface.Bits = new byte[(int)surfaceBufferSize];
+				surface.IsLocked = false;
+				surface.LockedMemoryPtr = 0;
+				surface.IsTextureDirty = true;
+
+				if (surface.AllocatedMemoryPtr != 0)
+				{
+					if (!_env.VirtualFree(surface.AllocatedMemoryPtr, 0, (uint)VirtualFreeType.MEM_RELEASE))
+					{
+						_logger.LogWarning("[DDraw] Failed to free resized surface memory at 0x{SurfaceMemoryPtr:X8}", surface.AllocatedMemoryPtr);
+					}
+
+					surface.AllocatedMemoryPtr = 0;
+				}
+
+				_logger.LogInformation("[DDraw] Resized surface 0x{SurfaceHandle:X8} to {Width}x{Height}x{Bpp} (pitch={Pitch})",
+					surface.Handle, width, height, bitsPerPixel, surface.Pitch);
+
+				foreach (var attachedSurfaceHandle in surface.AttachedSurfaces)
+				{
+					pendingSurfaceHandles.Enqueue(attachedSurfaceHandle);
+				}
+			}
 		}
 
 		private uint DDraw_WaitForVerticalBlank(ICpu cpu, VirtualMemory memory)
