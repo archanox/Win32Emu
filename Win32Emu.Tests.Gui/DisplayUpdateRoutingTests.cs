@@ -208,14 +208,14 @@ public class DisplayUpdateRoutingTests
 		return bytes;
 	}
 
-	private static byte[] CreateSolidFrameBuffer(int width, int height, byte red, byte green, byte blue)
+	private static byte[] CreateSolidFrameBuffer(int width, int height, byte redByte, byte greenByte, byte blueByte)
 	{
 		var bytes = new byte[width * height * 4];
 		for (var i = 0; i < bytes.Length; i += 4)
 		{
-			bytes[i] = red;
-			bytes[i + 1] = green;
-			bytes[i + 2] = blue;
+			bytes[i] = redByte;
+			bytes[i + 1] = greenByte;
+			bytes[i + 2] = blueByte;
 			bytes[i + 3] = 0xFF;
 		}
 
@@ -224,26 +224,27 @@ public class DisplayUpdateRoutingTests
 
 	private static IRenderer GetRenderer(Window window)
 	{
-		var property = typeof(TopLevel).GetProperty("Renderer", BindingFlags.Instance | BindingFlags.NonPublic);
-		Assert.NotNull(property);
-
-		return Assert.IsAssignableFrom<IRenderer>(property.GetValue(window));
+		return Assert.IsAssignableFrom<IRenderer>(((IRenderRoot)window).Renderer);
 	}
 
-	private static Delegate SubscribeToSceneInvalidated(IRenderer renderer, Action onSceneInvalidated)
+	private static EventHandler<SceneInvalidatedEventArgs> SubscribeToSceneInvalidated(IRenderer renderer, Action onSceneInvalidated)
 	{
 		EventHandler<SceneInvalidatedEventArgs> handler = (_, _) => onSceneInvalidated();
-		var addMethod = typeof(IRenderer).GetMethod("add_SceneInvalidated");
-		Assert.NotNull(addMethod);
-		addMethod.Invoke(renderer, [handler]);
+		GetSceneInvalidatedEvent().AddEventHandler(renderer, handler);
 		return handler;
 	}
 
-	private static void UnsubscribeFromSceneInvalidated(IRenderer renderer, Delegate handler)
+	private static void UnsubscribeFromSceneInvalidated(IRenderer renderer, EventHandler<SceneInvalidatedEventArgs> handler)
 	{
-		var removeMethod = typeof(IRenderer).GetMethod("remove_SceneInvalidated");
-		Assert.NotNull(removeMethod);
-		removeMethod.Invoke(renderer, [handler]);
+		GetSceneInvalidatedEvent().RemoveEventHandler(renderer, handler);
+	}
+
+	private static EventInfo GetSceneInvalidatedEvent()
+	{
+		// Avalonia's renderer event isn't directly subscribable in this test environment, so use EventInfo.
+		var sceneInvalidatedEvent = typeof(IRenderer).GetEvent("SceneInvalidated");
+		Assert.NotNull(sceneInvalidatedEvent);
+		return sceneInvalidatedEvent;
 	}
 
 	private static async Task FlushUiThreadAsync()
