@@ -568,12 +568,14 @@
 		};
 		
 		// Update canvas with RGBA frame buffer data
-		window.updateCanvas = (canvasId, base64Data, width, height, frameSequence = 0) => {
+		window.updateCanvas = (canvasId, base64Data, width, height, frameSequence = null) => {
 			const MAX_SAMPLED_PIXELS = 4096;
 			const BYTES_PER_PIXEL = 4; // RGBA format
-			const lastFrameSequence = window.ddrawDiagnostics.canvasFrameSequences[canvasId] || 0;
-			if (frameSequence !== 0 && frameSequence < lastFrameSequence) {
-				console.debug(`Skipping stale canvas update for ${canvasId}: frame ${frameSequence} < ${lastFrameSequence}`);
+			const previousFrameSequence = window.ddrawDiagnostics.canvasFrameSequences[canvasId] || 0;
+			const hasExplicitFrameSequence = typeof frameSequence === 'number' && Number.isFinite(frameSequence) && frameSequence > 0;
+			const effectiveFrameSequence = hasExplicitFrameSequence ? frameSequence : previousFrameSequence + 1;
+			if (hasExplicitFrameSequence && effectiveFrameSequence <= previousFrameSequence) {
+				console.debug(`Skipping stale canvas update for ${canvasId}: frame ${effectiveFrameSequence} <= ${previousFrameSequence}`);
 				return;
 			}
 			
@@ -654,13 +656,15 @@
 			window.ddrawDiagnostics.backendInitialized = true;
 			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
 			window.ddrawDiagnostics.lastCanvasId = canvasId;
-			window.ddrawDiagnostics.lastFrameSequence = frameSequence;
-			window.ddrawDiagnostics.canvasFrameSequences[canvasId] = frameSequence;
+			window.ddrawDiagnostics.lastFrameSequence = effectiveFrameSequence;
+			if (hasExplicitFrameSequence) {
+				window.ddrawDiagnostics.canvasFrameSequences[canvasId] = effectiveFrameSequence;
+			}
 			window.ddrawDiagnostics.samplePixelCount = samplePixelCount;
 			window.ddrawDiagnostics.sampleNonBlackPixels = sampleNonBlackPixels;
 			window.ddrawDiagnostics.firstVisibleColor = firstVisibleColor;
 			
-			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount}, frame #${frameSequence})`);
+			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount}, frame #${effectiveFrameSequence})`);
 		};
 		
 		// Clean up when a window canvas is no longer needed (Blazor manages canvas lifecycle)
@@ -668,7 +672,7 @@
 		};
 		
 		// Wrapper function that stops emulator on error
-		window.updateCanvasWithErrorHandling = (canvasId, base64Data, width, height, frameSequence = 0) => {
+		window.updateCanvasWithErrorHandling = (canvasId, base64Data, width, height, frameSequence = null) => {
 			// Check if emulator was already stopped
 			if (window.emulatorStopped) {
 				console.error("🛑 Emulator is stopped, ignoring canvas update");

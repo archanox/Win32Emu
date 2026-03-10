@@ -31,7 +31,7 @@ public class WasmRenderingBackend : IRenderingBackend
 	private string _canvasId = "emulatorCanvas";
 	private byte[]? _frameBuffer;
 	private volatile bool _renderingErrorOccurred = false;
-	private long _frameSequence;
+	private long _frameSequenceCounter = 0;
 	
 	public event EventHandler<UIEventArgs>? UIEvent;
 	
@@ -216,7 +216,7 @@ public class WasmRenderingBackend : IRenderingBackend
 			
 			// Update canvas through JavaScript with better error handling
 			var base64Data = Convert.ToBase64String(_frameBuffer);
-			var frameSequence = Interlocked.Increment(ref _frameSequence);
+			var frameSequence = Interlocked.Increment(ref _frameSequenceCounter);
 			
 			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
 			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}, frameSequence={FrameSequence}",
