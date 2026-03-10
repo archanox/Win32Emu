@@ -12,6 +12,12 @@ namespace Win32Emu.Rtl;
 /// </summary>
 public class RtlToCSharpGenerator
 {
+    private const uint ByteMask = 0xFFu;
+    private const uint WordMask = 0xFFFFu;
+    private const uint FullRegisterMask = uint.MaxValue;
+    private const int LowByteShift = 0;
+    private const int HighByteShift = 8;
+
     /// <summary>
     /// Generate C# code for an RTL code block
     /// </summary>
@@ -49,6 +55,12 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            uint EDI = cpu.GetRegister(\"EDI\");");
         sb.AppendLine("            uint EBP = cpu.GetRegister(\"EBP\");");
         sb.AppendLine("            uint ESP = cpu.GetRegister(\"ESP\");");
+        sb.AppendLine("            uint CS = cpu.GetRegister(\"CS\");");
+        sb.AppendLine("            uint DS = cpu.GetRegister(\"DS\");");
+        sb.AppendLine("            uint ES = cpu.GetRegister(\"ES\");");
+        sb.AppendLine("            uint FS = cpu.GetRegister(\"FS\");");
+        sb.AppendLine("            uint GS = cpu.GetRegister(\"GS\");");
+        sb.AppendLine("            uint SS = cpu.GetRegister(\"SS\");");
         sb.AppendLine("            uint FLAGS = 0;");
         sb.AppendLine();
         
@@ -84,6 +96,12 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            cpu.SetRegister(\"EDI\", EDI);");
         sb.AppendLine("            cpu.SetRegister(\"EBP\", EBP);");
         sb.AppendLine("            cpu.SetRegister(\"ESP\", ESP);");
+        sb.AppendLine("            cpu.SetRegister(\"CS\", CS);");
+        sb.AppendLine("            cpu.SetRegister(\"DS\", DS);");
+        sb.AppendLine("            cpu.SetRegister(\"ES\", ES);");
+        sb.AppendLine("            cpu.SetRegister(\"FS\", FS);");
+        sb.AppendLine("            cpu.SetRegister(\"GS\", GS);");
+        sb.AppendLine("            cpu.SetRegister(\"SS\", SS);");
         sb.AppendLine();
         // Set EIP to the address following this block (critical for execution to continue)
         sb.AppendLine($"            // Advance EIP to next instruction after this block");
@@ -101,13 +119,13 @@ public class RtlToCSharpGenerator
     {
         var code = insn switch
         {
-            RtlAssignment assign => $"{ExpressionToString(assign.Destination)} = {ExpressionToString(assign.Source)};",
-            RtlBinaryOp binOp => $"{ExpressionToString(binOp.Destination)} = {ExpressionToString(binOp.Left)} {binOp.Operator} {ExpressionToString(binOp.Right)};",
+            RtlAssignment assign => GenerateAssignment(assign),
+            RtlBinaryOp binOp => GenerateBinaryOp(binOp),
             RtlBranch branch => GenerateBranch(branch, rtlBlock),
             RtlGoto goto_ => GenerateGoto(goto_, rtlBlock),
             RtlCall call => GenerateCall(call),
             RtlReturn ret => GenerateReturn(ret),
-            RtlLoad load => $"{ExpressionToString(load.Destination)} = mem.Read{load.Size * 8}({ExpressionToString(load.Address)});",
+            RtlLoad load => GenerateLoad(load),
             RtlStore store => $"mem.Write{store.Size * 8}({ExpressionToString(store.Address)}, {ExpressionToString(store.Value)});",
             RtlSimdOp simd => GenerateSimdOperation(simd),
             RtlNop => "// nop",
@@ -147,7 +165,44 @@ public class RtlToCSharpGenerator
                 cpu.SetRegister(""ESI"", ESI);
                 cpu.SetRegister(""EDI"", EDI);
                 cpu.SetRegister(""EBP"", EBP);
-                cpu.SetRegister(""ESP"", ESP);";
+                cpu.SetRegister(""ESP"", ESP);
+                cpu.SetRegister(""CS"", CS);
+                cpu.SetRegister(""DS"", DS);
+                cpu.SetRegister(""ES"", ES);
+                cpu.SetRegister(""FS"", FS);
+                cpu.SetRegister(""GS"", GS);
+                cpu.SetRegister(""SS"", SS);";
+    }
+
+    private string GenerateAssignment(RtlAssignment assign)
+    {
+        return GenerateDestinationAssignment(assign.Destination, ExpressionToString(assign.Source));
+    }
+
+    private string GenerateBinaryOp(RtlBinaryOp binOp)
+    {
+        return GenerateDestinationAssignment(
+            binOp.Destination,
+            $"{ExpressionToString(binOp.Left)} {binOp.Operator} {ExpressionToString(binOp.Right)}"
+        );
+    }
+
+    private string GenerateLoad(RtlLoad load)
+    {
+        return GenerateDestinationAssignment(
+            load.Destination,
+            $"mem.Read{load.Size * 8}({ExpressionToString(load.Address)})"
+        );
+    }
+
+    private string GenerateDestinationAssignment(RtlExpression destination, string sourceExpression)
+    {
+        if (destination is RtlRegister register)
+        {
+            return GenerateRegisterWrite(register.Name, sourceExpression);
+        }
+
+        return $"{ExpressionToString(destination)} = {sourceExpression};";
     }
     
     /// <summary>
@@ -240,13 +295,165 @@ public class RtlToCSharpGenerator
     {
         return expr switch
         {
-            RtlRegister reg => reg.Name,
+            RtlRegister reg => GetRegisterReadExpression(reg.Name),
             RtlConstant const_ => $"0x{const_.Value:X}u",
             RtlTemporary temp => $"t{temp.Id}",
             RtlBinaryExpression binExpr => $"({ExpressionToString(binExpr.Left)} {binExpr.Operator} {ExpressionToString(binExpr.Right)})",
             RtlUnaryExpression unExpr => $"{unExpr.Operator}({ExpressionToString(unExpr.Operand)})",
             _ => "0"
         };
+    }
+
+    private string GetRegisterReadExpression(string registerName)
+    {
+        var normalizedName = registerName.ToUpperInvariant();
+
+        return normalizedName switch
+        {
+            "AL" => $"(EAX & 0x{ByteMask:X}u)",
+            "AH" => $"((EAX >> {HighByteShift}) & 0x{ByteMask:X}u)",
+            "AX" => $"(EAX & 0x{WordMask:X}u)",
+            "BL" => $"(EBX & 0x{ByteMask:X}u)",
+            "BH" => $"((EBX >> {HighByteShift}) & 0x{ByteMask:X}u)",
+            "BX" => $"(EBX & 0x{WordMask:X}u)",
+            "CL" => $"(ECX & 0x{ByteMask:X}u)",
+            "CH" => $"((ECX >> {HighByteShift}) & 0x{ByteMask:X}u)",
+            "CX" => $"(ECX & 0x{WordMask:X}u)",
+            "DL" => $"(EDX & 0x{ByteMask:X}u)",
+            "DH" => $"((EDX >> {HighByteShift}) & 0x{ByteMask:X}u)",
+            "DX" => $"(EDX & 0x{WordMask:X}u)",
+            "SI" => $"(ESI & 0x{WordMask:X}u)",
+            "DI" => $"(EDI & 0x{WordMask:X}u)",
+            "BP" => $"(EBP & 0x{WordMask:X}u)",
+            "SP" => $"(ESP & 0x{WordMask:X}u)",
+            _ => normalizedName
+        };
+    }
+
+    private string GenerateRegisterWrite(string registerName, string valueExpression)
+    {
+        var normalizedName = registerName.ToUpperInvariant();
+        var value = $"unchecked((uint)({valueExpression}))";
+
+        if (TryGetPartialRegisterInfo(normalizedName, out var parentRegister, out var shift, out var mask))
+        {
+            return GeneratePartialRegisterWrite(parentRegister, shift, mask, value);
+        }
+
+        if (IsSegmentRegister(normalizedName))
+        {
+            return $"{normalizedName} = {value} & 0x{WordMask:X}u;";
+        }
+
+        return $"{normalizedName} = {value};";
+    }
+
+    private static string GeneratePartialRegisterWrite(string parentRegister, int shift, uint mask, string valueExpression)
+    {
+        var shiftedMask = mask << shift;
+        var preservedMask = FullRegisterMask ^ shiftedMask;
+        var shiftedValue = shift == LowByteShift
+            ? $"({valueExpression} & 0x{mask:X}u)"
+            : $"(({valueExpression} & 0x{mask:X}u) << {shift})";
+
+        return $"{parentRegister} = ({parentRegister} & 0x{preservedMask:X}u) | {shiftedValue};";
+    }
+
+    private static bool TryGetPartialRegisterInfo(string registerName, out string parentRegister, out int shift, out uint mask)
+    {
+        switch (registerName)
+        {
+            case "AL":
+                parentRegister = "EAX";
+                shift = LowByteShift;
+                mask = ByteMask;
+                return true;
+            case "AH":
+                parentRegister = "EAX";
+                shift = HighByteShift;
+                mask = ByteMask;
+                return true;
+            case "AX":
+                parentRegister = "EAX";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            case "BL":
+                parentRegister = "EBX";
+                shift = LowByteShift;
+                mask = ByteMask;
+                return true;
+            case "BH":
+                parentRegister = "EBX";
+                shift = HighByteShift;
+                mask = ByteMask;
+                return true;
+            case "BX":
+                parentRegister = "EBX";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            case "CL":
+                parentRegister = "ECX";
+                shift = LowByteShift;
+                mask = ByteMask;
+                return true;
+            case "CH":
+                parentRegister = "ECX";
+                shift = HighByteShift;
+                mask = ByteMask;
+                return true;
+            case "CX":
+                parentRegister = "ECX";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            case "DL":
+                parentRegister = "EDX";
+                shift = LowByteShift;
+                mask = ByteMask;
+                return true;
+            case "DH":
+                parentRegister = "EDX";
+                shift = HighByteShift;
+                mask = ByteMask;
+                return true;
+            case "DX":
+                parentRegister = "EDX";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            case "SI":
+                parentRegister = "ESI";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            case "DI":
+                parentRegister = "EDI";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            case "BP":
+                parentRegister = "EBP";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            case "SP":
+                parentRegister = "ESP";
+                shift = LowByteShift;
+                mask = WordMask;
+                return true;
+            default:
+                parentRegister = string.Empty;
+                shift = LowByteShift;
+                mask = 0;
+                return false;
+        }
+    }
+
+    private static bool IsSegmentRegister(string registerName)
+    {
+        return registerName is "CS" or "DS" or "ES" or "FS" or "GS" or "SS";
     }
     
     /// <summary>
@@ -351,5 +558,4 @@ public class RtlToCSharpGenerator
         return (CompilationUnitSyntax)SyntaxFactory.ParseCompilationUnit(code);
     }
 }
-
 
