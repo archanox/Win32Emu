@@ -190,6 +190,12 @@ public static class NativeTypes
 		ERROR_RESOURCE_NAME_NOT_FOUND = 1814
 	}
 
+	public enum VirtualFreeType : uint
+	{
+		MEM_DECOMMIT = 0x00004000,
+		MEM_RELEASE = 0x00008000
+	}
+
 	// NTSTATUS codes
 	public enum NtStatus : uint
 	{
