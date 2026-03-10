@@ -140,6 +140,69 @@ public class DisplayUpdateRoutingTests
 	}
 
 	[AvaloniaFact]
+	public async Task OnDisplayUpdate_TargetedWindow_RerendersWhenUpdatingExistingBitmap()
+	{
+		var viewModel = new EmulatorWindowViewModel();
+		var windowHandle = 0x00014000u;
+
+		viewModel.OnWindowCreate(new WindowCreateInfo
+		{
+			Handle = windowHandle,
+			Title = "DirectDraw Window",
+			Width = 320,
+			Height = 240,
+			ClassName = "DirectDrawWindow",
+			X = 0,
+			Y = 0
+		});
+		await FlushUiThreadAsync();
+
+		var windows = GetTrackedWindows<Window>(viewModel, "_createdWindows");
+		var window = windows[windowHandle];
+		var renderer = GetRenderer(window);
+		var sceneInvalidations = 0;
+		var invalidationHandler = SubscribeToSceneInvalidated(renderer, () => sceneInvalidations++);
+
+		try
+		{
+			viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+			{
+				FrameBuffer = CreateSolidFrameBuffer(320, 240, 0x10, 0x40, 0x80),
+				Width = 320,
+				Height = 240,
+				Stride = 320 * 4,
+				TargetWindowHandle = (IntPtr)(long)windowHandle
+			});
+			await FlushUiThreadAsync();
+			await ForceRenderAsync();
+
+			var bitmaps = GetTrackedBitmaps(viewModel);
+			Assert.True(bitmaps.TryGetValue(windowHandle, out var displayBitmap));
+
+			sceneInvalidations = 0;
+			viewModel.OnDisplayUpdate(new DisplayUpdateInfo
+			{
+				FrameBuffer = CreateSolidFrameBuffer(320, 240, 0xD0, 0x20, 0x40),
+				Width = 320,
+				Height = 240,
+				Stride = 320 * 4,
+				TargetWindowHandle = (IntPtr)(long)windowHandle
+			});
+			await FlushUiThreadAsync();
+			await ForceRenderAsync();
+
+			Assert.Same(displayBitmap, bitmaps[windowHandle]);
+			Assert.True(sceneInvalidations > 0);
+		}
+		finally
+		{
+			UnsubscribeFromSceneInvalidated(renderer, invalidationHandler);
+			window.Close();
+			await FlushUiThreadAsync();
+		}
+	}
+
+	[AvaloniaFact]
 	public async Task OnDialogEnd_RemovesTrackedDialogBitmap()
 	{
 		var viewModel = new EmulatorWindowViewModel();
