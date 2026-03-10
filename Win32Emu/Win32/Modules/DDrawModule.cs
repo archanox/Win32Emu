@@ -3555,6 +3555,31 @@ namespace Win32Emu.Win32.Modules
 				_env.DisplayBitsPerPixel = (int)dwBPP;
 				_logger.LogInformation("[DDraw] Updated ProcessEnvironment display mode to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
 
+				var requiresBackendResize = obj.RenderingBackend?.IsInitialized == true &&
+					(obj.RenderingBackend.Width != (int)dwWidth || obj.RenderingBackend.Height != (int)dwHeight);
+
+				if (requiresBackendResize)
+				{
+					_logger.LogInformation("[DDraw] Reinitializing rendering backend for display mode change from {OldWidth}x{OldHeight} to {NewWidth}x{NewHeight}",
+						obj.RenderingBackend!.Width, obj.RenderingBackend.Height, dwWidth, dwHeight);
+
+					var backendToReinitialize = obj.RenderingBackend;
+					backendToReinitialize.Dispose();
+
+					if (_env.BackendFactory != null)
+					{
+						obj.RenderingBackend = _env.BackendFactory.CreateRenderingBackendWithHost(_logger, _env.Host);
+						if (_env.Host != null)
+						{
+							_logger.LogInformation("[DDraw] Recreated Avalonia rendering backend after display mode change");
+						}
+					}
+					else
+					{
+						obj.RenderingBackend = backendToReinitialize;
+					}
+				}
+
 				// Initialize rendering backend with the specified dimensions
 				if (obj.RenderingBackend == null)
 				{
@@ -3576,8 +3601,6 @@ namespace Win32Emu.Win32.Modules
 				var title = "Win32Emu DirectDraw";
 				if (obj.RenderingBackend?.IsInitialized == true)
 				{
-					// If already initialized, we would need to recreate with new dimensions
-					// For now, we'll just log this situation
 					_logger.LogInformation("[DDraw] Display mode changed to {Width}x{Height}x{Bpp}", dwWidth, dwHeight, dwBPP);
 				}
 				else if (obj.RenderingBackend != null)

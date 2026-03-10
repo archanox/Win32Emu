@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu.Jit;
 using Win32Emu.Memory;
@@ -274,6 +275,43 @@ public class DDrawPalettePresentationTests
 		Assert.Equal(255, backend.LastFrameData[3]);
 	}
 
+	[Fact]
+	public async Task SetDisplayMode_ShouldReinitializeBackend_WhenDimensionsChangeAfterInitialization()
+	{
+		var memory = new VirtualMemory();
+		var cpu = new JitCpu(memory, NullLogger.Instance);
+		var backendFactory = new TestBackendFactory();
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance, backendFactory: backendFactory);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		const uint ddrawHandle = 0x70000030;
+		const uint comObjectAddress = 0x00500030;
+
+		backendFactory.NextBackend = new ResizableTestRenderingBackend(isInitialized: true, width: 640, height: 480);
+
+		var ddrawObject = CreateNestedInstance("DirectDrawObject");
+		SetPropertyValue(ddrawObject, "Handle", ddrawHandle);
+		SetPropertyValue(ddrawObject, "ComObjectAddress", comObjectAddress);
+		SetPropertyValue(ddrawObject, "Width", 640);
+		SetPropertyValue(ddrawObject, "Height", 480);
+		SetPropertyValue(ddrawObject, "BitsPerPixel", 8);
+		SetPropertyValue(ddrawObject, "RenderingBackend", backendFactory.NextBackend);
+		GetDictionaryField(ddrawModule, "_ddrawObjects")[ddrawHandle] = ddrawObject;
+		GetDictionaryField(ddrawModule, "_comObjectToHandle")[comObjectAddress] = ddrawHandle;
+
+		var method = GetPrivateMethod("DDraw_SetDisplayModeAsync");
+
+		SetupStackArgs(cpu, memory, comObjectAddress, 320, 200, 8);
+		var result = (uint)await (Task<uint>)method.Invoke(ddrawModule, [cpu, memory, ddrawHandle])!;
+
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, result);
+		Assert.Equal(1, backendFactory.CreateRenderingBackendWithHostCallCount);
+		Assert.Equal(1, backendFactory.InitialBackend.DisposeCallCount);
+		Assert.Equal(1, backendFactory.CreatedBackend.InitializeCallCount);
+		Assert.Equal(320, backendFactory.CreatedBackend.Width);
+		Assert.Equal(200, backendFactory.CreatedBackend.Height);
+		Assert.Same(backendFactory.CreatedBackend, GetPropertyValue(ddrawObject, "RenderingBackend"));
+	}
+
 	private static uint[] CreatePaletteEntries(uint entryColor)
 	{
 		var entries = new uint[256];
@@ -419,7 +457,9 @@ public class DDrawPalettePresentationTests
 
 	private sealed class TestRenderingBackend : IRenderingBackend
 	{
+#pragma warning disable CS0067
 		public event EventHandler<UIEventArgs>? UIEvent;
+#pragma warning restore CS0067
 
 		public bool IsInitialized => true;
 		public int Width => 1;
@@ -470,5 +510,74 @@ public class DDrawPalettePresentationTests
 		public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull) { }
 		public void DeleteTexture(uint textureId) { }
 		public void Dispose() { }
+	}
+
+	private sealed class TestBackendFactory : IBackendFactory
+	{
+		public BackendType CurrentBackendType { get; set; } = BackendType.Headless;
+		public ResizableTestRenderingBackend? NextBackend { get; set; }
+		public ResizableTestRenderingBackend InitialBackend => NextBackend!;
+		public ResizableTestRenderingBackend CreatedBackend { get; private set; } = null!;
+		public int CreateRenderingBackendWithHostCallCount { get; private set; }
+
+		public IRenderingBackend CreateRenderingBackend(ILogger logger) => throw new NotSupportedException();
+		public IAudioBackend CreateAudioBackend(ILogger logger) => throw new NotSupportedException();
+		public IInputBackend CreateInputBackend(ILogger logger) => throw new NotSupportedException();
+
+		public IRenderingBackend CreateRenderingBackendWithHost(ILogger logger, IEmulatorHost? host)
+		{
+			CreateRenderingBackendWithHostCallCount++;
+			CreatedBackend = new ResizableTestRenderingBackend();
+			return CreatedBackend;
+		}
+	}
+
+	private sealed class ResizableTestRenderingBackend : IRenderingBackend
+	{
+		public ResizableTestRenderingBackend(bool isInitialized = false, int width = 0, int height = 0)
+		{
+			IsInitialized = isInitialized;
+			Width = width;
+			Height = height;
+		}
+
+#pragma warning disable CS0067
+		public event EventHandler<UIEventArgs>? UIEvent;
+#pragma warning restore CS0067
+
+		public bool IsInitialized { get; private set; }
+		public int Width { get; private set; }
+		public int Height { get; private set; }
+		public int InitializeCallCount { get; private set; }
+		public int DisposeCallCount { get; private set; }
+
+		public Task<bool> InitializeAsync(int width, int height, string title = "Win32Emu Display")
+		{
+			InitializeCallCount++;
+			Width = width;
+			Height = height;
+			IsInitialized = true;
+			return Task.FromResult(true);
+		}
+
+		public byte[] ConvertPalettizedToRGBA(byte[] indexedData, uint[] palette, int width, int height, int pitch) => throw new NotSupportedException();
+		public byte[] Convert16BitToRGBA(byte[] rgb565Data, int width, int height, int pitch) => throw new NotSupportedException();
+		public byte[] Convert24BitToRGBA(byte[] rgb24Data, int width, int height, int pitch) => throw new NotSupportedException();
+		public bool UpdateFrameBuffer(byte[] data, int pitch, IntPtr targetWindowHandle = default) => true;
+		public void Clear(byte r, byte g, byte b, byte a = 255) { }
+		public void ProcessEvents() { }
+		public void BeginFrame() { }
+		public void EndFrame() { }
+		public void DrawTriangles(Span<Vertex> vertices, Span<ushort> indices) { }
+		public void SetTexture(uint textureId, byte[] data, int width, int height, TextureFormat format) { }
+		public void BindTexture(uint textureId) { }
+		public void SetRenderState(BlendMode blend, DepthTest depth, CullMode cull) { }
+		public void DeleteTexture(uint textureId) { }
+
+		public void Dispose()
+		{
+			DisposeCallCount++;
+			IsInitialized = false;
+		}
 	}
 }
