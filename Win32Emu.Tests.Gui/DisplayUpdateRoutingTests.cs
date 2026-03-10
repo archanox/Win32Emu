@@ -100,7 +100,7 @@ public class DisplayUpdateRoutingTests
 		await FlushUiThreadAsync();
 		var renderer = GetRenderer(window);
 		var sceneInvalidations = 0;
-		var invalidationHandler = SubscribeToSceneInvalidated(renderer, () => sceneInvalidations++);
+		var invalidationHandler = SubscribeToSceneInvalidated(renderer, () => Interlocked.Increment(ref sceneInvalidations));
 
 		try
 		{
@@ -116,7 +116,7 @@ public class DisplayUpdateRoutingTests
 			Assert.NotNull(viewModel.DisplayBitmap);
 			var displayBitmap = viewModel.DisplayBitmap;
 
-			sceneInvalidations = 0;
+			Interlocked.Exchange(ref sceneInvalidations, 0);
 			viewModel.OnDisplayUpdate(new DisplayUpdateInfo
 			{
 				FrameBuffer = CreateSolidFrameBuffer(320, 240, 0xD0, 0x20, 0x40),
@@ -128,7 +128,7 @@ public class DisplayUpdateRoutingTests
 			await ForceRenderAsync();
 
 			Assert.Same(displayBitmap, viewModel.DisplayBitmap);
-			Assert.True(sceneInvalidations > 0);
+			Assert.True(Volatile.Read(ref sceneInvalidations) > 0);
 		}
 		finally
 		{
@@ -161,7 +161,7 @@ public class DisplayUpdateRoutingTests
 		var window = windows[windowHandle];
 		var renderer = GetRenderer(window);
 		var sceneInvalidations = 0;
-		var invalidationHandler = SubscribeToSceneInvalidated(renderer, () => sceneInvalidations++);
+		var invalidationHandler = SubscribeToSceneInvalidated(renderer, () => Interlocked.Increment(ref sceneInvalidations));
 
 		try
 		{
@@ -179,7 +179,7 @@ public class DisplayUpdateRoutingTests
 			var bitmaps = GetTrackedBitmaps(viewModel);
 			Assert.True(bitmaps.TryGetValue(windowHandle, out var displayBitmap));
 
-			sceneInvalidations = 0;
+			Interlocked.Exchange(ref sceneInvalidations, 0);
 			viewModel.OnDisplayUpdate(new DisplayUpdateInfo
 			{
 				FrameBuffer = CreateSolidFrameBuffer(320, 240, 0xD0, 0x20, 0x40),
@@ -192,7 +192,7 @@ public class DisplayUpdateRoutingTests
 			await ForceRenderAsync();
 
 			Assert.Same(displayBitmap, bitmaps[windowHandle]);
-			Assert.True(sceneInvalidations > 0);
+			Assert.True(Volatile.Read(ref sceneInvalidations) > 0);
 		}
 		finally
 		{
