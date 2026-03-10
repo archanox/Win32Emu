@@ -5070,6 +5070,11 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
+	/// <summary>
+	/// Returns the ST(i) register index used by x87 compare instructions.
+	/// Iced exposes register compares as ST(0), ST(i), so prefer Op1 when present and
+	/// fall back to Op0 or the implicit default operand index for no-operand encodings.
+	/// </summary>
 	private int GetFpuCompareRegisterIndex(Instruction insn, int defaultIndex = 1)
 	{
 		if (insn.OpCount == 0)
