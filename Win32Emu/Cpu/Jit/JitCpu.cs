@@ -5019,8 +5019,7 @@ public class JitCpu : IAsyncCpu
 		}
 		else
 		{
-			var reg = insn.Op0Register;
-			int i = reg - Register.ST0;
+			int i = GetFpuCompareRegisterIndex(insn);
 			source = FpuGetSt(i);
 		}
 
@@ -5070,12 +5069,32 @@ public class JitCpu : IAsyncCpu
 			_fpuStatusWord |= FpuConditionCodeEqual;
 		}
 	}
+
+	private int GetFpuCompareRegisterIndex(Instruction insn, int defaultIndex = 1)
+	{
+		if (insn.OpCount == 0)
+		{
+			return defaultIndex;
+		}
+
+		if (insn.OpCount > 1 && insn.Op1Kind == OpKind.Register)
+		{
+			return insn.Op1Register - Register.ST0;
+		}
+
+		if (insn.Op0Kind == OpKind.Register)
+		{
+			return insn.Op0Register - Register.ST0;
+		}
+
+		return defaultIndex;
+	}
 	
 	private void ExecFucomi(Instruction insn)
 	{
 		// FUCOMI - Unordered compare and set EFLAGS
 		double st0 = FpuGetSt(0);
-		int i = insn.OpCount > 0 ? insn.Op0Register - Register.ST0 : 1;
+		int i = GetFpuCompareRegisterIndex(insn);
 		double sti = FpuGetSt(i);
 		
 		if (double.IsNaN(st0) || double.IsNaN(sti))
@@ -5652,29 +5671,8 @@ public class JitCpu : IAsyncCpu
 		{
 			throw new NotImplementedException($"[JitCpu] FICOM with unsupported operand type: {insn.Op0Kind}");
 		}
-		
-		// Set condition codes in FPU status word (C0, C2, C3 = bits 8, 10, 14)
-		// FICOM does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
-		if (double.IsNaN(st0) || double.IsNaN(source))
-		{
-			// Unordered: C0=1, C2=1, C3=1
-			_fpuStatusWord |= 0x4500;
-		}
-		else if (st0 > source)
-		{
-			// Greater than: C0=0, C2=0, C3=0
-			_fpuStatusWord &= 0xBAFF;
-		}
-		else if (st0 < source)
-		{
-			// Less than: C0=1, C2=0, C3=0
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
-		}
-		else // st0 == source
-		{
-			// Equal: C0=0, C2=0, C3=1
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
-		}
+
+		SetFpuCompareConditionCodes(st0, source);
 	}
 
 	private void ExecFicomp(Instruction insn, VirtualMemory mem)
@@ -5689,37 +5687,12 @@ public class JitCpu : IAsyncCpu
 		// FUCOM - Unordered Compare
 		// Compares ST(0) with ST(i) and sets condition codes in FPU status word
 		// FUCOM does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
-		int i = 1; // Default to ST(1)
-		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Register)
-		{
-			var reg = insn.Op0Register;
-			i = reg - Register.ST0;
-		}
+		int i = GetFpuCompareRegisterIndex(insn);
 		
 		double st0 = FpuGetSt(0);
 		double sti = FpuGetSt(i);
-		
-		// Set condition codes in FPU status word only
-		if (double.IsNaN(st0) || double.IsNaN(sti))
-		{
-			// Unordered
-			_fpuStatusWord |= 0x4500;
-		}
-		else if (st0 > sti)
-		{
-			// Greater than
-			_fpuStatusWord &= 0xBAFF;
-		}
-		else if (st0 < sti)
-		{
-			// Less than
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
-		}
-		else // st0 == sti
-		{
-			// Equal
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
-		}
+
+		SetFpuCompareConditionCodes(st0, sti);
 	}
 
 	private void ExecFucomp(Instruction insn)
@@ -5736,24 +5709,8 @@ public class JitCpu : IAsyncCpu
 		// FUCOMPP does NOT modify EFLAGS (only FCOMI/FCOMIP do that)
 		double st0 = FpuGetSt(0);
 		double st1 = FpuGetSt(1);
-		
-		// Set FPU condition codes only (C0, C2, C3)
-		if (double.IsNaN(st0) || double.IsNaN(st1))
-		{
-			_fpuStatusWord |= 0x4500;
-		}
-		else if (st0 > st1)
-		{
-			_fpuStatusWord &= 0xBAFF;
-		}
-		else if (st0 < st1)
-		{
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
-		}
-		else
-		{
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
-		}
+
+		SetFpuCompareConditionCodes(st0, st1);
 		
 		// Pop twice
 		FpuPop();
@@ -5765,39 +5722,15 @@ public class JitCpu : IAsyncCpu
 		// FTST - Test ST(0)
 		// Compares ST(0) with 0.0 and sets condition codes
 		double st0 = FpuGetSt(0);
-		
-		if (double.IsNaN(st0))
-		{
-			// Unordered
-			_fpuStatusWord |= 0x4500;
-		}
-		else if (st0 > 0.0)
-		{
-			// Greater than zero
-			_fpuStatusWord &= 0xBAFF;
-		}
-		else if (st0 < 0.0)
-		{
-			// Less than zero
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xFAFF) | 0x0100);
-		}
-		else // st0 == 0.0
-		{
-			// Equal to zero
-			_fpuStatusWord = (ushort)((_fpuStatusWord & 0xBAFF) | 0x4000);
-		}
+
+		SetFpuCompareConditionCodes(st0, 0.0);
 	}
 
 	private void ExecFcomi(Instruction insn)
 	{
 		// FCOMI - Compare and Set EFLAGS
 		// Compares ST(0) with ST(i) and sets EFLAGS (ZF, PF, CF)
-		int i = 1; // Default to ST(1)
-		if (insn.OpCount > 0 && insn.Op0Kind == OpKind.Register)
-		{
-			var reg = insn.Op0Register;
-			i = reg - Register.ST0;
-		}
+		int i = GetFpuCompareRegisterIndex(insn);
 		
 		double st0 = FpuGetSt(0);
 		double sti = FpuGetSt(i);

@@ -9,6 +9,7 @@ public class FpuInstructionTests : IDisposable
 {
     private readonly CpuTestHelper _helper;
     private const uint FpuConditionCodeMask = 0x4500;
+    private const uint FpuConditionCodeC1 = 0x0200;
     private const uint FpuConditionCodeLessThan = 0x0100;
     private const uint FpuConditionCodeEqual = 0x4000;
 
@@ -184,7 +185,10 @@ public class FpuInstructionTests : IDisposable
     public void FCOM_ShouldCompareWithoutPop()
     {
         // Arrange: FCOM should compare but not pop the stack
-        
+        _helper.SetFlag(CpuFlag.Zf, true);
+        _helper.SetFlag(CpuFlag.Cf, true);
+        var flagsBeforeCompare = _helper.GetFlags();
+         
         // FLD1 - Load 1.0 onto FPU stack
         _helper.WriteCode(0xD9, 0xE8);
         _helper.ExecuteInstruction();
@@ -196,14 +200,101 @@ public class FpuInstructionTests : IDisposable
         // FCOM ST(1) - Compare ST(0) with ST(1) without popping (D8 D1)
         _helper.WriteCode(0xD8, 0xD1);
         _helper.ExecuteInstruction();
-        
-        // Assert: ZF should be set for equal values
-        Assert.True(_helper.IsFlagSet(CpuFlag.Zf), "ZF should be set when values are equal");
-        
+
+        Assert.Equal(flagsBeforeCompare, _helper.GetFlags());
+
+        var statusWord = ReadStatusWord();
+        Assert.Equal(FpuConditionCodeEqual, statusWord & FpuConditionCodeMask);
+         
         // FCOM doesn't pop, so we can do FCOMP next
         _helper.WriteCode(0xD8, 0xD9);
         _helper.ExecuteInstruction();
         // This should succeed without error
+    }
+
+    [Fact]
+    public void FCOMI_ShouldUseST1WhenComparingRegisterOperands()
+    {
+        var memAddr = 0x00200000u;
+        var twoBits = BitConverter.SingleToInt32Bits(2.0f);
+        _helper.WriteMemory32(memAddr, unchecked((uint)twoBits));
+
+        // FLD dword ptr [memAddr] - ST(0)=2.0
+        _helper.WriteCode(
+            0xD9, 0x05,
+            (byte)(memAddr & 0xFF),
+            (byte)((memAddr >> 8) & 0xFF),
+            (byte)((memAddr >> 16) & 0xFF),
+            (byte)((memAddr >> 24) & 0xFF));
+        _helper.ExecuteInstruction();
+
+        // FLD1 - ST(0)=1.0, ST(1)=2.0
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+
+        // FCOMI ST(1) - 1.0 < 2.0 should set CF only.
+        _helper.WriteCode(0xDB, 0xF1);
+        _helper.ExecuteInstruction();
+
+        Assert.True(_helper.IsFlagSet(CpuFlag.Cf));
+        Assert.False(_helper.IsFlagSet(CpuFlag.Zf));
+        Assert.False(_helper.IsFlagSet(CpuFlag.Pf));
+    }
+
+    [Fact]
+    public void FUCOM_ShouldClearPreviousConditionCodesAndC1()
+    {
+        var memAddr = 0x00200000u;
+        var negativeOneBits = BitConverter.SingleToInt32Bits(-1.0f);
+        _helper.WriteMemory32(memAddr, unchecked((uint)negativeOneBits));
+
+        _helper.WriteCode(
+            0xD9, 0x05,
+            (byte)(memAddr & 0xFF),
+            (byte)((memAddr >> 8) & 0xFF),
+            (byte)((memAddr >> 16) & 0xFF),
+            (byte)((memAddr >> 24) & 0xFF));
+        _helper.ExecuteInstruction();
+
+        _helper.WriteCode(0xD9, 0xE5);
+        _helper.ExecuteInstruction();
+
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+
+        _helper.WriteCode(0xDD, 0xE1);
+        _helper.ExecuteInstruction();
+
+        var statusWord = ReadStatusWord();
+        Assert.Equal(0u, statusWord & (FpuConditionCodeMask | FpuConditionCodeC1));
+    }
+
+    [Fact]
+    public void FTST_ShouldClearPreviousConditionCodesAndC1()
+    {
+        var memAddr = 0x00200000u;
+        var negativeOneBits = BitConverter.SingleToInt32Bits(-1.0f);
+        _helper.WriteMemory32(memAddr, unchecked((uint)negativeOneBits));
+
+        _helper.WriteCode(
+            0xD9, 0x05,
+            (byte)(memAddr & 0xFF),
+            (byte)((memAddr >> 8) & 0xFF),
+            (byte)((memAddr >> 16) & 0xFF),
+            (byte)((memAddr >> 24) & 0xFF));
+        _helper.ExecuteInstruction();
+
+        _helper.WriteCode(0xD9, 0xE5);
+        _helper.ExecuteInstruction();
+
+        _helper.WriteCode(0xD9, 0xE8);
+        _helper.ExecuteInstruction();
+
+        _helper.WriteCode(0xD9, 0xE4);
+        _helper.ExecuteInstruction();
+
+        var statusWord = ReadStatusWord();
+        Assert.Equal(0u, statusWord & (FpuConditionCodeMask | FpuConditionCodeC1));
     }
 
     #endregion
@@ -285,5 +376,12 @@ public class FpuInstructionTests : IDisposable
     public void Dispose()
     {
         _helper?.Dispose();
+    }
+
+    private uint ReadStatusWord()
+    {
+        _helper.WriteCode(0xDF, 0xE0);
+        _helper.ExecuteInstruction();
+        return _helper.GetReg("EAX") & 0xFFFF;
     }
 }
