@@ -2995,7 +2995,7 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			dc.SelectedClipRegion = hrgn;
-			dc.ClipRect = regionBounds;
+			dc.ClipRect = null;
 			return (uint)GetRegionComplexity(regionBounds);
 		}
 
