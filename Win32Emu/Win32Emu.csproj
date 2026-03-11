@@ -12,7 +12,9 @@
     <ErrorReport>send</ErrorReport>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <AnalysisLevel>latest-all</AnalysisLevel>
+    <RunFullAnalysis Condition="'$(RunFullAnalysis)' == ''">false</RunFullAnalysis>
+    <AnalysisLevel Condition="'$(RunFullAnalysis)' == 'true'">latest-all</AnalysisLevel>
+    <AnalysisLevel Condition="'$(RunFullAnalysis)' != 'true'">latest</AnalysisLevel>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
