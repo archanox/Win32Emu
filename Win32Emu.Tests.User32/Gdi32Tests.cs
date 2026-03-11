@@ -1,3 +1,5 @@
+using System.Collections;
+using System.Reflection;
 using Xunit;
 using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32;
@@ -761,6 +763,112 @@ public class Gdi32Tests : IDisposable
         var codepage = _testEnv.Memory.Read32(lpCs + 4);
         Assert.Equal(134u, charset); // GB2312_CHARSET
         Assert.Equal(936u, codepage); // GBK/Simplified Chinese codepage
+    }
+
+    [Fact]
+    public void PatBlt_ShouldRespectSelectedClipRegion()
+    {
+        // Arrange
+        var hdc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var bitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdc, 8, 4);
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdc, bitmap);
+
+        var brush = _testEnv.CallGdi32Api("CREATESOLIDBRUSH", 0x00AA5500u);
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdc, brush);
+
+        var clipRegion = _testEnv.CallGdi32Api("CREATERECTRGN", 2, 1, 6, 3);
+
+        // Act
+        var selectResult = _testEnv.CallGdi32Api("SELECTCLIPRGN", hdc, clipRegion);
+        var patBltResult = _testEnv.CallGdi32Api("PATBLT", hdc, 0, 0, 8, 4, 0x00F00021u);
+
+        // Assert
+        Assert.Equal((uint)NativeTypes.RegionComplexity.SIMPLEREGION, selectResult);
+        Assert.Equal(1u, patBltResult);
+
+        var bits = GetBitmapBits(bitmap);
+        AssertPixelEquals(bits, 8, 0, 0, 0x00, 0x00, 0x00, 0x00);
+        AssertPixelEquals(bits, 8, 2, 1, 0xAA, 0x55, 0x00, 0xFF);
+        AssertPixelEquals(bits, 8, 5, 2, 0xAA, 0x55, 0x00, 0xFF);
+        AssertPixelEquals(bits, 8, 6, 2, 0x00, 0x00, 0x00, 0x00);
+    }
+
+    [Fact]
+    public void StretchBlt_ShouldRespectSelectedClipRegion()
+    {
+        // Arrange
+        var hdcSrc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var hdcDest = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var srcBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcSrc, 4, 4);
+        var destBitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdcDest, 4, 4);
+
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcSrc, srcBitmap);
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcDest, destBitmap);
+
+        var brush = _testEnv.CallGdi32Api("CREATESOLIDBRUSH", 0x00112233u);
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdcSrc, brush);
+        _testEnv.CallGdi32Api("PATBLT", hdcSrc, 0, 0, 4, 4, 0x00F00021u);
+
+        var clipRegion = _testEnv.CallGdi32Api("CREATERECTRGN", 1, 1, 3, 4);
+        _testEnv.CallGdi32Api("SELECTCLIPRGN", hdcDest, clipRegion);
+
+        // Act
+        var bltResult = _testEnv.CallGdi32Api("STRETCHBLT",
+            hdcDest, 0, 0, 4, 4,
+            hdcSrc, 0, 0, 4, 4,
+            0x00CC0020u);
+
+        // Assert
+        Assert.Equal(1u, bltResult);
+
+        var bits = GetBitmapBits(destBitmap);
+        AssertPixelEquals(bits, 4, 0, 0, 0x00, 0x00, 0x00, 0x00);
+        AssertPixelEquals(bits, 4, 1, 1, 0x11, 0x22, 0x33, 0xFF);
+        AssertPixelEquals(bits, 4, 2, 3, 0x11, 0x22, 0x33, 0xFF);
+        AssertPixelEquals(bits, 4, 3, 3, 0x00, 0x00, 0x00, 0x00);
+    }
+
+    [Fact]
+    public void GetClipBox_ShouldReturnSelectedRegionBounds()
+    {
+        // Arrange
+        var hdc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var clipRegion = _testEnv.CallGdi32Api("CREATERECTRGN", 4, 5, 12, 15);
+        var rectAddress = _testEnv.AllocateMemory(16);
+
+        _testEnv.CallGdi32Api("SELECTCLIPRGN", hdc, clipRegion);
+
+        // Act
+        var result = _testEnv.CallGdi32Api("GETCLIPBOX", hdc, rectAddress);
+
+        // Assert
+        Assert.Equal((uint)NativeTypes.RegionComplexity.SIMPLEREGION, result);
+        Assert.Equal(4u, _testEnv.Memory.Read32(rectAddress));
+        Assert.Equal(5u, _testEnv.Memory.Read32(rectAddress + 4));
+        Assert.Equal(12u, _testEnv.Memory.Read32(rectAddress + 8));
+        Assert.Equal(15u, _testEnv.Memory.Read32(rectAddress + 12));
+    }
+
+    private byte[] GetBitmapBits(uint bitmapHandle)
+    {
+        var gdi32Property = typeof(TestEnvironment).GetProperty("Gdi32", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var gdi32 = gdi32Property.GetValue(_testEnv)!;
+        var gdiObjectsField = gdi32.GetType().GetField("_gdiObjects", BindingFlags.Instance | BindingFlags.NonPublic)!;
+        var gdiObjects = (IDictionary)gdiObjectsField.GetValue(gdi32)!;
+        var gdiObject = gdiObjects[bitmapHandle]!;
+        var bitmapProperty = gdiObject.GetType().GetProperty("Bitmap", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+        var bitmapData = bitmapProperty.GetValue(gdiObject)!;
+        var bitsProperty = bitmapData.GetType().GetProperty("Bits", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
+        return (byte[])((byte[])bitsProperty.GetValue(bitmapData)!).Clone();
+    }
+
+    private static void AssertPixelEquals(byte[] bits, int width, int x, int y, byte blue, byte green, byte red, byte alpha)
+    {
+        var offset = (y * width + x) * 4;
+        Assert.Equal(blue, bits[offset]);
+        Assert.Equal(green, bits[offset + 1]);
+        Assert.Equal(red, bits[offset + 2]);
+        Assert.Equal(alpha, bits[offset + 3]);
     }
 
     public void Dispose()

@@ -915,9 +915,14 @@ namespace Win32Emu.Win32.Modules
 				// Get destination bitmap if selected
 				if (destDc.SelectedBitmap != 0 && _gdiObjects.TryGetValue(destDc.SelectedBitmap, out var destBitmapObj) && destBitmapObj.Bitmap != null)
 				{
+					if (!TryClipRectToClipRegion(destDc, xDest, yDest, wDest, hDest, out var clippedX, out var clippedY, out var clippedWidth, out var clippedHeight))
+					{
+						return 1;
+					}
+
 					// Fill destination rectangle with color
 					var fillColor = (byte)(rop == 0x00000042 ? 0x00 : 0xFF);
-					FillBitmapRect(destBitmapObj.Bitmap, xDest, yDest, wDest, hDest, fillColor);
+					FillBitmapRect(destBitmapObj.Bitmap, clippedX, clippedY, clippedWidth, clippedHeight, fillColor);
 				}
 
 				return 1; // TRUE
@@ -967,9 +972,10 @@ namespace Win32Emu.Win32.Modules
 
 			// 3. Scale the bitmap from source to destination size
 			var srcBitmap = srcObj.Bitmap;
+			var clipRect = GetCurrentClipRect(destDc);
 
 			// Perform the stretch blit operation
-			PerformStretchBlt(srcBitmap, xSrc, ySrc, wSrc, hSrc, destBitmap, xDest, yDest, wDest, hDest, rop);
+			PerformStretchBlt(srcBitmap, xSrc, ySrc, wSrc, hSrc, destBitmap, xDest, yDest, wDest, hDest, rop, clipRect);
 
 			_logger.LogInformation("[Gdi32] StretchBlt: Operation completed successfully");
 			return 1; // TRUE
@@ -979,7 +985,7 @@ namespace Win32Emu.Win32.Modules
 		/// Performs the actual stretch blit operation with scaling and ROP application
 		/// </summary>
 		private void PerformStretchBlt(BitmapData src, int xSrc, int ySrc, int wSrc, int hSrc,
-			BitmapData dest, int xDest, int yDest, int wDest, int hDest, uint rop)
+			BitmapData dest, int xDest, int yDest, int wDest, int hDest, uint rop, NativeTypes.RECT clipRect)
 		{
 			if (src.Bits == null || dest.Bits == null)
 			{
@@ -1015,6 +1021,11 @@ namespace Win32Emu.Win32.Modules
 
 					// Skip if out of bounds
 					if (destX < 0 || destX >= dest.Width || destY < 0 || destY >= dest.Height)
+					{
+						continue;
+					}
+
+					if (destX < clipRect.left || destX >= clipRect.right || destY < clipRect.top || destY >= clipRect.bottom)
 					{
 						continue;
 					}
@@ -1791,28 +1802,54 @@ namespace Win32Emu.Win32.Modules
 		private int GetClipBox(uint hdc, uint lprect)
 		{
 			_logger.LogInformation("[Gdi32] GetClipBox(hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8})", hdc, lprect);
+
+			if (!_deviceContexts.TryGetValue(hdc, out var dc))
+			{
+				return (int)NativeTypes.RegionComplexity.ERROR;
+			}
+
+			var clipRect = GetCurrentClipRect(dc);
 			if (lprect != 0)
 			{
-				_env.MemWrite32(lprect, 0); // left
-				_env.MemWrite32(lprect + 4, 0); // top
-				_env.MemWrite32(lprect + 8, 640); // right
-				_env.MemWrite32(lprect + 12, 480); // bottom
+				_env.MemWrite32(lprect, unchecked((uint)clipRect.left));
+				_env.MemWrite32(lprect + 4, unchecked((uint)clipRect.top));
+				_env.MemWrite32(lprect + 8, unchecked((uint)clipRect.right));
+				_env.MemWrite32(lprect + 12, unchecked((uint)clipRect.bottom));
 			}
-			return 1; // SIMPLEREGION
+			return (int)GetRegionComplexity(clipRect);
 		}
 
 		[DllModuleExport(12)]
 		private uint PtVisible(uint hdc, int x, int y)
 		{
 			_logger.LogInformation("[Gdi32] PtVisible(hdc=0x{Hdc:X8}, x={X}, y={Y})", hdc, x, y);
-			return 1; // TRUE
+
+			if (!_deviceContexts.TryGetValue(hdc, out var dc))
+			{
+				return 0;
+			}
+
+			var clipRect = GetCurrentClipRect(dc);
+			return x >= clipRect.left && x < clipRect.right && y >= clipRect.top && y < clipRect.bottom ? 1u : 0u;
 		}
 
 		[DllModuleExport(8)]
 		private uint RectVisible(uint hdc, uint lprect)
 		{
 			_logger.LogInformation("[Gdi32] RectVisible(hdc=0x{Hdc:X8}, lprect=0x{Lprect:X8})", hdc, lprect);
-			return 1; // TRUE
+
+			if (!_deviceContexts.TryGetValue(hdc, out var dc) || lprect == 0)
+			{
+				return 0;
+			}
+
+			var clipRect = GetCurrentClipRect(dc);
+			var rect = new RectRef(_env.Memory, lprect);
+			var isVisible = rect.left < clipRect.right &&
+				rect.right > clipRect.left &&
+				rect.top < clipRect.bottom &&
+				rect.bottom > clipRect.top;
+			return isVisible ? 1u : 0u;
 		}
 
 		// Escape function
@@ -2069,6 +2106,11 @@ namespace Win32Emu.Win32.Modules
 				return 1; // TRUE - operation succeeded but had no visible effect
 			}
 
+			if (!TryClipRectToClipRegion(dc, x, y, w, h, out var clippedX, out var clippedY, out var clippedWidth, out var clippedHeight))
+			{
+				return 1;
+			}
+
 			// Get the selected brush color (used by pattern operations)
 			var brushColor = dc.BkColor; // Default to background color
 			if (dc.SelectedBrush != 0 && _gdiObjects.TryGetValue(dc.SelectedBrush, out var brushObj))
@@ -2080,29 +2122,29 @@ namespace Win32Emu.Win32.Modules
 			switch (rop)
 			{
 				case (uint)RasterOperation.BLACKNESS:
-					FillBitmapRect(destBitmap, x, y, w, h, 0x00);
+					FillBitmapRect(destBitmap, clippedX, clippedY, clippedWidth, clippedHeight, 0x00);
 					break;
 
 				case (uint)RasterOperation.WHITENESS:
-					FillBitmapRect(destBitmap, x, y, w, h, 0xFF);
+					FillBitmapRect(destBitmap, clippedX, clippedY, clippedWidth, clippedHeight, 0xFF);
 					break;
 
 				case (uint)RasterOperation.PATCOPY:
-					FillBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
+					FillBitmapRectWithColor(destBitmap, clippedX, clippedY, clippedWidth, clippedHeight, brushColor);
 					break;
 
 				case (uint)RasterOperation.DSTINVERT:
-					InvertBitmapRect(destBitmap, x, y, w, h);
+					InvertBitmapRect(destBitmap, clippedX, clippedY, clippedWidth, clippedHeight);
 					break;
 
 				case (uint)RasterOperation.PATINVERT:
-					XorBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
+					XorBitmapRectWithColor(destBitmap, clippedX, clippedY, clippedWidth, clippedHeight, brushColor);
 					break;
 
 				default:
 					_logger.LogWarning("[Gdi32] PatBlt: Unsupported ROP 0x{Rop:X8}, using PATCOPY as fallback", rop);
 					// Default to PATCOPY
-					FillBitmapRectWithColor(destBitmap, x, y, w, h, brushColor);
+					FillBitmapRectWithColor(destBitmap, clippedX, clippedY, clippedWidth, clippedHeight, brushColor);
 					break;
 			}
 
@@ -2302,8 +2344,16 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] IntersectClipRect(hdc=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
 				hdc, left, top, right, bottom);
 
-			// Stub: Return SIMPLEREGION (simple rectangular region)
-			return 2; // SIMPLEREGION
+			if (!_deviceContexts.TryGetValue(hdc, out var dc))
+			{
+				return (int)NativeTypes.RegionComplexity.ERROR;
+			}
+
+			var currentClip = GetCurrentClipRect(dc);
+			var intersectedClip = IntersectRects(currentClip, CreateNormalizedRect(left, top, right, bottom));
+			dc.SelectedClipRegion = 0;
+			dc.ClipRect = intersectedClip;
+			return (int)GetRegionComplexity(intersectedClip);
 		}
 
 		/// <summary>
@@ -2384,7 +2434,8 @@ namespace Win32Emu.Win32.Modules
 			var regionHandle = _nextGdiObjectHandle++;
 			_gdiObjects[regionHandle] = new GdiObject
 			{
-				Type = GdiObjectType.Region
+				Type = GdiObjectType.Region,
+				RegionBounds = CreateNormalizedRect(x1, y1, x2, y2)
 			};
 
 			return regionHandle;
@@ -2407,6 +2458,12 @@ namespace Win32Emu.Win32.Modules
 			if (!_gdiObjects.ContainsKey(hrgn))
 			{
 				_logger.LogWarning("[Gdi32] GetRegionData: Invalid region handle");
+				return 0;
+			}
+
+			if (!TryGetRegionBounds(hrgn, out var regionBounds))
+			{
+				_logger.LogWarning("[Gdi32] GetRegionData: Handle 0x{Hrgn:X8} is not a rectangular region", hrgn);
 				return 0;
 			}
 
@@ -2440,15 +2497,15 @@ namespace Win32Emu.Win32.Modules
 			_env.MemWrite32(lpRgnData + 8, 1);               // nCount
 			_env.MemWrite32(lpRgnData + 12, rectSize);       // nRgnSize
 															 // rcBound (RECT)
-			_env.MemWrite32(lpRgnData + 16, 0);              // left
-			_env.MemWrite32(lpRgnData + 20, 0);              // top
-			_env.MemWrite32(lpRgnData + 24, 100);            // right
-			_env.MemWrite32(lpRgnData + 28, 100);            // bottom
+			_env.MemWrite32(lpRgnData + 16, unchecked((uint)regionBounds.left));
+			_env.MemWrite32(lpRgnData + 20, unchecked((uint)regionBounds.top));
+			_env.MemWrite32(lpRgnData + 24, unchecked((uint)regionBounds.right));
+			_env.MemWrite32(lpRgnData + 28, unchecked((uint)regionBounds.bottom));
 															 // Rectangle data
-			_env.MemWrite32(lpRgnData + 32, 0);              // left
-			_env.MemWrite32(lpRgnData + 36, 0);              // top
-			_env.MemWrite32(lpRgnData + 40, 100);            // right
-			_env.MemWrite32(lpRgnData + 44, 100);            // bottom
+			_env.MemWrite32(lpRgnData + 32, unchecked((uint)regionBounds.left));
+			_env.MemWrite32(lpRgnData + 36, unchecked((uint)regionBounds.top));
+			_env.MemWrite32(lpRgnData + 40, unchecked((uint)regionBounds.right));
+			_env.MemWrite32(lpRgnData + 44, unchecked((uint)regionBounds.bottom));
 
 			return totalSize;
 		}
@@ -2628,6 +2685,7 @@ namespace Win32Emu.Win32.Modules
 			public GdiObjectType Type { get; set; }
 			public BitmapData? Bitmap { get; set; }
 			public uint BrushColor { get; set; } = 0x00000000; // For solid brushes
+			public NativeTypes.RECT? RegionBounds { get; set; }
 		}
 
 		/// <summary>
@@ -2847,6 +2905,8 @@ namespace Win32Emu.Win32.Modules
 			public uint SelectedBitmap { get; set; } = 0; // Currently selected bitmap
 			public uint SelectedBrush { get; set; } = 0; // Currently selected brush
 			public uint SelectedPen { get; set; } = 0; // Currently selected pen
+			public uint SelectedClipRegion { get; set; } = 0; // Currently selected clipping region
+			public NativeTypes.RECT? ClipRect { get; set; } // Current rectangular clip when not backed by a region handle
 			public bool OwnsSelectedBitmap { get; set; } = false; // True if bitmap was created by BeginPaint
 			public bool IsInfoContext { get; set; } = false; // True if this is an information context (IC) rather than a device context (DC)
 		}
@@ -2879,7 +2939,34 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] ExcludeClipRect(hdc=0x{Hdc:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
 			hdc, left, top, right, bottom);
-			return 1; // SIMPLEREGION
+
+			if (!_deviceContexts.TryGetValue(hdc, out var dc))
+			{
+				return (uint)NativeTypes.RegionComplexity.ERROR;
+			}
+
+			var currentClip = GetCurrentClipRect(dc);
+			var exclusionRect = CreateNormalizedRect(left, top, right, bottom);
+			var intersects = exclusionRect.left < currentClip.right &&
+				exclusionRect.right > currentClip.left &&
+				exclusionRect.top < currentClip.bottom &&
+				exclusionRect.bottom > currentClip.top;
+			if (!intersects)
+			{
+				return (uint)GetRegionComplexity(currentClip);
+			}
+
+			if (exclusionRect.left <= currentClip.left &&
+				exclusionRect.top <= currentClip.top &&
+				exclusionRect.right >= currentClip.right &&
+				exclusionRect.bottom >= currentClip.bottom)
+			{
+				dc.SelectedClipRegion = 0;
+				dc.ClipRect = new NativeTypes.RECT();
+				return (uint)NativeTypes.RegionComplexity.NULLREGION;
+			}
+
+			return (uint)NativeTypes.RegionComplexity.COMPLEXREGION;
 		}
 
 		/// <summary>
@@ -2889,7 +2976,27 @@ namespace Win32Emu.Win32.Modules
 		private uint SelectClipRgn(uint hdc, uint hrgn)
 		{
 			_logger.LogInformation("[Gdi32] SelectClipRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8})", hdc, hrgn);
-			return hrgn == 0 ? 1u : 2u; // NULLREGION (1) if null, SIMPLEREGION (2) if non-null
+
+			if (!_deviceContexts.TryGetValue(hdc, out var dc))
+			{
+				return (uint)NativeTypes.RegionComplexity.ERROR;
+			}
+
+			if (hrgn == 0)
+			{
+				dc.SelectedClipRegion = 0;
+				dc.ClipRect = null;
+				return (uint)NativeTypes.RegionComplexity.NULLREGION;
+			}
+
+			if (!TryGetRegionBounds(hrgn, out var regionBounds))
+			{
+				return (uint)NativeTypes.RegionComplexity.ERROR;
+			}
+
+			dc.SelectedClipRegion = hrgn;
+			dc.ClipRect = regionBounds;
+			return (uint)GetRegionComplexity(regionBounds);
 		}
 
 		/// <summary>
@@ -3408,7 +3515,11 @@ namespace Win32Emu.Win32.Modules
 			
 			// Create a region handle
 			var regionHandle = _nextGdiObjectHandle++;
-			_gdiObjects[regionHandle] = new GdiObject { Type = GdiObjectType.Region };
+			_gdiObjects[regionHandle] = new GdiObject
+			{
+				Type = GdiObjectType.Region,
+				RegionBounds = CreateNormalizedRect(left, top, right, bottom)
+			};
 			
 			_logger.LogInformation("[Gdi32] CreateRectRgnIndirect -> 0x{Handle:X8} ({Left},{Top})-({Right},{Bottom})",
 				regionHandle, left, top, right, bottom);
@@ -3425,13 +3536,29 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
-		[DllModuleExport(8, IsStub = true)]
+		[DllModuleExport(8)]
 		private int GetClipRgn(uint hdc, uint hrgn)
 		{
 			_logger.LogInformation("[Gdi32] GetClipRgn(hdc=0x{Hdc:X8}, hrgn=0x{Hrgn:X8})", hdc, hrgn);
-			
-			// Stub: return 0 (no clipping region)
-			return 0;
+
+			if (!_deviceContexts.TryGetValue(hdc, out var dc) || hrgn == 0)
+			{
+				return -1;
+			}
+
+			if (dc.SelectedClipRegion == 0 && dc.ClipRect == null)
+			{
+				return 0;
+			}
+
+			var clipRect = GetCurrentClipRect(dc);
+			if (!_gdiObjects.TryGetValue(hrgn, out var regionObject) || regionObject.Type != GdiObjectType.Region)
+			{
+				return -1;
+			}
+
+			regionObject.RegionBounds = clipRect;
+			return 1;
 		}
 
 		[DllModuleExport(12, IsStub = true)]
@@ -3444,30 +3571,38 @@ namespace Win32Emu.Win32.Modules
 			return -1;
 		}
 
-		[DllModuleExport(8, IsStub = true)]
+		[DllModuleExport(8)]
 		private int GetRgnBox(uint hrgn, uint lprc)
 		{
 			_logger.LogInformation("[Gdi32] GetRgnBox(hrgn=0x{Hrgn:X8}, lprc=0x{Lprc:X8})", hrgn, lprc);
-			
-			// Stub: return NULLREGION (1)
+
+			if (!TryGetRegionBounds(hrgn, out var regionBounds))
+			{
+				return (int)NativeTypes.RegionComplexity.ERROR;
+			}
+
 			if (lprc != 0)
 			{
-				// Write empty rectangle (all zeros)
-				_env.MemWrite32(lprc, 0);     // left
-				_env.MemWrite32(lprc + 4, 0); // top
-				_env.MemWrite32(lprc + 8, 0); // right
-				_env.MemWrite32(lprc + 12, 0); // bottom
+				_env.MemWrite32(lprc, unchecked((uint)regionBounds.left));
+				_env.MemWrite32(lprc + 4, unchecked((uint)regionBounds.top));
+				_env.MemWrite32(lprc + 8, unchecked((uint)regionBounds.right));
+				_env.MemWrite32(lprc + 12, unchecked((uint)regionBounds.bottom));
 			}
-			return (int)NativeTypes.RegionComplexity.NULLREGION;
+			return (int)GetRegionComplexity(regionBounds);
 		}
 
-		[DllModuleExport(20, IsStub = true)]
+		[DllModuleExport(20)]
 		private uint SetRectRgn(uint hrgn, int nLeftRect, int nTopRect, int nRightRect, int nBottomRect)
 		{
 			_logger.LogInformation("[Gdi32] SetRectRgn(hrgn=0x{Hrgn:X8}, left={Left}, top={Top}, right={Right}, bottom={Bottom})",
 				hrgn, nLeftRect, nTopRect, nRightRect, nBottomRect);
-			
-			// Stub: return TRUE
+
+			if (!_gdiObjects.TryGetValue(hrgn, out var regionObject) || regionObject.Type != GdiObjectType.Region)
+			{
+				return 0;
+			}
+
+			regionObject.RegionBounds = CreateNormalizedRect(nLeftRect, nTopRect, nRightRect, nBottomRect);
 			return 1;
 		}
 
@@ -3497,6 +3632,103 @@ namespace Win32Emu.Win32.Modules
 			
 			// Stub: return TRUE
 			return 1;
+		}
+
+		private static NativeTypes.RECT CreateNormalizedRect(int left, int top, int right, int bottom)
+		{
+			return new NativeTypes.RECT
+			{
+				left = Math.Min(left, right),
+				top = Math.Min(top, bottom),
+				right = Math.Max(left, right),
+				bottom = Math.Max(top, bottom)
+			};
+		}
+
+		private static NativeTypes.RECT IntersectRects(NativeTypes.RECT first, NativeTypes.RECT second)
+		{
+			var intersected = new NativeTypes.RECT
+			{
+				left = Math.Max(first.left, second.left),
+				top = Math.Max(first.top, second.top),
+				right = Math.Min(first.right, second.right),
+				bottom = Math.Min(first.bottom, second.bottom)
+			};
+
+			if (intersected.right <= intersected.left || intersected.bottom <= intersected.top)
+			{
+				return new NativeTypes.RECT();
+			}
+
+			return intersected;
+		}
+
+		private static NativeTypes.RegionComplexity GetRegionComplexity(NativeTypes.RECT rect)
+		{
+			return rect.right > rect.left && rect.bottom > rect.top
+				? NativeTypes.RegionComplexity.SIMPLEREGION
+				: NativeTypes.RegionComplexity.NULLREGION;
+		}
+
+		private bool TryGetRegionBounds(uint regionHandle, out NativeTypes.RECT regionBounds)
+		{
+			if (_gdiObjects.TryGetValue(regionHandle, out var regionObject) &&
+				regionObject.Type == GdiObjectType.Region &&
+				regionObject.RegionBounds.HasValue)
+			{
+				regionBounds = regionObject.RegionBounds.Value;
+				return true;
+			}
+
+			regionBounds = default;
+			return false;
+		}
+
+		private NativeTypes.RECT GetCurrentClipRect(DeviceContext dc)
+		{
+			if (dc.SelectedClipRegion != 0 && TryGetRegionBounds(dc.SelectedClipRegion, out var regionBounds))
+			{
+				return regionBounds;
+			}
+
+			if (dc.ClipRect.HasValue)
+			{
+				return dc.ClipRect.Value;
+			}
+
+			if (dc.SelectedBitmap != 0 &&
+				_gdiObjects.TryGetValue(dc.SelectedBitmap, out var selectedObject) &&
+				selectedObject.Bitmap != null)
+			{
+				return new NativeTypes.RECT
+				{
+					left = 0,
+					top = 0,
+					right = selectedObject.Bitmap.Width,
+					bottom = selectedObject.Bitmap.Height
+				};
+			}
+
+			return new NativeTypes.RECT
+			{
+				left = 0,
+				top = 0,
+				right = DefaultWindowWidth,
+				bottom = DefaultWindowHeight
+			};
+		}
+
+		private bool TryClipRectToClipRegion(DeviceContext dc, int x, int y, int w, int h, out int clippedX, out int clippedY, out int clippedWidth, out int clippedHeight)
+		{
+			var clipRect = GetCurrentClipRect(dc);
+			var targetRect = CreateNormalizedRect(x, y, x + w, y + h);
+			var intersectedRect = IntersectRects(clipRect, targetRect);
+
+			clippedX = intersectedRect.left;
+			clippedY = intersectedRect.top;
+			clippedWidth = intersectedRect.right - intersectedRect.left;
+			clippedHeight = intersectedRect.bottom - intersectedRect.top;
+			return GetRegionComplexity(intersectedRect) != NativeTypes.RegionComplexity.NULLREGION;
 		}
 
 		[DllModuleExport(12, IsStub = true)]
