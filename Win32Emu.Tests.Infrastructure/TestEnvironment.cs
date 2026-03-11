@@ -173,6 +173,11 @@ public class TestEnvironment : IDisposable
 		return returnValue;
 	}
 
+	internal byte[] GetGdiBitmapBitsSnapshot(uint bitmapHandle)
+	{
+		return Gdi32.GetBitmapBitsSnapshot(bitmapHandle);
+	}
+
 	/// <summary>
 	/// Call a DirectDraw API function with the given arguments
 	/// </summary>

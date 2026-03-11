@@ -144,7 +144,6 @@ public static class NativeTypes
 	// Used to specify which common control classes should be registered
 	// Total size: 8 bytes
 	[StructLayout(LayoutKind.Explicit, Size = 8)]
-	[GenerateMemoryRef]
 	public struct INITCOMMONCONTROLSEX
 	{
 		[FieldOffset(0)]

@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Reflection;
 using Xunit;
 using Win32Emu.Tests.Infrastructure;
 using Win32Emu.Win32;
@@ -849,17 +847,59 @@ public class Gdi32Tests : IDisposable
         Assert.Equal(15u, _testEnv.Memory.Read32(rectAddress + 12));
     }
 
+    [Fact]
+    public void SelectClipRgn_WithNullRegion_ShouldRestoreDefaultClip()
+    {
+        // Arrange
+        var hdc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var bitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdc, 8, 4);
+        var rectAddress = _testEnv.AllocateMemory(16);
+
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdc, bitmap);
+        var clipRegion = _testEnv.CallGdi32Api("CREATERECTRGN", 2, 1, 6, 3);
+        _testEnv.CallGdi32Api("SELECTCLIPRGN", hdc, clipRegion);
+
+        // Act
+        var selectResult = _testEnv.CallGdi32Api("SELECTCLIPRGN", hdc, 0u);
+        var clipBoxResult = _testEnv.CallGdi32Api("GETCLIPBOX", hdc, rectAddress);
+
+        // Assert
+        Assert.Equal((uint)NativeTypes.RegionComplexity.SIMPLEREGION, selectResult);
+        Assert.Equal((uint)NativeTypes.RegionComplexity.SIMPLEREGION, clipBoxResult);
+        Assert.Equal(0u, _testEnv.Memory.Read32(rectAddress));
+        Assert.Equal(0u, _testEnv.Memory.Read32(rectAddress + 4));
+        Assert.Equal(8u, _testEnv.Memory.Read32(rectAddress + 8));
+        Assert.Equal(4u, _testEnv.Memory.Read32(rectAddress + 12));
+    }
+
+    [Fact]
+    public void ExcludeClipRect_WithUnsupportedPartialOverlap_ShouldLeaveClipUnchanged()
+    {
+        // Arrange
+        var hdc = _testEnv.CallGdi32Api("CREATECOMPATIBLEDC", 0u);
+        var bitmap = _testEnv.CallGdi32Api("CREATECOMPATIBLEBITMAP", hdc, 8, 4);
+        var rectAddress = _testEnv.AllocateMemory(16);
+
+        _testEnv.CallGdi32Api("SELECTOBJECT", hdc, bitmap);
+        var clipRegion = _testEnv.CallGdi32Api("CREATERECTRGN", 1, 0, 7, 4);
+        _testEnv.CallGdi32Api("SELECTCLIPRGN", hdc, clipRegion);
+
+        // Act
+        var excludeResult = _testEnv.CallGdi32Api("EXCLUDECLIPRECT", hdc, 2, 1, 5, 3);
+        var clipBoxResult = _testEnv.CallGdi32Api("GETCLIPBOX", hdc, rectAddress);
+
+        // Assert
+        Assert.Equal((uint)NativeTypes.RegionComplexity.SIMPLEREGION, excludeResult);
+        Assert.Equal((uint)NativeTypes.RegionComplexity.SIMPLEREGION, clipBoxResult);
+        Assert.Equal(1u, _testEnv.Memory.Read32(rectAddress));
+        Assert.Equal(0u, _testEnv.Memory.Read32(rectAddress + 4));
+        Assert.Equal(7u, _testEnv.Memory.Read32(rectAddress + 8));
+        Assert.Equal(4u, _testEnv.Memory.Read32(rectAddress + 12));
+    }
+
     private byte[] GetBitmapBits(uint bitmapHandle)
     {
-        var gdi32Property = typeof(TestEnvironment).GetProperty("Gdi32", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var gdi32 = gdi32Property.GetValue(_testEnv)!;
-        var gdiObjectsField = gdi32.GetType().GetField("_gdiObjects", BindingFlags.Instance | BindingFlags.NonPublic)!;
-        var gdiObjects = (IDictionary)gdiObjectsField.GetValue(gdi32)!;
-        var gdiObject = gdiObjects[bitmapHandle]!;
-        var bitmapProperty = gdiObject.GetType().GetProperty("Bitmap", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-        var bitmapData = bitmapProperty.GetValue(gdiObject)!;
-        var bitsProperty = bitmapData.GetType().GetProperty("Bits", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!;
-        return (byte[])((byte[])bitsProperty.GetValue(bitmapData)!).Clone();
+        return _testEnv.GetGdiBitmapBitsSnapshot(bitmapHandle);
     }
 
     private static void AssertPixelEquals(byte[] bits, int width, int x, int y, byte blue, byte green, byte red, byte alpha)

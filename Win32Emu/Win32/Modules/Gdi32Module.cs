@@ -1980,6 +1980,18 @@ namespace Win32Emu.Win32.Modules
 			return 0;
 		}
 
+		internal byte[] GetBitmapBitsSnapshot(uint hBitmap)
+		{
+			if (!_gdiObjects.TryGetValue(hBitmap, out var gdiObject) ||
+				gdiObject.Type != GdiObjectType.Bitmap ||
+				gdiObject.Bitmap?.Bits == null)
+			{
+				throw new InvalidOperationException($"Bitmap handle 0x{hBitmap:X8} is not a tracked bitmap with pixel data.");
+			}
+
+			return (byte[])gdiObject.Bitmap.Bits.Clone();
+		}
+
 		[DllModuleExport(12)]
 		private int SetBitmapBits(uint hBitmap, uint cb, uint pvBits)
 		{
@@ -2455,7 +2467,7 @@ namespace Win32Emu.Win32.Modules
 			_logger.LogInformation("[Gdi32] GetRegionData(hrgn=0x{Hrgn:X8}, nCount={NCount}, lpRgnData=0x{LpRgnData:X8})",
 				hrgn, nCount, lpRgnData);
 
-			if (!_gdiObjects.ContainsKey(hrgn))
+			if (!_gdiObjects.TryGetValue(hrgn, out var regionObject) || regionObject.Type != GdiObjectType.Region)
 			{
 				_logger.LogWarning("[Gdi32] GetRegionData: Invalid region handle");
 				return 0;
@@ -2966,7 +2978,7 @@ namespace Win32Emu.Win32.Modules
 				return (uint)NativeTypes.RegionComplexity.NULLREGION;
 			}
 
-			return (uint)NativeTypes.RegionComplexity.COMPLEXREGION;
+			return (uint)GetRegionComplexity(currentClip);
 		}
 
 		/// <summary>
@@ -2986,7 +2998,7 @@ namespace Win32Emu.Win32.Modules
 			{
 				dc.SelectedClipRegion = 0;
 				dc.ClipRect = null;
-				return (uint)NativeTypes.RegionComplexity.NULLREGION;
+				return (uint)GetRegionComplexity(GetCurrentClipRect(dc));
 			}
 
 			if (!TryGetRegionBounds(hrgn, out var regionBounds))
