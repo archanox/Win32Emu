@@ -18,7 +18,8 @@ public sealed class ApiStatusGenerator : IIncrementalGenerator
 		// Find methods with [DllModuleExport] attribute
 		var exportedMethods = context.SyntaxProvider
 			.CreateSyntaxProvider(
-				static (node, _) => node is MethodDeclarationSyntax m && m.AttributeLists.Count > 0,
+				static (node, _) => node is MethodDeclarationSyntax { AttributeLists.Count: > 0 } method &&
+				                    GeneratorSyntaxHelpers.HasAttribute(method.AttributeLists, "DllModuleExport"),
 				static (ctx, _) => GetExportedMethod(ctx))
 			.Where(static m => m is not null);
 
@@ -193,7 +194,6 @@ public sealed class ApiStatusGenerator : IIncrementalGenerator
 		// Generate JSON as a string constant
 		var jsonData = new
 		{
-			generatedAt = DateTime.UtcNow.ToString("O"),
 			modules = modules.Select(m => new
 			{
 				name = m.Name,

@@ -12,7 +12,8 @@ public sealed class StdCallArgBytesGenerator : IIncrementalGenerator
 		// Find methods with [DllModuleExport] attribute
 		var attributedMethods = context.SyntaxProvider
 			.CreateSyntaxProvider(
-				static (node, _) => node is MethodDeclarationSyntax m && m.AttributeLists.Count > 0,
+				static (node, _) => node is MethodDeclarationSyntax { AttributeLists.Count: > 0 } method &&
+				                    GeneratorSyntaxHelpers.HasAttribute(method.AttributeLists, "DllModuleExport"),
 				static (ctx, _) =>
 				{
 					var method = ctx.SemanticModel.GetDeclaredSymbol((MethodDeclarationSyntax)ctx.Node) as IMethodSymbol;

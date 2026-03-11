@@ -69,8 +69,17 @@ class Program
 			stubFunctions += functions.EnumerateArray()
 				.Count(function => function.GetProperty("isStub").GetBoolean());
 		}
-		
-		File.WriteAllText(outputPath, json);
+
+		var outputJson = JsonSerializer.Serialize(new
+		{
+			generatedAt = DateTimeOffset.UtcNow.ToString("O"),
+			modules = modules.Clone()
+		}, new JsonSerializerOptions
+		{
+			WriteIndented = true
+		});
+
+		File.WriteAllText(outputPath, outputJson);
 		
 		Console.WriteLine($"  Output: {outputPath}");
 		Console.WriteLine($"  Modules: {moduleCount}");
