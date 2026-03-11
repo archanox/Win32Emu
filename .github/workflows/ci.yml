@@ -130,7 +130,7 @@ jobs:
       run: dotnet restore
       
     - name: Build with full analysis
-      run: dotnet build --configuration Release --verbosity normal --property WarningsAsErrors=false
+      run: dotnet build --configuration Release --verbosity normal --property WarningsAsErrors=false --property RunFullAnalysis=true
       
     - name: Check for build warnings
       run: |
