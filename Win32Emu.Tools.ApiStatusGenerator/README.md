@@ -18,8 +18,8 @@ Unlike traditional parsing tools, this leverages C# source generators to extract
 
 1. **Compile-Time Generation**: The `ApiStatusGenerator` source generator (in `Win32Emu.Generators`) scans all methods with `[DllModuleExport]` attributes during compilation
 2. **Metadata Extraction**: The generator extracts all metadata (ordinal, version, stub status, etc.) using Roslyn's semantic model
-3. **Code Generation**: Generates a static `ApiStatusMetadata` class containing JSON data
-4. **Export Tool**: This tool simply reads the generated metadata and writes it to a file
+3. **Code Generation**: Generates a static `ApiStatusMetadata` class containing deterministic JSON data
+4. **Export Tool**: This tool reads the generated metadata, adds the export timestamp, and writes it to a file
 
 ## Advantages Over Regex Parsing
 
