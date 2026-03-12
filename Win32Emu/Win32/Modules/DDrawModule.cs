@@ -1410,39 +1410,17 @@ namespace Win32Emu.Win32.Modules
 					_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)surface.Width); // dwWidth
 					_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)surface.Pitch); // lPitch
 
-					// Write pixel format (offset 76 for DDSURFACEDESC, 72 for actual spec)
+					// Write pixel format starting at the correct offset 72 (not 76)
 					if (dwSize >= 108)
 					{
-						_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
-						_env.MemWrite32(lpDDSurfaceDesc + 80, (uint)DDPFFlags.DDPF_RGB);
-						_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwFourCC
-						_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+						WritePixelFormat(lpDDSurfaceDesc, ddrawObj.BitsPerPixel);
 
-						// Set RGB masks based on bit depth
-						if (ddrawObj.BitsPerPixel == 16)
-						{
-							_env.MemWrite32(lpDDSurfaceDesc + 92, 0xF800); // Red mask (5 bits)
-							_env.MemWrite32(lpDDSurfaceDesc + 96, 0x07E0); // Green mask (6 bits)
-							_env.MemWrite32(lpDDSurfaceDesc + 100, 0x001F); // Blue mask (5 bits)
-						}
-						else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
-						{
-							_env.MemWrite32(lpDDSurfaceDesc + 92, 0x00FF0000); // Red mask
-							_env.MemWrite32(lpDDSurfaceDesc + 96, 0x0000FF00); // Green mask
-							_env.MemWrite32(lpDDSurfaceDesc + 100, 0x000000FF); // Blue mask
-						}
-
-						_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
-					}
-
-					// Write ddsCaps (offset 108)
-					// For primary surfaces, set DDSCAPS_PRIMARYSURFACE; for others, set DDSCAPS_OFFSCREENPLAIN
-					if (dwSize >= 112)
-					{
+						// Write ddsCaps at offset 104 (immediately after DDPIXELFORMAT)
+						// For primary surfaces, set DDSCAPS_PRIMARYSURFACE; for others, set DDSCAPS_OFFSCREENPLAIN
 						const uint DDSCAPS_PRIMARYSURFACE = (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE;
 						const uint DDSCAPS_OFFSCREENPLAIN = (uint)DDSCaps.DDSCAPS_OFFSCREENPLAIN;
 						var caps = surface.IsPrimary ? DDSCAPS_PRIMARYSURFACE : DDSCAPS_OFFSCREENPLAIN;
-						_env.MemWrite32(lpDDSurfaceDesc + 108, caps); // ddsCaps.dwCaps
+						_env.MemWrite32(lpDDSurfaceDesc + 104, caps); // ddsCaps.dwCaps
 					}
 				}
 			}
@@ -3195,37 +3173,14 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpDDSurfaceDesc + 12, (uint)ddrawObj.Width); // dwWidth
 				_env.MemWrite32(lpDDSurfaceDesc + 16, (uint)(ddrawObj.Width * (ddrawObj.BitsPerPixel / 8))); // lPitch
 
-				// Write pixel format (offset 76)
+				// Write pixel format starting at the correct offset 72 (not 76)
 				if (dwSize >= 108)
 				{
-					_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
-					_env.MemWrite32(lpDDSurfaceDesc + 80, (uint)DDPFFlags.DDPF_RGB);
-					_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwFourCC
-					_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+					WritePixelFormat(lpDDSurfaceDesc, ddrawObj.BitsPerPixel);
 
-					// Set RGB masks based on bit depth
-					if (ddrawObj.BitsPerPixel == 16)
-					{
-						_env.MemWrite32(lpDDSurfaceDesc + 92, 0xF800); // Red mask (5 bits)
-						_env.MemWrite32(lpDDSurfaceDesc + 96, 0x07E0); // Green mask (6 bits)
-						_env.MemWrite32(lpDDSurfaceDesc + 100, 0x001F); // Blue mask (5 bits)
-					}
-					else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
-					{
-						_env.MemWrite32(lpDDSurfaceDesc + 92, 0x00FF0000); // Red mask
-						_env.MemWrite32(lpDDSurfaceDesc + 96, 0x0000FF00); // Green mask
-						_env.MemWrite32(lpDDSurfaceDesc + 100, 0x000000FF); // Blue mask
-					}
-
-					_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
-				}
-
-				// Write ddsCaps (offset 108)
-				// For display mode, set DDSCAPS_PRIMARYSURFACE
-				if (dwSize >= 112)
-				{
+					// Write ddsCaps at offset 104 (immediately after DDPIXELFORMAT)
 					const uint DDSCAPS_PRIMARYSURFACE = (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE;
-					_env.MemWrite32(lpDDSurfaceDesc + 108, DDSCAPS_PRIMARYSURFACE); // ddsCaps.dwCaps
+					_env.MemWrite32(lpDDSurfaceDesc + 104, DDSCAPS_PRIMARYSURFACE); // ddsCaps.dwCaps
 				}
 			}
 
@@ -3873,7 +3828,7 @@ namespace Win32Emu.Win32.Modules
 				_env.MemWrite32(lpDDSurfaceDesc + 32, 0); // dwReserved
 				_env.MemWrite32(lpDDSurfaceDesc + 36, surfaceMemPtr); // lpSurface - THE CRITICAL FIELD!
 
-				// Write pixel format if needed (offset 76)
+				// Write pixel format starting at the correct offset 72 (not 76)
 				if (dwSize >= 108)
 				{
 					if (!_ddrawObjects.TryGetValue(surface.DirectDrawHandle, out var ddrawObj))
@@ -3882,27 +3837,15 @@ namespace Win32Emu.Win32.Modules
 						return (uint)DDResult.DDERR_GENERIC;
 					}
 
-					// Write pixel format structure
-					_env.MemWrite32(lpDDSurfaceDesc + 76, 32); // dwSize of DDPIXELFORMAT
-					_env.MemWrite32(lpDDSurfaceDesc + 80, 0x00000040); // DDPF_RGB
-					_env.MemWrite32(lpDDSurfaceDesc + 84, 0); // dwRGBBitCount
-					_env.MemWrite32(lpDDSurfaceDesc + 88, (uint)ddrawObj.BitsPerPixel); // dwRGBBitCount
+					WritePixelFormat(lpDDSurfaceDesc, ddrawObj.BitsPerPixel);
 
-					// Set RGB masks based on bit depth
-					if (ddrawObj.BitsPerPixel == 16)
-					{
-						_env.MemWrite32(lpDDSurfaceDesc + 92, 0xF800); // Red mask (5 bits)
-						_env.MemWrite32(lpDDSurfaceDesc + 96, 0x07E0); // Green mask (6 bits)
-						_env.MemWrite32(lpDDSurfaceDesc + 100, 0x001F); // Blue mask (5 bits)
-					}
-					else if (ddrawObj.BitsPerPixel == 24 || ddrawObj.BitsPerPixel == 32)
-					{
-						_env.MemWrite32(lpDDSurfaceDesc + 92, 0x00FF0000); // Red mask
-						_env.MemWrite32(lpDDSurfaceDesc + 96, 0x0000FF00); // Green mask
-						_env.MemWrite32(lpDDSurfaceDesc + 100, 0x000000FF); // Blue mask
-					}
-
-					_env.MemWrite32(lpDDSurfaceDesc + 104, 0); // dwRGBAlphaBitMask
+					// Write ddsCaps at offset 104 (immediately after DDPIXELFORMAT)
+					var surfaceCaps = surface.IsPrimary
+						? (uint)DDSCaps.DDSCAPS_PRIMARYSURFACE
+						: (uint)DDSCaps.DDSCAPS_OFFSCREENPLAIN;
+					if (surface.AttachedSurfaces.Count > 0)
+						surfaceCaps |= (uint)(DDSCaps.DDSCAPS_COMPLEX | DDSCaps.DDSCAPS_FLIP);
+					_env.MemWrite32(lpDDSurfaceDesc + 104, surfaceCaps); // ddsCaps.dwCaps
 				}
 			}
 
@@ -3982,6 +3925,70 @@ namespace Win32Emu.Win32.Modules
 
 			_logger.LogInformation("[DDraw] Unlocked surface 0x{SurfaceHandle:X8}", surfaceHandle);
 			return (uint)DDResult.DD_OK;
+		}
+
+		/// <summary>
+		/// Writes a DDPIXELFORMAT structure into a DDSURFACEDESC at the correct offset (72).
+		/// The DDPIXELFORMAT occupies bytes 72-103 of the 108-byte DDSURFACEDESC, followed by
+		/// ddsCaps at bytes 104-107.
+		/// </summary>
+		/// <param name="lpDDSurfaceDesc">Address of the DDSURFACEDESC in emulated memory</param>
+		/// <param name="bitsPerPixel">Bits per pixel for the current display mode</param>
+		private void WritePixelFormat(uint lpDDSurfaceDesc, int bitsPerPixel)
+		{
+			// DDPIXELFORMAT layout within DDSURFACEDESC:
+			// +72: dwSize        (4 bytes) = 32
+			// +76: dwFlags       (4 bytes) = DDPF_RGB or DDPF_PALETTEINDEXED8
+			// +80: dwFourCC      (4 bytes) = 0 (not compressed)
+			// +84: dwRGBBitCount (4 bytes) = bits per pixel
+			// +88: dwRBitMask    (4 bytes) = red channel mask
+			// +92: dwGBitMask    (4 bytes) = green channel mask
+			// +96: dwBBitMask    (4 bytes) = blue channel mask
+			// +100: dwRGBAlphaBitMask (4 bytes) = 0 (no alpha)
+
+			_env.MemWrite32(lpDDSurfaceDesc + 72, 32); // dwSize of DDPIXELFORMAT
+
+			if (bitsPerPixel == 8)
+			{
+				// 8-bit palette-indexed mode
+				_env.MemWrite32(lpDDSurfaceDesc + 76, (uint)DDPFFlags.DDPF_PALETTEINDEXED8);
+				_env.MemWrite32(lpDDSurfaceDesc + 80, 0); // dwFourCC = 0
+				_env.MemWrite32(lpDDSurfaceDesc + 84, 8); // dwRGBBitCount = 8
+				_env.MemWrite32(lpDDSurfaceDesc + 88, 0); // no RGB masks for palettized
+				_env.MemWrite32(lpDDSurfaceDesc + 92, 0);
+				_env.MemWrite32(lpDDSurfaceDesc + 96, 0);
+				_env.MemWrite32(lpDDSurfaceDesc + 100, 0); // dwRGBAlphaBitMask
+			}
+			else if (bitsPerPixel == 16)
+			{
+				_env.MemWrite32(lpDDSurfaceDesc + 76, (uint)DDPFFlags.DDPF_RGB);
+				_env.MemWrite32(lpDDSurfaceDesc + 80, 0); // dwFourCC = 0
+				_env.MemWrite32(lpDDSurfaceDesc + 84, 16); // dwRGBBitCount
+				_env.MemWrite32(lpDDSurfaceDesc + 88, 0xF800); // dwRBitMask  (5 bits)
+				_env.MemWrite32(lpDDSurfaceDesc + 92, 0x07E0); // dwGBitMask  (6 bits)
+				_env.MemWrite32(lpDDSurfaceDesc + 96, 0x001F); // dwBBitMask  (5 bits)
+				_env.MemWrite32(lpDDSurfaceDesc + 100, 0); // dwRGBAlphaBitMask
+			}
+			else if (bitsPerPixel == 24)
+			{
+				_env.MemWrite32(lpDDSurfaceDesc + 76, (uint)DDPFFlags.DDPF_RGB);
+				_env.MemWrite32(lpDDSurfaceDesc + 80, 0); // dwFourCC = 0
+				_env.MemWrite32(lpDDSurfaceDesc + 84, 24); // dwRGBBitCount
+				_env.MemWrite32(lpDDSurfaceDesc + 88, 0x00FF0000); // dwRBitMask
+				_env.MemWrite32(lpDDSurfaceDesc + 92, 0x0000FF00); // dwGBitMask
+				_env.MemWrite32(lpDDSurfaceDesc + 96, 0x000000FF); // dwBBitMask
+				_env.MemWrite32(lpDDSurfaceDesc + 100, 0); // dwRGBAlphaBitMask
+			}
+			else // 32-bit
+			{
+				_env.MemWrite32(lpDDSurfaceDesc + 76, (uint)DDPFFlags.DDPF_RGB);
+				_env.MemWrite32(lpDDSurfaceDesc + 80, 0); // dwFourCC = 0
+				_env.MemWrite32(lpDDSurfaceDesc + 84, 32); // dwRGBBitCount
+				_env.MemWrite32(lpDDSurfaceDesc + 88, 0x00FF0000); // dwRBitMask
+				_env.MemWrite32(lpDDSurfaceDesc + 92, 0x0000FF00); // dwGBitMask
+				_env.MemWrite32(lpDDSurfaceDesc + 96, 0x000000FF); // dwBBitMask
+				_env.MemWrite32(lpDDSurfaceDesc + 100, 0); // dwRGBAlphaBitMask
+			}
 		}
 
 		/// <summary>
