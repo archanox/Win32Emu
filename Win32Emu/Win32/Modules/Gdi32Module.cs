@@ -825,23 +825,23 @@ namespace Win32Emu.Win32.Modules
 				20 => 20, // NUMMARKERS - Number of device-specific markers
 				22 => 0, // NUMFONTS - Number of device-specific fonts
 				24 => bpp <= 8 ? (1 << bpp) : 0, // NUMCOLORS - Entries in color table (0 for >8bpp)
-				28 => 0, // PDEVICESIZE - Size required for device descriptor
-				30 => 0, // CURVECAPS - Curve capabilities (no curves for raster display)
-				32 => 0, // LINECAPS - Line capabilities
-				34 => 0, // POLYGONALCAPS - Polygonal capabilities
-				36 => 0x4000, // TEXTCAPS - Text capabilities (TC_RA_ABLE = raster fonts)
-				38 => 0, // CLIPCAPS - Clipping capabilities
-				40 => 0xF00, // RASTERCAPS - Raster capabilities (RC_BITBLT | RC_BITMAP64 | RC_GDI20_OUTPUT | RC_DI_BITMAP)
-				42 => width, // ASPECTX - Relative width of a device pixel
-				44 => height, // ASPECTY - Relative height of a device pixel
-				46 => (int)Math.Sqrt(width * width + height * height), // ASPECTXY - Diagonal of device pixel
+				26 => 0, // PDEVICESIZE - Size required for device descriptor
+				28 => 0, // CURVECAPS - Curve capabilities (no curves for raster display)
+				30 => 0, // LINECAPS - Line capabilities
+				32 => 0, // POLYGONALCAPS - Polygonal capabilities
+				34 => 0x4000, // TEXTCAPS - Text capabilities (TC_RA_ABLE = raster fonts)
+				36 => 0, // CLIPCAPS - Clipping capabilities
+				38 => 0xF00, // RASTERCAPS - Raster capabilities (RC_BITBLT | RC_BITMAP64 | RC_GDI20_OUTPUT | RC_DI_BITMAP)
+				40 => 1, // ASPECTX - Relative width of a device pixel (square pixels)
+				42 => 1, // ASPECTY - Relative height of a device pixel (square pixels)
+				44 => 1, // ASPECTXY - Diagonal of device pixel (square pixels)
 				72 => 0, // LOGPIXELSX - Logical pixels/inch X (not meaningful for display drivers in Win9x; use 96)
 				74 => 0, // LOGPIXELSY - Logical pixels/inch Y
 				88 => 96, // LOGPIXELSX (standard index) - Logical pixels/inch in X
 				90 => 96, // LOGPIXELSY (standard index) - Logical pixels/inch in Y
 				104 => 0, // SIZEPALETTE - Number of entries in the system palette
-				108 => 0, // NUMRESERVED - Number of reserved entries in the system palette
-				110 => bpp, // COLORRES - Actual color resolution in bits per pixel
+				106 => 0, // NUMRESERVED - Number of reserved entries in the system palette
+				108 => bpp, // COLORRES - Actual color resolution in bits per pixel
 				_ => 0
 			};
 		}
@@ -1655,22 +1655,64 @@ namespace Win32Emu.Win32.Modules
 			// Caller wants only the required size (pv == 0)
 			if (!_gdiObjects.TryGetValue(hObject, out var obj))
 			{
-				// Stock objects: return default sizes
+				// Stock objects: look up the ID from the handle to determine type
+				var stockId = _stockObjects.FirstOrDefault(kv => kv.Value == hObject).Key;
 				if (_stockObjects.ContainsValue(hObject))
 				{
-					// For stock objects, return brush size (LOGBRUSH = 12 bytes)
-					if (pv == 0)
-						return 12;
-					if (c >= 12)
+					// Classify by stock object ID: pens (6-8), fonts (10-17), brushes (0-5, 18-19)
+					var stockType = (NativeTypes.StockObject)stockId;
+					var isPen = stockType is NativeTypes.StockObject.WHITE_PEN
+						or NativeTypes.StockObject.BLACK_PEN
+						or NativeTypes.StockObject.NULL_PEN
+						or NativeTypes.StockObject.DC_PEN;
+					var isFont = stockType is NativeTypes.StockObject.OEM_FIXED_FONT
+						or NativeTypes.StockObject.ANSI_FIXED_FONT
+						or NativeTypes.StockObject.ANSI_VAR_FONT
+						or NativeTypes.StockObject.SYSTEM_FONT
+						or NativeTypes.StockObject.DEVICE_DEFAULT_FONT
+						or NativeTypes.StockObject.SYSTEM_FIXED_FONT
+						or NativeTypes.StockObject.DEFAULT_GUI_FONT;
+
+					if (isPen)
 					{
-						// lbStyle = BS_SOLID (0)
-						_env.MemWrite32(pv, 0);
-						// lbColor = 0 (black)
-						_env.MemWrite32(pv + 4, 0);
-						// lbHatch = 0
-						_env.MemWrite32(pv + 8, 0);
+						// LOGPEN is 16 bytes: lopnStyle (4) + POINT lopnWidth (8) + lopnColor (4)
+						const int penSize = 16;
+						if (pv == 0)
+							return penSize;
+						if (c < penSize)
+							return 0;
+						_env.MemWrite32(pv + 0, 0); // lopnStyle = PS_SOLID
+						_env.MemWrite32(pv + 4, 1); // lopnWidth.x = 1
+						_env.MemWrite32(pv + 8, 0); // lopnWidth.y = 0 (ignored)
+						_env.MemWrite32(pv + 12, 0); // lopnColor = black
+						return penSize;
 					}
-					return 12;
+
+					if (isFont)
+					{
+						// LOGFONTA is 60 bytes
+						const int fontSize = 60;
+						if (pv == 0)
+							return fontSize;
+						if (c < fontSize)
+							return 0;
+						// Zero the whole structure (default font)
+						for (var i = 0; i < fontSize; i += 4)
+							_env.MemWrite32(pv + (uint)i, 0);
+						return fontSize;
+					}
+
+					// Default: brush (LOGBRUSH = 12 bytes)
+					const int brushSize = 12;
+					if (pv == 0)
+						return brushSize;
+					if (c >= brushSize)
+					{
+						_env.MemWrite32(pv, 0); // lbStyle = BS_SOLID
+						_env.MemWrite32(pv + 4, 0); // lbColor = black
+						_env.MemWrite32(pv + 8, 0); // lbHatch = 0
+					}
+					return brushSize;
 				}
 				_logger.LogWarning("[Gdi32] GetObjectA: Object 0x{HObject:X8} not found", hObject);
 				return 0;
@@ -1716,13 +1758,14 @@ namespace Win32Emu.Win32.Modules
 
 				case GdiObjectType.Pen:
 				{
-					// LOGPEN structure layout (12 bytes):
+					// LOGPEN structure layout (16 bytes):
 					// typedef struct tagLOGPEN {
-					//   UINT     lopnStyle;   // +0
-					//   POINT    lopnWidth;   // +4 (x = width, y = ignored)
-					//   COLORREF lopnColor;   // +8
+					//   UINT     lopnStyle;   // +0  (4 bytes)
+					//   POINT    lopnWidth;   // +4  (8 bytes: x = width at +4, y = unused at +8)
+					//   COLORREF lopnColor;   // +12 (4 bytes)
 					// } LOGPEN;
-					const int requiredSize = 12;
+					// POINT contains two LONGs, so the total is 16 bytes.
+					const int requiredSize = 16;
 					if (pv == 0)
 						return requiredSize;
 					if (c < requiredSize)
@@ -1730,7 +1773,8 @@ namespace Win32Emu.Win32.Modules
 
 					_env.MemWrite32(pv + 0, (uint)obj.PenStyle); // lopnStyle
 					_env.MemWrite32(pv + 4, (uint)obj.PenWidth); // lopnWidth.x
-					_env.MemWrite32(pv + 8, obj.PenColor); // lopnColor
+					_env.MemWrite32(pv + 8, 0); // lopnWidth.y (ignored)
+					_env.MemWrite32(pv + 12, obj.PenColor); // lopnColor
 					return requiredSize;
 				}
 
