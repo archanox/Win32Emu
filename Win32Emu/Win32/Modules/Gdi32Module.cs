@@ -804,15 +804,44 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] GetDeviceCaps(HDC=0x{Hdc:X8}, nIndex={NIndex})", hdc, nIndex);
 
-			// Return common device capabilities
+			// Use the current display mode from the process environment so that
+			// windowed-mode paths that query the screen DC (hwnd=0) receive values
+			// consistent with whatever DirectDraw SetDisplayMode last programmed.
+			var bpp = _env.DisplayBitsPerPixel > 0 ? _env.DisplayBitsPerPixel : 32;
+			var width = _env.DisplayWidth > 0 ? _env.DisplayWidth : 640;
+			var height = _env.DisplayHeight > 0 ? _env.DisplayHeight : 480;
+
 			return nIndex switch
 			{
-				8 => 1920, // HORZRES - Horizontal resolution in pixels
-				10 => 1080, // VERTRES - Vertical resolution in pixels
-				12 => 32, // BITSPIXEL - Color bits per pixel
-				88 => 96, // LOGPIXELSX - Logical pixels/inch in X
-				90 => 96, // LOGPIXELSY - Logical pixels/inch in Y
-				2 => 8, // TECHNOLOGY - DT_RASDISPLAY (raster display)
+				2 => 1, // TECHNOLOGY - DT_RASDISPLAY (raster display)
+				4 => width, // HORZSIZE - Horizontal size in millimetres (approximate)
+				6 => height, // VERTSIZE - Vertical size in millimetres (approximate)
+				8 => width, // HORZRES - Horizontal resolution in pixels
+				10 => height, // VERTRES - Vertical resolution in pixels
+				12 => bpp, // BITSPIXEL - Color bits per pixel
+				14 => 1, // PLANES - Number of bit planes (always 1 on modern hardware)
+				16 => 0, // NUMBRUSHES - Number of device-specific brushes
+				18 => 0, // NUMPENS - Number of device-specific pens
+				20 => 20, // NUMMARKERS - Number of device-specific markers
+				22 => 0, // NUMFONTS - Number of device-specific fonts
+				24 => 1 << bpp, // NUMCOLORS - Number of entries in the color table (0 for >8bpp)
+				28 => 0, // PDEVICESIZE - Size required for device descriptor
+				30 => 0, // CURVECAPS - Curve capabilities (no curves for raster display)
+				32 => 0, // LINECAPS - Line capabilities
+				34 => 0, // POLYGONALCAPS - Polygonal capabilities
+				36 => 0x4000, // TEXTCAPS - Text capabilities (TC_RA_ABLE = raster fonts)
+				38 => 0, // CLIPCAPS - Clipping capabilities
+				40 => 0xF00, // RASTERCAPS - Raster capabilities (RC_BITBLT | RC_BITMAP64 | RC_GDI20_OUTPUT | RC_DI_BITMAP)
+				42 => width, // ASPECTX - Relative width of a device pixel
+				44 => height, // ASPECTY - Relative height of a device pixel
+				46 => (int)Math.Sqrt(width * width + height * height), // ASPECTXY - Diagonal of device pixel
+				72 => 0, // LOGPIXELSX - Logical pixels/inch X (not meaningful for display drivers in Win9x; use 96)
+				74 => 0, // LOGPIXELSY - Logical pixels/inch Y
+				88 => 96, // LOGPIXELSX (standard index) - Logical pixels/inch in X
+				90 => 96, // LOGPIXELSY (standard index) - Logical pixels/inch in Y
+				104 => 0, // SIZEPALETTE - Number of entries in the system palette
+				108 => 0, // NUMRESERVED - Number of reserved entries in the system palette
+				110 => bpp, // COLORRES - Actual color resolution in bits per pixel
 				_ => 0
 			};
 		}
@@ -1622,7 +1651,135 @@ namespace Win32Emu.Win32.Modules
 		private int GetObjectA(uint hObject, int c, uint pv)
 		{
 			_logger.LogInformation("[Gdi32] GetObjectA(hObject=0x{HObject:X8}, c={C}, pv=0x{Pv:X8})", hObject, c, pv);
-			return 0; // Return 0 (no data copied)
+
+			// Caller wants only the required size (pv == 0)
+			if (!_gdiObjects.TryGetValue(hObject, out var obj))
+			{
+				// Stock objects: return default sizes
+				if (_stockObjects.ContainsValue(hObject))
+				{
+					// For stock objects, return brush size (LOGBRUSH = 12 bytes)
+					if (pv == 0)
+						return 12;
+					if (c >= 12)
+					{
+						// lbStyle = BS_SOLID (0)
+						_env.MemWrite32(pv, 0);
+						// lbColor = 0 (black)
+						_env.MemWrite32(pv + 4, 0);
+						// lbHatch = 0
+						_env.MemWrite32(pv + 8, 0);
+					}
+					return 12;
+				}
+				_logger.LogWarning("[Gdi32] GetObjectA: Object 0x{HObject:X8} not found", hObject);
+				return 0;
+			}
+
+			switch (obj.Type)
+			{
+				case GdiObjectType.Bitmap:
+				{
+					// BITMAP structure layout (24 bytes):
+					// typedef struct tagBITMAP {
+					//   LONG   bmType;        // +0  (must be 0)
+					//   LONG   bmWidth;       // +4
+					//   LONG   bmHeight;      // +8
+					//   LONG   bmWidthBytes;  // +12 (bytes per scan line, DWORD-aligned)
+					//   WORD   bmPlanes;      // +16
+					//   WORD   bmBitsPixel;   // +18
+					//   LPVOID bmBits;        // +20 (NULL for device-dependent bitmaps)
+					// } BITMAP;
+					var requiredSize = 24;
+					if (pv == 0)
+						return requiredSize;
+					if (c < requiredSize)
+						return 0;
+
+					var bm = obj.Bitmap;
+					if (bm == null)
+						return 0;
+
+					var stride = bm.Stride > 0
+						? bm.Stride
+						: ((bm.Width * (int)bm.BitCount + 31) / 32) * 4;
+
+					_env.MemWrite32(pv + 0, 0); // bmType = 0
+					_env.MemWrite32(pv + 4, (uint)bm.Width); // bmWidth
+					_env.MemWrite32(pv + 8, (uint)bm.Height); // bmHeight
+					_env.MemWrite32(pv + 12, (uint)stride); // bmWidthBytes
+					_env.MemWrite16(pv + 16, (ushort)(bm.Planes > 0 ? bm.Planes : 1)); // bmPlanes
+					_env.MemWrite16(pv + 18, (ushort)bm.BitCount); // bmBitsPixel
+					_env.MemWrite32(pv + 20, 0); // bmBits = NULL
+					return requiredSize;
+				}
+
+				case GdiObjectType.Pen:
+				{
+					// LOGPEN structure layout (12 bytes):
+					// typedef struct tagLOGPEN {
+					//   UINT     lopnStyle;   // +0
+					//   POINT    lopnWidth;   // +4 (x = width, y = ignored)
+					//   COLORREF lopnColor;   // +8
+					// } LOGPEN;
+					const int requiredSize = 12;
+					if (pv == 0)
+						return requiredSize;
+					if (c < requiredSize)
+						return 0;
+
+					_env.MemWrite32(pv + 0, 0); // lopnStyle = PS_SOLID
+					_env.MemWrite32(pv + 4, 1); // lopnWidth.x = 1
+					_env.MemWrite32(pv + 8, 0); // lopnColor = black
+					return requiredSize;
+				}
+
+				case GdiObjectType.Brush:
+				{
+					// LOGBRUSH structure layout (12 bytes):
+					// typedef struct tagLOGBRUSH {
+					//   UINT     lbStyle;  // +0
+					//   COLORREF lbColor;  // +4
+					//   ULONG_PTR lbHatch; // +8
+					// } LOGBRUSH;
+					const int requiredSize = 12;
+					if (pv == 0)
+						return requiredSize;
+					if (c < requiredSize)
+						return 0;
+
+					_env.MemWrite32(pv + 0, 0); // lbStyle = BS_SOLID
+					_env.MemWrite32(pv + 4, obj.BrushColor); // lbColor
+					_env.MemWrite32(pv + 8, 0); // lbHatch = 0
+					return requiredSize;
+				}
+
+				case GdiObjectType.Font:
+				{
+					// LOGFONTA structure layout (60 bytes)
+					const int requiredSize = 60;
+					if (pv == 0)
+						return requiredSize;
+					if (c < requiredSize)
+						return 0;
+
+					// Zero-fill and write minimal defaults
+					for (var i = 0u; i < requiredSize; i += 4)
+						_env.MemWrite32(pv + i, 0);
+					_env.MemWrite32(pv + 0, (uint)DefaultFontHeight); // lfHeight
+					_env.MemWrite32(pv + 4, 0); // lfWidth = 0 (auto)
+					_env.MemWrite32(pv + 12, 400); // lfWeight = FW_NORMAL
+					_env.MemWrite8(pv + 16, 0); // lfItalic = FALSE
+					_env.MemWrite8(pv + 17, 0); // lfUnderline = FALSE
+					_env.MemWrite8(pv + 18, 0); // lfStrikeOut = FALSE
+					_env.MemWrite8(pv + 19, 1); // lfCharSet = DEFAULT_CHARSET
+					return requiredSize;
+				}
+
+				default:
+					_logger.LogWarning("[Gdi32] GetObjectA: Unhandled GDI object type {Type} for handle 0x{HObject:X8}", obj.Type, hObject);
+					return 0;
+			}
 		}
 
 		// Drawing functions
