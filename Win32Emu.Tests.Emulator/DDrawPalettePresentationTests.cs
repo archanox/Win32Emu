@@ -146,7 +146,7 @@ public class DDrawPalettePresentationTests
 	}
 
 	[Fact]
-	public void SurfaceLock_ShouldSyncExistingSurfaceBitsIntoReusableLockBuffer()
+	public void Lock_RefreshesStaleBufferFromCurrentSurfaceBits()
 	{
 		var memory = new VirtualMemory();
 		var cpu = new JitCpu(memory, NullLogger.Instance);
@@ -165,6 +165,8 @@ public class DDrawPalettePresentationTests
 		SetPropertyValue(surface, "Bits", new byte[] { 0x11, 0x22, 0x33, 0x44 });
 		SetPropertyValue(surface, "AllocatedMemoryPtr", allocatedMemoryPtr);
 
+		// Seed the reusable lock buffer with stale bytes so the assertion proves
+		// Surface_Lock refreshed it from the current surface bits.
 		memory.Write8(allocatedMemoryPtr, 0xAA);
 		memory.Write8(allocatedMemoryPtr + 1, 0xBB);
 		memory.Write8(allocatedMemoryPtr + 2, 0xCC);

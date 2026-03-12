@@ -3848,9 +3848,31 @@ namespace Win32Emu.Win32.Modules
 			// DirectDraw surfaces must expose their current contents through the lock pointer.
 			// Games can reuse the same lock buffer across frames and expect BitBlt/GetDC/Flip
 			// updates that touched surface.Bits to be visible on the next Lock call.
-			if (surface.Bits.Length > 0)
+			var lockBufferSizeLong = (long)surface.Pitch * surface.Height;
+			if (lockBufferSizeLong > int.MaxValue)
 			{
-				_env.MemWriteBytes(surfaceMemPtr, surface.Bits);
+				_logger.LogWarning("[DDraw] Surface 0x{SurfaceHandle:X8} lock sync skipped: expected buffer size {BufferSize} exceeds int range",
+					surface.Handle, lockBufferSizeLong);
+			}
+			else if (lockBufferSizeLong > 0)
+			{
+				var lockBufferSize = (int)lockBufferSizeLong;
+				var bytesToCopy = Math.Min(surface.Bits.Length, lockBufferSize);
+				if (bytesToCopy > 0)
+				{
+					_env.MemWriteBytes(surfaceMemPtr, surface.Bits.AsSpan(0, bytesToCopy));
+				}
+
+				if (bytesToCopy < lockBufferSize)
+				{
+					_env.MemZero(surfaceMemPtr + (uint)bytesToCopy, (uint)(lockBufferSize - bytesToCopy));
+				}
+
+				if (surface.Bits.Length != lockBufferSize)
+				{
+					_logger.LogWarning("[DDraw] Surface 0x{SurfaceHandle:X8} lock sync size mismatch: bitsLength={BitsLength}, expected={Expected}",
+						surface.Handle, surface.Bits.Length, lockBufferSize);
+				}
 			}
 
 			// Fill the surface description structure
