@@ -619,6 +619,7 @@ namespace Win32Emu.Win32.Modules
 						case IInputBackend.DeviceType.Keyboard:
 							// DirectInput keyboard format: 256 bytes indexed by DIK scan code.
 							// The backend stores keys by Win32 VK code, so convert VK→DIK here.
+							// KeyCodeMapper returns 0 for unmapped keys; DIK 0 is reserved/invalid.
 							if (cbData >= 256 && lpvData != 0)
 							{
 								foreach (var (vk, pressed) in state.KeyStates)
