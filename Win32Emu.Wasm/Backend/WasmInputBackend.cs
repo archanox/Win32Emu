@@ -232,6 +232,12 @@ public class WasmInputBackend : IInputBackend
 			_dotNetRef?.Dispose();
 			_dotNetRef = null;
 			_initialized = false;
+			
+			// Remove document-level keyboard listeners and clear the JS backend reference.
+			// This ensures that re-initialization does not accumulate duplicate listeners.
+			// InvokeVoidAsync is fire-and-forget here: cleanupInput is synchronous JS and
+			// Dispose() cannot be async, so we intentionally do not await the ValueTask.
+			_ = _jsRuntime.InvokeVoidAsync("cleanupInput");
 		}
 	}
 }

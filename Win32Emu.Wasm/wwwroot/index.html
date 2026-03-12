@@ -1088,27 +1088,39 @@
 			// continues to work even when the canvas loses focus (e.g. after clicking the
 			// virtual keyboard or other UI elements). Events originating from actual text
 			// input fields are excluded so normal browser text entry is not disrupted.
-			document.addEventListener('keydown', (e) => {
-				const tag = e.target.tagName;
-				if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-				e.preventDefault();
-				const vkCode = mapKeyCode(e.code);
-				if (vkCode > 0 && inputBackendRef) {
-					inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
-						.catch(err => console.error('OnKeyDown error:', err));
-				}
-			});
-			
-			document.addEventListener('keyup', (e) => {
-				const tag = e.target.tagName;
-				if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-				e.preventDefault();
-				const vkCode = mapKeyCode(e.code);
-				if (vkCode > 0 && inputBackendRef) {
-					inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
-						.catch(err => console.error('OnKeyUp error:', err));
-				}
-			});
+			//
+			// Listeners are registered only once (guarded by window.__inputListenersRegistered)
+			// and stored in window.__inputListeners so they can be removed via cleanupInput().
+			if (!window.__inputListenersRegistered) {
+				window.__inputListeners = {
+					keydown: (e) => {
+						const tag = e.target.tagName;
+						if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+						const vkCode = mapKeyCode(e.code);
+						// Only suppress browser defaults when the emulator will actually consume the key.
+						// This lets normal browser shortcuts work when the backend is not initialized
+						// or when the key has no Win32 mapping.
+						if (vkCode > 0 && inputBackendRef) {
+							e.preventDefault();
+							inputBackendRef.invokeMethodAsync('OnKeyDown', vkCode)
+								.catch(err => console.error('OnKeyDown error:', err));
+						}
+					},
+					keyup: (e) => {
+						const tag = e.target.tagName;
+						if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+						const vkCode = mapKeyCode(e.code);
+						if (vkCode > 0 && inputBackendRef) {
+							e.preventDefault();
+							inputBackendRef.invokeMethodAsync('OnKeyUp', vkCode)
+								.catch(err => console.error('OnKeyUp error:', err));
+						}
+					}
+				};
+				document.addEventListener('keydown', window.__inputListeners.keydown);
+				document.addEventListener('keyup', window.__inputListeners.keyup);
+				window.__inputListenersRegistered = true;
+			}
 			
 			// Mouse event handlers
 			canvas.addEventListener('mousemove', (e) => {
@@ -1197,6 +1209,18 @@
 			
 			console.log('Input system initialized successfully');
 			return true;
+		};
+		
+		// Remove document-level keyboard listeners and clear backend reference.
+		// Called from WasmInputBackend.Dispose() to avoid stale listener accumulation.
+		window.cleanupInput = function() {
+			inputBackendRef = null;
+			if (window.__inputListenersRegistered && window.__inputListeners) {
+				document.removeEventListener('keydown', window.__inputListeners.keydown);
+				document.removeEventListener('keyup', window.__inputListeners.keyup);
+				window.__inputListeners = null;
+				window.__inputListenersRegistered = false;
+			}
 		};
 		
 		// Send virtual key press (for on-screen keyboard buttons)
