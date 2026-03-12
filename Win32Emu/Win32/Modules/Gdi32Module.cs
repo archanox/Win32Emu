@@ -813,9 +813,9 @@ namespace Win32Emu.Win32.Modules
 
 			return nIndex switch
 			{
-				2 => 1, // TECHNOLOGY - DT_RASDISPLAY (raster display)
-				4 => width, // HORZSIZE - Horizontal size in millimetres (approximate)
-				6 => height, // VERTSIZE - Vertical size in millimetres (approximate)
+				2 => 8, // TECHNOLOGY - DT_RASDISPLAY (raster display)
+				4 => (int)(width * 25.4 / 96), // HORZSIZE - Horizontal size in millimetres (at 96 DPI)
+				6 => (int)(height * 25.4 / 96), // VERTSIZE - Vertical size in millimetres (at 96 DPI)
 				8 => width, // HORZRES - Horizontal resolution in pixels
 				10 => height, // VERTRES - Vertical resolution in pixels
 				12 => bpp, // BITSPIXEL - Color bits per pixel
@@ -824,7 +824,7 @@ namespace Win32Emu.Win32.Modules
 				18 => 0, // NUMPENS - Number of device-specific pens
 				20 => 20, // NUMMARKERS - Number of device-specific markers
 				22 => 0, // NUMFONTS - Number of device-specific fonts
-				24 => 1 << bpp, // NUMCOLORS - Number of entries in the color table (0 for >8bpp)
+				24 => bpp <= 8 ? (1 << bpp) : 0, // NUMCOLORS - Entries in color table (0 for >8bpp)
 				28 => 0, // PDEVICESIZE - Size required for device descriptor
 				30 => 0, // CURVECAPS - Curve capabilities (no curves for raster display)
 				32 => 0, // LINECAPS - Line capabilities

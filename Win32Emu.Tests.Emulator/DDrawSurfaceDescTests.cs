@@ -15,6 +15,12 @@ public class DDrawSurfaceDescTests
 {
 	private const uint BaseAddress = 0x00400000;
 
+	// GetDeviceCaps nIndex constants
+	private const int GDC_HORZRES = 8;
+	private const int GDC_VERTRES = 10;
+	private const int GDC_BITSPIXEL = 12;
+	private const int GDC_PLANES = 14;
+
 	[Fact]
 	public void DDSurfaceDescRef_PixelFormat_ShouldBeAtOffset72()
 	{
@@ -190,8 +196,8 @@ public class DDrawSurfaceDescTests
 			"GetDeviceCaps",
 			System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
 
-		var planes = (int)method!.Invoke(gdi32Module, [0u, 14])!;
-		var bitsPixel = (int)method!.Invoke(gdi32Module, [0u, 12])!;
+		var planes = (int)method!.Invoke(gdi32Module, [0u, GDC_PLANES])!;
+		var bitsPixel = (int)method!.Invoke(gdi32Module, [0u, GDC_BITSPIXEL])!;
 		Assert.Equal(8, planes * bitsPixel);
 	}
 }
