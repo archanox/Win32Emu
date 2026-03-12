@@ -6,7 +6,9 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Win32Emu.Cpu;
 using Win32Emu.Loader;
 using Win32Emu.Memory;
+using Win32Emu.Rendering;
 using Win32Emu.Threading;
+using Win32Emu.Win32.Input;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -6625,13 +6627,25 @@ namespace Win32Emu.Win32.Modules
 		private short GetAsyncKeyState(int vKey)
 		{
 			_logger.LogInformation("[User32] GetAsyncKeyState(vKey={VKey})", vKey);
-			return 0; // Key not pressed
+
+			if (_env.InputBackend != null && IsVkKeyPressed(_env.InputBackend, vKey))
+			{
+				return unchecked((short)0x8000); // High bit set = key currently down
+			}
+
+			return 0;
 		}
 
 		[DllModuleExport(4)]
 		private short GetKeyState(int nVirtKey)
 		{
 			_logger.LogInformation("[User32] GetKeyState(nVirtKey={NVirtKey})", nVirtKey);
+
+			if (_env.InputBackend != null && IsVkKeyPressed(_env.InputBackend, nVirtKey))
+			{
+				return unchecked((short)0x8000); // High bit set = key currently down
+			}
+
 			return 0;
 		}
 
@@ -6645,14 +6659,71 @@ namespace Win32Emu.Win32.Modules
 				return 0; // FALSE
 			}
 
-			// Keyboard state is an array of 256 bytes, one for each virtual key
-			// Clear all keys to "not pressed" state
+			// Keyboard state is an array of 256 bytes, one per virtual key.
+			// Clear all keys to "not pressed" state first.
 			for (uint i = 0; i < 256; i++)
 			{
 				_env.MemWrite8(lpKeyState + i, 0);
 			}
 
+			// Populate from the input backend if available.
+			if (_env.InputBackend != null)
+			{
+				var devices = _env.InputBackend.GetDevices();
+				foreach (var (deviceId, _, type) in devices)
+				{
+					if (type != IInputBackend.DeviceType.Keyboard)
+					{
+						continue;
+					}
+
+					if (!_env.InputBackend.PollDevice(deviceId, out var state) || state == null)
+					{
+						continue;
+					}
+
+					foreach (var (vk, pressed) in state.KeyStates)
+					{
+						if (pressed && (uint)vk < 256)
+						{
+							_env.MemWrite8(lpKeyState + (uint)vk, 0x80);
+						}
+					}
+
+					break; // Use the first keyboard device
+				}
+			}
+
 			return 1; // TRUE
+		}
+
+		/// <summary>
+		/// Checks whether a Win32 virtual key is currently pressed in the input backend.
+		/// </summary>
+		private static bool IsVkKeyPressed(IInputBackend inputBackend, int vKey)
+		{
+			var devices = inputBackend.GetDevices();
+			foreach (var (deviceId, _, type) in devices)
+			{
+				if (type != IInputBackend.DeviceType.Keyboard)
+				{
+					continue;
+				}
+
+				if (!inputBackend.PollDevice(deviceId, out var state) || state == null)
+				{
+					continue;
+				}
+
+				if (state.KeyStates.TryGetValue(vKey, out var pressed) && pressed)
+				{
+					return true;
+				}
+
+				break; // Use the first keyboard device only
+			}
+
+			return false;
 		}
 
 		[DllModuleExport(8)]

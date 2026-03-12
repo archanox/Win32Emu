@@ -522,4 +522,214 @@ public class DInputModuleTests
         // Assert - Should return DIERR_INVALIDPARAM (0x80070057)
         Assert.Equal(0x80070057u, returnValue);
     }
+
+    /// <summary>
+    /// Verifies that GetDeviceData converts VK codes (stored in backend) to DIK scan codes
+    /// (expected by the emulated game) when returning buffered keyboard events.
+    /// ign_teas and ign_win both use DirectInput buffered keyboard input and check dwOfs
+    /// against DIK_* constants (e.g. DIK_LEFT = 0xCB for the left arrow key).
+    /// </summary>
+    [Fact]
+    public async Task GetDeviceData_KeyboardEvent_ReportsDikScanCode()
+    {
+        // Arrange: stateful backend that can inject VK key state
+        var statefulBackend = new StatefulMockInputBackend();
+        var backendFactory = new StatefulMockBackendFactory(statefulBackend);
+        var vm = new VirtualMemory(0x10000000);
+        var cpu = new JitCpu(vm);
+        var env = new ProcessEnvironment(vm, heapBase: 0x01000000, backendFactory: backendFactory);
+        var dinputModule = new DInputModule(env, 0x00400000, logger: NullLogger.Instance);
+
+        // Initialise DirectInput (creates IDirectInput COM object and initialises InputBackend)
+        var diPtr = 0x001FF000u;
+        vm.Write32(diPtr, 0);
+        cpu.SetRegister("ESP", 0x001FFE00);
+        vm.Write32(0x001FFE04, 0x00400000); // hinst
+        vm.Write32(0x001FFE08, 0x00000300); // dwVersion
+        vm.Write32(0x001FFE0C, diPtr);       // lplpDirectInput
+        vm.Write32(0x001FFE10, 0);           // pUnkOuter
+        dinputModule.TryInvokeUnsafe("DirectInputCreateA", cpu, vm, out _);
+        Assert.NotNull(env.InputBackend);
+
+        // Inject a DirectInputDevice via reflection.
+        // The device must be in the _devices dictionary and IsAcquired must be true for
+        // GetDeviceData to process it.  BackendDeviceId=1 maps to statefulBackend device 1.
+        var devicesField = typeof(DInputModule)
+            .GetField("_devices", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Assert.NotNull(devicesField);
+
+        var devicesDict = devicesField!.GetValue(dinputModule);
+        Assert.NotNull(devicesDict);
+
+        // Find the DirectInputDevice type inside DInputModule
+        var deviceType = typeof(DInputModule).GetNestedType(
+            "DirectInputDevice", System.Reflection.BindingFlags.NonPublic);
+        Assert.NotNull(deviceType);
+
+        var device = Activator.CreateInstance(deviceType!)!;
+        deviceType!.GetProperty("Handle")!.SetValue(device, 0x01000000u);
+        deviceType!.GetProperty("BackendDeviceId")!.SetValue(device, 1u); // matches keyboard device ID 1
+        deviceType!.GetProperty("DeviceType")!.SetValue(device, IInputBackend.DeviceType.Keyboard);
+        deviceType!.GetProperty("IsAcquired")!.SetValue(device, true);
+        deviceType!.GetProperty("Name")!.SetValue(device, "TestKeyboard");
+
+        var addMethod = devicesDict!.GetType().GetMethod("Add")!;
+        addMethod.Invoke(devicesDict, new object[] { 0x01000000u, device });
+
+        // Simulate VK_LEFT (0x25) being pressed in the input backend
+        statefulBackend.KeyboardState.KeyStates[0x25] = true; // VK_LEFT
+
+        // Allocate output buffer for GetDeviceData (room for 4 events of 16 bytes each)
+        const uint EventBufPtr = 0x001FD000u;
+        const uint CountPtr    = 0x001FD200u;
+        vm.Write32(CountPtr, 4); // request up to 4 events
+
+        // Call DInputDevice_GetDeviceData via reflection
+        var getDataMethod = typeof(DInputModule).GetMethod(
+            "DInputDevice_GetDeviceData",
+            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+        Assert.NotNull(getDataMethod);
+
+        cpu.SetRegister("ESP", 0x001FEB00);
+        vm.Write32(0x001FEB04, 0x01000000u); // this = device handle
+        vm.Write32(0x001FEB08, 16);           // cbObjectData = sizeof(DIDEVICEOBJECTDATA)
+        vm.Write32(0x001FEB0C, EventBufPtr);  // rgdod (output buffer)
+        vm.Write32(0x001FEB10, CountPtr);     // pdwInOut
+        vm.Write32(0x001FEB14, 0);            // dwFlags
+
+        var dataResult = (uint)getDataMethod!.Invoke(dinputModule, new object[] { cpu, vm })!;
+        Assert.Equal(0u, dataResult); // DI_OK
+
+        // Verify returned event count
+        var returnedCount = vm.Read32(CountPtr);
+        Assert.Equal(1u, returnedCount); // one key-down event
+
+        // Verify DIDEVICEOBJECTDATA: dwOfs should be DIK_LEFT = 0xCB
+        var dwOfs  = vm.Read32(EventBufPtr + 0);  // dwOfs at offset 0
+        var dwData = vm.Read32(EventBufPtr + 4);  // dwData at offset 4
+        Assert.Equal(0xCBu, dwOfs);   // DIK_LEFT
+        Assert.Equal(0x80u, dwData);  // 0x80 = key pressed
+    }
+
+    // Infrastructure for stateful mock
+    private class StatefulMockInputBackend : IInputBackend
+    {
+        public bool IsInitialized { get; private set; }
+        public int DeviceCount => 1;
+
+#pragma warning disable CS0067
+        public event EventHandler<UIEventArgs>? UIEvent;
+#pragma warning restore CS0067
+
+        public readonly IInputBackend.InputState KeyboardState = new();
+
+        public Task<bool> InitializeAsync() { IsInitialized = true; return Task.FromResult(true); }
+
+        public List<(uint DeviceId, string Name, IInputBackend.DeviceType Type)> GetDevices() =>
+            new() { (1, "Mock Keyboard", IInputBackend.DeviceType.Keyboard) };
+
+        public uint OpenDevice(uint deviceId, IInputBackend.DeviceType type) => deviceId;
+        public bool CloseDevice(uint deviceId) => true;
+
+        public bool PollDevice(uint deviceId, out IInputBackend.InputState? state)
+        {
+            state = KeyboardState;
+            return true;
+        }
+
+        public void ProcessEvents() { }
+        public void Dispose() { }
+    }
+
+    private class StatefulMockBackendFactory(StatefulMockInputBackend backend) : IBackendFactory
+    {
+        public BackendType CurrentBackendType { get; set; } = BackendType.Headless;
+        public IRenderingBackend CreateRenderingBackend(ILogger logger) => throw new NotImplementedException();
+        public IRenderingBackend CreateRenderingBackendWithHost(ILogger logger, IEmulatorHost? host) => throw new NotImplementedException();
+        public IAudioBackend CreateAudioBackend(ILogger logger) => throw new NotImplementedException();
+        public IInputBackend CreateInputBackend(ILogger logger) => backend;
+    }
+}
+
+// Separate test class for KeyCodeMapper so it is clean and focused
+public class KeyCodeMapperTests
+{
+    [Theory]
+    [InlineData(0x41, 0x1E)] // VK_A   → DIK_A
+    [InlineData(0x53, 0x1F)] // VK_S   → DIK_S
+    [InlineData(0x44, 0x20)] // VK_D   → DIK_D
+    [InlineData(0x57, 0x11)] // VK_W   → DIK_W
+    [InlineData(0x1B, 0x01)] // VK_ESCAPE → DIK_ESCAPE
+    [InlineData(0x20, 0x39)] // VK_SPACE  → DIK_SPACE
+    [InlineData(0x0D, 0x1C)] // VK_RETURN → DIK_RETURN
+    [InlineData(0x25, 0xCB)] // VK_LEFT   → DIK_LEFT
+    [InlineData(0x27, 0xCD)] // VK_RIGHT  → DIK_RIGHT
+    [InlineData(0x26, 0xC8)] // VK_UP     → DIK_UP
+    [InlineData(0x28, 0xD0)] // VK_DOWN   → DIK_DOWN
+    [InlineData(0x70, 0x3B)] // VK_F1     → DIK_F1
+    [InlineData(0x7B, 0x58)] // VK_F12    → DIK_F12
+    [InlineData(0xA0, 0x2A)] // VK_LSHIFT → DIK_LSHIFT
+    [InlineData(0xA1, 0x36)] // VK_RSHIFT → DIK_RSHIFT
+    [InlineData(0xA2, 0x1D)] // VK_LCONTROL → DIK_LCONTROL
+    [InlineData(0xA3, 0x9D)] // VK_RCONTROL → DIK_RCONTROL
+    [InlineData(0xA4, 0x38)] // VK_LMENU  → DIK_LMENU
+    [InlineData(0xA5, 0xB8)] // VK_RMENU  → DIK_RMENU
+    [InlineData(0x30, 0x0B)] // VK_0      → DIK_0
+    [InlineData(0x31, 0x02)] // VK_1      → DIK_1
+    [InlineData(0x09, 0x0F)] // VK_TAB    → DIK_TAB
+    [InlineData(0x08, 0x0E)] // VK_BACK   → DIK_BACK
+    public void VkToDik_MapsCommonKeys(int vk, int expectedDik)
+    {
+        var dik = Win32Emu.Win32.Input.KeyCodeMapper.VkToDik(vk);
+        Assert.Equal(expectedDik, dik);
+    }
+
+    [Theory]
+    [InlineData(0x00)] // Unknown/null
+    [InlineData(0xFF)] // Out of range
+    public void VkToDik_ReturnsZeroForUnmappedKeys(int vk)
+    {
+        var dik = Win32Emu.Win32.Input.KeyCodeMapper.VkToDik(vk);
+        Assert.Equal(0, dik);
+    }
+
+    [Theory]
+    [InlineData(4,   0x41)] // SDL_SCANCODE_A    → VK_A
+    [InlineData(29,  0x5A)] // SDL_SCANCODE_Z    → VK_Z
+    [InlineData(30,  0x31)] // SDL_SCANCODE_1    → VK_1
+    [InlineData(39,  0x30)] // SDL_SCANCODE_0    → VK_0
+    [InlineData(40,  0x0D)] // SDL_SCANCODE_RETURN → VK_RETURN
+    [InlineData(41,  0x1B)] // SDL_SCANCODE_ESCAPE → VK_ESCAPE
+    [InlineData(44,  0x20)] // SDL_SCANCODE_SPACE  → VK_SPACE
+    [InlineData(79,  0x27)] // SDL_SCANCODE_RIGHT  → VK_RIGHT
+    [InlineData(80,  0x25)] // SDL_SCANCODE_LEFT   → VK_LEFT
+    [InlineData(81,  0x28)] // SDL_SCANCODE_DOWN   → VK_DOWN
+    [InlineData(82,  0x26)] // SDL_SCANCODE_UP     → VK_UP
+    [InlineData(58,  0x70)] // SDL_SCANCODE_F1     → VK_F1
+    [InlineData(69,  0x7B)] // SDL_SCANCODE_F12    → VK_F12
+    [InlineData(224, 0xA2)] // SDL_SCANCODE_LCTRL  → VK_LCONTROL
+    [InlineData(225, 0xA0)] // SDL_SCANCODE_LSHIFT → VK_LSHIFT
+    [InlineData(226, 0xA4)] // SDL_SCANCODE_LALT   → VK_LMENU
+    [InlineData(228, 0xA3)] // SDL_SCANCODE_RCTRL  → VK_RCONTROL
+    [InlineData(229, 0xA1)] // SDL_SCANCODE_RSHIFT → VK_RSHIFT
+    [InlineData(230, 0xA5)] // SDL_SCANCODE_RALT   → VK_RMENU
+    public void SdlScancodeToVk_MapsCommonKeys(int sdlScancode, int expectedVk)
+    {
+        var vk = Win32Emu.Win32.Input.KeyCodeMapper.SdlScancodeToVk(sdlScancode);
+        Assert.Equal(expectedVk, vk);
+    }
+
+    [Fact]
+    public void SdlScancodeToVk_ReturnsZeroForUnmappedScancode()
+    {
+        var vk = Win32Emu.Win32.Input.KeyCodeMapper.SdlScancodeToVk(0);
+        Assert.Equal(0, vk);
+    }
+
+    [Fact]
+    public void SdlScancodeToVk_ReturnsZeroForOutOfRangeScancode()
+    {
+        var vk = Win32Emu.Win32.Input.KeyCodeMapper.SdlScancodeToVk(9999);
+        Assert.Equal(0, vk);
+    }
 }
