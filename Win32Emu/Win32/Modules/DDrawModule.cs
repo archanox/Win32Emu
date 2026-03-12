@@ -3845,6 +3845,14 @@ namespace Win32Emu.Win32.Modules
 			}
 			surface.LockedMemoryPtr = surfaceMemPtr;
 
+			// DirectDraw surfaces must expose their current contents through the lock pointer.
+			// Games can reuse the same lock buffer across frames and expect BitBlt/GetDC/Flip
+			// updates that touched surface.Bits to be visible on the next Lock call.
+			if (surface.Bits.Length > 0)
+			{
+				_env.MemWriteBytes(surfaceMemPtr, surface.Bits);
+			}
+
 			// Fill the surface description structure
 			if (lpDDSurfaceDesc != 0)
 			{

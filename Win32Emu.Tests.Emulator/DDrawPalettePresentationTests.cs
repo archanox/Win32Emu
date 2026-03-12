@@ -146,6 +146,43 @@ public class DDrawPalettePresentationTests
 	}
 
 	[Fact]
+	public void SurfaceLock_ShouldSyncExistingSurfaceBitsIntoReusableLockBuffer()
+	{
+		var memory = new VirtualMemory();
+		var cpu = new JitCpu(memory, NullLogger.Instance);
+		var processEnvironment = new ProcessEnvironment(memory, logger: NullLogger.Instance);
+		var ddrawModule = new DDrawModule(processEnvironment, 0x00400000, null, NullLogger.Instance);
+		var backend = new TestRenderingBackend();
+		const uint ddrawHandle = 0x70000022;
+		const uint surfaceHandle = 0x71000022;
+		const uint allocatedMemoryPtr = 0x00900000;
+
+		AddDirectDrawObject(ddrawModule, ddrawHandle, backend);
+		var surface = AddOffscreenSurface(ddrawModule, surfaceHandle, ddrawHandle, paletteHandle: 0);
+		SetPropertyValue(surface, "Width", 4);
+		SetPropertyValue(surface, "Height", 1);
+		SetPropertyValue(surface, "Pitch", 4);
+		SetPropertyValue(surface, "Bits", new byte[] { 0x11, 0x22, 0x33, 0x44 });
+		SetPropertyValue(surface, "AllocatedMemoryPtr", allocatedMemoryPtr);
+
+		memory.Write8(allocatedMemoryPtr, 0xAA);
+		memory.Write8(allocatedMemoryPtr + 1, 0xBB);
+		memory.Write8(allocatedMemoryPtr + 2, 0xCC);
+		memory.Write8(allocatedMemoryPtr + 3, 0xDD);
+
+		SetupStackArgs(cpu, memory, surfaceHandle, 0, 0, 0, 0);
+		var lockMethod = GetPrivateMethod("Surface_Lock");
+		var result = (uint)lockMethod.Invoke(ddrawModule, [cpu, memory, surfaceHandle])!;
+
+		Assert.Equal((uint)NativeTypes.DDResult.DD_OK, result);
+		Assert.Equal(0x11u, memory.Read8(allocatedMemoryPtr));
+		Assert.Equal(0x22u, memory.Read8(allocatedMemoryPtr + 1));
+		Assert.Equal(0x33u, memory.Read8(allocatedMemoryPtr + 2));
+		Assert.Equal(0x44u, memory.Read8(allocatedMemoryPtr + 3));
+		Assert.Equal(allocatedMemoryPtr, (uint)GetPropertyValue(surface, "LockedMemoryPtr")!);
+	}
+
+	[Fact]
 	public void SurfaceWithAttachedBackbuffers_ShouldBeRendered_WhenBltFastCalled()
 	{
 		var memory = new VirtualMemory();
