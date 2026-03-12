@@ -1728,9 +1728,9 @@ namespace Win32Emu.Win32.Modules
 					if (c < requiredSize)
 						return 0;
 
-					_env.MemWrite32(pv + 0, 0); // lopnStyle = PS_SOLID
-					_env.MemWrite32(pv + 4, 1); // lopnWidth.x = 1
-					_env.MemWrite32(pv + 8, 0); // lopnColor = black
+					_env.MemWrite32(pv + 0, (uint)obj.PenStyle); // lopnStyle
+					_env.MemWrite32(pv + 4, (uint)obj.PenWidth); // lopnWidth.x
+					_env.MemWrite32(pv + 8, obj.PenColor); // lopnColor
 					return requiredSize;
 				}
 
@@ -1858,7 +1858,7 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[Gdi32] CreatePen(style={IStyle}, width={CWidth}, color=0x{Color:X8})", iStyle, cWidth, color);
 			var handle = _nextGdiObjectHandle++;
-			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Pen };
+			_gdiObjects[handle] = new GdiObject { Type = GdiObjectType.Pen, PenStyle = iStyle, PenWidth = cWidth, PenColor = color };
 			return handle;
 		}
 
@@ -2854,6 +2854,9 @@ namespace Win32Emu.Win32.Modules
 			public GdiObjectType Type { get; set; }
 			public BitmapData? Bitmap { get; set; }
 			public uint BrushColor { get; set; } = 0x00000000; // For solid brushes
+			public uint PenColor { get; set; } = 0x00000000; // For pens
+			public int PenStyle { get; set; } = 0; // PS_SOLID = 0
+			public int PenWidth { get; set; } = 1; // 1 pixel wide by default
 			public NativeTypes.RECT? RegionBounds { get; set; }
 		}
 

@@ -2864,19 +2864,27 @@ namespace Win32Emu.Win32.Modules
 					// Fill in pixel format using nested ref struct
 					var pixelFormat = surfaceDesc.ddpfPixelFormat;
 					pixelFormat.dwSize = 32;
-					pixelFormat.dwFlags = (uint)DDPFFlags.DDPF_RGB;
 					pixelFormat.dwFourCC = 0;
 					pixelFormat.dwRGBBitCount = (uint)mode.Bpp;
 
-					// Set RGB masks based on bit depth
-					if (mode.Bpp == 16)
+					// Set flags and RGB masks based on bit depth
+					if (mode.Bpp == 8)
 					{
+						pixelFormat.dwFlags = (uint)DDPFFlags.DDPF_PALETTEINDEXED8;
+						pixelFormat.dwRBitMask = 0;
+						pixelFormat.dwGBitMask = 0;
+						pixelFormat.dwBBitMask = 0;
+					}
+					else if (mode.Bpp == 16)
+					{
+						pixelFormat.dwFlags = (uint)DDPFFlags.DDPF_RGB;
 						pixelFormat.dwRBitMask = 0xF800;
 						pixelFormat.dwGBitMask = 0x07E0;
 						pixelFormat.dwBBitMask = 0x001F;
 					}
-					else if (mode.Bpp == 24 || mode.Bpp == 32)
+					else
 					{
+						pixelFormat.dwFlags = (uint)DDPFFlags.DDPF_RGB;
 						pixelFormat.dwRBitMask = 0x00FF0000;
 						pixelFormat.dwGBitMask = 0x0000FF00;
 						pixelFormat.dwBBitMask = 0x000000FF;
