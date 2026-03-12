@@ -6628,7 +6628,8 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] GetAsyncKeyState(vKey={VKey})", vKey);
 
-			if (_env.InputBackend != null && IsVkKeyPressed(_env.InputBackend, vKey))
+			var state = GetFirstKeyboardState(_env.InputBackend);
+			if (state != null && state.KeyStates.TryGetValue(vKey, out var pressed) && pressed)
 			{
 				return unchecked((short)0x8000); // High bit set = key currently down
 			}
@@ -6641,7 +6642,8 @@ namespace Win32Emu.Win32.Modules
 		{
 			_logger.LogInformation("[User32] GetKeyState(nVirtKey={NVirtKey})", nVirtKey);
 
-			if (_env.InputBackend != null && IsVkKeyPressed(_env.InputBackend, nVirtKey))
+			var state = GetFirstKeyboardState(_env.InputBackend);
+			if (state != null && state.KeyStates.TryGetValue(nVirtKey, out var pressed) && pressed)
 			{
 				return unchecked((short)0x8000); // High bit set = key currently down
 			}
@@ -6667,30 +6669,15 @@ namespace Win32Emu.Win32.Modules
 			}
 
 			// Populate from the input backend if available.
-			if (_env.InputBackend != null)
+			var kbState = GetFirstKeyboardState(_env.InputBackend);
+			if (kbState != null)
 			{
-				var devices = _env.InputBackend.GetDevices();
-				foreach (var (deviceId, _, type) in devices)
+				foreach (var (vk, pressed) in kbState.KeyStates)
 				{
-					if (type != IInputBackend.DeviceType.Keyboard)
+					if (pressed && (uint)vk < 256)
 					{
-						continue;
+						_env.MemWrite8(lpKeyState + (uint)vk, 0x80);
 					}
-
-					if (!_env.InputBackend.PollDevice(deviceId, out var state) || state == null)
-					{
-						continue;
-					}
-
-					foreach (var (vk, pressed) in state.KeyStates)
-					{
-						if (pressed && (uint)vk < 256)
-						{
-							_env.MemWrite8(lpKeyState + (uint)vk, 0x80);
-						}
-					}
-
-					break; // Use the first keyboard device
 				}
 			}
 
@@ -6698,32 +6685,41 @@ namespace Win32Emu.Win32.Modules
 		}
 
 		/// <summary>
-		/// Checks whether a Win32 virtual key is currently pressed in the input backend.
+		/// Returns the <see cref="IInputBackend.InputState"/> for the first keyboard device
+		/// found in <paramref name="inputBackend"/>, or <c>null</c> if none is available.
 		/// </summary>
-		private static bool IsVkKeyPressed(IInputBackend inputBackend, int vKey)
+		private static IInputBackend.InputState? GetFirstKeyboardState(IInputBackend? inputBackend)
 		{
-			var devices = inputBackend.GetDevices();
-			foreach (var (deviceId, _, type) in devices)
+			if (inputBackend == null)
+			{
+				return null;
+			}
+
+			foreach (var (deviceId, _, type) in inputBackend.GetDevices())
 			{
 				if (type != IInputBackend.DeviceType.Keyboard)
 				{
 					continue;
 				}
 
-				if (!inputBackend.PollDevice(deviceId, out var state) || state == null)
+				if (inputBackend.PollDevice(deviceId, out var state) && state != null)
 				{
-					continue;
-				}
-
-				if (state.KeyStates.TryGetValue(vKey, out var pressed) && pressed)
-				{
-					return true;
+					return state;
 				}
 
 				break; // Use the first keyboard device only
 			}
 
-			return false;
+			return null;
+		}
+
+		/// <summary>
+		/// Checks whether a Win32 virtual key is currently pressed in the input backend.
+		/// </summary>
+		private static bool IsVkKeyPressed(IInputBackend inputBackend, int vKey)
+		{
+			var state = GetFirstKeyboardState(inputBackend);
+			return state != null && state.KeyStates.TryGetValue(vKey, out var pressed) && pressed;
 		}
 
 		[DllModuleExport(8)]

@@ -617,9 +617,7 @@ public class DInputModuleTests
         public bool IsInitialized { get; private set; }
         public int DeviceCount => 1;
 
-#pragma warning disable CS0067
-        public event EventHandler<UIEventArgs>? UIEvent;
-#pragma warning restore CS0067
+        public event EventHandler<UIEventArgs>? UIEvent { add { } remove { } }
 
         public readonly IInputBackend.InputState KeyboardState = new();
 
