@@ -565,9 +565,10 @@
 			};
 		};
 		
-		// Update canvas with RGBA frame buffer data
-		window.updateCanvas = (canvasId, base64Data, width, height) => {
-			const MAX_SAMPLED_PIXELS = 4096;
+		// Update canvas with RGBA frame buffer data.
+		// pixelData is a Uint8Array received directly from .NET byte[] via Blazor WASM interop
+		// (no Base64 encoding overhead: .NET 6+ transfers byte[] as Uint8Array natively).
+		window.updateCanvas = (canvasId, pixelData, width, height) => {
 			const BYTES_PER_PIXEL = 4; // RGBA format
 			
 			let canvas = document.getElementById(canvasId);
@@ -603,63 +604,34 @@
 				canvas.height = height;
 			}
 			
-			// Decode base64 data
-			const binaryString = atob(base64Data);
-			const frameBufferLength = binaryString.length;
-			const bytes = new Uint8ClampedArray(frameBufferLength);
-			for (let i = 0; i < frameBufferLength; i++) {
-				bytes[i] = binaryString.charCodeAt(i);
-			}
-			
 			// Validate data length matches expected size
 			const expectedLength = width * height * BYTES_PER_PIXEL;
-			if (frameBufferLength !== expectedLength) {
-				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${frameBufferLength} bytes`);
+			if (pixelData.byteLength !== expectedLength) {
+				throw new Error(`Data length mismatch: expected ${expectedLength} bytes (${width}x${height}x${BYTES_PER_PIXEL}), got ${pixelData.byteLength} bytes`);
 			}
+			
+			// Wrap as Uint8ClampedArray (required by ImageData) -- zero-copy view over the same buffer
+			const bytes = new Uint8ClampedArray(pixelData.buffer, pixelData.byteOffset, pixelData.byteLength);
 			
 			// Create ImageData and draw to canvas
 			const imageData = new ImageData(bytes, width, height);
 			ctx.putImageData(imageData, 0, 0);
 			
-			const pixelCount = width * height;
-			const pixelStep = Math.max(1, Math.floor(pixelCount / MAX_SAMPLED_PIXELS));
-			let samplePixelCount = 0;
-			let sampleNonBlackPixels = 0;
-			let firstVisibleColor = null;
-			for (let pixelIndex = 0; pixelIndex < pixelCount; pixelIndex += pixelStep) {
-				const offset = pixelIndex * BYTES_PER_PIXEL;
-				const r = bytes[offset];
-				const g = bytes[offset + 1];
-				const b = bytes[offset + 2];
-				const a = bytes[offset + 3];
-				samplePixelCount++;
-				if (r !== 0 || g !== 0 || b !== 0) {
-					sampleNonBlackPixels++;
-					if (firstVisibleColor === null) {
-						firstVisibleColor = `rgba(${r}, ${g}, ${b}, ${a})`;
-					}
-				}
-			}
-			
-			// Update diagnostics
+			// Update minimal diagnostics (no per-frame pixel sampling -- use sampleCanvasPixels for diagnostics)
 			window.ddrawDiagnostics.canvasUpdateCount++;
 			window.ddrawDiagnostics.lastUpdateTime = Date.now();
 			window.ddrawDiagnostics.backendInitialized = true;
-			window.ddrawDiagnostics.frameBufferSize = frameBufferLength;
+			window.ddrawDiagnostics.frameBufferSize = pixelData.byteLength;
 			window.ddrawDiagnostics.lastCanvasId = canvasId;
-			window.ddrawDiagnostics.samplePixelCount = samplePixelCount;
-			window.ddrawDiagnostics.sampleNonBlackPixels = sampleNonBlackPixels;
-			window.ddrawDiagnostics.firstVisibleColor = firstVisibleColor;
-			
-			console.log(`Canvas updated successfully: ${width}x${height} (${frameBufferLength} bytes, update #${window.ddrawDiagnostics.canvasUpdateCount})`);
 		};
 		
 		// Clean up when a window canvas is no longer needed (Blazor manages canvas lifecycle)
 		window.removeWindowCanvas = (canvasId) => {
 		};
 		
-		// Wrapper function that stops emulator on error
-		window.updateCanvasWithErrorHandling = (canvasId, base64Data, width, height) => {
+		// Wrapper function that stops emulator on error.
+		// pixelData is a Uint8Array (byte[] marshaled from .NET without Base64).
+		window.updateCanvasWithErrorHandling = (canvasId, pixelData, width, height) => {
 			// Check if emulator was already stopped
 			if (window.emulatorStopped) {
 				console.error("🛑 Emulator is stopped, ignoring canvas update");
@@ -667,23 +639,19 @@
 			}
 			
 			try {
-				console.log(`[updateCanvas] Called: ${canvasId}, ${width}x${height}, data length: ${base64Data?.length || 0}`);
-				
 				// Validate inputs
 				if (!canvasId) {
 					throw new Error("Canvas ID is null or undefined");
 				}
-				if (!base64Data) {
-					throw new Error("Base64 data is null or undefined");
+				if (!pixelData) {
+					throw new Error("Pixel data is null or undefined");
 				}
 				if (width <= 0 || height <= 0) {
 					throw new Error(`Invalid dimensions: ${width}x${height}`);
 				}
 				
 				// Call the actual update function
-				window.updateCanvas(canvasId, base64Data, width, height);
-				
-				console.log(`[updateCanvas] SUCCESS`);
+				window.updateCanvas(canvasId, pixelData, width, height);
 			} catch (error) {
 				// Mark error state in diagnostics
 				window.ddrawDiagnostics.renderingError = true;
@@ -1116,8 +1084,13 @@
 			canvas.tabIndex = 1;
 			canvas.style.outline = 'none';
 			
-			// Keyboard event handlers
-			canvas.addEventListener('keydown', (e) => {
+			// Keyboard event handlers attached at document level so that keyboard input
+			// continues to work even when the canvas loses focus (e.g. after clicking the
+			// virtual keyboard or other UI elements). Events originating from actual text
+			// input fields are excluded so normal browser text entry is not disrupted.
+			document.addEventListener('keydown', (e) => {
+				const tag = e.target.tagName;
+				if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 				e.preventDefault();
 				const vkCode = mapKeyCode(e.code);
 				if (vkCode > 0 && inputBackendRef) {
@@ -1126,7 +1099,9 @@
 				}
 			});
 			
-			canvas.addEventListener('keyup', (e) => {
+			document.addEventListener('keyup', (e) => {
+				const tag = e.target.tagName;
+				if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 				e.preventDefault();
 				const vkCode = mapKeyCode(e.code);
 				if (vkCode > 0 && inputBackendRef) {
@@ -1247,6 +1222,7 @@
 		window.tapVirtualKey = function(vkCode) {
 			const backend = inputBackendRef;
 			if (!backend) {
+				console.warn('tapVirtualKey: inputBackendRef is null; emulator may not be initialized yet');
 				return;
 			}
 			

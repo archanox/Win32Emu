@@ -212,16 +212,15 @@ public class WasmRenderingBackend : IRenderingBackend
 				}
 			}
 			
-			// Update canvas through JavaScript with better error handling
-			var base64Data = Convert.ToBase64String(_frameBuffer);
-			
-			// Log at Trace level to avoid flooding logs during rendering (called every frame at 30-60 FPS)
-			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}, base64Length={Base64Length}",
-				canvasId, _width, _height, base64Data.Length);
+			// Pass raw pixel bytes directly to JavaScript. In .NET 6+ Blazor WASM, byte[] parameters are
+			// transferred as Uint8Array without Base64 encoding, eliminating the expensive Base64
+			// encode/decode round-trip that was the primary rendering performance bottleneck.
+			_logger.LogTrace("[WASM] Calling updateCanvasWithErrorHandling: canvasId={CanvasId}, width={Width}, height={Height}",
+				canvasId, _width, _height);
 			
 			// Use fire-and-forget pattern but with proper error tracking
 			// We return success immediately for performance, but track errors for future calls
-			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", canvasId, base64Data, _width, _height)
+			_jsRuntime.InvokeVoidAsync("updateCanvasWithErrorHandling", canvasId, _frameBuffer, _width, _height)
 				.AsTask()
 				.ContinueWith(t =>
 				{
