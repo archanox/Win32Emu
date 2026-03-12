@@ -5,6 +5,7 @@ using Win32Emu.Loader;
 using Win32Emu.Memory;
 using Win32Emu.Rendering;
 using Win32Emu.Threading;
+using Win32Emu.Win32.Input;
 
 namespace Win32Emu.Win32.Modules
 {
@@ -616,13 +617,17 @@ namespace Win32Emu.Win32.Modules
 					switch (device.DeviceType)
 					{
 						case IInputBackend.DeviceType.Keyboard:
-							// DirectInput keyboard format: 256 bytes, one per key
+							// DirectInput keyboard format: 256 bytes indexed by DIK scan code.
+							// The backend stores keys by Win32 VK code, so convert VK→DIK here.
 							if (cbData >= 256 && lpvData != 0)
 							{
-								for (var i = 0; i < 256; i++)
+								foreach (var (vk, pressed) in state.KeyStates)
 								{
-									var isPressed = state.KeyStates.TryGetValue(i, out var pressed) && pressed;
-									_env.Memory.Write8(lpvData + (uint)i, (byte)(isPressed ? 0x80 : 0x00));
+									var dik = KeyCodeMapper.VkToDik(vk);
+									if (dik > 0 && dik < 256)
+									{
+										_env.Memory.Write8(lpvData + (uint)dik, (byte)(pressed ? 0x80 : 0x00));
+									}
 								}
 							}
 
@@ -737,27 +742,35 @@ namespace Win32Emu.Win32.Modules
 				switch (device.DeviceType)
 				{
 					case IInputBackend.DeviceType.Keyboard:
-						// Check for key state changes
-						for (var i = 0; i < DIKEYBOARD_MAX_KEYS; i++)
+						// The backend stores key state by Win32 VK code.
+						// DirectInput events use DIK scan codes as dwOfs, so convert VK→DIK.
+						// Iterate current state to detect changes vs the previous poll.
+						foreach (var (vk, isPressed) in state.KeyStates)
 						{
-							var isPressed = state.KeyStates.TryGetValue(i, out var pressed) && pressed;
-							var wasPressed = device.PreviousKeyStates.TryGetValue(i, out var prevPressed) && prevPressed;
-							
+							var dik = KeyCodeMapper.VkToDik(vk);
+							if (dik == 0 || dik >= DIKEYBOARD_MAX_KEYS)
+							{
+								continue;
+							}
+
+							var wasPressed = device.PreviousKeyStates.TryGetValue(vk, out var prevPressed) && prevPressed;
+
 							if (isPressed != wasPressed)
 							{
 								// Key state changed, add event
 								device.EventQueue.Enqueue(new DeviceObjectData
 								{
-									dwOfs = (uint)i,  // Key offset
+									dwOfs = (uint)dik, // DirectInput scan code (DIK_*)
 									dwData = isPressed ? DIKEY_PRESSED : DIKEY_RELEASED,
 									dwTimeStamp = timestamp,
 									dwSequence = device.EventSequence++
 								});
-								
-								// Update previous state
-								device.PreviousKeyStates[i] = isPressed;
+
+								// Track previous state by VK code
+								device.PreviousKeyStates[vk] = isPressed;
 							}
 						}
+
 						break;
 
 					case IInputBackend.DeviceType.Mouse:

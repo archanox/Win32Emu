@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SDL3;
 using System.Runtime.InteropServices;
+using Win32Emu.Win32.Input;
 
 namespace Win32Emu.Gui.Backends;
 using Win32Emu.Rendering;
@@ -435,13 +436,22 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                     break;
 
                 case SDL.EventType.KeyDown:
-                    // Update keyboard state in SDL3InputBackend
-                    Sdl3InputBackend.UpdateKeyState((int)evt.Key.Scancode, true);
+                    // Convert SDL3 USB-HID scancode to Win32 VK code for backend state.
+                    // DInputModule then converts VK→DIK when building DirectInput events.
+                    var vkDown = KeyCodeMapper.SdlScancodeToVk((int)evt.Key.Scancode);
+                    if (vkDown != 0)
+                    {
+                        Sdl3InputBackend.UpdateKeyState(vkDown, true);
+                    }
                     break;
 
                 case SDL.EventType.KeyUp:
-                    // Update keyboard state in SDL3InputBackend
-                    Sdl3InputBackend.UpdateKeyState((int)evt.Key.Scancode, false);
+                    // Convert SDL3 USB-HID scancode to Win32 VK code for backend state.
+                    var vkUp = KeyCodeMapper.SdlScancodeToVk((int)evt.Key.Scancode);
+                    if (vkUp != 0)
+                    {
+                        Sdl3InputBackend.UpdateKeyState(vkUp, false);
+                    }
                     break;
 
                 case SDL.EventType.MouseButtonDown:
