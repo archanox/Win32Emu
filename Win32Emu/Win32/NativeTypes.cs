@@ -665,7 +665,7 @@ public static class NativeTypes
 		ALL = 0x00FFF9EE,            // All fields are valid
 	}
 
-	// DDSURFACEDESC structure (108 bytes minimum)
+	// DDSURFACEDESC structure (108 bytes total)
 	// Used in DirectDraw for surface description
 	public struct DDSURFACEDESC
 	{
@@ -676,7 +676,17 @@ public static class NativeTypes
 		public uint lPitch;           // Offset 16
 		public uint dwBackBufferCount;// Offset 20
 		// Additional fields exist but these are the most commonly used
-		// dwSurfaceCaps is at offset 108
+		// dwMipMapCount/dwZBufferBitDepth/dwRefreshRate  at offset 24
+		// dwAlphaBitDepth at offset 28
+		// dwReserved      at offset 32
+		// lpSurface       at offset 36
+		// ddckCKDestOverlay at offset 40 (8 bytes)
+		// ddckCKDestBlt   at offset 48 (8 bytes)
+		// ddckCKSrcOverlay at offset 56 (8 bytes)
+		// ddckCKSrcBlt    at offset 64 (8 bytes)
+		// ddpfPixelFormat at offset 72 (32 bytes)
+		// ddsCaps.dwCaps  at offset 104 (4 bytes)
+		// Total: 108 bytes
 	}
 
 	// DIPROPHEADER structure (16 bytes)

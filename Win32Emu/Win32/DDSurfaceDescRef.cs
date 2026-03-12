@@ -62,9 +62,9 @@ namespace Win32Emu.Win32
 		}
 
 		/// <summary>
-		/// Gets a ref to the embedded DDPIXELFORMAT at offset 76.
+		/// Gets a ref to the embedded DDPIXELFORMAT at offset 72.
 		/// </summary>
-		public DDPixelFormatRef ddpfPixelFormat => new DDPixelFormatRef(_memory, _address + 76);
+		public DDPixelFormatRef ddpfPixelFormat => new DDPixelFormatRef(_memory, _address + 72);
 
 		/// <summary>
 		/// Converts this ref struct to a value struct snapshot.
