@@ -48,7 +48,7 @@ jobs:
         if: steps.cache-sonar-scanner.outputs.cache-hit != 'true'
         run: |
           mkdir -p ${{ runner.temp }}/scanner
-          dotnet tool update dotnet-sonarscanner --tool-path ${{ runner.temp }}/scanner
+          dotnet tool install dotnet-sonarscanner --tool-path ${{ runner.temp }}/scanner
       - name: Restore dependencies
         run: dotnet restore
       - name: Build and analyze
@@ -56,5 +56,5 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           ${{ runner.temp }}/scanner/dotnet-sonarscanner begin /k:"archanox_Win32Emu" /o:"archanox" /d:sonar.host.url="https://sonarcloud.io" /d:sonar.token="${SONAR_TOKEN}"
-          dotnet build --no-restore
+          dotnet build --no-restore -p:RunFullAnalysis=true
           ${{ runner.temp }}/scanner/dotnet-sonarscanner end /d:sonar.token="${SONAR_TOKEN}"

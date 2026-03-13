@@ -9,6 +9,7 @@
       Usage:
         Normal build (fast):   dotnet build
         Full analysis (slow):  dotnet build -p:RunFullAnalysis=true
+      The SonarCloud workflow passes -p:RunFullAnalysis=true so it always uses latest-all.
     -->
     <RunFullAnalysis Condition="'$(RunFullAnalysis)' == ''">false</RunFullAnalysis>
 
@@ -27,6 +28,9 @@
     -->
     <EnforceCodeStyleInBuild Condition="'$(RunFullAnalysis)' == 'true'">true</EnforceCodeStyleInBuild>
     <EnforceCodeStyleInBuild Condition="'$(RunFullAnalysis)' != 'true'">false</EnforceCodeStyleInBuild>
+
+    <!-- Maintain warning level 8 (nullable, interpolated strings, etc.) across all projects. -->
+    <WarningLevel>8</WarningLevel>
   </PropertyGroup>
 
 </Project>
