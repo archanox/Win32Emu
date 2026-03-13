@@ -6687,6 +6687,7 @@ namespace Win32Emu.Win32.Modules
 		/// <summary>
 		/// Returns the <see cref="IInputBackend.InputState"/> for the first keyboard device
 		/// found in <paramref name="inputBackend"/>, or <c>null</c> if none is available.
+		/// Continues past keyboard devices whose poll fails to find the first working one.
 		/// </summary>
 		private static IInputBackend.InputState? GetFirstKeyboardState(IInputBackend? inputBackend)
 		{
@@ -6707,7 +6708,7 @@ namespace Win32Emu.Win32.Modules
 					return state;
 				}
 
-				break; // Use the first keyboard device only
+				// Poll failed for this keyboard device; try the next one.
 			}
 
 			return null;
