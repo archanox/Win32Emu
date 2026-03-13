@@ -38,6 +38,14 @@ jobs:
       uses: actions/setup-dotnet@v5
       with:
         dotnet-version: '10.0.x'
+
+    - name: Cache NuGet packages
+      uses: actions/cache@v5
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
         
     - name: Restore dependencies
       run: dotnet restore
@@ -53,7 +61,7 @@ jobs:
         test_filter="Category!=ConformanceTests&Category!=DllModuleTests"
         echo "core-test-filter=$test_filter" >> $GITHUB_OUTPUT
         
-        # Check for any tests and core tests in a single pass (use --no-build to avoid rebuilding)
+        # List all tests once (use --no-build to avoid rebuilding)
         test_list=$(dotnet test --list-tests --no-build --verbosity quiet 2>&1 || true)
         
         if echo "$test_list" | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
@@ -61,18 +69,9 @@ jobs:
         else
           echo "has-tests=false" >> $GITHUB_OUTPUT
         fi
-        
-        # Check for core tests (anything not marked with ConformanceTests or DllModuleTests traits)
-        core_test_list=$(dotnet test --list-tests --no-build --verbosity quiet --filter "$test_filter" 2>&1 || true)
-        
-        if echo "$core_test_list" | grep -E "^\s+[A-Za-z].*\.[A-Za-z].*\(" > /dev/null; then
-          echo "has-core-tests=true" >> $GITHUB_OUTPUT
-        else
-          echo "has-core-tests=false" >> $GITHUB_OUTPUT
-        fi
       
     - name: Run core emulator tests (required)
-      if: steps.check-tests.outputs.has-core-tests == 'true'
+      if: steps.check-tests.outputs.has-tests == 'true'
       timeout-minutes: 10
       run: dotnet test --configuration Release --no-build --verbosity normal --logger trx --collect:"XPlat Code Coverage" --filter "${{ steps.check-tests.outputs.core-test-filter }}"
       
@@ -84,7 +83,7 @@ jobs:
       continue-on-error: true
       
     - name: Run CPU conformance tests (optional - informational only)
-      if: steps.check-tests.outputs.has-core-tests == 'true'
+      if: steps.check-tests.outputs.has-tests == 'true'
       timeout-minutes: 5
       run: |
         echo "Running CPU conformance tests (SingleStepTests)..."
@@ -110,32 +109,6 @@ jobs:
         echo "Note: Win32 DLL module tests are optional and won't block PRs if they fail."
         echo "Core emulator tests (CPU, memory, etc.) are required and will block PRs if they fail."
         echo "Conformance tests (SingleStepTests) are optional and provide CPU instruction validation."
-
-  code-quality:
-    name: Code Quality Analysis
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v6
-      with:
-        submodules: recursive
-        
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v5
-      with:
-        dotnet-version: '10.0.x'
-        
-    - name: Restore dependencies
-      run: dotnet restore
-      
-    - name: Build with full analysis
-      run: dotnet build --configuration Release --verbosity normal --property WarningsAsErrors=false --property RunFullAnalysis=true
-      
-    - name: Check for build warnings
-      run: |
-        echo "Build completed. Check the logs above for any warnings."
-        echo "Consider addressing the warnings for better code quality."
 
   process-stubs:
     name: Process Game Database Stubs
