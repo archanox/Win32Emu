@@ -1,0 +1,32 @@
+<Project>
+
+  <PropertyGroup>
+    <!--
+      Control whether the full (expensive) code analysis runs.
+      Set RunFullAnalysis=true for dedicated analysis workflows (SonarCloud, Qodana).
+      Defaults to false for normal builds to keep build times reasonable.
+
+      Usage:
+        Normal build (fast):   dotnet build
+        Full analysis (slow):  dotnet build -p:RunFullAnalysis=true
+    -->
+    <RunFullAnalysis Condition="'$(RunFullAnalysis)' == ''">false</RunFullAnalysis>
+
+    <!--
+      Use the recommended analyzer subset for normal builds and all analyzers
+      only when a full analysis run has been explicitly requested.
+      'latest-recommended' is substantially faster than 'latest-all' while
+      still catching the most important issues.
+    -->
+    <AnalysisLevel Condition="'$(RunFullAnalysis)' == 'true'">latest-all</AnalysisLevel>
+    <AnalysisLevel Condition="'$(RunFullAnalysis)' != 'true'">latest-recommended</AnalysisLevel>
+
+    <!--
+      IDE code-style enforcement during build is expensive and is better handled
+      by editor tooling and dedicated analysis workflows.
+    -->
+    <EnforceCodeStyleInBuild Condition="'$(RunFullAnalysis)' == 'true'">true</EnforceCodeStyleInBuild>
+    <EnforceCodeStyleInBuild Condition="'$(RunFullAnalysis)' != 'true'">false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>
