@@ -683,9 +683,18 @@ public class KeyCodeMapperTests
     }
 
     [Theory]
-    [InlineData(0x00)] // Unknown/null
-    [InlineData(0xFF)] // Out of range
+    [InlineData(0x00)] // Unmapped (null)
+    [InlineData(0xFF)] // In-range but unmapped (index 255 is unused)
     public void VkToDik_ReturnsZeroForUnmappedKeys(int vk)
+    {
+        var dik = Win32Emu.Win32.Input.KeyCodeMapper.VkToDik(vk);
+        Assert.Equal(0, dik);
+    }
+
+    [Theory]
+    [InlineData(256)]  // First out-of-range index (table length = 256)
+    [InlineData(-1)]   // Negative (treated as out-of-range via uint cast)
+    public void VkToDik_ReturnsZeroForOutOfRangeVk(int vk)
     {
         var dik = Win32Emu.Win32.Input.KeyCodeMapper.VkToDik(vk);
         Assert.Equal(0, dik);

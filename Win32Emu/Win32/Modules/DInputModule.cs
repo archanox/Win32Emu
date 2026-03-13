@@ -622,12 +622,20 @@ namespace Win32Emu.Win32.Modules
 							// KeyCodeMapper returns 0 for unmapped keys; DIK 0 is reserved/invalid.
 							if (cbData >= 256 && lpvData != 0)
 							{
+								// Zero the entire buffer first to clear any previously-pressed keys.
+								_env.MemZero(lpvData, 256);
+
 								foreach (var (vk, pressed) in state.KeyStates)
 								{
+									if (!pressed)
+									{
+										continue;
+									}
+
 									var dik = KeyCodeMapper.VkToDik(vk);
 									if (dik > 0 && dik < 256)
 									{
-										_env.Memory.Write8(lpvData + (uint)dik, (byte)(pressed ? 0x80 : 0x00));
+										_env.Memory.Write8(lpvData + (uint)dik, 0x80);
 									}
 								}
 							}
@@ -745,30 +753,45 @@ namespace Win32Emu.Win32.Modules
 					case IInputBackend.DeviceType.Keyboard:
 						// The backend stores key state by Win32 VK code.
 						// DirectInput events use DIK scan codes as dwOfs, so convert VK→DIK.
-						// Iterate current state to detect changes vs the previous poll.
-						foreach (var (vk, isPressed) in state.KeyStates)
+						// Iterate the union of current and previous states so that keys removed
+						// from the dictionary (common when released) generate DIKEY_RELEASED events.
 						{
-							var dik = KeyCodeMapper.VkToDik(vk);
-							if (dik == 0 || dik >= DIKEYBOARD_MAX_KEYS)
-							{
-								continue;
-							}
+							// Collect all VK codes that are currently or were previously tracked.
+							var allVks = new HashSet<int>(state.KeyStates.Keys);
+							allVks.UnionWith(device.PreviousKeyStates.Keys);
 
-							var wasPressed = device.PreviousKeyStates.TryGetValue(vk, out var prevPressed) && prevPressed;
-
-							if (isPressed != wasPressed)
+							foreach (var vk in allVks)
 							{
-								// Key state changed, add event
-								device.EventQueue.Enqueue(new DeviceObjectData
+								var dik = KeyCodeMapper.VkToDik(vk);
+								if (dik == 0 || dik >= DIKEYBOARD_MAX_KEYS)
 								{
-									dwOfs = (uint)dik, // DirectInput scan code (DIK_*)
-									dwData = isPressed ? DIKEY_PRESSED : DIKEY_RELEASED,
-									dwTimeStamp = timestamp,
-									dwSequence = device.EventSequence++
-								});
+									continue;
+								}
 
-								// Track previous state by VK code
-								device.PreviousKeyStates[vk] = isPressed;
+								var isPressed = state.KeyStates.TryGetValue(vk, out var curPressed) && curPressed;
+								var wasPressed = device.PreviousKeyStates.TryGetValue(vk, out var prevPressed) && prevPressed;
+
+								if (isPressed != wasPressed)
+								{
+									// Key state changed, add event
+									device.EventQueue.Enqueue(new DeviceObjectData
+									{
+										dwOfs = (uint)dik, // DirectInput scan code (DIK_*)
+										dwData = isPressed ? DIKEY_PRESSED : DIKEY_RELEASED,
+										dwTimeStamp = timestamp,
+										dwSequence = device.EventSequence++
+									});
+								}
+
+								// Update previous state to match current snapshot
+								if (isPressed)
+								{
+									device.PreviousKeyStates[vk] = true;
+								}
+								else
+								{
+									device.PreviousKeyStates.Remove(vk);
+								}
 							}
 						}
 
