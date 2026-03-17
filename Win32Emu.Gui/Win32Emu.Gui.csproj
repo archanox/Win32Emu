@@ -53,7 +53,7 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.5" />
     <PackageReference Include="ModelContextProtocol" Version="1.1.0" />
     <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.1.0" />
-    <PackageReference Include="SDL3-CS" Version="3.3.7" />
+    <PackageReference Include="SDL3-CS" Version="3.4.2" />
     <PackageReference Include="SDL3-CS.Native" Version="3.3.7" />
     <PackageReference Include="SharpMetal" Version="1.1.0" />
     <PackageReference Include="Silk.NET.GLFW" Version="2.23.0" />
