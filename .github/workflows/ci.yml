@@ -93,7 +93,7 @@ jobs:
       continue-on-error: true
       
     - name: Publish test results
-      uses: dorny/test-reporter@v2
+      uses: dorny/test-reporter@v3
       if: steps.check-tests.outputs.has-tests == 'true' && (success() || failure())
       with:
         name: .NET Tests
