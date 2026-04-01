@@ -181,11 +181,16 @@ public class RtlToCSharpGenerator
 
     private string GenerateBinaryOp(RtlBinaryOp binOp)
     {
+        var right = IsShiftOperator(binOp.Operator)
+            ? $"(int)({ExpressionToString(binOp.Right)})"
+            : ExpressionToString(binOp.Right);
         return GenerateDestinationAssignment(
             binOp.Destination,
-            $"{ExpressionToString(binOp.Left)} {binOp.Operator} {ExpressionToString(binOp.Right)}"
+            $"{ExpressionToString(binOp.Left)} {binOp.Operator} {right}"
         );
     }
+
+    private static bool IsShiftOperator(string op) => op is "<<" or ">>";
 
     private string GenerateLoad(RtlLoad load)
     {
@@ -299,7 +304,9 @@ public class RtlToCSharpGenerator
             RtlRegister reg => GetRegisterReadExpression(reg.Name),
             RtlConstant const_ => $"0x{const_.Value:X}u",
             RtlTemporary temp => $"t{temp.Id}",
-            RtlBinaryExpression binExpr => $"({ExpressionToString(binExpr.Left)} {binExpr.Operator} {ExpressionToString(binExpr.Right)})",
+            RtlBinaryExpression binExpr => IsShiftOperator(binExpr.Operator)
+                ? $"({ExpressionToString(binExpr.Left)} {binExpr.Operator} (int)({ExpressionToString(binExpr.Right)}))"
+                : $"({ExpressionToString(binExpr.Left)} {binExpr.Operator} {ExpressionToString(binExpr.Right)})",
             RtlUnaryExpression unExpr => $"{unExpr.Operator}({ExpressionToString(unExpr.Operand)})",
             _ => "0"
         };
