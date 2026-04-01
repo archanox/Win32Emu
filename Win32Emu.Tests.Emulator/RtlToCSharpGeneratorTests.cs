@@ -105,6 +105,64 @@ public class RtlToCSharpGeneratorTests
 		Assert.True(setEipIndex > returnSaveIndex);
 	}
 
+	[Fact]
+	public void GenerateCSharpCode_Compiles_WhenBlockUsesShiftOperators()
+	{
+		var block = new RtlCodeBlock
+		{
+			StartAddress = 0x403000,
+			EndAddress = 0x403004,
+			BasicBlocks =
+			{
+				new RtlBasicBlock
+				{
+					StartAddress = 0x403000,
+					Instructions =
+					{
+						// EAX = EAX << 0x2u  (SHL EAX, 2)
+						new RtlBinaryOp
+						{
+							Offset = 0x403000,
+							Destination = new RtlRegister { Name = "EAX" },
+							Left = new RtlRegister { Name = "EAX" },
+							Operator = "<<",
+							Right = new RtlConstant { Value = 2 }
+						},
+						// EBX = EBX >> 0x1u  (SHR EBX, 1)
+						new RtlBinaryOp
+						{
+							Offset = 0x403001,
+							Destination = new RtlRegister { Name = "EBX" },
+							Left = new RtlRegister { Name = "EBX" },
+							Operator = ">>",
+							Right = new RtlConstant { Value = 1 }
+						},
+						// ECX = (EAX << ECX) via RtlBinaryExpression
+						new RtlAssignment
+						{
+							Offset = 0x403002,
+							Destination = new RtlRegister { Name = "ECX" },
+							Source = new RtlBinaryExpression
+							{
+								Left = new RtlRegister { Name = "EAX" },
+								Operator = "<<",
+								Right = new RtlRegister { Name = "ECX" }
+							}
+						}
+					}
+				}
+			}
+		};
+
+		var generator = new RtlToCSharpGenerator();
+
+		var code = generator.GenerateCSharpCode(block, "ShiftTestClass", "Execute");
+		var diagnostics = CompileGeneratedCode(code);
+		var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+
+		Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
+	}
+
 	private static ImmutableArray<Diagnostic> CompileGeneratedCode(string code)
 	{
 		var syntaxTree = CSharpSyntaxTree.ParseText(code);
