@@ -10,7 +10,7 @@ public class X86ToRtlConverterTests
 	{
 		// Arrange
 		var converter = new X86ToRtlConverter();
-		var instruction = Instruction.Create(Code.Ror_rm32_imm8, new MemoryOperand(Register.EAX), 4);
+		var instruction = Instruction.Create(Code.Ror_rm32_imm8, Register.EAX, 4);
 		instruction.IP = 0x401000;
 		instruction.NextIP = 0x401003;
 
@@ -111,10 +111,23 @@ public class X86ToRtlConverterTests
 		Assert.Single(result.BasicBlocks);
 		var block = result.BasicBlocks[0];
 
-		// DIV should generate two operations: EAX = quotient, EDX = remainder
-		Assert.Equal(2, block.Instructions.Count);
-		Assert.IsType<RtlBinaryOp>(block.Instructions[0]);
-		Assert.IsType<RtlBinaryOp>(block.Instructions[1]);
+		// DIV should generate three operations: temp = EAX (preserve dividend), EAX = quotient, EDX = remainder
+		Assert.Equal(3, block.Instructions.Count);
+		Assert.IsType<RtlAssignment>(block.Instructions[0]); // temp = EAX
+		Assert.IsType<RtlBinaryOp>(block.Instructions[1]);   // EAX = temp / src
+		Assert.IsType<RtlBinaryOp>(block.Instructions[2]);   // EDX = temp % src
+
+		// Verify quotient operation
+		var quotient = (RtlBinaryOp)block.Instructions[1];
+		Assert.Equal("/", quotient.Operator);
+		var quotientDest = Assert.IsType<RtlRegister>(quotient.Destination);
+		Assert.Equal("EAX", quotientDest.Name);
+
+		// Verify remainder operation
+		var remainder = (RtlBinaryOp)block.Instructions[2];
+		Assert.Equal("%", remainder.Operator);
+		var remainderDest = Assert.IsType<RtlRegister>(remainder.Destination);
+		Assert.Equal("EDX", remainderDest.Name);
 	}
 
 	[Fact]
