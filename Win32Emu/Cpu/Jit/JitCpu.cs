@@ -1664,7 +1664,33 @@ public class JitCpu : IAsyncCpu
 			case Mnemonic.Punpckldq:
 				ExecMmxPack(insn);
 				break;
-			
+
+			// Bit manipulation instructions (BMI/BMI2)
+			case Mnemonic.Lzcnt:
+				ExecLzcnt(insn);
+				break;
+			case Mnemonic.Tzcnt:
+				ExecTzcnt(insn);
+				break;
+			case Mnemonic.Popcnt:
+				ExecPopcnt(insn);
+				break;
+			case Mnemonic.Andn:
+				ExecAndn(insn);
+				break;
+			case Mnemonic.Bextr:
+				ExecBextr(insn);
+				break;
+			case Mnemonic.Blsi:
+				ExecBlsi(insn);
+				break;
+			case Mnemonic.Blsmsk:
+				ExecBlsmsk(insn);
+				break;
+			case Mnemonic.Blsr:
+				ExecBlsr(insn);
+				break;
+
 			default:
 				throw new NotImplementedException($"[JitCpu] Unimplemented instruction: {insn.Mnemonic}");
 				break;
@@ -2090,6 +2116,258 @@ public class JitCpu : IAsyncCpu
 				break;
 			}
 		}
+	}
+
+	// Bit manipulation instructions (BMI/BMI2) implementation
+	private void ExecLzcnt(Instruction insn)
+	{
+		uint src = GetOperandValue(insn, 1);
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// Count leading zeros
+		int result;
+		if (opSize == 16)
+		{
+			src &= 0xFFFF;
+			if (src == 0)
+			{
+				result = 16;
+			}
+			else
+			{
+				// LeadingZeroCount returns count for 32-bit, adjust for 16-bit
+				result = BitOperations.LeadingZeroCount(src) - 16;
+			}
+		}
+		else // 32-bit
+		{
+			if (src == 0)
+			{
+				result = 32;
+			}
+			else
+			{
+				result = BitOperations.LeadingZeroCount(src);
+			}
+		}
+
+		SetOperandValue(insn, 0, (uint)result);
+
+		// Set flags: ZF if source is zero, CF always clear for LZCNT
+		SetFlagVal(Zf, src == 0);
+		ClearFlag(Cf);
+		// Other flags (SF, OF, AF, PF) are undefined but typically cleared
+		ClearFlag(Of);
+		ClearFlag(Sf);
+		ClearFlag(Af);
+		ClearFlag(Pf);
+	}
+
+	private void ExecTzcnt(Instruction insn)
+	{
+		uint src = GetOperandValue(insn, 1);
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// Count trailing zeros
+		int result;
+		if (opSize == 16)
+		{
+			src &= 0xFFFF;
+			if (src == 0)
+			{
+				result = 16;
+			}
+			else
+			{
+				result = BitOperations.TrailingZeroCount(src);
+			}
+		}
+		else // 32-bit
+		{
+			if (src == 0)
+			{
+				result = 32;
+			}
+			else
+			{
+				result = BitOperations.TrailingZeroCount(src);
+			}
+		}
+
+		SetOperandValue(insn, 0, (uint)result);
+
+		// Set flags: ZF if source is zero, CF always clear for TZCNT
+		SetFlagVal(Zf, src == 0);
+		ClearFlag(Cf);
+		// Other flags (SF, OF, AF, PF) are undefined but typically cleared
+		ClearFlag(Of);
+		ClearFlag(Sf);
+		ClearFlag(Af);
+		ClearFlag(Pf);
+	}
+
+	private void ExecPopcnt(Instruction insn)
+	{
+		uint src = GetOperandValue(insn, 1);
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// Count set bits (population count)
+		int result;
+		if (opSize == 16)
+		{
+			src &= 0xFFFF;
+			result = BitOperations.PopCount(src);
+		}
+		else // 32-bit
+		{
+			result = BitOperations.PopCount(src);
+		}
+
+		SetOperandValue(insn, 0, (uint)result);
+
+		// Set flags: only ZF affected (set if result is 0)
+		SetFlagVal(Zf, result == 0);
+		// CF, SF, OF, AF, PF are all cleared
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		ClearFlag(Sf);
+		ClearFlag(Af);
+		ClearFlag(Pf);
+	}
+
+	private void ExecAndn(Instruction insn)
+	{
+		uint src1 = GetOperandValue(insn, 1); // First source (inverted)
+		uint src2 = GetOperandValue(insn, 2); // Second source
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// ANDN: dest = ~src1 & src2
+		uint result = ~src1 & src2;
+
+		if (opSize == 16)
+		{
+			result &= 0xFFFF;
+		}
+
+		SetOperandValue(insn, 0, result);
+
+		// Update flags: SF, ZF based on result; CF, OF cleared; AF, PF undefined
+		UpdateLogicResultFlags(result, opSize == 16 ? 0x8000u : 0x80000000u);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+	}
+
+	private void ExecBextr(Instruction insn)
+	{
+		uint src = GetOperandValue(insn, 1);   // Source value
+		uint control = GetOperandValue(insn, 2); // Control value (start:length)
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// Extract start position and length from control
+		uint start = control & 0xFF;         // Bits 0-7: start position
+		uint length = (control >> 8) & 0xFF; // Bits 8-15: field length
+
+		uint result;
+		if (start >= (opSize == 16 ? 16u : 32u) || length == 0)
+		{
+			// If start is beyond operand size or length is 0, result is 0
+			result = 0;
+		}
+		else
+		{
+			// Extract the bit field
+			uint mask = length >= 32 ? 0xFFFFFFFF : (1u << (int)length) - 1;
+			result = (src >> (int)start) & mask;
+		}
+
+		SetOperandValue(insn, 0, result);
+
+		// Update flags: ZF set if result is zero, CF, OF cleared
+		SetFlagVal(Zf, result == 0);
+		ClearFlag(Cf);
+		ClearFlag(Of);
+		// SF, AF, PF are undefined
+	}
+
+	private void ExecBlsi(Instruction insn)
+	{
+		uint src = GetOperandValue(insn, 1);
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// BLSI: Extract lowest set bit (isolate)
+		// result = src & -src
+		uint result = src & (uint)(-(int)src);
+
+		if (opSize == 16)
+		{
+			result &= 0xFFFF;
+		}
+
+		SetOperandValue(insn, 0, result);
+
+		// Update flags:
+		// ZF = (src == 0)
+		// SF = sign bit of result
+		// CF = (src == 0) ? 0 : 1 - inverted from ZF
+		SetFlagVal(Zf, src == 0);
+		SetFlagVal(Cf, src == 0);  // CF set if source was zero
+		SetFlagVal(Sf, (result & (opSize == 16 ? 0x8000u : 0x80000000u)) != 0);
+		ClearFlag(Of);
+		// AF, PF undefined
+	}
+
+	private void ExecBlsmsk(Instruction insn)
+	{
+		uint src = GetOperandValue(insn, 1);
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// BLSMSK: Get mask up to lowest set bit
+		// result = src ^ (src - 1)
+		uint result = src ^ (src - 1);
+
+		if (opSize == 16)
+		{
+			result &= 0xFFFF;
+		}
+
+		SetOperandValue(insn, 0, result);
+
+		// Update flags:
+		// CF = (src == 0) ? 0 : 1
+		// SF = sign bit of result
+		// ZF cleared (result is never zero)
+		SetFlagVal(Cf, src == 0);
+		SetFlagVal(Sf, (result & (opSize == 16 ? 0x8000u : 0x80000000u)) != 0);
+		ClearFlag(Zf);  // Result is never zero
+		ClearFlag(Of);
+		// AF, PF undefined
+	}
+
+	private void ExecBlsr(Instruction insn)
+	{
+		uint src = GetOperandValue(insn, 1);
+		int opSize = GetOpSizeBits(insn, 0);
+
+		// BLSR: Reset lowest set bit
+		// result = src & (src - 1)
+		uint result = src & (src - 1);
+
+		if (opSize == 16)
+		{
+			result &= 0xFFFF;
+		}
+
+		SetOperandValue(insn, 0, result);
+
+		// Update flags:
+		// ZF = (result == 0)
+		// CF = (src == 0) ? 1 : 0
+		// SF = sign bit of result
+		SetFlagVal(Zf, result == 0);
+		SetFlagVal(Cf, src == 0);  // CF set if source was zero
+		SetFlagVal(Sf, (result & (opSize == 16 ? 0x8000u : 0x80000000u)) != 0);
+		ClearFlag(Of);
+		// AF, PF undefined
 	}
 
 	// BCD/ASCII arithmetic implementation
