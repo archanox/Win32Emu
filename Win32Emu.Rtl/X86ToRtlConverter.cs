@@ -456,64 +456,222 @@ public class X86ToRtlConverter
 
             // ROR - Rotate Right
             // Rotates bits right by count, wrapping around
-            // ROR formula: (val >> count) | (val << (bits - count))
+            // ROR formula: (val >> maskedCount) | (val << ((bits - maskedCount) & (bits - 1)))
             case Mnemonic.Ror:
                 {
                     var dest = GetOperandExpression(insn, 0, block);
                     var count = GetOperandExpression(insn, 1, block);
                     var size = GetOperandSize(insn, 0);
                     var bits = (uint)(size * 8);
+                    var rotateMask = bits - 1;
+                    var operandMask = bits == 32 ? uint.MaxValue : ((1u << (int)bits) - 1u);
 
+                    var tempMaskedDest = block.NewTemporary();
+                    var tempMaskedCount = block.NewTemporary();
                     var tempRight = block.NewTemporary();
                     var tempLeft = block.NewTemporary();
                     var tempCount = block.NewTemporary();
+                    var tempCount2 = block.NewTemporary();
+                    var tempCombined = block.NewTemporary();
 
-                    // tempCount = bits - count (for the left shift)
+                    // tempMaskedDest = dest & operandMask
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempMaskedDest,
+                        Left = dest,
+                        Operator = "&",
+                        Right = new RtlConstant { Value = operandMask }
+                    });
+
+                    // tempMaskedCount = count & (bits - 1)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempMaskedCount,
+                        Left = count,
+                        Operator = "&",
+                        Right = new RtlConstant { Value = rotateMask }
+                    });
+
+                    // tempCount = bits - tempMaskedCount
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = tempCount,
                         Left = new RtlConstant { Value = bits },
                         Operator = "-",
-                        Right = count
+                        Right = tempMaskedCount
                     });
 
-                    // tempRight = dest >> count
+                    // tempCount2 = tempCount & (bits - 1)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempCount2,
+                        Left = tempCount,
+                        Operator = "&",
+                        Right = new RtlConstant { Value = rotateMask }
+                    });
+
+                    // tempRight = tempMaskedDest >> tempMaskedCount
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = tempRight,
-                        Left = dest,
+                        Left = tempMaskedDest,
                         Operator = ">>",
-                        Right = count
+                        Right = tempMaskedCount
                     });
 
-                    // tempLeft = dest << (bits - count)
+                    // tempLeft = tempMaskedDest << tempCount2
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = tempLeft,
-                        Left = dest,
+                        Left = tempMaskedDest,
                         Operator = "<<",
-                        Right = tempCount
+                        Right = tempCount2
                     });
 
-                    // dest = tempRight | tempLeft
+                    // tempCombined = tempRight | tempLeft
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempCombined,
+                        Left = tempRight,
+                        Operator = "|",
+                        Right = tempLeft
+                    });
+
+                    // dest = tempCombined & operandMask
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = dest,
-                        Left = tempRight,
-                        Operator = "|",
-                        Right = tempLeft
+                        Left = tempCombined,
+                        Operator = "&",
+                        Right = new RtlConstant { Value = operandMask }
                     });
                 }
                 break;
 
             // SAR - Shift Arithmetic Right (sign-extended shift)
-            // Note: This is simplified - full implementation would require sign extension
             case Mnemonic.Sar:
-                results.Add(ConvertBinaryOp(insn, block, ">>"));
+                {
+                    var dest = GetOperandExpression(insn, 0, block);
+                    var count = GetOperandExpression(insn, 1, block);
+                    var size = GetOperandSize(insn, 0);
+                    var bits = (uint)(size * 8);
+                    var allMask = size switch
+                    {
+                        1 => 0xFFu,
+                        2 => 0xFFFFu,
+                        4 => 0xFFFFFFFFu,
+                        _ => 0xFFFFFFFFu
+                    };
+
+                    var tempMaskedDest = block.NewTemporary();
+                    var tempLogicalShift = block.NewTemporary();
+                    var tempSignBit = block.NewTemporary();
+                    var tempFillMask = block.NewTemporary();
+                    var tempTopClearMask = block.NewTemporary();
+                    var tempTopFillBits = block.NewTemporary();
+                    var tempSignFill = block.NewTemporary();
+                    var tempResult = block.NewTemporary();
+
+                    // tempMaskedDest = dest & allMask
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempMaskedDest,
+                        Left = dest,
+                        Operator = "&",
+                        Right = new RtlConstant { Value = allMask }
+                    });
+
+                    // tempLogicalShift = tempMaskedDest >> count
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempLogicalShift,
+                        Left = tempMaskedDest,
+                        Operator = ">>",
+                        Right = count
+                    });
+
+                    // tempSignBit = tempMaskedDest >> (bits - 1)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempSignBit,
+                        Left = tempMaskedDest,
+                        Operator = ">>",
+                        Right = new RtlConstant { Value = bits - 1 }
+                    });
+
+                    // tempFillMask = 0 - tempSignBit
+                    // Produces 0 when sign bit is clear, or all ones when sign bit is set.
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempFillMask,
+                        Left = new RtlConstant { Value = 0u },
+                        Operator = "-",
+                        Right = tempSignBit
+                    });
+
+                    // tempTopClearMask = allMask >> count
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempTopClearMask,
+                        Left = new RtlConstant { Value = allMask },
+                        Operator = ">>",
+                        Right = count
+                    });
+
+                    // tempTopFillBits = allMask ^ tempTopClearMask
+                    // Sets the upper 'count' bits within the operand width.
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempTopFillBits,
+                        Left = new RtlConstant { Value = allMask },
+                        Operator = "^",
+                        Right = tempTopClearMask
+                    });
+
+                    // tempSignFill = tempFillMask & tempTopFillBits
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempSignFill,
+                        Left = tempFillMask,
+                        Operator = "&",
+                        Right = tempTopFillBits
+                    });
+
+                    // tempResult = tempLogicalShift | tempSignFill
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempResult,
+                        Left = tempLogicalShift,
+                        Operator = "|",
+                        Right = tempSignFill
+                    });
+
+                    // dest = tempResult & allMask
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = dest,
+                        Left = tempResult,
+                        Operator = "&",
+                        Right = new RtlConstant { Value = allMask }
+                    });
+                }
                 break;
 
             // SAL - Shift Arithmetic Left (same as SHL)
@@ -524,38 +682,106 @@ public class X86ToRtlConverter
             // XCHG - Exchange register/memory with register
             case Mnemonic.Xchg:
                 {
-                    var dest = GetOperandExpression(insn, 0, block);
-                    var src = GetOperandExpression(insn, 1, block);
-                    var temp = block.NewTemporary();
+                    var destKind = insn.GetOpKind(0);
+                    var srcKind = insn.GetOpKind(1);
+                    var size = GetOperandSize(insn, 0);
 
-                    // temp = dest
-                    results.Add(new RtlAssignment
-                    {
-                        Offset = (int)insn.IP,
-                        Destination = temp,
-                        Source = dest
-                    });
+                    var temp1 = block.NewTemporary();
+                    var temp2 = block.NewTemporary();
 
-                    // dest = src
-                    results.Add(new RtlAssignment
+                    // Load dest into temp1
+                    if (destKind == OpKind.Memory)
                     {
-                        Offset = (int)insn.IP,
-                        Destination = dest,
-                        Source = src
-                    });
+                        results.Add(new RtlLoad
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = temp1,
+                            Address = GetMemoryAddressExpression(insn),
+                            Size = size
+                        });
+                    }
+                    else
+                    {
+                        results.Add(new RtlAssignment
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = temp1,
+                            Source = GetOperandExpression(insn, 0, block)
+                        });
+                    }
 
-                    // src = temp
-                    results.Add(new RtlAssignment
+                    // Load src into temp2
+                    if (srcKind == OpKind.Memory)
                     {
-                        Offset = (int)insn.IP,
-                        Destination = src,
-                        Source = temp
-                    });
+                        results.Add(new RtlLoad
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = temp2,
+                            Address = GetMemoryAddressExpression(insn),
+                            Size = size
+                        });
+                    }
+                    else
+                    {
+                        results.Add(new RtlAssignment
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = temp2,
+                            Source = GetOperandExpression(insn, 1, block)
+                        });
+                    }
+
+                    // Store temp2 to dest
+                    if (destKind == OpKind.Memory)
+                    {
+                        results.Add(new RtlStore
+                        {
+                            Offset = (int)insn.IP,
+                            Address = GetMemoryAddressExpression(insn),
+                            Value = temp2,
+                            Size = size
+                        });
+                    }
+                    else
+                    {
+                        results.Add(new RtlAssignment
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = GetOperandExpression(insn, 0, block),
+                            Source = temp2
+                        });
+                    }
+
+                    // Store temp1 to src
+                    if (srcKind == OpKind.Memory)
+                    {
+                        results.Add(new RtlStore
+                        {
+                            Offset = (int)insn.IP,
+                            Address = GetMemoryAddressExpression(insn),
+                            Value = temp1,
+                            Size = size
+                        });
+                    }
+                    else
+                    {
+                        results.Add(new RtlAssignment
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = GetOperandExpression(insn, 1, block),
+                            Source = temp1
+                        });
+                    }
                 }
                 break;
 
             // MUL - Unsigned Multiply
             // Simplified: Only handles basic cases, doesn't set flags properly
+            // Known limitations:
+            // - For 32-bit: EDX is set to 0 instead of high 32 bits (RTL lacks 64-bit arithmetic)
+            // - For 8-bit: Should use AL->AX (AH:AL), but uses EAX (incorrect implicit operands)
+            // - For 16-bit: Should use AX->DX:AX, but uses EAX (incorrect implicit operands)
+            // Full implementation would require RTL extensions for 64-bit types and proper register size handling
             case Mnemonic.Mul:
                 {
                     var src = GetOperandExpression(insn, 0, block);
@@ -584,7 +810,7 @@ public class X86ToRtlConverter
                             Source = temp
                         });
 
-                        // EDX = 0 (simplified - should be high 32 bits)
+                        // EDX = 0 (simplified - should be high 32 bits of 64-bit product)
                         results.Add(new RtlAssignment
                         {
                             Offset = (int)insn.IP,
@@ -595,6 +821,7 @@ public class X86ToRtlConverter
                     else
                     {
                         // For 8-bit and 16-bit, simplified version
+                        // Note: Uses EAX incorrectly (should be AL->AX for 8-bit, AX->DX:AX for 16-bit)
                         results.Add(new RtlBinaryOp
                         {
                             Offset = (int)insn.IP,
@@ -608,11 +835,18 @@ public class X86ToRtlConverter
                 break;
 
             // IMUL - Signed Multiply
+            // Known limitations for single-operand form:
+            // - Uses unsigned * operator (RTL lacks signed multiply)
+            // - For 32-bit: Doesn't set EDX to high 32 bits (same issue as MUL)
+            // - For 8-bit: Should use AL->AX, but uses EAX (incorrect implicit operands)
+            // - For 16-bit: Should use AX->DX:AX, but uses EAX (incorrect implicit operands)
+            // Two and three operand forms work correctly within RTL's unsigned arithmetic limitations
             case Mnemonic.Imul:
                 {
                     if (insn.OpCount == 1)
                     {
                         // Single operand form: like MUL
+                        // Note: Should set EDX:EAX (or DX:AX, or AH:AL) but simplified to only set EAX
                         var src = GetOperandExpression(insn, 0, block);
                         results.Add(new RtlBinaryOp
                         {
@@ -648,27 +882,37 @@ public class X86ToRtlConverter
                 break;
 
             // DIV - Unsigned Divide
-            // Simplified: Only handles basic cases
+            // Simplified: Only handles 32-bit division (EDX:EAX divided by src)
+            // Note: Full implementation would need to construct 64-bit dividend from EDX:EAX
             case Mnemonic.Div:
                 {
                     var src = GetOperandExpression(insn, 0, block);
+                    var tempDividend = block.NewTemporary();
+
+                    // Preserve original EAX value for remainder calculation
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempDividend,
+                        Source = new RtlRegister { Name = "EAX" }
+                    });
 
                     // EAX = EAX / src (quotient)
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = new RtlRegister { Name = "EAX" },
-                        Left = new RtlRegister { Name = "EAX" },
+                        Left = tempDividend,
                         Operator = "/",
                         Right = src
                     });
 
-                    // EDX = EAX % src (remainder)
+                    // EDX = tempDividend % src (remainder)
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = new RtlRegister { Name = "EDX" },
-                        Left = new RtlRegister { Name = "EAX" },
+                        Left = tempDividend,
                         Operator = "%",
                         Right = src
                     });
@@ -676,26 +920,38 @@ public class X86ToRtlConverter
                 break;
 
             // IDIV - Signed Divide
+            // Note: RTL uses uint registers, so signed semantics are approximated.
+            // Full implementation would require signed cast and proper EDX:EAX dividend construction.
             case Mnemonic.Idiv:
                 {
                     var src = GetOperandExpression(insn, 0, block);
+                    var tempDividend = block.NewTemporary();
+
+                    // Preserve original EAX value for remainder calculation
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempDividend,
+                        Source = new RtlRegister { Name = "EAX" }
+                    });
 
                     // EAX = EAX / src (quotient)
+                    // Note: This is unsigned division on uint; proper IDIV needs signed handling
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = new RtlRegister { Name = "EAX" },
-                        Left = new RtlRegister { Name = "EAX" },
+                        Left = tempDividend,
                         Operator = "/",
                         Right = src
                     });
 
-                    // EDX = EAX % src (remainder)
+                    // EDX = tempDividend % src (remainder)
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
                         Destination = new RtlRegister { Name = "EDX" },
-                        Left = new RtlRegister { Name = "EAX" },
+                        Left = tempDividend,
                         Operator = "%",
                         Right = src
                     });
@@ -926,12 +1182,28 @@ public class X86ToRtlConverter
             case Mnemonic.Setnp:
                 {
                     // Simplified: always set to 0 since we don't have proper flag tracking
-                    results.Add(new RtlAssignment
+                    var value = new RtlConstant { Value = 0 };
+                    var destKind = insn.GetOpKind(0);
+
+                    if (destKind == OpKind.Memory)
                     {
-                        Offset = (int)insn.IP,
-                        Destination = GetOperandExpression(insn, 0, block),
-                        Source = new RtlConstant { Value = 0 }
-                    });
+                        results.Add(new RtlStore
+                        {
+                            Offset = (int)insn.IP,
+                            Address = GetMemoryAddressExpression(insn),
+                            Value = value,
+                            Size = 1
+                        });
+                    }
+                    else
+                    {
+                        results.Add(new RtlAssignment
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = GetOperandExpression(insn, 0, block),
+                            Source = value
+                        });
+                    }
                 }
                 break;
 
