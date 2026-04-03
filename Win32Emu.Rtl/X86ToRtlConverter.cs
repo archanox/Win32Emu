@@ -407,11 +407,11 @@ public class X86ToRtlConverter
                     var count = GetOperandExpression(insn, 1, block);
                     var size = GetOperandSize(insn, 0);
                     var bits = (uint)(size * 8);
-                    
+
                     var tempLeft = block.NewTemporary();
                     var tempRight = block.NewTemporary();
                     var tempCount = block.NewTemporary();
-                    
+
                     // tempCount = bits - count (for the right shift)
                     results.Add(new RtlBinaryOp
                     {
@@ -421,7 +421,7 @@ public class X86ToRtlConverter
                         Operator = "-",
                         Right = count
                     });
-                    
+
                     // tempLeft = dest << count
                     results.Add(new RtlBinaryOp
                     {
@@ -431,7 +431,7 @@ public class X86ToRtlConverter
                         Operator = "<<",
                         Right = count
                     });
-                    
+
                     // tempRight = dest >> (bits - count)
                     results.Add(new RtlBinaryOp
                     {
@@ -441,7 +441,7 @@ public class X86ToRtlConverter
                         Operator = ">>",
                         Right = tempCount
                     });
-                    
+
                     // dest = tempLeft | tempRight
                     results.Add(new RtlBinaryOp
                     {
@@ -453,7 +453,488 @@ public class X86ToRtlConverter
                     });
                 }
                 break;
-                
+
+            // ROR - Rotate Right
+            // Rotates bits right by count, wrapping around
+            // ROR formula: (val >> count) | (val << (bits - count))
+            case Mnemonic.Ror:
+                {
+                    var dest = GetOperandExpression(insn, 0, block);
+                    var count = GetOperandExpression(insn, 1, block);
+                    var size = GetOperandSize(insn, 0);
+                    var bits = (uint)(size * 8);
+
+                    var tempRight = block.NewTemporary();
+                    var tempLeft = block.NewTemporary();
+                    var tempCount = block.NewTemporary();
+
+                    // tempCount = bits - count (for the left shift)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempCount,
+                        Left = new RtlConstant { Value = bits },
+                        Operator = "-",
+                        Right = count
+                    });
+
+                    // tempRight = dest >> count
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempRight,
+                        Left = dest,
+                        Operator = ">>",
+                        Right = count
+                    });
+
+                    // tempLeft = dest << (bits - count)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempLeft,
+                        Left = dest,
+                        Operator = "<<",
+                        Right = tempCount
+                    });
+
+                    // dest = tempRight | tempLeft
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = dest,
+                        Left = tempRight,
+                        Operator = "|",
+                        Right = tempLeft
+                    });
+                }
+                break;
+
+            // SAR - Shift Arithmetic Right (sign-extended shift)
+            // Note: This is simplified - full implementation would require sign extension
+            case Mnemonic.Sar:
+                results.Add(ConvertBinaryOp(insn, block, ">>"));
+                break;
+
+            // SAL - Shift Arithmetic Left (same as SHL)
+            case Mnemonic.Sal:
+                results.Add(ConvertBinaryOp(insn, block, "<<"));
+                break;
+
+            // XCHG - Exchange register/memory with register
+            case Mnemonic.Xchg:
+                {
+                    var dest = GetOperandExpression(insn, 0, block);
+                    var src = GetOperandExpression(insn, 1, block);
+                    var temp = block.NewTemporary();
+
+                    // temp = dest
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = temp,
+                        Source = dest
+                    });
+
+                    // dest = src
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = dest,
+                        Source = src
+                    });
+
+                    // src = temp
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = src,
+                        Source = temp
+                    });
+                }
+                break;
+
+            // MUL - Unsigned Multiply
+            // Simplified: Only handles basic cases, doesn't set flags properly
+            case Mnemonic.Mul:
+                {
+                    var src = GetOperandExpression(insn, 0, block);
+                    var size = GetOperandSize(insn, 0);
+
+                    if (size == 4)
+                    {
+                        // 32-bit: EDX:EAX = EAX * src
+                        var temp = block.NewTemporary();
+
+                        // temp = EAX * src
+                        results.Add(new RtlBinaryOp
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = temp,
+                            Left = new RtlRegister { Name = "EAX" },
+                            Operator = "*",
+                            Right = src
+                        });
+
+                        // EAX = low 32 bits
+                        results.Add(new RtlAssignment
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = new RtlRegister { Name = "EAX" },
+                            Source = temp
+                        });
+
+                        // EDX = 0 (simplified - should be high 32 bits)
+                        results.Add(new RtlAssignment
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = new RtlRegister { Name = "EDX" },
+                            Source = new RtlConstant { Value = 0 }
+                        });
+                    }
+                    else
+                    {
+                        // For 8-bit and 16-bit, simplified version
+                        results.Add(new RtlBinaryOp
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = new RtlRegister { Name = "EAX" },
+                            Left = new RtlRegister { Name = "EAX" },
+                            Operator = "*",
+                            Right = src
+                        });
+                    }
+                }
+                break;
+
+            // IMUL - Signed Multiply
+            case Mnemonic.Imul:
+                {
+                    if (insn.OpCount == 1)
+                    {
+                        // Single operand form: like MUL
+                        var src = GetOperandExpression(insn, 0, block);
+                        results.Add(new RtlBinaryOp
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = new RtlRegister { Name = "EAX" },
+                            Left = new RtlRegister { Name = "EAX" },
+                            Operator = "*",
+                            Right = src
+                        });
+                    }
+                    else if (insn.OpCount == 2)
+                    {
+                        // Two operand form: dest = dest * src
+                        results.Add(ConvertBinaryOp(insn, block, "*"));
+                    }
+                    else if (insn.OpCount == 3)
+                    {
+                        // Three operand form: dest = src1 * src2
+                        var dest = GetOperandExpression(insn, 0, block);
+                        var src1 = GetOperandExpression(insn, 1, block);
+                        var src2 = GetOperandExpression(insn, 2, block);
+
+                        results.Add(new RtlBinaryOp
+                        {
+                            Offset = (int)insn.IP,
+                            Destination = dest,
+                            Left = src1,
+                            Operator = "*",
+                            Right = src2
+                        });
+                    }
+                }
+                break;
+
+            // DIV - Unsigned Divide
+            // Simplified: Only handles basic cases
+            case Mnemonic.Div:
+                {
+                    var src = GetOperandExpression(insn, 0, block);
+
+                    // EAX = EAX / src (quotient)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "EAX" },
+                        Left = new RtlRegister { Name = "EAX" },
+                        Operator = "/",
+                        Right = src
+                    });
+
+                    // EDX = EAX % src (remainder)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "EDX" },
+                        Left = new RtlRegister { Name = "EAX" },
+                        Operator = "%",
+                        Right = src
+                    });
+                }
+                break;
+
+            // IDIV - Signed Divide
+            case Mnemonic.Idiv:
+                {
+                    var src = GetOperandExpression(insn, 0, block);
+
+                    // EAX = EAX / src (quotient)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "EAX" },
+                        Left = new RtlRegister { Name = "EAX" },
+                        Operator = "/",
+                        Right = src
+                    });
+
+                    // EDX = EAX % src (remainder)
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "EDX" },
+                        Left = new RtlRegister { Name = "EAX" },
+                        Operator = "%",
+                        Right = src
+                    });
+                }
+                break;
+
+            // CDQ - Convert Doubleword to Quadword
+            // Sign-extends EAX into EDX:EAX
+            case Mnemonic.Cdq:
+                {
+                    // If EAX < 0 (sign bit set), EDX = 0xFFFFFFFF, else EDX = 0
+                    // Simplified version: always set EDX to 0
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "EDX" },
+                        Source = new RtlConstant { Value = 0 }
+                    });
+                }
+                break;
+
+            // CWD - Convert Word to Doubleword
+            // Sign-extends AX into DX:AX
+            case Mnemonic.Cwd:
+                {
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "DX" },
+                        Source = new RtlConstant { Value = 0 }
+                    });
+                }
+                break;
+
+            // CBW - Convert Byte to Word
+            // Sign-extends AL into AX
+            case Mnemonic.Cbw:
+                {
+                    // Simplified: just copy AL to AX
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "AX" },
+                        Source = new RtlRegister { Name = "AL" }
+                    });
+                }
+                break;
+
+            // CWDE - Convert Word to Doubleword Extended
+            // Sign-extends AX into EAX
+            case Mnemonic.Cwde:
+                {
+                    // Simplified: just copy AX to EAX
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "EAX" },
+                        Source = new RtlRegister { Name = "AX" }
+                    });
+                }
+                break;
+
+            // BSWAP - Byte Swap (reverse byte order)
+            case Mnemonic.Bswap:
+                {
+                    var dest = GetOperandExpression(insn, 0, block);
+                    var t0 = block.NewTemporary();
+                    var t1 = block.NewTemporary();
+                    var t2 = block.NewTemporary();
+                    var t3 = block.NewTemporary();
+
+                    // Extract bytes: t0 = byte0, t1 = byte1, t2 = byte2, t3 = byte3
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = t0,
+                        Left = dest,
+                        Operator = "&",
+                        Right = new RtlConstant { Value = 0xFF }
+                    });
+
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = t1,
+                        Left = new RtlBinaryExpression
+                        {
+                            Left = dest,
+                            Operator = ">>",
+                            Right = new RtlConstant { Value = 8 }
+                        },
+                        Operator = "&",
+                        Right = new RtlConstant { Value = 0xFF }
+                    });
+
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = t2,
+                        Left = new RtlBinaryExpression
+                        {
+                            Left = dest,
+                            Operator = ">>",
+                            Right = new RtlConstant { Value = 16 }
+                        },
+                        Operator = "&",
+                        Right = new RtlConstant { Value = 0xFF }
+                    });
+
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = t3,
+                        Left = dest,
+                        Operator = ">>",
+                        Right = new RtlConstant { Value = 24 }
+                    });
+
+                    // Reassemble in reverse order: dest = (t0 << 24) | (t1 << 16) | (t2 << 8) | t3
+                    var temp = block.NewTemporary();
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = temp,
+                        Left = t0,
+                        Operator = "<<",
+                        Right = new RtlConstant { Value = 24 }
+                    });
+
+                    var temp2 = block.NewTemporary();
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = temp2,
+                        Left = t1,
+                        Operator = "<<",
+                        Right = new RtlConstant { Value = 16 }
+                    });
+
+                    var temp3 = block.NewTemporary();
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = temp3,
+                        Left = temp,
+                        Operator = "|",
+                        Right = temp2
+                    });
+
+                    var temp4 = block.NewTemporary();
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = temp4,
+                        Left = t2,
+                        Operator = "<<",
+                        Right = new RtlConstant { Value = 8 }
+                    });
+
+                    var temp5 = block.NewTemporary();
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = temp5,
+                        Left = temp3,
+                        Operator = "|",
+                        Right = temp4
+                    });
+
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = dest,
+                        Left = temp5,
+                        Operator = "|",
+                        Right = t3
+                    });
+                }
+                break;
+
+            // LEAVE - High-level procedure exit
+            // Equivalent to: MOV ESP, EBP; POP EBP
+            case Mnemonic.Leave:
+                {
+                    // ESP = EBP
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "ESP" },
+                        Source = new RtlRegister { Name = "EBP" }
+                    });
+
+                    // EBP = [ESP]; ESP += 4
+                    results.Add(new RtlLoad
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "EBP" },
+                        Address = new RtlRegister { Name = "ESP" },
+                        Size = 4
+                    });
+
+                    results.Add(new RtlBinaryOp
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = new RtlRegister { Name = "ESP" },
+                        Left = new RtlRegister { Name = "ESP" },
+                        Operator = "+",
+                        Right = new RtlConstant { Value = 4 }
+                    });
+                }
+                break;
+
+            // SETCC - Set byte on condition
+            // Sets destination byte to 1 if condition is true, 0 otherwise
+            case Mnemonic.Sete:
+            case Mnemonic.Setne:
+            case Mnemonic.Seta:
+            case Mnemonic.Setae:
+            case Mnemonic.Setb:
+            case Mnemonic.Setbe:
+            case Mnemonic.Setg:
+            case Mnemonic.Setge:
+            case Mnemonic.Setl:
+            case Mnemonic.Setle:
+            case Mnemonic.Sets:
+            case Mnemonic.Setns:
+            case Mnemonic.Setp:
+            case Mnemonic.Setnp:
+                {
+                    // Simplified: always set to 0 since we don't have proper flag tracking
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = GetOperandExpression(insn, 0, block),
+                        Source = new RtlConstant { Value = 0 }
+                    });
+                }
+                break;
+
             default:
                 // Unsupported instruction - emit NOP with comment
                 _logger.LogWarning("[X86ToRtl] Unsupported instruction: {Mnemonic} at 0x{IP:X}", 
