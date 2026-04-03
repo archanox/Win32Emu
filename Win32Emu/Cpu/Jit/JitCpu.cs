@@ -2153,9 +2153,9 @@ public class JitCpu : IAsyncCpu
 
 		SetOperandValue(insn, 0, (uint)result);
 
-		// Set flags: ZF if source is zero, CF always clear for LZCNT
+		// Set flags: ZF and CF both set if source is zero, both cleared otherwise
 		SetFlagVal(Zf, src == 0);
-		ClearFlag(Cf);
+		SetFlagVal(Cf, src == 0);
 		// Other flags (SF, OF, AF, PF) are undefined but typically cleared
 		ClearFlag(Of);
 		ClearFlag(Sf);
@@ -2196,9 +2196,9 @@ public class JitCpu : IAsyncCpu
 
 		SetOperandValue(insn, 0, (uint)result);
 
-		// Set flags: ZF if source is zero, CF always clear for TZCNT
+		// Set flags: ZF and CF both set if source is zero, both cleared otherwise
 		SetFlagVal(Zf, src == 0);
-		ClearFlag(Cf);
+		SetFlagVal(Cf, src == 0);
 		// Other flags (SF, OF, AF, PF) are undefined but typically cleared
 		ClearFlag(Of);
 		ClearFlag(Sf);
@@ -2263,6 +2263,12 @@ public class JitCpu : IAsyncCpu
 		uint control = GetOperandValue(insn, 2); // Control value (start:length)
 		int opSize = GetOpSizeBits(insn, 0);
 
+		// Mask source to operand size
+		if (opSize == 16)
+		{
+			src &= 0xFFFF;
+		}
+
 		// Extract start position and length from control
 		uint start = control & 0xFF;         // Bits 0-7: start position
 		uint length = (control >> 8) & 0xFF; // Bits 8-15: field length
@@ -2275,6 +2281,13 @@ public class JitCpu : IAsyncCpu
 		}
 		else
 		{
+			// Clamp length to remaining bits in operand
+			uint maxBits = (opSize == 16 ? 16u : 32u);
+			if (start + length > maxBits)
+			{
+				length = maxBits - start;
+			}
+
 			// Extract the bit field
 			uint mask = length >= 32 ? 0xFFFFFFFF : (1u << (int)length) - 1;
 			result = (src >> (int)start) & mask;
@@ -2294,6 +2307,12 @@ public class JitCpu : IAsyncCpu
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
 
+		// Mask source to operand size
+		if (opSize == 16)
+		{
+			src &= 0xFFFF;
+		}
+
 		// BLSI: Extract lowest set bit (isolate)
 		// result = src & -src
 		uint result = src & (uint)(-(int)src);
@@ -2308,9 +2327,9 @@ public class JitCpu : IAsyncCpu
 		// Update flags:
 		// ZF = (src == 0)
 		// SF = sign bit of result
-		// CF = (src == 0) ? 0 : 1 - inverted from ZF
+		// CF = (src != 0) - set when source is nonzero
 		SetFlagVal(Zf, src == 0);
-		SetFlagVal(Cf, src == 0);  // CF set if source was zero
+		SetFlagVal(Cf, src != 0);  // CF set if source is nonzero
 		SetFlagVal(Sf, (result & (opSize == 16 ? 0x8000u : 0x80000000u)) != 0);
 		ClearFlag(Of);
 		// AF, PF undefined
@@ -2320,6 +2339,12 @@ public class JitCpu : IAsyncCpu
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
+
+		// Mask source to operand size before computation
+		if (opSize == 16)
+		{
+			src &= 0xFFFF;
+		}
 
 		// BLSMSK: Get mask up to lowest set bit
 		// result = src ^ (src - 1)
@@ -2333,7 +2358,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, result);
 
 		// Update flags:
-		// CF = (src == 0) ? 0 : 1
+		// CF = (src == 0) ? 1 : 0
 		// SF = sign bit of result
 		// ZF cleared (result is never zero)
 		SetFlagVal(Cf, src == 0);
@@ -2347,6 +2372,12 @@ public class JitCpu : IAsyncCpu
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
+
+		// Mask source to operand size before computation
+		if (opSize == 16)
+		{
+			src &= 0xFFFF;
+		}
 
 		// BLSR: Reset lowest set bit
 		// result = src & (src - 1)

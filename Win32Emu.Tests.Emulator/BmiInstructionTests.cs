@@ -41,7 +41,7 @@ public class BmiInstructionTests
 
 		Assert.Equal(expectedCount, result);
 		Assert.Equal(source == 0, zf); // ZF set if source is zero
-		Assert.False(cf); // CF always clear for LZCNT
+		Assert.Equal(source == 0, cf); // CF set if source is zero
 	}
 
 	[Theory]
@@ -103,8 +103,8 @@ public class BmiInstructionTests
 		var cf = (eflags & (1 << 0)) != 0;
 
 		Assert.Equal(expectedCount, result);
-		Assert.Equal(source == 0, zf); // ZF set if source is zero
-		Assert.False(cf); // CF always clear for TZCNT
+		Assert.Equal(source == 0, zf);
+		Assert.Equal(source == 0, cf); // CF set if source is zero, otherwise clear for TZCNT
 	}
 
 	#endregion
@@ -192,9 +192,9 @@ public class BmiInstructionTests
 	#region BEXTR Tests
 
 	[Theory]
-	[InlineData(0xFFFFFFFFu, 0x0000u, 0xFFFFFFFFu)]  // Extract from bit 0, length 0 -> 0
+	[InlineData(0xFFFFFFFFu, 0x0000u, 0x00000000u)] // Extract from bit 0, length 0 -> 0
 	[InlineData(0xFFFFFFFFu, 0x0800u, 0xFFu)]       // Extract from bit 0, length 8 -> FF
-	[InlineData(0xFFFFFFFFu, 0x1008u, 0xFFu)]       // Extract from bit 8, length 16 -> FF (length clamped)
+	[InlineData(0xFFFFFFFFu, 0x1008u, 0xFFFFu)]     // Extract from bit 8, length 16 -> FFFF
 	[InlineData(0x12345678u, 0x0808u, 0x56u)]       // Extract byte at position 8
 	[InlineData(0x12345678u, 0x1000u, 0x5678u)]     // Extract lower 16 bits
 	[InlineData(0x12345678u, 0x1010u, 0x1234u)]     // Extract upper 16 bits
@@ -257,7 +257,7 @@ public class BmiInstructionTests
 
 		Assert.Equal(expected, result);
 		Assert.Equal(source == 0, zf); // ZF set if source is zero
-		Assert.Equal(source == 0, cf); // CF set if source is zero
+		Assert.Equal(source != 0, cf); // CF set if source is nonzero
 	}
 
 	#endregion
