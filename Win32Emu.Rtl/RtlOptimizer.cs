@@ -159,6 +159,17 @@ public class RtlOptimizer
                 Operator = binOp.Operator,
                 Right = PropagateInExpression(binOp.Right, copies)
             },
+            RtlFlagUpdate flagUpdate => new RtlFlagUpdate
+            {
+                Offset = flagUpdate.Offset,
+                Operation = flagUpdate.Operation,
+                Result = PropagateInExpression(flagUpdate.Result, copies),
+                Left = PropagateInExpression(flagUpdate.Left, copies),
+                Right = flagUpdate.Right != null ? PropagateInExpression(flagUpdate.Right, copies) : null,
+                OperandSize = flagUpdate.OperandSize,
+                UpdateCF = flagUpdate.UpdateCF,
+                UpdateOF = flagUpdate.UpdateOF
+            },
             _ => insn
         };
     }
@@ -196,7 +207,14 @@ public class RtlOptimizer
                 CollectFromExpression(binOp.Right, usedTemps);
                 break;
             case RtlBranch branch:
-                CollectFromExpression(branch.Condition, usedTemps);
+                if (branch.Condition != null)
+                    CollectFromExpression(branch.Condition, usedTemps);
+                break;
+            case RtlFlagUpdate flagUpdate:
+                CollectFromExpression(flagUpdate.Result, usedTemps);
+                CollectFromExpression(flagUpdate.Left, usedTemps);
+                if (flagUpdate.Right != null)
+                    CollectFromExpression(flagUpdate.Right, usedTemps);
                 break;
             case RtlStore store:
                 CollectFromExpression(store.Address, usedTemps);

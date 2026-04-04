@@ -79,24 +79,149 @@ public class X86ToRtlConverter
                 break;
                 
             case Mnemonic.Add:
-                results.Add(ConvertBinaryOp(insn, block, "+"));
+            {
+                var dest = GetOperandExpression(insn, 0, block);
+                var right = GetOperandExpression(insn, 1, block);
+                var size = GetOperandSize(insn, 0);
+                var tempLeft = block.NewTemporary();
+                results.Add(new RtlAssignment
+                {
+                    Offset = (int)insn.IP,
+                    Destination = tempLeft,
+                    Source = dest
+                });
+                results.Add(new RtlBinaryOp
+                {
+                    Offset = (int)insn.IP,
+                    Destination = dest,
+                    Left = dest,
+                    Operator = "+",
+                    Right = right
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "ADD",
+                    Result = dest,
+                    Left = tempLeft,
+                    Right = right,
+                    OperandSize = size
+                });
                 break;
-                
+            }
+
             case Mnemonic.Sub:
-                results.Add(ConvertBinaryOp(insn, block, "-"));
+            {
+                var dest = GetOperandExpression(insn, 0, block);
+                var right = GetOperandExpression(insn, 1, block);
+                var size = GetOperandSize(insn, 0);
+                var tempLeft = block.NewTemporary();
+                results.Add(new RtlAssignment
+                {
+                    Offset = (int)insn.IP,
+                    Destination = tempLeft,
+                    Source = dest
+                });
+                results.Add(new RtlBinaryOp
+                {
+                    Offset = (int)insn.IP,
+                    Destination = dest,
+                    Left = dest,
+                    Operator = "-",
+                    Right = right
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "SUB",
+                    Result = dest,
+                    Left = tempLeft,
+                    Right = right,
+                    OperandSize = size
+                });
                 break;
-                
+            }
+
             case Mnemonic.And:
-                results.Add(ConvertBinaryOp(insn, block, "&"));
+            {
+                var dest = GetOperandExpression(insn, 0, block);
+                var right = GetOperandExpression(insn, 1, block);
+                var size = GetOperandSize(insn, 0);
+                results.Add(new RtlBinaryOp
+                {
+                    Offset = (int)insn.IP,
+                    Destination = dest,
+                    Left = dest,
+                    Operator = "&",
+                    Right = right
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "AND",
+                    Result = dest,
+                    Left = dest,
+                    Right = right,
+                    OperandSize = size,
+                    UpdateCF = false,
+                    UpdateOF = false
+                });
                 break;
-                
+            }
+
             case Mnemonic.Or:
-                results.Add(ConvertBinaryOp(insn, block, "|"));
+            {
+                var dest = GetOperandExpression(insn, 0, block);
+                var right = GetOperandExpression(insn, 1, block);
+                var size = GetOperandSize(insn, 0);
+                results.Add(new RtlBinaryOp
+                {
+                    Offset = (int)insn.IP,
+                    Destination = dest,
+                    Left = dest,
+                    Operator = "|",
+                    Right = right
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "OR",
+                    Result = dest,
+                    Left = dest,
+                    Right = right,
+                    OperandSize = size,
+                    UpdateCF = false,
+                    UpdateOF = false
+                });
                 break;
-                
+            }
+
             case Mnemonic.Xor:
-                results.Add(ConvertBinaryOp(insn, block, "^"));
+            {
+                var dest = GetOperandExpression(insn, 0, block);
+                var right = GetOperandExpression(insn, 1, block);
+                var size = GetOperandSize(insn, 0);
+                results.Add(new RtlBinaryOp
+                {
+                    Offset = (int)insn.IP,
+                    Destination = dest,
+                    Left = dest,
+                    Operator = "^",
+                    Right = right
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "XOR",
+                    Result = dest,
+                    Left = dest,
+                    Right = right,
+                    OperandSize = size,
+                    UpdateCF = false,
+                    UpdateOF = false
+                });
                 break;
+            }
                 
             case Mnemonic.Shl:
                 results.Add(ConvertBinaryOp(insn, block, "<<"));
@@ -107,34 +232,60 @@ public class X86ToRtlConverter
                 break;
                 
             case Mnemonic.Cmp:
-                // CMP sets flags - model as temporary for condition
-                results.Add(new RtlAssignment
+            {
+                // CMP computes left - right for flag purposes only; result is discarded
+                var left = GetOperandExpression(insn, 0, block);
+                var right = GetOperandExpression(insn, 1, block);
+                var size = GetOperandSize(insn, 0);
+                var temp = block.NewTemporary();
+                results.Add(new RtlBinaryOp
                 {
                     Offset = (int)insn.IP,
-                    Destination = new RtlRegister { Name = "FLAGS" },
-                    Source = new RtlBinaryExpression
-                    {
-                        Left = GetOperandExpression(insn, 0, block),
-                        Operator = "-",
-                        Right = GetOperandExpression(insn, 1, block)
-                    }
+                    Destination = temp,
+                    Left = left,
+                    Operator = "-",
+                    Right = right
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "SUB",
+                    Result = temp,
+                    Left = left,
+                    Right = right,
+                    OperandSize = size
                 });
                 break;
-                
+            }
+
             case Mnemonic.Test:
-                // TEST sets flags - model as temporary for condition
-                results.Add(new RtlAssignment
+            {
+                // TEST computes left & right for flag purposes only; result is discarded
+                var left = GetOperandExpression(insn, 0, block);
+                var right = GetOperandExpression(insn, 1, block);
+                var size = GetOperandSize(insn, 0);
+                var temp = block.NewTemporary();
+                results.Add(new RtlBinaryOp
                 {
                     Offset = (int)insn.IP,
-                    Destination = new RtlRegister { Name = "FLAGS" },
-                    Source = new RtlBinaryExpression
-                    {
-                        Left = GetOperandExpression(insn, 0, block),
-                        Operator = "&",
-                        Right = GetOperandExpression(insn, 1, block)
-                    }
+                    Destination = temp,
+                    Left = left,
+                    Operator = "&",
+                    Right = right
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "AND",
+                    Result = temp,
+                    Left = left,
+                    Right = right,
+                    OperandSize = size,
+                    UpdateCF = false,
+                    UpdateOF = false
                 });
                 break;
+            }
                 
             case Mnemonic.Jmp:
                 results.Add(new RtlGoto
@@ -161,12 +312,7 @@ public class X86ToRtlConverter
                 results.Add(new RtlBranch
                 {
                     Offset = (int)insn.IP,
-                    Condition = new RtlBinaryExpression
-                    {
-                        Left = new RtlRegister { Name = "FLAGS" },
-                        Operator = GetConditionOperator(insn.Mnemonic),
-                        Right = new RtlConstant { Value = 0 }
-                    },
+                    FlagCondition = GetFlagCondition(insn.Mnemonic),
                     TargetOffset = (int)GetBranchTarget(insn)
                 });
                 break;
@@ -238,6 +384,14 @@ public class X86ToRtlConverter
             case Mnemonic.Inc:
             {
                 var operand = GetOperandExpression(insn, 0, block);
+                var size = GetOperandSize(insn, 0);
+                var tempOrig = block.NewTemporary();
+                results.Add(new RtlAssignment
+                {
+                    Offset = (int)insn.IP,
+                    Destination = tempOrig,
+                    Source = operand
+                });
                 results.Add(new RtlBinaryOp
                 {
                     Offset = (int)insn.IP,
@@ -246,6 +400,15 @@ public class X86ToRtlConverter
                     Operator = "+",
                     Right = new RtlConstant { Value = 1 }
                 });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "INC",
+                    Result = operand,
+                    Left = tempOrig,
+                    OperandSize = size,
+                    UpdateCF = false   // INC does not modify CF
+                });
                 break;
             }
                 
@@ -253,6 +416,14 @@ public class X86ToRtlConverter
             case Mnemonic.Dec:
             {
                 var operand = GetOperandExpression(insn, 0, block);
+                var size = GetOperandSize(insn, 0);
+                var tempOrig = block.NewTemporary();
+                results.Add(new RtlAssignment
+                {
+                    Offset = (int)insn.IP,
+                    Destination = tempOrig,
+                    Source = operand
+                });
                 results.Add(new RtlBinaryOp
                 {
                     Offset = (int)insn.IP,
@@ -260,6 +431,15 @@ public class X86ToRtlConverter
                     Left = operand,
                     Operator = "-",
                     Right = new RtlConstant { Value = 1 }
+                });
+                results.Add(new RtlFlagUpdate
+                {
+                    Offset = (int)insn.IP,
+                    Operation = "DEC",
+                    Result = operand,
+                    Left = tempOrig,
+                    OperandSize = size,
+                    UpdateCF = false   // DEC does not modify CF
                 });
                 break;
             }
@@ -308,6 +488,14 @@ public class X86ToRtlConverter
             case Mnemonic.Neg:
                 {
                     var operand = GetOperandExpression(insn, 0, block);
+                    var size = GetOperandSize(insn, 0);
+                    var tempOrig = block.NewTemporary();
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = tempOrig,
+                        Source = operand
+                    });
                     results.Add(new RtlBinaryOp
                     {
                         Offset = (int)insn.IP,
@@ -315,6 +503,14 @@ public class X86ToRtlConverter
                         Left = new RtlConstant { Value = 0 },
                         Operator = "-",
                         Right = operand
+                    });
+                    results.Add(new RtlFlagUpdate
+                    {
+                        Offset = (int)insn.IP,
+                        Operation = "NEG",
+                        Result = operand,
+                        Left = tempOrig,
+                        OperandSize = size
                     });
                 }
                 break;
@@ -348,19 +544,32 @@ public class X86ToRtlConverter
                 break;
                 
             // SETO - Set byte on overflow
-            // Sets destination byte to 1 if overflow flag is set, 0 otherwise
-            // Note: Full overflow flag tracking requires proper flag modeling.
-            // This simplified version always sets to 0 since we don't track OF.
             case Mnemonic.Seto:
-                results.Add(new RtlAssignment
+            {
+                var flagRef = new RtlFlagReference { Condition = FlagCondition.Overflow };
+                var destKind = insn.GetOpKind(0);
+
+                if (destKind == OpKind.Memory)
                 {
-                    Offset = (int)insn.IP,
-                    Destination = GetOperandExpression(insn, 0, block),
-                    // Simplified: always 0 since we don't have proper overflow flag tracking
-                    // A full implementation would check the OF flag from previous operations
-                    Source = new RtlConstant { Value = 0 }
-                });
+                    results.Add(new RtlStore
+                    {
+                        Offset = (int)insn.IP,
+                        Address = GetMemoryAddressExpression(insn),
+                        Value = flagRef,
+                        Size = 1
+                    });
+                }
+                else
+                {
+                    results.Add(new RtlAssignment
+                    {
+                        Offset = (int)insn.IP,
+                        Destination = GetOperandExpression(insn, 0, block),
+                        Source = flagRef
+                    });
+                }
                 break;
+            }
                 
             // XADD - Exchange and Add
             // TEMP = DEST; DEST = DEST + SRC; SRC = TEMP
@@ -1181,8 +1390,7 @@ public class X86ToRtlConverter
             case Mnemonic.Setp:
             case Mnemonic.Setnp:
                 {
-                    // Simplified: always set to 0 since we don't have proper flag tracking
-                    var value = new RtlConstant { Value = 0 };
+                    var flagRef = new RtlFlagReference { Condition = GetFlagConditionForSetcc(insn.Mnemonic) };
                     var destKind = insn.GetOpKind(0);
 
                     if (destKind == OpKind.Memory)
@@ -1191,7 +1399,7 @@ public class X86ToRtlConverter
                         {
                             Offset = (int)insn.IP,
                             Address = GetMemoryAddressExpression(insn),
-                            Value = value,
+                            Value = flagRef,
                             Size = 1
                         });
                     }
@@ -1201,7 +1409,7 @@ public class X86ToRtlConverter
                         {
                             Offset = (int)insn.IP,
                             Destination = GetOperandExpression(insn, 0, block),
-                            Source = value
+                            Source = flagRef
                         });
                     }
                 }
@@ -1471,37 +1679,53 @@ public class X86ToRtlConverter
     }
     
     /// <summary>
-    /// Gets the comparison operator for a conditional jump instruction.
-    /// Note: The current simplified flag model compares the FLAGS pseudo-register
-    /// against 0. This works for simple cases after CMP/TEST but doesn't fully
-    /// model unsigned comparisons or sign/overflow flags.
+    /// Maps a conditional jump mnemonic to the corresponding <see cref="FlagCondition"/>.
     /// </summary>
-    private string GetConditionOperator(Mnemonic mnemonic)
+    private static FlagCondition GetFlagCondition(Mnemonic mnemonic)
     {
-        // Note: Unsigned comparisons (JA/JAE/JB/JBE) are approximated using signed operators.
-        // Full implementation would require tracking CF and ZF separately.
-        // Sign flag checks (JS/JNS) are approximated using < 0 / >= 0 comparisons
-        // which is correct when FLAGS holds the result of a subtraction (CMP).
         return mnemonic switch
         {
-            Mnemonic.Je => "==",   // ZF=1
-            Mnemonic.Jne => "!=",  // ZF=0
-            Mnemonic.Jl => "<",    // SF!=OF (signed less than)
-            Mnemonic.Jle => "<=",  // ZF=1 or SF!=OF
-            Mnemonic.Jg => ">",    // ZF=0 and SF=OF (signed greater)
-            Mnemonic.Jge => ">=",  // SF=OF (signed greater or equal)
-            // Unsigned comparisons - simplified using signed operators
-            // Works correctly for many common patterns but not all
-            Mnemonic.Ja => ">",    // CF=0 and ZF=0 (unsigned above)
-            Mnemonic.Jae => ">=",  // CF=0 (unsigned above or equal)
-            Mnemonic.Jb => "<",    // CF=1 (unsigned below)
-            Mnemonic.Jbe => "<=",  // CF=1 or ZF=1 (unsigned below or equal)
-            // Overflow/sign flag checks - simplified
-            Mnemonic.Jo => "!=",   // OF=1 (approximated as non-zero check)
-            Mnemonic.Jno => "==",  // OF=0
-            Mnemonic.Js => "<",    // SF=1 (negative - FLAGS < 0)
-            Mnemonic.Jns => ">=", // not sign (positive or zero)
-            _ => "=="
+            Mnemonic.Je  => FlagCondition.Equal,
+            Mnemonic.Jne => FlagCondition.NotEqual,
+            Mnemonic.Jl  => FlagCondition.Less,
+            Mnemonic.Jle => FlagCondition.LessOrEqual,
+            Mnemonic.Jg  => FlagCondition.Greater,
+            Mnemonic.Jge => FlagCondition.GreaterOrEqual,
+            Mnemonic.Ja  => FlagCondition.Above,
+            Mnemonic.Jae => FlagCondition.AboveOrEqual,
+            Mnemonic.Jb  => FlagCondition.Below,
+            Mnemonic.Jbe => FlagCondition.BelowOrEqual,
+            Mnemonic.Jo  => FlagCondition.Overflow,
+            Mnemonic.Jno => FlagCondition.NotOverflow,
+            Mnemonic.Js  => FlagCondition.Sign,
+            Mnemonic.Jns => FlagCondition.NotSign,
+            _            => FlagCondition.None
+        };
+    }
+
+    /// <summary>
+    /// Maps a SETCC mnemonic to the corresponding <see cref="FlagCondition"/>.
+    /// </summary>
+    private static FlagCondition GetFlagConditionForSetcc(Mnemonic mnemonic)
+    {
+        return mnemonic switch
+        {
+            Mnemonic.Sete  => FlagCondition.Equal,
+            Mnemonic.Setne => FlagCondition.NotEqual,
+            Mnemonic.Setl  => FlagCondition.Less,
+            Mnemonic.Setle => FlagCondition.LessOrEqual,
+            Mnemonic.Setg  => FlagCondition.Greater,
+            Mnemonic.Setge => FlagCondition.GreaterOrEqual,
+            Mnemonic.Seta  => FlagCondition.Above,
+            Mnemonic.Setae => FlagCondition.AboveOrEqual,
+            Mnemonic.Setb  => FlagCondition.Below,
+            Mnemonic.Setbe => FlagCondition.BelowOrEqual,
+            Mnemonic.Seto  => FlagCondition.Overflow,
+            Mnemonic.Sets  => FlagCondition.Sign,
+            Mnemonic.Setns => FlagCondition.NotSign,
+            Mnemonic.Setp  => FlagCondition.Parity,
+            Mnemonic.Setnp => FlagCondition.NotParity,
+            _              => FlagCondition.None
         };
     }
 }

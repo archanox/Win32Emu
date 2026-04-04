@@ -61,7 +61,12 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            uint FS = cpu.GetRegister(\"FS\");");
         sb.AppendLine("            uint GS = cpu.GetRegister(\"GS\");");
         sb.AppendLine("            uint SS = cpu.GetRegister(\"SS\");");
-        sb.AppendLine("            uint FLAGS = 0;");
+        sb.AppendLine("            uint EFLAGS = cpu.GetRegister(\"EFLAGS\");");
+        sb.AppendLine("            bool ZF = (EFLAGS & 0x40u) != 0;");
+        sb.AppendLine("            bool CF = (EFLAGS & 0x1u) != 0;");
+        sb.AppendLine("            bool SF = (EFLAGS & 0x80u) != 0;");
+        sb.AppendLine("            bool OF = (EFLAGS & 0x800u) != 0;");
+        sb.AppendLine("            bool PF = (EFLAGS & 0x4u) != 0;");
         sb.AppendLine();
         
         // Generate temporaries
@@ -102,6 +107,8 @@ public class RtlToCSharpGenerator
         sb.AppendLine("            cpu.SetRegister(\"FS\", FS);");
         sb.AppendLine("            cpu.SetRegister(\"GS\", GS);");
         sb.AppendLine("            cpu.SetRegister(\"SS\", SS);");
+        sb.AppendLine("            EFLAGS = (EFLAGS & 0xFFFFF73Au) | (CF ? 0x1u : 0u) | (PF ? 0x4u : 0u) | (ZF ? 0x40u : 0u) | (SF ? 0x80u : 0u) | (OF ? 0x800u : 0u);");
+        sb.AppendLine("            cpu.SetRegister(\"EFLAGS\", EFLAGS);");
         sb.AppendLine();
         // Set EIP to the address following this block (critical for execution to continue)
         sb.AppendLine($"            // Advance EIP to next instruction after this block");
@@ -128,6 +135,7 @@ public class RtlToCSharpGenerator
             RtlLoad load => GenerateLoad(load),
             RtlStore store => $"mem.Write{store.Size * 8}({ExpressionToString(store.Address)}, {ExpressionToString(store.Value)});",
             RtlSimdOp simd => GenerateSimdOperation(simd),
+            RtlFlagUpdate flagUpdate => GenerateFlagUpdate(flagUpdate),
             RtlNop => "// nop",
             _ => "// unknown instruction"
         };
@@ -171,7 +179,9 @@ public class RtlToCSharpGenerator
                 cpu.SetRegister(""ES"", ES);
                 cpu.SetRegister(""FS"", FS);
                 cpu.SetRegister(""GS"", GS);
-                cpu.SetRegister(""SS"", SS);";
+                cpu.SetRegister(""SS"", SS);
+                EFLAGS = (EFLAGS & 0xFFFFF73Au) | (CF ? 0x1u : 0u) | (PF ? 0x4u : 0u) | (ZF ? 0x40u : 0u) | (SF ? 0x80u : 0u) | (OF ? 0x800u : 0u);
+                cpu.SetRegister(""EFLAGS"", EFLAGS);";
     }
 
     private string GenerateAssignment(RtlAssignment assign)
@@ -217,9 +227,12 @@ public class RtlToCSharpGenerator
     private string GenerateBranch(RtlBranch branch, RtlCodeBlock rtlBlock)
     {
         var targetAddr = (uint)branch.TargetOffset;
+        var condition = branch.FlagCondition != FlagCondition.None
+            ? GenerateFlagConditionExpression(branch.FlagCondition)
+            : ExpressionToString(branch.Condition!);
         return IsAddressInBlock(targetAddr, rtlBlock)
-            ? $"if ({ExpressionToString(branch.Condition)}) goto Label_{branch.TargetOffset:X};"
-            : $@"if ({ExpressionToString(branch.Condition)}) {{ // @0x{branch.Offset:X}
+            ? $"if ({condition}) goto Label_{branch.TargetOffset:X};"
+            : $@"if ({condition}) {{ // @0x{branch.Offset:X}
                 {GenerateRegisterSave()}
                 cpu.SetEip(0x{branch.TargetOffset:X8}u);
                 return await Task.FromResult(new CpuStepResult(IsCall: false, CallTarget: 0));
@@ -308,6 +321,7 @@ public class RtlToCSharpGenerator
                 ? $"({ExpressionToString(binExpr.Left)} {binExpr.Operator} (int)({ExpressionToString(binExpr.Right)}))"
                 : $"({ExpressionToString(binExpr.Left)} {binExpr.Operator} {ExpressionToString(binExpr.Right)})",
             RtlUnaryExpression unExpr => $"{unExpr.Operator}({ExpressionToString(unExpr.Operand)})",
+            RtlFlagReference flagRef => $"({GenerateFlagConditionExpression(flagRef.Condition)} ? 1u : 0u)",
             _ => "0"
         };
     }
@@ -463,7 +477,108 @@ public class RtlToCSharpGenerator
     {
         return registerName is "CS" or "DS" or "ES" or "FS" or "GS" or "SS";
     }
-    
+
+    /// <summary>
+    /// Returns the C# boolean expression that evaluates the given <see cref="FlagCondition"/>.
+    /// </summary>
+    private static string GenerateFlagConditionExpression(FlagCondition condition)
+    {
+        return condition switch
+        {
+            FlagCondition.Equal           => "ZF",
+            FlagCondition.NotEqual        => "!ZF",
+            FlagCondition.Below           => "CF",
+            FlagCondition.AboveOrEqual    => "!CF",
+            FlagCondition.BelowOrEqual    => "(CF || ZF)",
+            FlagCondition.Above           => "(!CF && !ZF)",
+            FlagCondition.Sign            => "SF",
+            FlagCondition.NotSign         => "!SF",
+            FlagCondition.Overflow        => "OF",
+            FlagCondition.NotOverflow     => "!OF",
+            FlagCondition.Less            => "(SF != OF)",
+            FlagCondition.LessOrEqual     => "(ZF || SF != OF)",
+            FlagCondition.Greater         => "(!ZF && SF == OF)",
+            FlagCondition.GreaterOrEqual  => "(SF == OF)",
+            FlagCondition.Parity          => "PF",
+            FlagCondition.NotParity       => "!PF",
+            _                             => "false"
+        };
+    }
+
+    /// <summary>
+    /// Generates C# code that updates the CPU flag variables (ZF, SF, CF, OF, PF)
+    /// after an arithmetic or logical operation.
+    /// </summary>
+    private string GenerateFlagUpdate(RtlFlagUpdate flagUpdate)
+    {
+        var r = ExpressionToString(flagUpdate.Result);
+        var l = ExpressionToString(flagUpdate.Left);
+        var ri = flagUpdate.Right != null ? ExpressionToString(flagUpdate.Right) : "0u";
+
+        var size = flagUpdate.OperandSize;
+        var signBit = size == 4 ? "0x80000000u" : (size == 2 ? "0x8000u" : "0x80u");
+        var allMask = size == 4 ? "0xFFFFFFFFu" : (size == 2 ? "0xFFFFu" : "0xFFu");
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"{{ // Flag update: {flagUpdate.Operation} @0x{flagUpdate.Offset:X}");
+
+        // Mask operands to the correct size
+        if (size < 4)
+        {
+            sb.AppendLine($"                uint _r = {r} & {allMask};");
+            sb.AppendLine($"                uint _l = {l} & {allMask};");
+            if (flagUpdate.Right != null)
+                sb.AppendLine($"                uint _ri = {ri} & {allMask};");
+        }
+        else
+        {
+            sb.AppendLine($"                uint _r = {r};");
+            sb.AppendLine($"                uint _l = {l};");
+            if (flagUpdate.Right != null)
+                sb.AppendLine($"                uint _ri = {ri};");
+        }
+
+        // ZF: result is zero
+        sb.AppendLine("                ZF = _r == 0u;");
+
+        // SF: sign bit of result is set
+        sb.AppendLine($"                SF = (_r & {signBit}) != 0u;");
+
+        // CF
+        if (flagUpdate.UpdateCF)
+        {
+            var cfLine = flagUpdate.Operation switch
+            {
+                "ADD" => "                CF = _r < _l; // unsigned carry",
+                "SUB" => "                CF = _l < _ri; // unsigned borrow",
+                "NEG" => "                CF = _l != 0u; // non-zero source produces carry",
+                _     => "                CF = false; // AND/OR/XOR clear CF"
+            };
+            sb.AppendLine(cfLine);
+        }
+
+        // OF
+        if (flagUpdate.UpdateOF)
+        {
+            var ofLine = flagUpdate.Operation switch
+            {
+                "ADD" => $"                OF = ((~(_l ^ _ri) & (_l ^ _r)) & {signBit}) != 0u;",
+                "SUB" => $"                OF = (((_l ^ _ri) & (_l ^ _r)) & {signBit}) != 0u;",
+                "INC" => $"                OF = _l == {(size == 4 ? "0x7FFFFFFFu" : (size == 2 ? "0x7FFFu" : "0x7Fu"))};",
+                "DEC" => $"                OF = _l == {signBit};",
+                "NEG" => $"                OF = _l == {signBit}; // NEG of minimum signed value overflows",
+                _     => "                OF = false; // AND/OR/XOR clear OF"
+            };
+            sb.AppendLine(ofLine);
+        }
+
+        // PF: even parity of low byte
+        sb.AppendLine("                { var _pv = _r & 0xFFu; _pv ^= _pv >> 4; _pv ^= _pv >> 2; _pv ^= _pv >> 1; PF = (_pv & 1u) == 0u; }");
+
+        sb.Append("            }");
+        return sb.ToString();
+    }
+
     /// <summary>
     /// Check if the RTL block contains SIMD instructions
     /// </summary>
