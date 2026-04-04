@@ -40,11 +40,16 @@ public class RtlBinaryOp : RtlInstruction
 /// </summary>
 public class RtlBranch : RtlInstruction
 {
-    public RtlExpression Condition { get; set; } = null!;
+    /// <summary>Legacy direct-expression condition. Null when FlagCondition is used.</summary>
+    public RtlExpression? Condition { get; set; }
+    /// <summary>Flag-based condition. Takes precedence over Condition when not None.</summary>
+    public FlagCondition FlagCondition { get; set; } = FlagCondition.None;
     public int TargetOffset { get; set; }
     public uint TargetAddress { get; set; }
-    
-    public override string ToReadableString() => $"if ({Condition}) goto {TargetOffset:X}";
+
+    public override string ToReadableString() => FlagCondition != FlagCondition.None
+        ? $"if ({FlagCondition}) goto {TargetOffset:X}"
+        : $"if ({Condition}) goto {TargetOffset:X}";
 }
 
 /// <summary>
@@ -119,6 +124,64 @@ public class RtlStore : RtlInstruction
 public class RtlNop : RtlInstruction
 {
     public override string ToReadableString() => "nop";
+}
+
+/// <summary>
+/// Represents the CPU flag condition for a conditional branch or SETCC instruction.
+/// </summary>
+public enum FlagCondition
+{
+    None,
+    Equal,              // ZF=1  (JE/JZ/SETE)
+    NotEqual,           // ZF=0  (JNE/JNZ/SETNE)
+    Below,              // CF=1  (JB/JC/SETB)
+    AboveOrEqual,       // CF=0  (JAE/JNC/SETAE)
+    BelowOrEqual,       // CF=1 or ZF=1  (JBE/SETBE)
+    Above,              // CF=0 and ZF=0  (JA/SETA)
+    Sign,               // SF=1  (JS/SETS)
+    NotSign,            // SF=0  (JNS/SETNS)
+    Overflow,           // OF=1  (JO/SETO)
+    NotOverflow,        // OF=0  (JNO/SETNO)
+    Less,               // SF≠OF  (JL/SETL)
+    LessOrEqual,        // ZF=1 or SF≠OF  (JLE/SETLE)
+    Greater,            // ZF=0 and SF=OF  (JG/SETG)
+    GreaterOrEqual,     // SF=OF  (JGE/SETGE)
+    Parity,             // PF=1  (JP/SETP)
+    NotParity,          // PF=0  (JNP/SETNP)
+}
+
+/// <summary>
+/// Flag update: recomputes CPU flags (ZF, SF, CF, OF, PF) after an arithmetic or logical operation.
+/// </summary>
+public class RtlFlagUpdate : RtlInstruction
+{
+    /// <summary>Operation type: "ADD", "SUB", "AND", "OR", "XOR", "INC", "DEC", "NEG"</summary>
+    public string Operation { get; set; } = "";
+    /// <summary>Result of the operation (used for ZF, SF, PF).</summary>
+    public RtlExpression Result { get; set; } = null!;
+    /// <summary>Left (or only) operand before the operation (used for CF and OF computation).</summary>
+    public RtlExpression Left { get; set; } = null!;
+    /// <summary>Right operand. Null for unary operations such as INC, DEC, and NEG.</summary>
+    public RtlExpression? Right { get; set; }
+    /// <summary>Operand size in bytes (1, 2, or 4).</summary>
+    public int OperandSize { get; set; } = 4;
+    /// <summary>Whether to update the carry flag. False for INC/DEC which do not modify CF.</summary>
+    public bool UpdateCF { get; set; } = true;
+    /// <summary>Whether to update the overflow flag.</summary>
+    public bool UpdateOF { get; set; } = true;
+
+    public override string ToReadableString() => $"update_flags({Operation}, {Result})";
+}
+
+/// <summary>
+/// A reference to a CPU flag condition, evaluating to 1u when true and 0u when false.
+/// Used as the source expression for SETCC instructions.
+/// </summary>
+public class RtlFlagReference : RtlExpression
+{
+    public FlagCondition Condition { get; set; }
+
+    public override string ToString() => $"flag({Condition})";
 }
 
 /// <summary>

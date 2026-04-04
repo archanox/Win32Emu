@@ -163,6 +163,155 @@ public class RtlToCSharpGeneratorTests
 		Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
 	}
 
+	[Fact]
+	public void GenerateCSharpCode_ContainsFlagVariablesLoadedFromEflags()
+	{
+		var block = new RtlCodeBlock
+		{
+			StartAddress = 0x404000,
+			EndAddress = 0x404002,
+			BasicBlocks =
+			{
+				new RtlBasicBlock
+				{
+					StartAddress = 0x404000,
+					Instructions =
+					{
+						new RtlNop { Offset = 0x404000 }
+					}
+				}
+			}
+		};
+
+		var generator = new RtlToCSharpGenerator();
+		var code = generator.GenerateCSharpCode(block, "FlagTestClass", "Execute");
+
+		// Flag booleans must be declared and loaded from EFLAGS
+		Assert.Contains("uint EFLAGS = cpu.GetRegister(\"EFLAGS\");", code);
+		Assert.Contains("bool ZF = (EFLAGS & 0x40u) != 0;", code);
+		Assert.Contains("bool CF = (EFLAGS & 0x1u) != 0;", code);
+		Assert.Contains("bool SF = (EFLAGS & 0x80u) != 0;", code);
+		Assert.Contains("bool OF = (EFLAGS & 0x800u) != 0;", code);
+		Assert.Contains("bool PF = (EFLAGS & 0x4u) != 0;", code);
+
+		// EFLAGS must be saved back at the end of the block
+		Assert.Contains("cpu.SetRegister(\"EFLAGS\", EFLAGS);", code);
+	}
+
+	[Fact]
+	public void GenerateCSharpCode_ForFlagUpdate_GeneratesCorrectFlagCode()
+	{
+		var block = new RtlCodeBlock
+		{
+			StartAddress = 0x405000,
+			EndAddress = 0x405003,
+			BasicBlocks =
+			{
+				new RtlBasicBlock
+				{
+					StartAddress = 0x405000,
+					Instructions =
+					{
+						new RtlFlagUpdate
+						{
+							Offset = 0x405000,
+							Operation = "SUB",
+							Result = new RtlRegister { Name = "EAX" },
+							Left = new RtlTemporary { Id = 0 },
+							Right = new RtlRegister { Name = "EBX" },
+							OperandSize = 4
+						}
+					}
+				}
+			}
+		};
+		block.NextTemporaryId = 1;
+
+		var generator = new RtlToCSharpGenerator();
+		var code = generator.GenerateCSharpCode(block, "FlagUpdateClass", "Execute");
+
+		Assert.Contains("ZF = _r == 0u;", code);
+		Assert.Contains("SF =", code);
+		Assert.Contains("CF = _l < _ri;", code);  // borrow for SUB
+		Assert.Contains("OF =", code);
+
+		var diagnostics = CompileGeneratedCode(code);
+		var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+		Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
+	}
+
+	[Fact]
+	public void GenerateCSharpCode_ForFlagReference_GeneratesConditionalExpression()
+	{
+		var block = new RtlCodeBlock
+		{
+			StartAddress = 0x406000,
+			EndAddress = 0x406002,
+			BasicBlocks =
+			{
+				new RtlBasicBlock
+				{
+					StartAddress = 0x406000,
+					Instructions =
+					{
+						new RtlAssignment
+						{
+							Offset = 0x406000,
+							Destination = new RtlRegister { Name = "AL" },
+							Source = new RtlFlagReference { Condition = FlagCondition.Equal }
+						}
+					}
+				}
+			}
+		};
+
+		var generator = new RtlToCSharpGenerator();
+		var code = generator.GenerateCSharpCode(block, "FlagRefClass", "Execute");
+
+		// SETE AL should emit (ZF ? 1u : 0u)
+		Assert.Contains("ZF ? 1u : 0u", code);
+
+		var diagnostics = CompileGeneratedCode(code);
+		var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+		Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
+	}
+
+	[Fact]
+	public void GenerateCSharpCode_ForFlagConditionBranch_GeneratesCorrectCondition()
+	{
+		var block = new RtlCodeBlock
+		{
+			StartAddress = 0x407000,
+			EndAddress = 0x407010,
+			BasicBlocks =
+			{
+				new RtlBasicBlock
+				{
+					StartAddress = 0x407000,
+					Instructions =
+					{
+						new RtlBranch
+						{
+							Offset = 0x407000,
+							FlagCondition = FlagCondition.Less,
+							TargetOffset = 0x407020  // outside the block → triggers register save + return
+						}
+					}
+				}
+			}
+		};
+
+		var generator = new RtlToCSharpGenerator();
+		var code = generator.GenerateCSharpCode(block, "BranchFlagClass", "Execute");
+
+		// JL should check (SF != OF)
+		Assert.Contains("(SF != OF)", code);
+
+		var diagnostics = CompileGeneratedCode(code);
+		var errors = diagnostics.Where(d => d.Severity == DiagnosticSeverity.Error).ToList();
+		Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
+	}
+
 	private static ImmutableArray<Diagnostic> CompileGeneratedCode(string code)
 	{
 		var syntaxTree = CSharpSyntaxTree.ParseText(code);

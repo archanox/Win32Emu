@@ -216,9 +216,13 @@ public class X86ToRtlConverterTests
 		Assert.Single(result.BasicBlocks);
 		var block = result.BasicBlocks[0];
 
-		Assert.Single(block.Instructions);
-		var binOp = Assert.IsType<RtlBinaryOp>(block.Instructions[0]);
-		Assert.Equal(">>", binOp.Operator);
+		// SAR generates several helper operations to produce a sign-extended shift.
+		// Verify that at least one RtlBinaryOp with ">>" is present.
+		Assert.True(block.Instructions.Count > 0);
+		var hasRightShift = block.Instructions
+			.OfType<RtlBinaryOp>()
+			.Any(op => op.Operator == ">>");
+		Assert.True(hasRightShift, "Expected at least one right-shift (>>) operation in SAR output");
 	}
 
 	[Fact]
@@ -262,9 +266,9 @@ public class X86ToRtlConverterTests
 
 		Assert.Single(block.Instructions);
 		var assignment = Assert.IsType<RtlAssignment>(block.Instructions[0]);
-		// Simplified implementation always sets to 0
-		var constant = Assert.IsType<RtlConstant>(assignment.Source);
-		Assert.Equal(0u, constant.Value);
+		// SETE should emit a RtlFlagReference with Equal condition
+		var flagRef = Assert.IsType<RtlFlagReference>(assignment.Source);
+		Assert.Equal(FlagCondition.Equal, flagRef.Condition);
 	}
 
 	[Fact]
@@ -332,5 +336,124 @@ public class X86ToRtlConverterTests
 		var assignment = Assert.IsType<RtlAssignment>(block.Instructions[0]);
 		var dest = Assert.IsType<RtlRegister>(assignment.Destination);
 		Assert.Equal("EAX", dest.Name);
+	}
+
+	[Fact]
+	public void Convert_CmpInstruction_EmitsFlagUpdate()
+	{
+		// Arrange
+		var converter = new X86ToRtlConverter();
+		var instruction = Instruction.Create(Code.Cmp_rm32_r32, Register.EAX, Register.EBX);
+		instruction.IP = 0x401000;
+		instruction.NextIP = 0x401002;
+
+		// Act
+		var result = converter.Convert(0x401000, [instruction]);
+
+		// Assert
+		Assert.Single(result.BasicBlocks);
+		var block = result.BasicBlocks[0];
+
+		// CMP should emit: temp = left - right, then RtlFlagUpdate(SUB)
+		Assert.Equal(2, block.Instructions.Count);
+		Assert.IsType<RtlBinaryOp>(block.Instructions[0]);
+		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[1]);
+		Assert.Equal("SUB", flagUpdate.Operation);
+		Assert.True(flagUpdate.UpdateCF);
+		Assert.True(flagUpdate.UpdateOF);
+	}
+
+	[Fact]
+	public void Convert_TestInstruction_EmitsFlagUpdateWithoutCfOf()
+	{
+		// Arrange
+		var converter = new X86ToRtlConverter();
+		var instruction = Instruction.Create(Code.Test_rm32_r32, Register.EAX, Register.EBX);
+		instruction.IP = 0x401000;
+		instruction.NextIP = 0x401002;
+
+		// Act
+		var result = converter.Convert(0x401000, [instruction]);
+
+		// Assert
+		Assert.Single(result.BasicBlocks);
+		var block = result.BasicBlocks[0];
+
+		// TEST should emit: temp = left & right, then RtlFlagUpdate(AND, UpdateCF=false, UpdateOF=false)
+		Assert.Equal(2, block.Instructions.Count);
+		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[1]);
+		Assert.Equal("AND", flagUpdate.Operation);
+		Assert.False(flagUpdate.UpdateCF);
+		Assert.False(flagUpdate.UpdateOF);
+	}
+
+	[Fact]
+	public void Convert_AddInstruction_EmitsFlagUpdate()
+	{
+		// Arrange
+		var converter = new X86ToRtlConverter();
+		var instruction = Instruction.Create(Code.Add_rm32_r32, Register.EAX, Register.EBX);
+		instruction.IP = 0x401000;
+		instruction.NextIP = 0x401002;
+
+		// Act
+		var result = converter.Convert(0x401000, [instruction]);
+
+		// Assert
+		Assert.Single(result.BasicBlocks);
+		var block = result.BasicBlocks[0];
+
+		// ADD: save orig left, add, flag-update
+		Assert.Equal(3, block.Instructions.Count);
+		Assert.IsType<RtlAssignment>(block.Instructions[0]);  // save original
+		Assert.IsType<RtlBinaryOp>(block.Instructions[1]);    // add
+		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[2]);
+		Assert.Equal("ADD", flagUpdate.Operation);
+		Assert.True(flagUpdate.UpdateCF);
+		Assert.True(flagUpdate.UpdateOF);
+	}
+
+	[Fact]
+	public void Convert_IncInstruction_EmitsFlagUpdateWithoutCf()
+	{
+		// Arrange
+		var converter = new X86ToRtlConverter();
+		var instruction = Instruction.Create(Code.Inc_r32, Register.EAX);
+		instruction.IP = 0x401000;
+		instruction.NextIP = 0x401001;
+
+		// Act
+		var result = converter.Convert(0x401000, [instruction]);
+
+		// Assert
+		Assert.Single(result.BasicBlocks);
+		var block = result.BasicBlocks[0];
+
+		// INC: save orig, inc, flag-update (no CF)
+		Assert.Equal(3, block.Instructions.Count);
+		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[2]);
+		Assert.Equal("INC", flagUpdate.Operation);
+		Assert.False(flagUpdate.UpdateCF);
+	}
+
+	[Fact]
+	public void Convert_ConditionalJump_UsesFlagCondition()
+	{
+		// Arrange
+		var converter = new X86ToRtlConverter();
+		var instruction = Instruction.CreateBranch(Code.Je_rel32_32, 0x401010);
+		instruction.IP = 0x401000;
+		instruction.NextIP = 0x401006;
+
+		// Act
+		var result = converter.Convert(0x401000, [instruction]);
+
+		// Assert – JE should produce a branch with FlagCondition.Equal
+		Assert.Single(result.BasicBlocks);
+		var block = result.BasicBlocks[0];
+		Assert.Single(block.Instructions);
+		var branch = Assert.IsType<RtlBranch>(block.Instructions[0]);
+		Assert.Equal(FlagCondition.Equal, branch.FlagCondition);
+		Assert.Null(branch.Condition);
 	}
 }
