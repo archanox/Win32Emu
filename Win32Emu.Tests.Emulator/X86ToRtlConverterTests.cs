@@ -358,13 +358,13 @@ public class X86ToRtlConverterTests
 		Assert.Equal(2, block.Instructions.Count);
 		Assert.IsType<RtlBinaryOp>(block.Instructions[0]);
 		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[1]);
-		Assert.Equal("SUB", flagUpdate.Operation);
+		Assert.Equal(FlagUpdateOperation.Sub, flagUpdate.Operation);
 		Assert.True(flagUpdate.UpdateCF);
 		Assert.True(flagUpdate.UpdateOF);
 	}
 
 	[Fact]
-	public void Convert_TestInstruction_EmitsFlagUpdateWithoutCfOf()
+	public void Convert_TestInstruction_EmitsFlagUpdateThatClearsCfAndOf()
 	{
 		// Arrange
 		var converter = new X86ToRtlConverter();
@@ -379,12 +379,13 @@ public class X86ToRtlConverterTests
 		Assert.Single(result.BasicBlocks);
 		var block = result.BasicBlocks[0];
 
-		// TEST should emit: temp = left & right, then RtlFlagUpdate(AND, UpdateCF=false, UpdateOF=false)
+		// TEST should emit: temp = left & right, then RtlFlagUpdate(AND)
+		// CF and OF must be UPDATED (cleared to 0) per x86 spec, not preserved.
 		Assert.Equal(2, block.Instructions.Count);
 		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[1]);
-		Assert.Equal("AND", flagUpdate.Operation);
-		Assert.False(flagUpdate.UpdateCF);
-		Assert.False(flagUpdate.UpdateOF);
+		Assert.Equal(FlagUpdateOperation.And, flagUpdate.Operation);
+		Assert.True(flagUpdate.UpdateCF, "TEST must update (clear) CF");
+		Assert.True(flagUpdate.UpdateOF, "TEST must update (clear) OF");
 	}
 
 	[Fact]
@@ -408,7 +409,7 @@ public class X86ToRtlConverterTests
 		Assert.IsType<RtlAssignment>(block.Instructions[0]);  // save original
 		Assert.IsType<RtlBinaryOp>(block.Instructions[1]);    // add
 		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[2]);
-		Assert.Equal("ADD", flagUpdate.Operation);
+		Assert.Equal(FlagUpdateOperation.Add, flagUpdate.Operation);
 		Assert.True(flagUpdate.UpdateCF);
 		Assert.True(flagUpdate.UpdateOF);
 	}
@@ -432,7 +433,7 @@ public class X86ToRtlConverterTests
 		// INC: save orig, inc, flag-update (no CF)
 		Assert.Equal(3, block.Instructions.Count);
 		var flagUpdate = Assert.IsType<RtlFlagUpdate>(block.Instructions[2]);
-		Assert.Equal("INC", flagUpdate.Operation);
+		Assert.Equal(FlagUpdateOperation.Inc, flagUpdate.Operation);
 		Assert.False(flagUpdate.UpdateCF);
 	}
 

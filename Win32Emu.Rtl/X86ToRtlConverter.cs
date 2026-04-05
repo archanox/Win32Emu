@@ -101,7 +101,7 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "ADD",
+                    Operation = FlagUpdateOperation.Add,
                     Result = dest,
                     Left = tempLeft,
                     Right = right,
@@ -133,7 +133,7 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "SUB",
+                    Operation = FlagUpdateOperation.Sub,
                     Result = dest,
                     Left = tempLeft,
                     Right = right,
@@ -158,13 +158,11 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "AND",
+                    Operation = FlagUpdateOperation.And,
                     Result = dest,
                     Left = dest,
                     Right = right,
-                    OperandSize = size,
-                    UpdateCF = false,
-                    UpdateOF = false
+                    OperandSize = size
                 });
                 break;
             }
@@ -185,13 +183,11 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "OR",
+                    Operation = FlagUpdateOperation.Or,
                     Result = dest,
                     Left = dest,
                     Right = right,
-                    OperandSize = size,
-                    UpdateCF = false,
-                    UpdateOF = false
+                    OperandSize = size
                 });
                 break;
             }
@@ -212,13 +208,11 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "XOR",
+                    Operation = FlagUpdateOperation.Xor,
                     Result = dest,
                     Left = dest,
                     Right = right,
-                    OperandSize = size,
-                    UpdateCF = false,
-                    UpdateOF = false
+                    OperandSize = size
                 });
                 break;
             }
@@ -249,7 +243,7 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "SUB",
+                    Operation = FlagUpdateOperation.Sub,
                     Result = temp,
                     Left = left,
                     Right = right,
@@ -276,13 +270,11 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "AND",
+                    Operation = FlagUpdateOperation.And,
                     Result = temp,
                     Left = left,
                     Right = right,
-                    OperandSize = size,
-                    UpdateCF = false,
-                    UpdateOF = false
+                    OperandSize = size
                 });
                 break;
             }
@@ -403,7 +395,7 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "INC",
+                    Operation = FlagUpdateOperation.Inc,
                     Result = operand,
                     Left = tempOrig,
                     OperandSize = size,
@@ -435,7 +427,7 @@ public class X86ToRtlConverter
                 results.Add(new RtlFlagUpdate
                 {
                     Offset = (int)insn.IP,
-                    Operation = "DEC",
+                    Operation = FlagUpdateOperation.Dec,
                     Result = operand,
                     Left = tempOrig,
                     OperandSize = size,
@@ -507,7 +499,7 @@ public class X86ToRtlConverter
                     results.Add(new RtlFlagUpdate
                     {
                         Offset = (int)insn.IP,
-                        Operation = "NEG",
+                        Operation = FlagUpdateOperation.Neg,
                         Result = operand,
                         Left = tempOrig,
                         OperandSize = size
@@ -543,33 +535,7 @@ public class X86ToRtlConverter
                 results.Add(new RtlNop { Offset = (int)insn.IP });
                 break;
                 
-            // SETO - Set byte on overflow
-            case Mnemonic.Seto:
-            {
-                var flagRef = new RtlFlagReference { Condition = FlagCondition.Overflow };
-                var destKind = insn.GetOpKind(0);
-
-                if (destKind == OpKind.Memory)
-                {
-                    results.Add(new RtlStore
-                    {
-                        Offset = (int)insn.IP,
-                        Address = GetMemoryAddressExpression(insn),
-                        Value = flagRef,
-                        Size = 1
-                    });
-                }
-                else
-                {
-                    results.Add(new RtlAssignment
-                    {
-                        Offset = (int)insn.IP,
-                        Destination = GetOperandExpression(insn, 0, block),
-                        Source = flagRef
-                    });
-                }
-                break;
-            }
+            // SETO - Set byte on overflow (handled by the combined SETCC block below)
                 
             // XADD - Exchange and Add
             // TEMP = DEST; DEST = DEST + SRC; SRC = TEMP
@@ -1389,6 +1355,8 @@ public class X86ToRtlConverter
             case Mnemonic.Setns:
             case Mnemonic.Setp:
             case Mnemonic.Setnp:
+            case Mnemonic.Setno:
+            case Mnemonic.Seto:
                 {
                     var flagRef = new RtlFlagReference { Condition = GetFlagConditionForSetcc(insn.Mnemonic) };
                     var destKind = insn.GetOpKind(0);
@@ -1721,6 +1689,7 @@ public class X86ToRtlConverter
             Mnemonic.Setb  => FlagCondition.Below,
             Mnemonic.Setbe => FlagCondition.BelowOrEqual,
             Mnemonic.Seto  => FlagCondition.Overflow,
+            Mnemonic.Setno => FlagCondition.NotOverflow,
             Mnemonic.Sets  => FlagCondition.Sign,
             Mnemonic.Setns => FlagCondition.NotSign,
             Mnemonic.Setp  => FlagCondition.Parity,

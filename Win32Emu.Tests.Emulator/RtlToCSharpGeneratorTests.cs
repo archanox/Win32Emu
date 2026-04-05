@@ -215,7 +215,7 @@ public class RtlToCSharpGeneratorTests
 						new RtlFlagUpdate
 						{
 							Offset = 0x405000,
-							Operation = "SUB",
+							Operation = FlagUpdateOperation.Sub,
 							Result = new RtlRegister { Name = "EAX" },
 							Left = new RtlTemporary { Id = 0 },
 							Right = new RtlRegister { Name = "EBX" },
