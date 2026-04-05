@@ -151,12 +151,29 @@ public enum FlagCondition
 }
 
 /// <summary>
+/// Identifies the arithmetic or logical operation that produced the flag-relevant result.
+/// Using an enum instead of a free-form string makes the IR type-safe and avoids silent
+/// miscompilations from typos.
+/// </summary>
+public enum FlagUpdateOperation
+{
+    Add,
+    Sub,
+    And,
+    Or,
+    Xor,
+    Inc,
+    Dec,
+    Neg,
+}
+
+/// <summary>
 /// Flag update: recomputes CPU flags (ZF, SF, CF, OF, PF) after an arithmetic or logical operation.
 /// </summary>
 public class RtlFlagUpdate : RtlInstruction
 {
-    /// <summary>Operation type: "ADD", "SUB", "AND", "OR", "XOR", "INC", "DEC", "NEG"</summary>
-    public string Operation { get; set; } = "";
+    /// <summary>Operation type.</summary>
+    public FlagUpdateOperation Operation { get; set; }
     /// <summary>Result of the operation (used for ZF, SF, PF).</summary>
     public RtlExpression Result { get; set; } = null!;
     /// <summary>Left (or only) operand before the operation (used for CF and OF computation).</summary>

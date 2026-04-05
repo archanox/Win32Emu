@@ -516,8 +516,14 @@ public class RtlToCSharpGenerator
         var ri = flagUpdate.Right != null ? ExpressionToString(flagUpdate.Right) : "0u";
 
         var size = flagUpdate.OperandSize;
-        var signBit = size == 4 ? "0x80000000u" : (size == 2 ? "0x8000u" : "0x80u");
-        var allMask = size == 4 ? "0xFFFFFFFFu" : (size == 2 ? "0xFFFFu" : "0xFFu");
+        var (signBit, allMask) = size switch
+        {
+            4 => ("0x80000000u", "0xFFFFFFFFu"),
+            2 => ("0x8000u",     "0xFFFFu"),
+            1 => ("0x80u",       "0xFFu"),
+            _ => throw new ArgumentOutOfRangeException(nameof(flagUpdate), size,
+                     "Only operand sizes 1, 2, and 4 are supported for flag generation.")
+        };
 
         var sb = new StringBuilder();
         sb.AppendLine($"{{ // Flag update: {flagUpdate.Operation} @0x{flagUpdate.Offset:X}");
@@ -549,10 +555,10 @@ public class RtlToCSharpGenerator
         {
             var cfLine = flagUpdate.Operation switch
             {
-                "ADD" => "                CF = _r < _l; // unsigned carry",
-                "SUB" => "                CF = _l < _ri; // unsigned borrow",
-                "NEG" => "                CF = _l != 0u; // non-zero source produces carry",
-                _     => "                CF = false; // AND/OR/XOR clear CF"
+                FlagUpdateOperation.Add => "                CF = _r < _l; // unsigned carry",
+                FlagUpdateOperation.Sub => "                CF = _l < _ri; // unsigned borrow",
+                FlagUpdateOperation.Neg => "                CF = _l != 0u; // non-zero source produces carry",
+                _                       => "                CF = false; // AND/OR/XOR clear CF"
             };
             sb.AppendLine(cfLine);
         }
@@ -560,14 +566,15 @@ public class RtlToCSharpGenerator
         // OF
         if (flagUpdate.UpdateOF)
         {
+            var maxSigned = size == 4 ? "0x7FFFFFFFu" : (size == 2 ? "0x7FFFu" : "0x7Fu");
             var ofLine = flagUpdate.Operation switch
             {
-                "ADD" => $"                OF = ((~(_l ^ _ri) & (_l ^ _r)) & {signBit}) != 0u;",
-                "SUB" => $"                OF = (((_l ^ _ri) & (_l ^ _r)) & {signBit}) != 0u;",
-                "INC" => $"                OF = _l == {(size == 4 ? "0x7FFFFFFFu" : (size == 2 ? "0x7FFFu" : "0x7Fu"))};",
-                "DEC" => $"                OF = _l == {signBit};",
-                "NEG" => $"                OF = _l == {signBit}; // NEG of minimum signed value overflows",
-                _     => "                OF = false; // AND/OR/XOR clear OF"
+                FlagUpdateOperation.Add => $"                OF = ((~(_l ^ _ri) & (_l ^ _r)) & {signBit}) != 0u;",
+                FlagUpdateOperation.Sub => $"                OF = (((_l ^ _ri) & (_l ^ _r)) & {signBit}) != 0u;",
+                FlagUpdateOperation.Inc => $"                OF = _l == {maxSigned};",
+                FlagUpdateOperation.Dec => $"                OF = _l == {signBit};",
+                FlagUpdateOperation.Neg => $"                OF = _l == {signBit}; // NEG of minimum signed value overflows",
+                _                       => "                OF = false; // AND/OR/XOR clear OF"
             };
             sb.AppendLine(ofLine);
         }
