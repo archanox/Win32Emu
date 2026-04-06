@@ -133,7 +133,14 @@ public class RtlToCSharpGenerator
             RtlCall call => GenerateCall(call),
             RtlReturn ret => GenerateReturn(ret),
             RtlLoad load => GenerateLoad(load),
-            RtlStore store => $"mem.Write{store.Size * 8}({ExpressionToString(store.Address)}, {ExpressionToString(store.Value)});",
+            RtlStore store => store.Size switch
+            {
+                1 => $"mem.Write8((ulong)({ExpressionToString(store.Address)}), (byte)({ExpressionToString(store.Value)}));",
+                2 => $"mem.Write16((ulong)({ExpressionToString(store.Address)}), (ushort)({ExpressionToString(store.Value)}));",
+                4 => $"mem.Write32((ulong)({ExpressionToString(store.Address)}), (uint)({ExpressionToString(store.Value)}));",
+                8 => $"mem.Write64((ulong)({ExpressionToString(store.Address)}), (ulong)({ExpressionToString(store.Value)}));",
+                _ => $"/* ERROR: unsupported store size {store.Size} */"
+            },
             RtlSimdOp simd => GenerateSimdOperation(simd),
             RtlFlagUpdate flagUpdate => GenerateFlagUpdate(flagUpdate),
             RtlNop => "// nop",
@@ -206,7 +213,7 @@ public class RtlToCSharpGenerator
     {
         return GenerateDestinationAssignment(
             load.Destination,
-            $"mem.Read{load.Size * 8}({ExpressionToString(load.Address)})"
+            $"mem.Read{load.Size * 8}((ulong)({ExpressionToString(load.Address)}))"
         );
     }
 
@@ -275,7 +282,7 @@ public class RtlToCSharpGenerator
         sb.AppendLine($"                uint returnAddr = 0x{call.ReturnAddress:X8}u;");
         sb.AppendLine("                // Push return address");
         sb.AppendLine("                ESP -= 4;");
-        sb.AppendLine("                mem.Write32(ESP, returnAddr);");
+        sb.AppendLine("                mem.Write32((ulong)ESP, returnAddr);");
         sb.AppendLine("                cpu.SetRegister(\"ESP\", ESP);");
         sb.AppendLine("                // Set EIP to call target");
         sb.AppendLine("                cpu.SetEip(callTarget);");
@@ -296,7 +303,7 @@ public class RtlToCSharpGenerator
 		var sb = new StringBuilder();
 		// For multi-line blocks, include offset on the opening line instead of closing brace
 		sb.AppendLine($"{{ // RET instruction @0x{ret.Offset:X}");
-		sb.AppendLine("                uint retAddr = mem.Read32(ESP);");
+		sb.AppendLine("                uint retAddr = mem.Read32((ulong)ESP);");
 		sb.AppendLine("                ESP += 4;");
 		if (ret.StackCleanup > 0)
 		{
@@ -622,10 +629,10 @@ public class RtlToCSharpGenerator
         sb.AppendLine($"                var vecAddr = {baseAddr};");
         
         // For 4x uint32, we need to load 16 bytes
-        sb.AppendLine($"                var v1_0 = mem.Read32(vecAddr);");
-        sb.AppendLine($"                var v1_1 = mem.Read32(vecAddr + 4);");
-        sb.AppendLine($"                var v1_2 = mem.Read32(vecAddr + 8);");
-        sb.AppendLine($"                var v1_3 = mem.Read32(vecAddr + 12);");
+        sb.AppendLine($"                var v1_0 = mem.Read32((ulong)vecAddr);");
+        sb.AppendLine($"                var v1_1 = mem.Read32((ulong)vecAddr + 4);");
+        sb.AppendLine($"                var v1_2 = mem.Read32((ulong)vecAddr + 8);");
+        sb.AppendLine($"                var v1_3 = mem.Read32((ulong)vecAddr + 12);");
         sb.AppendLine($"                var vector1 = Vector128.Create(v1_0, v1_1, v1_2, v1_3);");
         
         // Generate operand2 (either vector or scalar to broadcast)
@@ -669,10 +676,10 @@ public class RtlToCSharpGenerator
         if (simd.IsStore)
         {
             sb.AppendLine($"                // Store vector result to memory");
-            sb.AppendLine($"                mem.Write32(vecAddr, result.GetElement(0));");
-            sb.AppendLine($"                mem.Write32(vecAddr + 4, result.GetElement(1));");
-            sb.AppendLine($"                mem.Write32(vecAddr + 8, result.GetElement(2));");
-            sb.AppendLine($"                mem.Write32(vecAddr + 12, result.GetElement(3));");
+            sb.AppendLine($"                mem.Write32((ulong)vecAddr, result.GetElement(0));");
+            sb.AppendLine($"                mem.Write32((ulong)vecAddr + 4, result.GetElement(1));");
+            sb.AppendLine($"                mem.Write32((ulong)vecAddr + 8, result.GetElement(2));");
+            sb.AppendLine($"                mem.Write32((ulong)vecAddr + 12, result.GetElement(3));");
         }
         
         sb.Append("            }");

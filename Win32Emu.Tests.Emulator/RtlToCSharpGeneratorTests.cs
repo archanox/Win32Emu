@@ -312,6 +312,106 @@ public class RtlToCSharpGeneratorTests
 		Assert.True(errors.Count == 0, string.Join(Environment.NewLine, errors));
 	}
 
+	[Fact]
+	public void GenerateCSharpCode_ForStore_CastsAddressAndValue()
+	{
+		var block = new RtlCodeBlock
+		{
+			StartAddress = 0x408000,
+			EndAddress = 0x408004,
+			BasicBlocks =
+			{
+				new RtlBasicBlock
+				{
+					StartAddress = 0x408000,
+					Instructions =
+					{
+						// MOV BYTE PTR [EAX], CL  (size=1 store)
+						new RtlStore
+						{
+							Offset = 0x408000,
+							Address = new RtlRegister { Name = "EAX" },
+							Value = new RtlRegister { Name = "CL" },
+							Size = 1
+						},
+						// MOV WORD PTR [EBX], DX  (size=2 store)
+						new RtlStore
+						{
+							Offset = 0x408002,
+							Address = new RtlRegister { Name = "EBX" },
+							Value = new RtlRegister { Name = "DX" },
+							Size = 2
+						},
+						// MOV DWORD PTR [ECX], EDX  (size=4 store)
+						new RtlStore
+						{
+							Offset = 0x408003,
+							Address = new RtlRegister { Name = "ECX" },
+							Value = new RtlRegister { Name = "EDX" },
+							Size = 4
+						}
+					}
+				}
+			}
+		};
+
+		var generator = new RtlToCSharpGenerator();
+		var code = generator.GenerateCSharpCode(block, "StoreTestClass", "Execute");
+
+		// Address must be cast to ulong
+		Assert.Contains("mem.Write8((ulong)(", code);
+		Assert.Contains("mem.Write16((ulong)(", code);
+		Assert.Contains("mem.Write32((ulong)(", code);
+
+		// Value must be narrowed to the correct integer type
+		Assert.Contains("), (byte)(", code);
+		Assert.Contains("), (ushort)(", code);
+		Assert.Contains("), (uint)(", code);
+	}
+
+	[Fact]
+	public void GenerateCSharpCode_ForLoad_CastsAddress()
+	{
+		var block = new RtlCodeBlock
+		{
+			StartAddress = 0x409000,
+			EndAddress = 0x409004,
+			BasicBlocks =
+			{
+				new RtlBasicBlock
+				{
+					StartAddress = 0x409000,
+					Instructions =
+					{
+						// MOV AL, BYTE PTR [EAX]
+						new RtlLoad
+						{
+							Offset = 0x409000,
+							Destination = new RtlRegister { Name = "AL" },
+							Address = new RtlRegister { Name = "EAX" },
+							Size = 1
+						},
+						// MOV EBX, DWORD PTR [ECX]
+						new RtlLoad
+						{
+							Offset = 0x409002,
+							Destination = new RtlRegister { Name = "EBX" },
+							Address = new RtlRegister { Name = "ECX" },
+							Size = 4
+						}
+					}
+				}
+			}
+		};
+
+		var generator = new RtlToCSharpGenerator();
+		var code = generator.GenerateCSharpCode(block, "LoadTestClass", "Execute");
+
+		// Address must be cast to ulong for both Read8 and Read32
+		Assert.Contains("mem.Read8((ulong)(", code);
+		Assert.Contains("mem.Read32((ulong)(", code);
+	}
+
 	private static ImmutableArray<Diagnostic> CompileGeneratedCode(string code)
 	{
 		var syntaxTree = CSharpSyntaxTree.ParseText(code);
