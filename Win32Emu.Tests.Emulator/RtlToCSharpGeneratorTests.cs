@@ -358,15 +358,10 @@ public class RtlToCSharpGeneratorTests
 		var generator = new RtlToCSharpGenerator();
 		var code = generator.GenerateCSharpCode(block, "StoreTestClass", "Execute");
 
-		// Address must be cast to ulong
-		Assert.Contains("mem.Write8((ulong)(", code);
-		Assert.Contains("mem.Write16((ulong)(", code);
-		Assert.Contains("mem.Write32((ulong)(", code);
-
-		// Value must be narrowed to the correct integer type
-		Assert.Contains("), (byte)(", code);
-		Assert.Contains("), (ushort)(", code);
-		Assert.Contains("), (uint)(", code);
+		// Address must be cast to ulong with the correct register
+		Assert.Contains("mem.Write8((ulong)(EAX), (byte)(", code);
+		Assert.Contains("mem.Write16((ulong)(EBX), (ushort)(", code);
+		Assert.Contains("mem.Write32((ulong)(ECX), (uint)(EDX))", code);
 	}
 
 	[Fact]
@@ -407,9 +402,9 @@ public class RtlToCSharpGeneratorTests
 		var generator = new RtlToCSharpGenerator();
 		var code = generator.GenerateCSharpCode(block, "LoadTestClass", "Execute");
 
-		// Address must be cast to ulong for both Read8 and Read32
-		Assert.Contains("mem.Read8((ulong)(", code);
-		Assert.Contains("mem.Read32((ulong)(", code);
+		// Address must be cast to ulong with the correct register
+		Assert.Contains("mem.Read8((ulong)(EAX))", code);
+		Assert.Contains("mem.Read32((ulong)(ECX))", code);
 	}
 
 	private static ImmutableArray<Diagnostic> CompileGeneratedCode(string code)
