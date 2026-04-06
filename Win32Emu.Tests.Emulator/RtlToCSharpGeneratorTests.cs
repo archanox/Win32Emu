@@ -362,6 +362,9 @@ public class RtlToCSharpGeneratorTests
 		Assert.Contains("mem.Write8((ulong)(EAX), (byte)(", code);
 		Assert.Contains("mem.Write16((ulong)(EBX), (ushort)(", code);
 		Assert.Contains("mem.Write32((ulong)(ECX), (uint)(EDX))", code);
+
+		var diagnostics = CompileGeneratedCode(code);
+		Assert.DoesNotContain(diagnostics, static d => d.Severity == DiagnosticSeverity.Error);
 	}
 
 	[Fact]
@@ -405,6 +408,9 @@ public class RtlToCSharpGeneratorTests
 		// Address must be cast to ulong with the correct register
 		Assert.Contains("mem.Read8((ulong)(EAX))", code);
 		Assert.Contains("mem.Read32((ulong)(ECX))", code);
+
+		var diagnostics = CompileGeneratedCode(code);
+		Assert.DoesNotContain(diagnostics, static d => d.Severity == DiagnosticSeverity.Error);
 	}
 
 	private static ImmutableArray<Diagnostic> CompileGeneratedCode(string code)
