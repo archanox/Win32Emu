@@ -139,7 +139,8 @@ public class RtlToCSharpGenerator
                 2 => $"mem.Write16((ulong)({ExpressionToString(store.Address)}), (ushort)({ExpressionToString(store.Value)}));",
                 4 => $"mem.Write32((ulong)({ExpressionToString(store.Address)}), (uint)({ExpressionToString(store.Value)}));",
                 8 => $"mem.Write64((ulong)({ExpressionToString(store.Address)}), (ulong)({ExpressionToString(store.Value)}));",
-                _ => $"/* ERROR: unsupported store size {store.Size} */"
+                _ => throw new ArgumentOutOfRangeException(nameof(store), store.Size,
+                    "Only store sizes 1, 2, 4, and 8 are supported.")
             },
             RtlSimdOp simd => GenerateSimdOperation(simd),
             RtlFlagUpdate flagUpdate => GenerateFlagUpdate(flagUpdate),
