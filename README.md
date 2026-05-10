@@ -424,4 +424,3 @@ dotnet run --project Win32Emu.Tools.PeAnalyzer \
 - Calculates overall compatibility percentage
 
 For more information, see [Win32Emu.Tools.PeAnalyzer/README.md](Win32Emu.Tools.PeAnalyzer/README.md).
-
