@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="8.0.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.6.0" />
     <PackageReference Include="PeNet" Version="6.0.0" />
     <PackageReference Include="SharpMetal" Version="1.1.0" />
     <PackageReference Include="UnicornEngine.Unicorn" Version="2.1.4-a40db6c" />
