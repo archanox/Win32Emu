@@ -1535,6 +1535,11 @@ namespace Win32Emu.Win32.Modules
 				{
 					var temp = memory.GetSpan(pvAudioPtr1, bytesToCopy1);
 					Buffer.BlockCopy(temp, 0, buffer.Data, (int)offset, bytesToCopy1);
+
+					if (buffer.IsPlaying && buffer.AudioStreamId != 0 && _env.AudioBackend != null)
+					{
+						_env.AudioBackend.WriteAudioData(buffer.AudioStreamId, buffer.Data, (int)offset, bytesToCopy1);
+					}
 				}
 			}
 
@@ -1546,6 +1551,11 @@ namespace Win32Emu.Win32.Modules
 				{
 					var temp = memory.GetSpan(pvAudioPtr2, bytesToCopy2);
 					temp.CopyTo(new Span<byte>(buffer.Data, 0, bytesToCopy2));
+
+					if (buffer.IsPlaying && buffer.AudioStreamId != 0 && _env.AudioBackend != null)
+					{
+						_env.AudioBackend.WriteAudioData(buffer.AudioStreamId, buffer.Data, 0, bytesToCopy2);
+					}
 				}
 			}
 

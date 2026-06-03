@@ -25,6 +25,7 @@ internal static class WindowMessages
 	public const uint WM_CREATE = 0x0001;
 	public const uint WM_SIZE = 0x0005;
 	public const uint WM_MOVE = 0x0003;
+	public const uint WM_ACTIVATEAPP = 0x001C;
 }
 
 public class ProcessEnvironment
@@ -2305,6 +2306,11 @@ public class ProcessEnvironment
 		SendMessageToWindow(handle, WindowMessages.WM_MOVE, 0, moveParam);
 		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
 
+		// Send WM_ACTIVATEAPP message to the window
+		// WM_ACTIVATEAPP = 0x001C, wParam = 1 (TRUE), lParam = 0
+		SendMessageToWindow(handle, WindowMessages.WM_ACTIVATEAPP, 1, 0);
+		_logger.LogDebug("[ProcessEnv] Sent WM_ACTIVATEAPP to window 0x{Handle:X8}", handle);
+
 		return handle;
 	}
 	
@@ -2366,6 +2372,11 @@ public class ProcessEnvironment
 		uint moveParam = ((uint)y << 16) | ((uint)x & 0xFFFF);
 		await SendMessageToWindowAsync(handle, WindowMessages.WM_MOVE, 0, moveParam, cancellationToken).ConfigureAwait(false);
 		_logger.LogDebug("[ProcessEnv] Sent WM_MOVE to window 0x{Handle:X8} (x={X}, y={Y})", handle, x, y);
+
+		// Send WM_ACTIVATEAPP message
+		// WM_ACTIVATEAPP = 0x001C, wParam = 1 (TRUE), lParam = 0
+		await SendMessageToWindowAsync(handle, WindowMessages.WM_ACTIVATEAPP, 1, 0, cancellationToken).ConfigureAwait(false);
+		_logger.LogDebug("[ProcessEnv] Sent WM_ACTIVATEAPP to window 0x{Handle:X8}", handle);
 
 		return handle;
 	}
@@ -2598,10 +2609,13 @@ public class ProcessEnvironment
 	{
 		_logger.LogDebug("[ProcessEnv] SendMessageToWindow: sending MSG=0x{Message:X4} to HWND=0x{Hwnd:X8}", message, hwnd);
 		
-		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE), always post to queue
+		// For window creation messages (WM_CREATE, WM_SIZE, WM_MOVE, WM_ACTIVATEAPP), always post to queue
 		// so applications can retrieve them via GetMessageA/PeekMessageA
 		// This is critical for DirectDraw applications that initialize in WM_CREATE handler
-		bool isCreationMessage = message == WindowMessages.WM_CREATE || message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
+		bool isCreationMessage = message == WindowMessages.WM_CREATE || 
+								 message == WindowMessages.WM_SIZE || 
+								 message == WindowMessages.WM_MOVE || 
+								 message == WindowMessages.WM_ACTIVATEAPP;
 		
 		if (isCreationMessage)
 		{
@@ -2659,8 +2673,10 @@ public class ProcessEnvironment
 		// WM_CREATE must be SENT (synchronously dispatched), not posted
 		// The window procedure must handle WM_CREATE before CreateWindow returns
 		// This is critical for applications that call SetTimer or do initialization in WM_CREATE
-		// WM_SIZE and WM_MOVE are posted to the queue for the message loop to process
-		bool isPostOnlyMessage = message == WindowMessages.WM_SIZE || message == WindowMessages.WM_MOVE;
+		// WM_SIZE, WM_MOVE, and WM_ACTIVATEAPP are posted to the queue for the message loop to process
+		bool isPostOnlyMessage = message == WindowMessages.WM_SIZE || 
+								 message == WindowMessages.WM_MOVE || 
+								 message == WindowMessages.WM_ACTIVATEAPP;
 		
 		if (isPostOnlyMessage)
 		{

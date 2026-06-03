@@ -21,6 +21,12 @@ public class VirtualMemory
 	private readonly ConcurrentDictionary<uint, byte[]> _pages;
 	private readonly ulong _configuredSize; // Configured size from settings (not enforced, for logging/stats only)
 	
+	// Fast path page cache
+	private uint _lastReadPageIndex = 0xFFFFFFFF;
+	private byte[]? _lastReadPage;
+	private uint _lastWritePageIndex = 0xFFFFFFFF;
+	private byte[]? _lastWritePage;
+
 	// IAT protection: maps IAT VA -> expected synthetic address for runtime verification
 	private Dictionary<uint, uint>? _iatEntryMap;
 	private readonly ILogger? _logger;
@@ -81,8 +87,15 @@ public class VirtualMemory
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
+        if (pageIndex == _lastReadPageIndex && _lastReadPage != null)
+        {
+            return _lastReadPage[offset];
+        }
+
         if (_pages.TryGetValue(pageIndex, out var page))
         {
+            _lastReadPageIndex = pageIndex;
+            _lastReadPage = page;
             return page[offset];
         }
         
@@ -96,7 +109,17 @@ public class VirtualMemory
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
-        var page = GetOrCreatePage(pageIndex);
+        byte[] page;
+        if (pageIndex == _lastWritePageIndex && _lastWritePage != null)
+        {
+            page = _lastWritePage;
+        }
+        else
+        {
+            page = GetOrCreatePage(pageIndex);
+            _lastWritePageIndex = pageIndex;
+            _lastWritePage = page;
+        }
         page[offset] = value;
     }
 
@@ -116,10 +139,18 @@ public class VirtualMemory
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
-        if (offset <= PageMask - 1 && _pages.TryGetValue(pageIndex, out var page))
+        if (offset <= PageMask - 1)
         {
-            // Data is within a single page - use BinaryPrimitives for efficient little-endian access
-            return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 2));
+            if (pageIndex == _lastReadPageIndex && _lastReadPage != null)
+            {
+                return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(_lastReadPage, (int)offset, 2));
+            }
+            if (_pages.TryGetValue(pageIndex, out var page))
+            {
+                _lastReadPageIndex = pageIndex;
+                _lastReadPage = page;
+                return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 2));
+            }
         }
         
         // Slow path: Cross-page boundary or unallocated page
@@ -131,18 +162,36 @@ public class VirtualMemory
     {
         EnsureRange(addr, 4);
         
-        // Fast path: If within a single page, use direct span access
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
-        // Use ternary for cleaner assignment to 'value'
-        uint value = offset <= PageMask - 3 && _pages.TryGetValue(pageIndex, out var page)
-            ? BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 4))
-            : (uint)(
+        uint value = 0;
+        bool handled = false;
+        
+        if (offset <= PageMask - 3)
+        {
+            if (pageIndex == _lastReadPageIndex && _lastReadPage != null)
+            {
+                value = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(_lastReadPage, (int)offset, 4));
+                handled = true;
+            }
+            else if (_pages.TryGetValue(pageIndex, out var page))
+            {
+                _lastReadPageIndex = pageIndex;
+                _lastReadPage = page;
+                value = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 4));
+                handled = true;
+            }
+        }
+        
+        if (!handled)
+        {
+            value = (uint)(
                 ReadByteInternal(addr) |
                 (ReadByteInternal(addr + 1) << 8) |
                 (ReadByteInternal(addr + 2) << 16) |
                 (ReadByteInternal(addr + 3) << 24));
+        }
         
         // IAT protection: verify and fix corrupted entries
         if (_iatEntryMap != null && _iatEntryMap.TryGetValue((uint)addr, out var expectedValue))
@@ -178,7 +227,17 @@ public class VirtualMemory
         
         if (offset <= PageMask - 1)
         {
-            var page = GetOrCreatePage(pageIndex);
+            byte[] page;
+            if (pageIndex == _lastWritePageIndex && _lastWritePage != null)
+            {
+                page = _lastWritePage;
+            }
+            else
+            {
+                page = GetOrCreatePage(pageIndex);
+                _lastWritePageIndex = pageIndex;
+                _lastWritePage = page;
+            }
             BinaryPrimitives.WriteUInt16LittleEndian(new Span<byte>(page, (int)offset, 2), value);
             return;
         }
@@ -199,7 +258,17 @@ public class VirtualMemory
         
         if (offset <= PageMask - 3)
         {
-            var page = GetOrCreatePage(pageIndex);
+            byte[] page;
+            if (pageIndex == _lastWritePageIndex && _lastWritePage != null)
+            {
+                page = _lastWritePage;
+            }
+            else
+            {
+                page = GetOrCreatePage(pageIndex);
+                _lastWritePageIndex = pageIndex;
+                _lastWritePage = page;
+            }
             BinaryPrimitives.WriteUInt32LittleEndian(new Span<byte>(page, (int)offset, 4), value);
             return;
         }

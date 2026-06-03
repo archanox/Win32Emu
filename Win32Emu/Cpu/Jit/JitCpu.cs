@@ -334,7 +334,7 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Formats an instruction to a human-readable string for debugging
 	/// </summary>
-	public string FormatInstruction(in Instruction insn)
+	public string FormatInstruction(ref Instruction insn)
 	{
 		if (_analyzer == null)
 		{
@@ -347,7 +347,7 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Gets detailed analysis of an instruction including read/written registers and memory
 	/// </summary>
-	public InstructionAnalysis AnalyzeInstruction(in Instruction insn)
+	public InstructionAnalysis AnalyzeInstruction(ref Instruction insn)
 	{
 		if (_analyzer == null)
 		{
@@ -1878,7 +1878,7 @@ public class JitCpu : IAsyncCpu
 	/// <summary>
 	/// Gets the direct target address from a branch instruction, if available
 	/// </summary>
-	private uint? GetDirectTarget(Instruction insn)
+	private uint? GetDirectTarget(ref Instruction insn)
 	{
 		if (insn.Op0Kind == OpKind.NearBranch32)
 		{
@@ -1928,7 +1928,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Conditional jump implementation
-	private void ExecConditionalJump(Instruction insn)
+	private void ExecConditionalJump(ref Instruction insn)
 	{
 		bool condition = insn.Mnemonic switch
 		{
@@ -1964,7 +1964,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Loop instructions
-	private void ExecLoop(Instruction insn)
+	private void ExecLoop(ref Instruction insn)
 	{
 		// LOOP - Decrement ECX and jump if ECX != 0
 		_ecx--;
@@ -1974,7 +1974,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecLoope(Instruction insn)
+	private void ExecLoope(ref Instruction insn)
 	{
 		// LOOPE/LOOPZ - Decrement ECX and jump if ECX != 0 and ZF = 1
 		_ecx--;
@@ -1984,7 +1984,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecLoopne(Instruction insn)
+	private void ExecLoopne(ref Instruction insn)
 	{
 		// LOOPNE/LOOPNZ - Decrement ECX and jump if ECX != 0 and ZF = 0
 		_ecx--;
@@ -1995,7 +1995,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Bit manipulation implementation
-	private void ExecBitManipulation(Instruction insn)
+	private void ExecBitManipulation(ref Instruction insn)
 	{
 		switch (insn.Mnemonic)
 		{
@@ -2119,7 +2119,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Bit manipulation instructions (BMI/BMI2) implementation
-	private void ExecLzcnt(Instruction insn)
+	private void ExecLzcnt(ref Instruction insn)
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
@@ -2163,7 +2163,7 @@ public class JitCpu : IAsyncCpu
 		ClearFlag(Pf);
 	}
 
-	private void ExecTzcnt(Instruction insn)
+	private void ExecTzcnt(ref Instruction insn)
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
@@ -2206,7 +2206,7 @@ public class JitCpu : IAsyncCpu
 		ClearFlag(Pf);
 	}
 
-	private void ExecPopcnt(Instruction insn)
+	private void ExecPopcnt(ref Instruction insn)
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
@@ -2235,7 +2235,7 @@ public class JitCpu : IAsyncCpu
 		ClearFlag(Pf);
 	}
 
-	private void ExecAndn(Instruction insn)
+	private void ExecAndn(ref Instruction insn)
 	{
 		uint src1 = GetOperandValue(insn, 1); // First source (inverted)
 		uint src2 = GetOperandValue(insn, 2); // Second source
@@ -2257,7 +2257,7 @@ public class JitCpu : IAsyncCpu
 		ClearFlag(Of);
 	}
 
-	private void ExecBextr(Instruction insn)
+	private void ExecBextr(ref Instruction insn)
 	{
 		uint src = GetOperandValue(insn, 1);   // Source value
 		uint control = GetOperandValue(insn, 2); // Control value (start:length)
@@ -2302,7 +2302,7 @@ public class JitCpu : IAsyncCpu
 		// SF, AF, PF are undefined
 	}
 
-	private void ExecBlsi(Instruction insn)
+	private void ExecBlsi(ref Instruction insn)
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
@@ -2335,7 +2335,7 @@ public class JitCpu : IAsyncCpu
 		// AF, PF undefined
 	}
 
-	private void ExecBlsmsk(Instruction insn)
+	private void ExecBlsmsk(ref Instruction insn)
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
@@ -2368,7 +2368,7 @@ public class JitCpu : IAsyncCpu
 		// AF, PF undefined
 	}
 
-	private void ExecBlsr(Instruction insn)
+	private void ExecBlsr(ref Instruction insn)
 	{
 		uint src = GetOperandValue(insn, 1);
 		int opSize = GetOpSizeBits(insn, 0);
@@ -2402,7 +2402,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// BCD/ASCII arithmetic implementation
-	private void ExecBcdArithmetic(Instruction insn)
+	private void ExecBcdArithmetic(ref Instruction insn)
 	{
 		switch (insn.Mnemonic)
 		{
@@ -2563,7 +2563,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Double shift implementation
-	private void ExecDoubleShift(Instruction insn)
+	private void ExecDoubleShift(ref Instruction insn)
 	{
 		uint dest = GetOperandValue(insn, 0);
 		uint src = GetOperandValue(insn, 1);
@@ -2631,7 +2631,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Conditional move implementation
-	private void ExecConditionalMove(Instruction insn)
+	private void ExecConditionalMove(ref Instruction insn)
 	{
 		bool condition = insn.Mnemonic switch
 		{
@@ -2662,7 +2662,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Control flow instructions
-	private void ExecRetf(Instruction insn)
+	private void ExecRetf(ref Instruction insn)
 	{
 		// Far return - pop IP and CS from stack
 		// In 32-bit protected mode with a flat memory model, the segment selector (CS) is ignored on far returns,
@@ -2699,7 +2699,7 @@ public class JitCpu : IAsyncCpu
 		// In a real implementation, this might set a halted state
 	}
 
-	private void ExecBound(Instruction insn)
+	private void ExecBound(ref Instruction insn)
 	{
 		// BOUND - Check array bounds
 		// This instruction checks if a signed index is within bounds
@@ -2716,7 +2716,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecEnter(Instruction insn)
+	private void ExecEnter(ref Instruction insn)
 	{
 		// ENTER - Make stack frame for procedure parameters
 		ushort allocSize = insn.Immediate16;
@@ -2755,7 +2755,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// Segment operations
-	private void ExecLoadSegment(Instruction insn)
+	private void ExecLoadSegment(ref Instruction insn)
 	{
 		// LDS, LES, LFS, LGS, LSS - Load far pointer
 		// In 32-bit protected mode flat memory, segment registers are typically not used
@@ -2768,7 +2768,7 @@ public class JitCpu : IAsyncCpu
 		_logger.LogDebug("[JitCpu] Load segment instruction: {0}", insn.Mnemonic);
 	}
 
-	private void ExecSegmentCheck(Instruction insn)
+	private void ExecSegmentCheck(ref Instruction insn)
 	{
 		// LAR, LSL, VERR, VERW - Segment descriptor checks
 		// In flat memory model, these are simplified
@@ -2788,7 +2788,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecDescriptorTable(Instruction insn)
+	private void ExecDescriptorTable(ref Instruction insn)
 	{
 		// LGDT, SGDT, LIDT, SIDT, LLDT, LTR, STR - Descriptor table operations
 		// These are privileged instructions for protected mode
@@ -2996,7 +2996,7 @@ public class JitCpu : IAsyncCpu
 	/// Generic helper method for handling REP/REPNE prefix for string comparison instructions.
 	/// Reduces code duplication across SCASB, SCASW, SCASD, CMPSB, CMPSW, CMPSD.
 	/// </summary>
-	private void ExecStringCompareWithRep(StringInstructionExecutor execInstruction, in Instruction insn, uint oldEip)
+	private void ExecStringCompareWithRep(StringInstructionExecutor execInstruction, ref Instruction insn, uint oldEip)
 	{
 		// Handle REP/REPNE prefix for string comparison instructions
 		// REP/REPE (F3): repeat while ZF=1 (equal) and ECX != 0
@@ -3037,7 +3037,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecScasbWithRep(in Instruction insn, uint oldEip)
+	private void ExecScasbWithRep(ref Instruction insn, uint oldEip)
 	{
 		ExecStringCompareWithRep(ExecScasb, in insn, oldEip);
 	}
@@ -3208,27 +3208,27 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecScaswWithRep(in Instruction insn, uint oldEip)
+	private void ExecScaswWithRep(ref Instruction insn, uint oldEip)
 	{
 		ExecStringCompareWithRep(ExecScasw, in insn, oldEip);
 	}
 	
-	private void ExecScasdWithRep(in Instruction insn, uint oldEip)
+	private void ExecScasdWithRep(ref Instruction insn, uint oldEip)
 	{
 		ExecStringCompareWithRep(ExecScasd, in insn, oldEip);
 	}
 	
-	private void ExecCmpsbWithRep(in Instruction insn, uint oldEip)
+	private void ExecCmpsbWithRep(ref Instruction insn, uint oldEip)
 	{
 		ExecStringCompareWithRep(ExecCmpsb, in insn, oldEip);
 	}
 	
-	private void ExecCmpswWithRep(in Instruction insn, uint oldEip)
+	private void ExecCmpswWithRep(ref Instruction insn, uint oldEip)
 	{
 		ExecStringCompareWithRep(ExecCmpsw, in insn, oldEip);
 	}
 	
-	private void ExecCmpsdWithRep(in Instruction insn, uint oldEip)
+	private void ExecCmpsdWithRep(ref Instruction insn, uint oldEip)
 	{
 		ExecStringCompareWithRep(ExecCmpsd, in insn, oldEip);
 	}
@@ -3339,7 +3339,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// I/O operations
-	private void ExecIn(Instruction insn)
+	private void ExecIn(ref Instruction insn)
 	{
 		// IN accumulator, port
 		// In emulation, I/O ports are typically not directly accessed
@@ -3361,7 +3361,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, 0);
 	}
 	
-	private void ExecOut(Instruction insn)
+	private void ExecOut(ref Instruction insn)
 	{
 		// OUT - Output to port
 		// In emulation, I/O ports are typically not directly accessed
@@ -3426,7 +3426,7 @@ public class JitCpu : IAsyncCpu
 		return ((uint)selector << 4) + offset;
 	}
 	
-	private uint GetOperandValue(Instruction insn, int operandIndex)
+	private uint GetOperandValue(ref Instruction insn, int operandIndex)
 	{
 		var opKind = operandIndex switch
 		{
@@ -3452,7 +3452,7 @@ public class JitCpu : IAsyncCpu
 		return result;
 	}
 
-	private void SetOperandValue(Instruction insn, int operandIndex, uint value)
+	private void SetOperandValue(ref Instruction insn, int operandIndex, uint value)
 	{
 		var opKind = operandIndex switch
 		{
@@ -3472,7 +3472,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private uint ReadMemoryOperand(Instruction insn, int operandIndex)
+	private uint ReadMemoryOperand(ref Instruction insn, int operandIndex)
 	{
 		var addr = CalcMemAddress(insn, operandIndex);
 		var memSize = insn.MemorySize;
@@ -3490,7 +3490,7 @@ public class JitCpu : IAsyncCpu
 		};
 	}
 	
-	private void WriteMemoryOperand(Instruction insn, int operandIndex, uint value)
+	private void WriteMemoryOperand(ref Instruction insn, int operandIndex, uint value)
 	{
 		var addr = CalcMemAddress(insn, operandIndex);
 		var memSize = insn.MemorySize;
@@ -3516,7 +3516,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private uint GetRegisterValue(Instruction insn, int operandIndex)
+	private uint GetRegisterValue(ref Instruction insn, int operandIndex)
 	{
 		var reg = operandIndex switch
 		{
@@ -3563,7 +3563,7 @@ public class JitCpu : IAsyncCpu
 		};
 	}
 
-	private void SetRegisterValue(Instruction insn, int operandIndex, uint value)
+	private void SetRegisterValue(ref Instruction insn, int operandIndex, uint value)
 	{
 		var reg = operandIndex switch
 		{
@@ -3609,7 +3609,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private uint CalcMemAddress(Instruction insn, int operandIndex)
+	private uint CalcMemAddress(ref Instruction insn, int operandIndex)
 	{
 		// Full SIB (Scale-Index-Base) memory address calculation
 		// The Iced library parses the SIB byte and provides displacement, base, index, and scale
@@ -3727,7 +3727,7 @@ public class JitCpu : IAsyncCpu
 
 	// === Core Arithmetic Implementations ===
 	
-	private void ExecAdd(Instruction insn, VirtualMemory mem)
+	private void ExecAdd(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3745,7 +3745,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagsAdd(a, b, r, signBitMask);
 	}
 	
-	private void ExecSub(Instruction insn, VirtualMemory mem)
+	private void ExecSub(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3763,7 +3763,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagsSub(a, b, r, signBitMask);
 	}
 	
-	private void ExecAdc(Instruction insn, VirtualMemory mem)
+	private void ExecAdc(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3777,7 +3777,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecSbb(Instruction insn, VirtualMemory mem)
+	private void ExecSbb(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3791,7 +3791,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecInc(Instruction insn, VirtualMemory mem)
+	private void ExecInc(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint r = a + 1;
@@ -3801,7 +3801,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecDec(Instruction insn, VirtualMemory mem)
+	private void ExecDec(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint r = a - 1;
@@ -3811,7 +3811,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecNeg(Instruction insn, VirtualMemory mem)
+	private void ExecNeg(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint r = (uint)(-(int)a);
@@ -3822,7 +3822,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecCmp(Instruction insn, VirtualMemory mem)
+	private void ExecCmp(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3841,7 +3841,7 @@ public class JitCpu : IAsyncCpu
 	
 	// === Logic Implementations ===
 	
-	private void ExecAnd(Instruction insn, VirtualMemory mem)
+	private void ExecAnd(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3852,7 +3852,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecOr(Instruction insn, VirtualMemory mem)
+	private void ExecOr(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3863,7 +3863,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecXor(Instruction insn, VirtualMemory mem)
+	private void ExecXor(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3874,7 +3874,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecTest(Instruction insn, VirtualMemory mem)
+	private void ExecTest(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -3884,7 +3884,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecNot(Instruction insn, VirtualMemory mem)
+	private void ExecNot(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint r = ~a;
@@ -3893,7 +3893,7 @@ public class JitCpu : IAsyncCpu
 	
 	// === Shift/Rotate Implementations ===
 	
-	private void ExecShl(Instruction insn, VirtualMemory mem)
+	private void ExecShl(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
@@ -3914,7 +3914,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecShr(Instruction insn, VirtualMemory mem)
+	private void ExecShr(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
@@ -3935,7 +3935,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecSar(Instruction insn, VirtualMemory mem)
+	private void ExecSar(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
@@ -3957,7 +3957,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecRol(Instruction insn, VirtualMemory mem)
+	private void ExecRol(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
@@ -3977,7 +3977,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecRor(Instruction insn, VirtualMemory mem)
+	private void ExecRor(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
@@ -3997,7 +3997,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecRcl(Instruction insn, VirtualMemory mem)
+	private void ExecRcl(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
@@ -4020,7 +4020,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecRcr(Instruction insn, VirtualMemory mem)
+	private void ExecRcr(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint count = GetOperandValue(insn, 1) & 0x1F;
@@ -4045,19 +4045,19 @@ public class JitCpu : IAsyncCpu
 	
 	// === Data Movement Implementations ===
 	
-	private void ExecMov(Instruction insn, VirtualMemory mem)
+	private void ExecMov(ref Instruction insn, VirtualMemory mem)
 	{
 		uint value = GetOperandValue(insn, 1);
 		SetOperandValue(insn, 0, value);
 	}
 	
-	private void ExecMovzx(Instruction insn, VirtualMemory mem)
+	private void ExecMovzx(ref Instruction insn, VirtualMemory mem)
 	{
 		uint value = GetOperandValue(insn, 1);
 		SetOperandValue(insn, 0, value);
 	}
 	
-	private void ExecMovsx(Instruction insn, VirtualMemory mem)
+	private void ExecMovsx(ref Instruction insn, VirtualMemory mem)
 	{
 		uint value = GetOperandValue(insn, 1);
 		
@@ -4086,7 +4086,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, value);
 	}
 	
-	private void ExecXchg(Instruction insn, VirtualMemory mem)
+	private void ExecXchg(ref Instruction insn, VirtualMemory mem)
 	{
 		uint a = GetOperandValue(insn, 0);
 		uint b = GetOperandValue(insn, 1);
@@ -4094,7 +4094,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 1, a);
 	}
 	
-	private void ExecPush(Instruction insn, VirtualMemory mem)
+	private void ExecPush(ref Instruction insn, VirtualMemory mem)
 	{
 		uint value = GetOperandValue(insn, 0);
 		
@@ -4112,7 +4112,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecPop(Instruction insn, VirtualMemory mem)
+	private void ExecPop(ref Instruction insn, VirtualMemory mem)
 	{
 		uint value;
 		
@@ -4132,7 +4132,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, value);
 	}
 	
-	private void ExecLea(Instruction insn, VirtualMemory mem)
+	private void ExecLea(ref Instruction insn, VirtualMemory mem)
 	{
 		uint address = CalcMemAddress(insn, 1);
 		SetOperandValue(insn, 0, address);
@@ -4148,7 +4148,7 @@ public class JitCpu : IAsyncCpu
 		_esp += 4;
 	}
 	
-	private void ExecCmpxchg(Instruction insn, VirtualMemory mem)
+	private void ExecCmpxchg(ref Instruction insn, VirtualMemory mem)
 	{
 		// CMPXCHG - Compare and exchange
 		// Compares AL/AX/EAX with destination. If equal, source is loaded into destination.
@@ -4173,7 +4173,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecXadd(Instruction insn, VirtualMemory mem)
+	private void ExecXadd(ref Instruction insn, VirtualMemory mem)
 	{
 		// XADD - Exchange and add
 		// Exchanges dest and src, then stores the sum in dest
@@ -4191,7 +4191,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagsAdd(dest, src, sum);
 	}
 	
-	private void ExecCmpxchg8b(Instruction insn, VirtualMemory mem)
+	private void ExecCmpxchg8b(ref Instruction insn, VirtualMemory mem)
 	{
 		// CMPXCHG8B - Compare and exchange 8 bytes
 		// Compares EDX:EAX with destination. If equal, ECX:EBX is loaded into destination.
@@ -4350,7 +4350,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagVal(Of, ((oldAl & 0x80) != 0) && ((al & 0x80) == 0));
 	}
 	
-	private void ExecAam(Instruction insn)
+	private void ExecAam(ref Instruction insn)
 	{
 		// AAM - ASCII Adjust AX After Multiply
 		byte base_ = insn.OpCount > 0 ? insn.Immediate8 : (byte)10;
@@ -4367,7 +4367,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(al);
 	}
 	
-	private void ExecAad(Instruction insn)
+	private void ExecAad(ref Instruction insn)
 	{
 		// AAD - ASCII Adjust AX Before Division
 		byte base_ = insn.OpCount > 0 ? insn.Immediate8 : (byte)10;
@@ -4504,7 +4504,7 @@ public class JitCpu : IAsyncCpu
 		_logger.LogDebug("[JitCpu] WBINVD executed (no-op)");
 	}
 	
-	private void ExecInvlpg(Instruction insn)
+	private void ExecInvlpg(ref Instruction insn)
 	{
 		// INVLPG - Invalidate TLB Entry (no-op in emulation)
 		_logger.LogDebug("[JitCpu] INVLPG executed (no-op)");
@@ -4516,14 +4516,14 @@ public class JitCpu : IAsyncCpu
 		_logger.LogDebug("[JitCpu] RSM executed (no-op)");
 	}
 	
-	private void ExecSldt(Instruction insn)
+	private void ExecSldt(ref Instruction insn)
 	{
 		// SLDT - Store Local Descriptor Table Register
 		// In flat memory model, store 0
 		SetOperandValue(insn, 0, 0);
 	}
 	
-	private void ExecArpl(Instruction insn)
+	private void ExecArpl(ref Instruction insn)
 	{
 		// ARPL - Adjust RPL Field of Segment Selector
 		// In flat memory model, always report no adjustment
@@ -4576,7 +4576,7 @@ public class JitCpu : IAsyncCpu
 	
 	// === FPU Instructions ===
 	
-	private void ExecFld(Instruction insn, VirtualMemory mem)
+	private void ExecFld(ref Instruction insn, VirtualMemory mem)
 	{
 		// FLD - Load floating point value
 		double val;
@@ -4611,7 +4611,7 @@ public class JitCpu : IAsyncCpu
 		FpuPush(val);
 	}
 	
-	private void ExecFst(Instruction insn, VirtualMemory mem, bool pop)
+	private void ExecFst(ref Instruction insn, VirtualMemory mem, bool pop)
 	{
 		// FST/FSTP - Store floating point value
 		double st0 = FpuGetSt(0);
@@ -4644,7 +4644,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFild(Instruction insn, VirtualMemory mem)
+	private void ExecFild(ref Instruction insn, VirtualMemory mem)
 	{
 		// FILD - Load integer and convert to float
 		uint addr = CalcMemAddress(insn, 0);
@@ -4671,7 +4671,7 @@ public class JitCpu : IAsyncCpu
 		FpuPush(val);
 	}
 	
-	private void ExecFistp(Instruction insn, VirtualMemory mem)
+	private void ExecFistp(ref Instruction insn, VirtualMemory mem)
 	{
 		// FISTP - Store integer and pop
 		double val = FpuGetSt(0);
@@ -4700,7 +4700,7 @@ public class JitCpu : IAsyncCpu
 		FpuPop();
 	}
 	
-	private void ExecFist(Instruction insn, VirtualMemory mem)
+	private void ExecFist(ref Instruction insn, VirtualMemory mem)
 	{
 		// FIST - Store integer (no pop)
 		double val = FpuGetSt(0);
@@ -4726,7 +4726,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFadd(Instruction insn, VirtualMemory mem)
+	private void ExecFadd(ref Instruction insn, VirtualMemory mem)
 	{
 		// FADD - Add
 		if (insn.OpCount == 0)
@@ -4769,7 +4769,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFaddp(Instruction insn)
+	private void ExecFaddp(ref Instruction insn)
 	{
 		// FADDP - Add and pop
 		if (insn.OpCount == 0)
@@ -4790,7 +4790,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFsub(Instruction insn, VirtualMemory mem)
+	private void ExecFsub(ref Instruction insn, VirtualMemory mem)
 	{
 		// FSUB - Subtract
 		if (insn.OpCount == 0)
@@ -4833,7 +4833,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFsubp(Instruction insn)
+	private void ExecFsubp(ref Instruction insn)
 	{
 		// FSUBP - Subtract and pop
 		if (insn.OpCount == 0)
@@ -4854,7 +4854,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFsubr(Instruction insn, VirtualMemory mem)
+	private void ExecFsubr(ref Instruction insn, VirtualMemory mem)
 	{
 		// FSUBR - Reverse subtract
 		if (insn.OpCount == 0)
@@ -4897,7 +4897,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFsubrp(Instruction insn)
+	private void ExecFsubrp(ref Instruction insn)
 	{
 		// FSUBRP - Reverse subtract and pop
 		if (insn.OpCount == 0)
@@ -4918,7 +4918,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFmul(Instruction insn, VirtualMemory mem)
+	private void ExecFmul(ref Instruction insn, VirtualMemory mem)
 	{
 		// FMUL - Multiply
 		if (insn.OpCount == 0)
@@ -4961,7 +4961,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFmulp(Instruction insn)
+	private void ExecFmulp(ref Instruction insn)
 	{
 		// FMULP - Multiply and pop
 		if (insn.OpCount == 0)
@@ -4982,7 +4982,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFdiv(Instruction insn, VirtualMemory mem)
+	private void ExecFdiv(ref Instruction insn, VirtualMemory mem)
 	{
 		// FDIV - Divide
 		if (insn.OpCount == 0)
@@ -5025,7 +5025,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFdivp(Instruction insn)
+	private void ExecFdivp(ref Instruction insn)
 	{
 		// FDIVP - Divide and pop
 		if (insn.OpCount == 0)
@@ -5048,7 +5048,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFdivr(Instruction insn, VirtualMemory mem)
+	private void ExecFdivr(ref Instruction insn, VirtualMemory mem)
 	{
 		// FDIVR - Reverse divide
 		if (insn.OpCount == 0)
@@ -5091,7 +5091,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFdivrp(Instruction insn)
+	private void ExecFdivrp(ref Instruction insn)
 	{
 		// FDIVRP - Reverse divide and pop
 		if (insn.OpCount == 0)
@@ -5114,7 +5114,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFiadd(Instruction insn, VirtualMemory mem)
+	private void ExecFiadd(ref Instruction insn, VirtualMemory mem)
 	{
 		// FIADD - Integer add
 		uint addr = CalcMemAddress(insn, 0);
@@ -5130,7 +5130,7 @@ public class JitCpu : IAsyncCpu
 		FpuSetSt(0, FpuGetSt(0) + ival);
 	}
 	
-	private void ExecFimul(Instruction insn, VirtualMemory mem)
+	private void ExecFimul(ref Instruction insn, VirtualMemory mem)
 	{
 		// FIMUL - Integer multiply
 		uint addr = CalcMemAddress(insn, 0);
@@ -5146,7 +5146,7 @@ public class JitCpu : IAsyncCpu
 		FpuSetSt(0, FpuGetSt(0) * ival);
 	}
 	
-	private void ExecFisub(Instruction insn, VirtualMemory mem)
+	private void ExecFisub(ref Instruction insn, VirtualMemory mem)
 	{
 		// FISUB - Integer subtract
 		uint addr = CalcMemAddress(insn, 0);
@@ -5162,7 +5162,7 @@ public class JitCpu : IAsyncCpu
 		FpuSetSt(0, FpuGetSt(0) - ival);
 	}
 	
-	private void ExecFisubr(Instruction insn, VirtualMemory mem)
+	private void ExecFisubr(ref Instruction insn, VirtualMemory mem)
 	{
 		// FISUBR - Integer reverse subtract
 		uint addr = CalcMemAddress(insn, 0);
@@ -5178,7 +5178,7 @@ public class JitCpu : IAsyncCpu
 		FpuSetSt(0, ival - FpuGetSt(0));
 	}
 	
-	private void ExecFidiv(Instruction insn, VirtualMemory mem)
+	private void ExecFidiv(ref Instruction insn, VirtualMemory mem)
 	{
 		// FIDIV - Integer divide
 		uint addr = CalcMemAddress(insn, 0);
@@ -5194,7 +5194,7 @@ public class JitCpu : IAsyncCpu
 		FpuSetSt(0, FpuGetSt(0) / ival);
 	}
 	
-	private void ExecFidivr(Instruction insn, VirtualMemory mem)
+	private void ExecFidivr(ref Instruction insn, VirtualMemory mem)
 	{
 		// FIDIVR - Integer reverse divide
 		uint addr = CalcMemAddress(insn, 0);
@@ -5216,7 +5216,7 @@ public class JitCpu : IAsyncCpu
 		FpuSetSt(0, Math.Sqrt(FpuGetSt(0)));
 	}
 	
-	private void ExecFxch(Instruction insn)
+	private void ExecFxch(ref Instruction insn)
 	{
 		// FXCH - Exchange registers
 		int i = insn.OpCount > 0 ? insn.Op0Register - Register.ST0 : 1;
@@ -5303,7 +5303,7 @@ public class JitCpu : IAsyncCpu
 		FpuSetSt(0, FpuGetSt(0) * Math.Pow(2, Math.Truncate(FpuGetSt(1))));
 	}
 	
-	private void ExecFcom(Instruction insn, VirtualMemory mem)
+	private void ExecFcom(ref Instruction insn, VirtualMemory mem)
 	{
 		// FCOM - Compare (no pop)
 		double st0 = FpuGetSt(0);
@@ -5335,7 +5335,7 @@ public class JitCpu : IAsyncCpu
 		SetFpuCompareConditionCodes(st0, source);
 	}
 	
-	private void ExecFcomp(Instruction insn, VirtualMemory mem)
+	private void ExecFcomp(ref Instruction insn, VirtualMemory mem)
 	{
 		// FCOMP - Compare and pop
 		ExecFcom(insn, mem);
@@ -5384,7 +5384,7 @@ public class JitCpu : IAsyncCpu
 	/// Iced exposes register compares as ST(0), ST(i), so prefer Op1 when present and
 	/// fall back to Op0 or the implicit default operand index for no-operand encodings.
 	/// </summary>
-	private int GetFpuCompareRegisterIndex(Instruction insn, int defaultIndex = 1)
+	private int GetFpuCompareRegisterIndex(ref Instruction insn, int defaultIndex = 1)
 	{
 		if (insn.OpCount == 0)
 		{
@@ -5404,7 +5404,7 @@ public class JitCpu : IAsyncCpu
 		return defaultIndex;
 	}
 	
-	private void ExecFucomi(Instruction insn)
+	private void ExecFucomi(ref Instruction insn)
 	{
 		// FUCOMI - Unordered compare and set EFLAGS
 		double st0 = FpuGetSt(0);
@@ -5429,14 +5429,14 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFucomip(Instruction insn)
+	private void ExecFucomip(ref Instruction insn)
 	{
 		// FUCOMIP - Unordered compare, set EFLAGS, and pop
 		ExecFucomi(insn);
 		FpuPop();
 	}
 	
-	private void ExecFcmovnbe(Instruction insn)
+	private void ExecFcmovnbe(ref Instruction insn)
 	{
 		// FCMOVNBE - Conditional move if not below or equal
 		if (!GetFlag(Cf) && !GetFlag(Zf))
@@ -5447,21 +5447,21 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecFnstcw(Instruction insn, VirtualMemory mem)
+	private void ExecFnstcw(ref Instruction insn, VirtualMemory mem)
 	{
 		// FNSTCW - Store FPU control word
 		uint addr = CalcMemAddress(insn, 0);
 		mem.Write16(addr, _fpuControlWord);
 	}
 	
-	private void ExecFldcw(Instruction insn, VirtualMemory mem)
+	private void ExecFldcw(ref Instruction insn, VirtualMemory mem)
 	{
 		// FLDCW - Load FPU control word
 		uint addr = CalcMemAddress(insn, 0);
 		_fpuControlWord = mem.Read16(addr);
 	}
 	
-	private void ExecFnstsw(Instruction insn, VirtualMemory mem)
+	private void ExecFnstsw(ref Instruction insn, VirtualMemory mem)
 	{
 		// FNSTSW - Store FPU status word
 		if (insn.OpCount == 0 || insn.Op0Kind == OpKind.Register)
@@ -5576,7 +5576,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagVal(Pf, even);
 	}
 	
-	private int GetOpSizeBits(Instruction insn, int opIndex)
+	private int GetOpSizeBits(ref Instruction insn, int opIndex)
 	{
 		if (insn.GetOpKind(opIndex) == OpKind.Memory)
 		{
@@ -5610,7 +5610,7 @@ public class JitCpu : IAsyncCpu
 	
 	// === Multiply/Divide Implementations ===
 	
-	private void ExecMul(Instruction insn, VirtualMemory mem)
+	private void ExecMul(ref Instruction insn, VirtualMemory mem)
 	{
 		uint src = GetOperandValue(insn, 0);
 		ulong result = (ulong)_eax * src;
@@ -5621,7 +5621,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagVal(Of, _edx != 0);
 	}
 	
-	private void ExecImul(Instruction insn, VirtualMemory mem)
+	private void ExecImul(ref Instruction insn, VirtualMemory mem)
 	{
 		if (insn.OpCount == 1)
 		{
@@ -5658,7 +5658,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecDiv(Instruction insn, VirtualMemory mem)
+	private void ExecDiv(ref Instruction insn, VirtualMemory mem)
 	{
 		uint divisor = GetOperandValue(insn, 0);
 		if (divisor == 0)
@@ -5672,7 +5672,7 @@ public class JitCpu : IAsyncCpu
 		_edx = (uint)(dividend % divisor);
 	}
 	
-	private void ExecIdiv(Instruction insn, VirtualMemory mem)
+	private void ExecIdiv(ref Instruction insn, VirtualMemory mem)
 	{
 		int divisor = (int)GetOperandValue(insn, 0);
 		if (divisor == 0)
@@ -5718,7 +5718,7 @@ public class JitCpu : IAsyncCpu
 		_edx = (_eax & 0x80000000) != 0 ? 0xFFFFFFFF : 0;
 	}
 	
-	private void ExecBswap(Instruction insn)
+	private void ExecBswap(ref Instruction insn)
 	{
 		uint value = GetOperandValue(insn, 0);
 		uint result = ((value & 0xFF) << 24) |
@@ -5735,7 +5735,7 @@ public class JitCpu : IAsyncCpu
 		_eax = (_eax & 0xFFFFFF00) | value;
 	}
 	
-	private void ExecSetcc(Instruction insn)
+	private void ExecSetcc(ref Instruction insn)
 	{
 		bool condition = insn.Mnemonic switch
 		{
@@ -5781,7 +5781,7 @@ public class JitCpu : IAsyncCpu
 	    _fpuStatusWord &= 0x7F00;
 	}
 
-	private void ExecFstsw(Instruction insn)
+	private void ExecFstsw(ref Instruction insn)
 	{
 		// FSTSW - Store FPU Status Word
 		// Stores the FPU status word to AX register or memory (16-bit)
@@ -5826,7 +5826,7 @@ public class JitCpu : IAsyncCpu
 		// Does nothing, just advances EIP
 	}
 
-	private void ExecFldenv(Instruction insn, VirtualMemory mem)
+	private void ExecFldenv(ref Instruction insn, VirtualMemory mem)
 	{
 		// FLDENV - Load FPU Environment
 		// Loads the FPU environment from memory (14 bytes in 16-bit mode, 28 bytes in 32-bit mode)
@@ -5840,7 +5840,7 @@ public class JitCpu : IAsyncCpu
 		// Instruction pointer (offset 12), data pointer (offset 20), and opcode (offset 24) are ignored in emulation
 	}
 
-	private void ExecFstenv(Instruction insn, VirtualMemory mem)
+	private void ExecFstenv(ref Instruction insn, VirtualMemory mem)
 	{
 		// FSTENV - Store FPU Environment
 		// Stores the FPU environment to memory (28 bytes in 32-bit mode)
@@ -5858,7 +5858,7 @@ public class JitCpu : IAsyncCpu
 		mem.Write32(addr + 24, 0); // FPU data selector
 	}
 
-	private void ExecFsave(Instruction insn, VirtualMemory mem)
+	private void ExecFsave(ref Instruction insn, VirtualMemory mem)
 	{
 		// FSAVE - Save FPU State
 		// Saves the complete FPU state to memory (108 bytes in 32-bit mode)
@@ -5887,7 +5887,7 @@ public class JitCpu : IAsyncCpu
 		ExecFninit();
 	}
 
-	private void ExecFrstor(Instruction insn, VirtualMemory mem)
+	private void ExecFrstor(ref Instruction insn, VirtualMemory mem)
 	{
 		// FRSTOR - Restore FPU State
 		// Restores the complete FPU state from memory (108 bytes in 32-bit mode)
@@ -5908,7 +5908,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFstcw(Instruction insn, VirtualMemory mem)
+	private void ExecFstcw(ref Instruction insn, VirtualMemory mem)
 	{
 		// FSTCW - Store Control Word (with WAIT)
 		// Same as FNSTCW but waits for pending FPU exceptions
@@ -5933,7 +5933,7 @@ public class JitCpu : IAsyncCpu
 		_fpuStatusWord = (ushort)((_fpuStatusWord & 0xC7FF) | ((_fpuTop & 7) << 11));
 	}
 
-	private void ExecFfree(Instruction insn)
+	private void ExecFfree(ref Instruction insn)
 	{
 		// FFREE - Free Register
 		// Marks the specified FPU register as empty in the tag word
@@ -5950,7 +5950,7 @@ public class JitCpu : IAsyncCpu
 		_fpuTagWord |= (ushort)(3 << tagBits); // Set bits to 11b
 	}
 
-	private void ExecFfreep(Instruction insn)
+	private void ExecFfreep(ref Instruction insn)
 	{
 		// FFREEP - Free Register and Pop
 		// Marks the specified FPU register as empty and pops the stack
@@ -5958,7 +5958,7 @@ public class JitCpu : IAsyncCpu
 		FpuPop();
 	}
 
-	private void ExecFicom(Instruction insn, VirtualMemory mem)
+	private void ExecFicom(ref Instruction insn, VirtualMemory mem)
 	{
 		// FICOM - Integer Compare
 		// Compares ST(0) with an integer source from memory and sets condition codes in FPU status word
@@ -5989,14 +5989,14 @@ public class JitCpu : IAsyncCpu
 		SetFpuCompareConditionCodes(st0, source);
 	}
 
-	private void ExecFicomp(Instruction insn, VirtualMemory mem)
+	private void ExecFicomp(ref Instruction insn, VirtualMemory mem)
 	{
 		// FICOMP - Integer Compare and Pop
 		ExecFicom(insn, mem);
 		FpuPop();
 	}
 
-	private void ExecFucom(Instruction insn)
+	private void ExecFucom(ref Instruction insn)
 	{
 		// FUCOM - Unordered Compare
 		// Compares ST(0) with ST(i) and sets condition codes in FPU status word
@@ -6009,7 +6009,7 @@ public class JitCpu : IAsyncCpu
 		SetFpuCompareConditionCodes(st0, sti);
 	}
 
-	private void ExecFucomp(Instruction insn)
+	private void ExecFucomp(ref Instruction insn)
 	{
 		// FUCOMP - Unordered Compare and Pop
 		ExecFucom(insn);
@@ -6040,7 +6040,7 @@ public class JitCpu : IAsyncCpu
 		SetFpuCompareConditionCodes(st0, 0.0);
 	}
 
-	private void ExecFcomi(Instruction insn)
+	private void ExecFcomi(ref Instruction insn)
 	{
 		// FCOMI - Compare and Set EFLAGS
 		// Compares ST(0) with ST(i) and sets EFLAGS (ZF, PF, CF)
@@ -6076,14 +6076,14 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFcomip(Instruction insn)
+	private void ExecFcomip(ref Instruction insn)
 	{
 		// FCOMIP - Compare, Set EFLAGS, and Pop
 		ExecFcomi(insn);
 		FpuPop();
 	}
 
-	private void ExecFcmovb(Instruction insn)
+	private void ExecFcmovb(ref Instruction insn)
 	{
 		// FCMOVB - Conditional Move if Below (CF=1)
 		if (GetFlag(Cf))
@@ -6098,7 +6098,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFcmovbe(Instruction insn)
+	private void ExecFcmovbe(ref Instruction insn)
 	{
 		// FCMOVBE - Conditional Move if Below or Equal (CF=1 or ZF=1)
 		if (GetFlag(Cf) || GetFlag(Zf))
@@ -6113,7 +6113,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFcmove(Instruction insn)
+	private void ExecFcmove(ref Instruction insn)
 	{
 		// FCMOVE - Conditional Move if Equal (ZF=1)
 		if (GetFlag(Zf))
@@ -6128,7 +6128,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFcmovnb(Instruction insn)
+	private void ExecFcmovnb(ref Instruction insn)
 	{
 		// FCMOVNB - Conditional Move if Not Below (CF=0)
 		if (!GetFlag(Cf))
@@ -6143,7 +6143,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFcmovne(Instruction insn)
+	private void ExecFcmovne(ref Instruction insn)
 	{
 		// FCMOVNE - Conditional Move if Not Equal (ZF=0)
 		if (!GetFlag(Zf))
@@ -6158,7 +6158,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFcmovnu(Instruction insn)
+	private void ExecFcmovnu(ref Instruction insn)
 	{
 		// FCMOVNU - Conditional Move if Not Unordered (PF=0)
 		if (!GetFlag(Pf))
@@ -6173,7 +6173,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecFcmovu(Instruction insn)
+	private void ExecFcmovu(ref Instruction insn)
 	{
 		// FCMOVU - Conditional Move if Unordered (PF=1)
 		if (GetFlag(Pf))
@@ -6377,7 +6377,7 @@ public class JitCpu : IAsyncCpu
 	}
 
 	// MMX instruction implementations
-	private void ExecMmxMovd(Instruction insn)
+	private void ExecMmxMovd(ref Instruction insn)
 	{
 		// MOVD - Move Doubleword between MMX register and memory/GPR
 		if (insn.Op0Kind == OpKind.Register && insn.Op0Register >= Register.MM0 && insn.Op0Register <= Register.MM7)
@@ -6400,7 +6400,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecMmxMovq(Instruction insn)
+	private void ExecMmxMovq(ref Instruction insn)
 	{
 		// MOVQ - Move Quadword between MMX registers or memory
 		if (insn.Op0Kind == OpKind.Register && insn.Op0Register >= Register.MM0 && insn.Op0Register <= Register.MM7)
@@ -6438,7 +6438,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecMmxArithmetic(Instruction insn)
+	private void ExecMmxArithmetic(ref Instruction insn)
 	{
 		// Get destination and source MMX registers
 		if (insn.Op0Kind != OpKind.Register || insn.Op0Register < Register.MM0 || insn.Op0Register > Register.MM7)
@@ -6566,7 +6566,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecMmxShift(Instruction insn)
+	private void ExecMmxShift(ref Instruction insn)
 	{
 		if (insn.Op0Kind != OpKind.Register || insn.Op0Register < Register.MM0 || insn.Op0Register > Register.MM7)
 		{
@@ -6630,7 +6630,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 
-	private void ExecMmxPack(Instruction insn)
+	private void ExecMmxPack(ref Instruction insn)
 	{
 		if (insn.Op0Kind != OpKind.Register || insn.Op0Register < Register.MM0 || insn.Op0Register > Register.MM7)
 		{
@@ -7342,7 +7342,7 @@ public class JitCpu : IAsyncCpu
 		_edx = (_edx & 0xFFFF0000) | dx;
 	}
 	
-	private void ExecMovx(Instruction insn, bool signExtend)
+	private void ExecMovx(ref Instruction insn, bool signExtend)
 	{
 		uint value;
 		var srcBits = insn.MemorySize switch
@@ -7385,7 +7385,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, result);
 	}
 	
-	private void ExecLogic(Instruction insn, LogicOp op, VirtualMemory mem)
+	private void ExecLogic(ref Instruction insn, LogicOp op, VirtualMemory mem)
 	{
 		var opSize = GetOpSizeBits(insn, 0);
 		
@@ -7498,7 +7498,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecRotate(Instruction insn, RotateKind kind, VirtualMemory mem)
+	private void ExecRotate(ref Instruction insn, RotateKind kind, VirtualMemory mem)
 	{
 		var a = GetOperandValue(insn, 0);
 		int c = insn.OpCount >= 2 && insn.Op1Kind == OpKind.Immediate8 
@@ -7596,7 +7596,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, r);
 	}
 	
-	private void ExecShiftLeft(Instruction insn, VirtualMemory mem)
+	private void ExecShiftLeft(ref Instruction insn, VirtualMemory mem)
 	{
 		var a = GetOperandValue(insn, 0);
 		int c = insn.OpCount >= 2 && insn.Op1Kind == OpKind.Immediate8 
@@ -7633,7 +7633,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecShiftRight(Instruction insn, bool arithmetic, VirtualMemory mem)
+	private void ExecShiftRight(ref Instruction insn, bool arithmetic, VirtualMemory mem)
 	{
 		var a = GetOperandValue(insn, 0);
 		int c = insn.OpCount >= 2 && insn.Op1Kind == OpKind.Immediate8 
@@ -7678,7 +7678,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(r);
 	}
 	
-	private void ExecShld(Instruction insn, VirtualMemory mem)
+	private void ExecShld(ref Instruction insn, VirtualMemory mem)
 	{
 		var dest = GetOperandValue(insn, 0);
 		var src = GetOperandValue(insn, 1);
@@ -7714,7 +7714,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(dest);
 	}
 	
-	private void ExecShrd(Instruction insn, VirtualMemory mem)
+	private void ExecShrd(ref Instruction insn, VirtualMemory mem)
 	{
 		var dest = GetOperandValue(insn, 0);
 		var src = GetOperandValue(insn, 1);
@@ -7749,7 +7749,7 @@ public class JitCpu : IAsyncCpu
 		UpdateLogicResultFlags(dest);
 	}
 	
-	private void ExecBt(Instruction insn, VirtualMemory mem)
+	private void ExecBt(ref Instruction insn, VirtualMemory mem)
 	{
 		var bitBase = GetOperandValue(insn, 0);
 		var bitOffset = GetOperandValue(insn, 1);
@@ -7758,7 +7758,7 @@ public class JitCpu : IAsyncCpu
 		SetFlagVal(Cf, bitValue != 0);
 	}
 	
-	private void ExecBts(Instruction insn, VirtualMemory mem)
+	private void ExecBts(ref Instruction insn, VirtualMemory mem)
 	{
 		var bitBase = GetOperandValue(insn, 0);
 		var bitOffset = GetOperandValue(insn, 1);
@@ -7769,7 +7769,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, bitBase);
 	}
 	
-	private void ExecBtr(Instruction insn, VirtualMemory mem)
+	private void ExecBtr(ref Instruction insn, VirtualMemory mem)
 	{
 		var bitBase = GetOperandValue(insn, 0);
 		var bitOffset = GetOperandValue(insn, 1);
@@ -7780,7 +7780,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, bitBase);
 	}
 	
-	private void ExecBtc(Instruction insn, VirtualMemory mem)
+	private void ExecBtc(ref Instruction insn, VirtualMemory mem)
 	{
 		var bitBase = GetOperandValue(insn, 0);
 		var bitOffset = GetOperandValue(insn, 1);
@@ -7791,7 +7791,7 @@ public class JitCpu : IAsyncCpu
 		SetOperandValue(insn, 0, bitBase);
 	}
 	
-	private void ExecBsf(Instruction insn, VirtualMemory mem)
+	private void ExecBsf(ref Instruction insn, VirtualMemory mem)
 	{
 		var src = GetOperandValue(insn, 1);
 		
@@ -7811,7 +7811,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecBsr(Instruction insn, VirtualMemory mem)
+	private void ExecBsr(ref Instruction insn, VirtualMemory mem)
 	{
 		var src = GetOperandValue(insn, 1);
 		
@@ -7831,7 +7831,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecCmovcc(Instruction insn, VirtualMemory mem)
+	private void ExecCmovcc(ref Instruction insn, VirtualMemory mem)
 	{
 		bool condition = insn.Mnemonic switch
 		{
@@ -7861,7 +7861,7 @@ public class JitCpu : IAsyncCpu
 		}
 	}
 	
-	private void ExecCmpxchg8B(Instruction insn, VirtualMemory mem)
+	private void ExecCmpxchg8B(ref Instruction insn, VirtualMemory mem)
 	{
 		var addr = CalcMemAddress(insn, 0);
 		

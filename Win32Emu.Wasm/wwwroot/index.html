@@ -499,6 +499,63 @@
 			
 			console.log("Emulator canvas initialized successfully");
 		};
+
+		window.initializeInput = (canvasId, dotNetRef) => {
+			console.log(`Initializing input for canvas id: ${canvasId}`);
+			const canvas = document.getElementById(canvasId);
+			if (!canvas) {
+				console.error(`Canvas element not found with id: ${canvasId}`);
+				return false;
+			}
+			
+			// Make canvas focusable to receive keyboard events
+			canvas.setAttribute('tabindex', '0');
+			
+			// Keyboard events
+			canvas.addEventListener('keydown', (e) => {
+				e.preventDefault();
+				dotNetRef.invokeMethodAsync('OnKeyDown', e.keyCode);
+			});
+			
+			canvas.addEventListener('keyup', (e) => {
+				e.preventDefault();
+				dotNetRef.invokeMethodAsync('OnKeyUp', e.keyCode);
+			});
+			
+			// Mouse events
+			canvas.addEventListener('mousemove', (e) => {
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor(e.clientX - rect.left);
+				const y = Math.floor(e.clientY - rect.top);
+				dotNetRef.invokeMethodAsync('OnMouseMove', x, y);
+			});
+			
+			canvas.addEventListener('mousedown', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor(e.clientX - rect.left);
+				const y = Math.floor(e.clientY - rect.top);
+				// Map standard DOM buttons (0=left, 1=middle, 2=right) to matching backend expectations if needed
+				dotNetRef.invokeMethodAsync('OnMouseDown', e.button, x, y);
+				canvas.focus();
+			});
+			
+			canvas.addEventListener('mouseup', (e) => {
+				e.preventDefault();
+				const rect = canvas.getBoundingClientRect();
+				const x = Math.floor(e.clientX - rect.left);
+				const y = Math.floor(e.clientY - rect.top);
+				dotNetRef.invokeMethodAsync('OnMouseUp', e.button, x, y);
+			});
+			
+			// Prevent context menu
+			canvas.addEventListener('contextmenu', (e) => {
+				e.preventDefault();
+			});
+			
+			console.log("Input initialized successfully");
+			return true;
+		};
 		
 		// Global flag to stop emulator on error
 		window.emulatorStopped = false;
