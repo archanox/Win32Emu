@@ -92,14 +92,14 @@ public class VirtualMemory
         
         if (pageIndex == cachedIndex && cachedPage != null)
         {
-            return cachedPage[offset];
+            return cachedPage[(int)offset];
         }
 
         if (_pages.TryGetValue(pageIndex, out var page))
         {
             _lastReadPage = page;
             _lastReadPageIndex = pageIndex;
-            return page[offset];
+            return page[(int)offset];
         }
         
         // Unallocated pages return zero
@@ -126,7 +126,7 @@ public class VirtualMemory
             _lastWritePage = page;
             _lastWritePageIndex = pageIndex;
         }
-        page[offset] = value;
+        page[(int)offset] = value;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveOptimization)]

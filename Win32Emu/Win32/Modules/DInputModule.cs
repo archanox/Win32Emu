@@ -878,17 +878,15 @@ namespace Win32Emu.Win32.Modules
 			}
 			
 			bool isPeek = (dwFlags & 0x00000001) != 0; // DIGDD_PEEK
-			
+		
 			// Write events to output buffer
-			var eventArray = device.EventQueue.ToArray();
+			// For peek, snapshot the queue first so we can index into it without consuming entries.
+			// For non-peek, dequeue each event in turn to avoid an extra allocation.
+			var eventSnapshot = isPeek ? device.EventQueue.ToArray() : null;
 			for (var i = 0u; i < eventsToReturn; i++)
 			{
-				var evt = eventArray[i];
-				if (!isPeek)
-				{
-					device.EventQueue.Dequeue();
-				}
-				
+				var evt = isPeek ? eventSnapshot![(int)i] : device.EventQueue.Dequeue();
+			
 				var offset = rgdod + (i * DIDEVICEOBJECTDATA_SIZE);
 				
 				// Write DIDEVICEOBJECTDATA structure
