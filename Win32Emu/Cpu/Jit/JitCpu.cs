@@ -3039,7 +3039,7 @@ public class JitCpu : IAsyncCpu
 	
 	private void ExecScasbWithRep(ref Instruction insn, uint oldEip)
 	{
-		ExecStringCompareWithRep(ExecScasb, in insn, oldEip);
+		ExecStringCompareWithRep(ExecScasb, ref insn, oldEip);
 	}
 	
 	private void ExecScasw()
@@ -3210,27 +3210,27 @@ public class JitCpu : IAsyncCpu
 	
 	private void ExecScaswWithRep(ref Instruction insn, uint oldEip)
 	{
-		ExecStringCompareWithRep(ExecScasw, in insn, oldEip);
+		ExecStringCompareWithRep(ExecScasw, ref insn, oldEip);
 	}
 	
 	private void ExecScasdWithRep(ref Instruction insn, uint oldEip)
 	{
-		ExecStringCompareWithRep(ExecScasd, in insn, oldEip);
+		ExecStringCompareWithRep(ExecScasd, ref insn, oldEip);
 	}
 	
 	private void ExecCmpsbWithRep(ref Instruction insn, uint oldEip)
 	{
-		ExecStringCompareWithRep(ExecCmpsb, in insn, oldEip);
+		ExecStringCompareWithRep(ExecCmpsb, ref insn, oldEip);
 	}
 	
 	private void ExecCmpswWithRep(ref Instruction insn, uint oldEip)
 	{
-		ExecStringCompareWithRep(ExecCmpsw, in insn, oldEip);
+		ExecStringCompareWithRep(ExecCmpsw, ref insn, oldEip);
 	}
 	
 	private void ExecCmpsdWithRep(ref Instruction insn, uint oldEip)
 	{
-		ExecStringCompareWithRep(ExecCmpsd, in insn, oldEip);
+		ExecStringCompareWithRep(ExecCmpsd, ref insn, oldEip);
 	}
 	
 	private void ExecInsb()
