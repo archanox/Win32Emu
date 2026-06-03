@@ -877,10 +877,18 @@ namespace Win32Emu.Win32.Modules
 				return DI_OK;
 			}
 			
+			bool isPeek = (dwFlags & 0x00000001) != 0; // DIGDD_PEEK
+			
 			// Write events to output buffer
+			var eventArray = device.EventQueue.ToArray();
 			for (var i = 0u; i < eventsToReturn; i++)
 			{
-				var evt = device.EventQueue.Dequeue();
+				var evt = eventArray[i];
+				if (!isPeek)
+				{
+					device.EventQueue.Dequeue();
+				}
+				
 				var offset = rgdod + (i * DIDEVICEOBJECTDATA_SIZE);
 				
 				// Write DIDEVICEOBJECTDATA structure
