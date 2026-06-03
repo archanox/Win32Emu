@@ -87,15 +87,18 @@ public class VirtualMemory
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
-        if (pageIndex == _lastReadPageIndex && _lastReadPage != null)
+        uint cachedIndex = _lastReadPageIndex;
+        byte[]? cachedPage = _lastReadPage;
+        
+        if (pageIndex == cachedIndex && cachedPage != null)
         {
-            return _lastReadPage[offset];
+            return cachedPage[offset];
         }
 
         if (_pages.TryGetValue(pageIndex, out var page))
         {
-            _lastReadPageIndex = pageIndex;
             _lastReadPage = page;
+            _lastReadPageIndex = pageIndex;
             return page[offset];
         }
         
@@ -109,16 +112,19 @@ public class VirtualMemory
         uint pageIndex = (uint)(addr >> PageSizeBits);
         uint offset = (uint)(addr & PageMask);
         
+        uint cachedIndex = _lastWritePageIndex;
+        byte[]? cachedPage = _lastWritePage;
+        
         byte[] page;
-        if (pageIndex == _lastWritePageIndex && _lastWritePage != null)
+        if (pageIndex == cachedIndex && cachedPage != null)
         {
-            page = _lastWritePage;
+            page = cachedPage;
         }
         else
         {
             page = GetOrCreatePage(pageIndex);
-            _lastWritePageIndex = pageIndex;
             _lastWritePage = page;
+            _lastWritePageIndex = pageIndex;
         }
         page[offset] = value;
     }
@@ -141,14 +147,16 @@ public class VirtualMemory
         
         if (offset <= PageMask - 1)
         {
-            if (pageIndex == _lastReadPageIndex && _lastReadPage != null)
+            uint cachedIndex = _lastReadPageIndex;
+            byte[]? cachedPage = _lastReadPage;
+            if (pageIndex == cachedIndex && cachedPage != null)
             {
-                return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(_lastReadPage, (int)offset, 2));
+                return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(cachedPage, (int)offset, 2));
             }
             if (_pages.TryGetValue(pageIndex, out var page))
             {
-                _lastReadPageIndex = pageIndex;
                 _lastReadPage = page;
+                _lastReadPageIndex = pageIndex;
                 return BinaryPrimitives.ReadUInt16LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 2));
             }
         }
@@ -170,15 +178,17 @@ public class VirtualMemory
         
         if (offset <= PageMask - 3)
         {
-            if (pageIndex == _lastReadPageIndex && _lastReadPage != null)
+            uint cachedIndex = _lastReadPageIndex;
+            byte[]? cachedPage = _lastReadPage;
+            if (pageIndex == cachedIndex && cachedPage != null)
             {
-                value = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(_lastReadPage, (int)offset, 4));
+                value = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(cachedPage, (int)offset, 4));
                 handled = true;
             }
             else if (_pages.TryGetValue(pageIndex, out var page))
             {
-                _lastReadPageIndex = pageIndex;
                 _lastReadPage = page;
+                _lastReadPageIndex = pageIndex;
                 value = BinaryPrimitives.ReadUInt32LittleEndian(new ReadOnlySpan<byte>(page, (int)offset, 4));
                 handled = true;
             }
@@ -227,16 +237,18 @@ public class VirtualMemory
         
         if (offset <= PageMask - 1)
         {
+            uint cachedIndex = _lastWritePageIndex;
+            byte[]? cachedPage = _lastWritePage;
             byte[] page;
-            if (pageIndex == _lastWritePageIndex && _lastWritePage != null)
+            if (pageIndex == cachedIndex && cachedPage != null)
             {
-                page = _lastWritePage;
+                page = cachedPage;
             }
             else
             {
                 page = GetOrCreatePage(pageIndex);
-                _lastWritePageIndex = pageIndex;
                 _lastWritePage = page;
+                _lastWritePageIndex = pageIndex;
             }
             BinaryPrimitives.WriteUInt16LittleEndian(new Span<byte>(page, (int)offset, 2), value);
             return;
@@ -258,16 +270,18 @@ public class VirtualMemory
         
         if (offset <= PageMask - 3)
         {
+            uint cachedIndex = _lastWritePageIndex;
+            byte[]? cachedPage = _lastWritePage;
             byte[] page;
-            if (pageIndex == _lastWritePageIndex && _lastWritePage != null)
+            if (pageIndex == cachedIndex && cachedPage != null)
             {
-                page = _lastWritePage;
+                page = cachedPage;
             }
             else
             {
                 page = GetOrCreatePage(pageIndex);
-                _lastWritePageIndex = pageIndex;
                 _lastWritePage = page;
+                _lastWritePageIndex = pageIndex;
             }
             BinaryPrimitives.WriteUInt32LittleEndian(new Span<byte>(page, (int)offset, 4), value);
             return;
