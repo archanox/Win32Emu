@@ -31,7 +31,7 @@ public class X86ToRtlConverterTests
 	{
 		// Arrange
 		var converter = new X86ToRtlConverter();
-		var instruction = Instruction.Create(Code.Xchg_r32_rm32, Register.EAX, Register.EBX);
+		var instruction = Instruction.Create(Code.Xchg_rm32_r32, Register.EAX, Register.EBX);
 		instruction.IP = 0x401000;
 		instruction.NextIP = 0x401002;
 
@@ -135,7 +135,7 @@ public class X86ToRtlConverterTests
 	{
 		// Arrange
 		var converter = new X86ToRtlConverter();
-		var instruction = Instruction.Create(Code.Leave);
+		var instruction = Instruction.Create(Code.Leaved);
 		instruction.IP = 0x401000;
 		instruction.NextIP = 0x401001;
 
