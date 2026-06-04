@@ -349,7 +349,7 @@ public unsafe class Sdl3RenderingBackend : IRenderingBackend
                         ClearColor = default,
                         FlipMode = SDL.FlipMode.None,
                         Filter = SDL.GPUFilter.Linear,
-                        Cycle = 0
+                        Cycle = false
                     };
 
                     SDL.BlitGPUTexture(commandBuffer, blitInfo);
