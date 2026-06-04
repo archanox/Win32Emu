@@ -960,7 +960,7 @@ public partial class EmulatorWindowViewModel : ViewModelBase, IGuiEmulatorHost
         OnPropertyChanged(nameof(DisplayBitmap));
         if (_ownerWindow is Views.EmulatorWindow emulatorWindow && emulatorWindow.GetDisplayImage() is { } displayImage)
         {
-            displayImage.Source = DisplayBitmap;
+            displayImage.SetCurrentValue(Image.SourceProperty, DisplayBitmap);
             displayImage.Width = info.Width;
             displayImage.Height = info.Height;
             displayImage.IsVisible = true;
