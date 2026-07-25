@@ -27,7 +27,7 @@
 
   <ItemGroup>
     <PackageReference Include="AsmResolver.PE" Version="6.0.0-rc.1" />
-    <PackageReference Include="AsmResolver.PE.Win32Resources" Version="6.0.0-rc.1" />
+    <PackageReference Include="AsmResolver.PE.Win32Resources" Version="6.0.1" />
     <PackageReference Include="LTRData.DiscUtils.Core" Version="1.0.77" />
     <PackageReference Include="LTRData.DiscUtils.Fat" Version="1.0.77" />
     <PackageReference Include="LTRData.DiscUtils.Iso9660" Version="1.0.77" />
