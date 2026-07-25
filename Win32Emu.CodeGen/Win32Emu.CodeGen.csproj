@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AsmResolver.PE" Version="6.0.0-rc.1" />
+    <PackageReference Include="AsmResolver.PE" Version="6.0.1" />
     <PackageReference Include="System.CommandLine" Version="2.0.5" />
   </ItemGroup>
 
